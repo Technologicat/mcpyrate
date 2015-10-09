@@ -17,7 +17,7 @@ def customliterals(sentences, **kw):
     You can use `str`, `tuple`, `list`, `dict`, `set` and `num` to customize
     literals.
     '''
-    visitor = _ExpandLiterals() 
+    visitor = _WrapLiterals() 
     return map(visitor.visit, sentences)
 
 def log(expr, **kw):
@@ -58,7 +58,7 @@ def value(classdef, **kw):
                          args=[], keywords=[], starargs=None, kwargs=None))
     return [baked_class, replacement]
 
-class _ExpandLiterals(NodeTransformer):
+class _WrapLiterals(NodeTransformer):
     '''
     A visitor to wrap each literal appariton with a proper name.
     '''

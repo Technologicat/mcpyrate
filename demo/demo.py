@@ -13,8 +13,6 @@ class Meters(float):
         return self * self._units[unit]
 
 def working_with_distances():
-    normal_tuple = (2, 2)
-
     with customliterals:
         tuple = Point2D
         print('Is (0, 0) a Point2D?')
