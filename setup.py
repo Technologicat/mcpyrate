@@ -5,12 +5,12 @@ from distutils.core import setup
 setup(
     name = "mcpy",
     packages = ["mcpy"],
-    version = "1.0.1",
+    version = "2.0.0",
     description = "A small and compact Python 3 library to enable syntactic macros at importing time",
     author = "Salvador de la Puente González",
     author_email = "salva@unoyunodiez.com",
     url = "https://github.com/delapuente/mcpy",
-    download_url = "https://github.com/delapuente/mcpy/tarball/1.0.1",
+    download_url = "https://github.com/delapuente/mcpy/tarball/2.0.0",
     keywords = ["macros", "import", "importer", "github"],
     classifiers = [
         "Programming Language :: Python",
