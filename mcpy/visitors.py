@@ -17,7 +17,7 @@ class BaseMacroExpander(NodeTransformer):
         '''Short-circuit visit() to avoid expansions if no macros.'''
         return super().visit(tree) if self.bindings else tree
     
-    def _expand(self, kind, target, macroname, tree, kw=None):
+    def _expand(self, syntax, target, macroname, tree, kw=None):
         '''
         Transform `target` node, replacing it with the expansion result of
         aplying the named macro on the proper node and recursively treat the
@@ -26,7 +26,7 @@ class BaseMacroExpander(NodeTransformer):
         macro = self.bindings[macroname]
         kw = kw or {}
         kw.update({
-            'mode': kind,
+            'syntax': syntax,
             'to_source': unparse,
             'expand_macros': self.visit
         })

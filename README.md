@@ -17,7 +17,7 @@ import mcpy.activate
 import application
 
 # mymacros.py with your macros definitions
-def echo(expr, **):
+def echo(expr, **kw):
   print('Echo')
   return expr
 
@@ -42,7 +42,7 @@ macro[...]
 ...
 ```
 
-For each case, the macro will receive `...` as input and will replace the invokation with the expanded content. Expansion occurs first for innermost nodes.
+For each case, the macro will receive `...` as input and will replace the invokation with the expanded content. Expansion occurs first for outermost nodes. I.e, from outside to inside.
 
 ### Importing macros
 Macros are simple functions. To use functions from a module as macros, use:
@@ -60,7 +60,7 @@ import module
 If you want to use some of your macros as regular functions, simply use:
 
 ```python
-form module import ...
+from module import ...
 ```
 
 Or use fully qualified names for them:
@@ -76,20 +76,37 @@ from module import macros, macroname as alias
 ```
 
 ## Writing macros
-No special imports are needed to write your own macros. Just read the documentation for the [AST module](https://docs.python.org/3.5/library/ast.html) and consider a macro as a function accepting an AST and returning another AST.
+No special imports are needed to write your own macros. Just read the documentation for the [AST module](https://docs.python.org/3.5/library/ast.html) and consider a macro as a function accepting an AST tree and returning another AST.
+
+```python
+def macro(tree, **): return tree
+```
+
+The `tree` parameter is the only positional parameter the macro is called with. Remaining parameters are called by name and includes a set of useful functionality.
+
+In addittion to a node, you can return `None` to remove the node, or a list of `AST` nodes. The expanded macros are recursively expanded until no new macros are found.
 
 ```python
 from ast import *
-from mcpy import unparse
-def log(expr, **kw):
+def log(expr, to_source, **kw):
     '''Replaces log[expr] with print('expr: ', expr)'''
-    label = unparse(expr) + ': '
+    label = to_source(expr) + ': '
     return Call(func=Name(id='print', ctx=Load()),
                 args=[Str(s=label), expr], keywords=[], starargs=None,
                 kwargs=None)
 ```
 
-Instead of a node, you can return `None` to remove the node or a list of `AST` nodes. The expanded macros are recursively expanded until no new macros are found.
+### Distinguish how the macro is called
+
+A macro can be called in three different ways. The way a macro is called is recorded in the `syntax` named parameter (one of `'block'`, `'expr'` or `'decorator'`) so you can distinguish the syntax used in the source code and provide different implementations for each one.
+
+### Getting the source of an AST
+
+A macro is passed with a named parameter `to_source` which is a function able to get the Python code for an AST.
+
+### Expand macros
+
+Use the named parameter `expand_macros` with an AST to expand the macros in that AST. This is useful to expand innermost macros first.
 
 ### Examples
 `mcpy` focuses on the mechanisms to expand macros, not in authoring tools or macros libraries. Anyway, a `demo` folder is provided to see `mcpy` in actions. Simply navigate to it and run a Python console, then import `run`:
