@@ -1,8 +1,7 @@
 
 from ast import *
-from mcpy import unparse
 
-def customliterals(sentences, **kw):
+def customliterals(sentences, expand_macros, **kw):
     '''
     Allow to provide custom meaning to literals. Example:
 
@@ -18,9 +17,9 @@ def customliterals(sentences, **kw):
     literals.
     '''
     visitor = _WrapLiterals() 
-    return map(visitor.visit, sentences)
+    return map(visitor.visit, map(expand_macros, sentences))
 
-def log(expr, **kw):
+def log(expr, to_source, **kw):
     '''
     Prints the passed value labeling the output with the expression. Example:
 
@@ -31,7 +30,7 @@ def log(expr, **kw):
         # d['a']: 1
         
     '''
-    label = unparse(expr) + ': '
+    label = to_source(expr) + ': '
     return Call(func=Name(id='print', ctx=Load()),
                 args=[Str(s=label), expr], keywords=[], starargs=None,
                 kwargs=None)

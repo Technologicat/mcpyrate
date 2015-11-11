@@ -2,11 +2,10 @@
 
 import sys
 from ast import *
-from .visitors import BaseMacroExpander, dfs
+from .visitors import BaseMacroExpander
 
 class _MacroExpander(BaseMacroExpander):
 
-    @dfs
     def visit_With(self, withstmt):
         '''
         Check for a with macro as
@@ -16,18 +15,18 @@ class _MacroExpander(BaseMacroExpander):
 
         It replaces the with node with the result of the macro.
         '''
-        new_tree = withstmt
-        withitem = withstmt.items[0]
-        candidate = withitem.context_expr
+        with_item = withstmt.items[0]
+        candidate = with_item.context_expr
         if isinstance(candidate, Name) and self._ismacro(candidate.id):
             macro = candidate.id
             tree = withstmt.body
-            kw = { 'optional_vars': withitem.optional_vars }
+            kw = { 'optional_vars': with_item.optional_vars }
             new_tree = self._expand('block', withstmt, macro, tree, kw)
+        else:
+            new_tree = self.generic_visit(withstmt)
 
         return new_tree
 
-    @dfs
     def visit_Subscript(self, subscript):
         '''
         Check for a expression macro as
@@ -36,12 +35,13 @@ class _MacroExpander(BaseMacroExpander):
 
         It replaces the expression node with the result of the macro.
         '''
-        new_tree = subscript
         candidate = subscript.value
         if isinstance(candidate, Name) and self._ismacro(candidate.id):
             macro = candidate.id
             tree = subscript.slice.value
             new_tree = self._expand('expr', subscript, macro, tree)
+        else:
+            new_tree = self.generic_visit(subscript)
 
         return new_tree
 
@@ -51,7 +51,6 @@ class _MacroExpander(BaseMacroExpander):
     def visit_FunctionDef(self, functiondef):
         return self._visit_Decorated(functiondef)
 
-    @dfs
     def _visit_Decorated(self, decorated):
         '''
         Check for a expression macro as
@@ -68,13 +67,13 @@ class _MacroExpander(BaseMacroExpander):
                 
         It replaces the whole decorated node with the result of the macro.
         '''
-        new_tree = decorated
         macros, decorators = self._filter_out_macros(decorated.decorator_list)
         decorated.decorator_list = decorators
-        tree = new_tree
-
-        for macro in reversed(macros):
-            new_tree = self._expand('decorator', decorated, macro, new_tree)
+        if macros:
+            for macro in reversed(macros):
+                new_tree = self._expand('decorator', decorated, macro, decorated)
+        else:
+            new_tree = self.generic_visit(decorated)
 
         return new_tree
 
@@ -97,7 +96,6 @@ def expand_macros(tree, bindings):
     Return an expanded version of tree with macros applied.
     '''
     expansion = _MacroExpander(bindings).visit(tree)
-    fix_missing_locations(expansion)
     return expansion
 
 def find_macros(tree):
@@ -112,7 +110,10 @@ def find_macros(tree):
             bindings.update(_get_macros(statement))
             # Remove all names to prevent macro names to be used
             module = statement.module
-            tree.body[index] = Import(names=[alias(name=module, asname=None)])
+            tree.body[index] = copy_location(
+                Import(names=[alias(name=module, asname=None)]),
+                statement
+            )
 
     return bindings
 

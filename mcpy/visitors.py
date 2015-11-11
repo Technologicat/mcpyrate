@@ -1,6 +1,7 @@
 
 from functools import wraps
-from ast import NodeTransformer, AST, copy_location
+from ast import NodeTransformer, AST, copy_location, fix_missing_locations
+from .unparse import unparse
 
 class BaseMacroExpander(NodeTransformer):
     '''
@@ -16,20 +17,24 @@ class BaseMacroExpander(NodeTransformer):
         '''Short-circuit visit() to avoid expansions if no macros.'''
         return super().visit(tree) if self.bindings else tree
     
-    def _expand(self, kind, macronode, name, target, kw=None):
+    def _expand(self, kind, target, macroname, tree, kw=None):
         '''
-        Transform `macronode` node, replacing it with the expansion result of
+        Transform `target` node, replacing it with the expansion result of
         aplying the named macro on the proper node and recursively treat the
         expansion as well.
         '''
-        macro = self.bindings[name]
+        macro = self.bindings[macroname]
         kw = kw or {}
-        kw.update({ 'mode': kind })
-        expansion = _apply_macro(macro, target, kw)
+        kw.update({
+            'mode': kind,
+            'to_source': unparse,
+            'expand_macros': self.visit
+        })
+        expansion = _apply_macro(macro, tree, kw)
 
-        return self._visit_expansion(macronode, expansion)
+        return self._visit_expansion(expansion, target)
 
-    def _visit_expansion(self, macronode, expansion):
+    def _visit_expansion(self, expansion, target):
         '''
         Ensures the macro expansions into None (deletions), other nodes or
         list of nodes are expanded too.
@@ -37,8 +42,9 @@ class BaseMacroExpander(NodeTransformer):
         if expansion is not None:
             is_node = isinstance(expansion, AST)
             expansion = [expansion] if is_node else expansion
+            expansion = map(lambda n: copy_location(n, target), expansion)
+            expansion = map(fix_missing_locations, expansion)
             expansion = map(self.visit, expansion)
-            expansion = map(lambda n: copy_location(n, macronode), expansion)
             expansion = list(expansion).pop() if is_node else list(expansion)
 
         return expansion
@@ -46,20 +52,8 @@ class BaseMacroExpander(NodeTransformer):
     def _ismacro(self, name):
         return name in self.bindings
 
-def _apply_macro(macro, target, kw):
+def _apply_macro(macro, tree, kw):
     '''
-    Executes the macro on target passing extra kwargs.
+    Executes the macro on tree passing extra kwargs.
     '''
-    return macro(target, **kw)
-
-def dfs(f):
-    '''
-    Decorate a NodeVisitor method to perform a depth-first search visitation.
-    '''
-    @wraps(f)
-    def _dfs(self, node):
-        new_node = self.generic_visit(node)
-        return f(self, new_node)
-
-    return _dfs
-
+    return macro(tree, **kw)
