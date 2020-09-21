@@ -11,7 +11,8 @@ Install from PyPI:
 ```
 
 ## Using macros
-Due to mcpy macro extension procedure, you need to enable `mcpy` before importing the modules using macros and in a separated file. The following 3 file setup works fine for most of the cases:
+
+Due to how `mcpy` works, you need to enable `mcpy` before importing any module that uses macros. Macros must be defined in a separate module. The following 3 file setup works fine for most cases:
 
 ```python
 # run.py
@@ -80,7 +81,8 @@ from module import macros, macroname as alias
 ```
 
 ## Writing macros
-No special imports are needed to write your own macros. Just read the documentation for the [AST module](https://docs.python.org/3.5/library/ast.html) and consider a macro as a function accepting an AST tree and returning another AST.
+
+No special imports are needed to write your own macros. Just read the documentation for the [AST module](https://docs.python.org/3/library/ast.html) and consider a macro as a function accepting an AST tree and returning another AST (i.e., a [syntax transformer](http://www.greghendershott.com/fear-of-macros/)). Refer to [Green Tree Snakes](https://greentreesnakes.readthedocs.io/en/latest/nodes.html) (a.k.a. the missing Python AST docs) for more on the AST node types.
 
 ```python
 def macro(tree, **kw): return tree
@@ -107,6 +109,8 @@ A macro can be called in three different ways. The way a macro is called is reco
 ### Getting the source of an AST
 
 A macro is passed a named parameter `to_source`, which is a function able to get the Python code for an AST.
+
+This is backconverted from the AST representation, so the result may differ in minute details of surface syntax, such as parenthesization, and which character is used for quoting string literals.
 
 ### Expand macros
 
