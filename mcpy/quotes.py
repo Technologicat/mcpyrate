@@ -1,3 +1,4 @@
+# -*- coding: utf-8; -*-
 """Quasiquotes. Build ASTs in your macros, conveniently.
 
 **Quick reference**
@@ -173,33 +174,9 @@ whole quasiquote system fits into one module.
 """
 
 import ast
-import uuid
-from mcpy import unparse
 
-# --------------------------------------------------------------------------------
-
-def ast_aware_repr(thing):  # TODO: move to a util module
-    """Like repr(), but supports ASTs.
-
-    Like MacroPy's `real_repr`.
-    """
-    if isinstance(thing, ast.AST):
-        fields = [ast_aware_repr(b) for a, b in ast.iter_fields(thing)]
-        return '{}({})'.format(thing.__class__.__name__, ', '.join(fields))
-    elif isinstance(thing, list):  # e.g. multi-statement body
-        return '[{}]'.format(', '.join(ast_aware_repr(elt) for elt in thing))
-    return repr(thing)
-
-def gensym(basename=None):  # TODO: move to a util module
-    """Create a name for a new, unused lexical identifier, and return the name as an `str`."""
-    # We use an uuid to avoid the need for any lexical scanning.
-    unique = "{}_gensym".format(str(uuid.uuid4()).replace('-', ''))
-    if basename:
-        sym = "{}_{}".format(basename, unique)
-    else:
-        sym = unique
-    assert sym.isidentifier()
-    return sym
+from .unparse import unparse
+from .utilities import gensym
 
 # --------------------------------------------------------------------------------
 
@@ -290,9 +267,6 @@ def generate_lookup_ast(captured_sym):
     """Create the AST that, when compiled and run, looks up the given hygienically captured name."""
     # print("creating lookup for:", captured_sym)
     return ast.Call(ast.Name(id="lookup", ctx=ast.Load()), [ast.Constant(value=captured_sym)], [])
-    # return ast.Subscript(value=ast.Name(id="captured", ctx=ast.Load()),
-    #                      slice=ast.Index(value=ast.Constant(value=captured_sym)),
-    #                      ctx=ast.Load())
 
 # --------------------------------------------------------------------------------
 
@@ -344,18 +318,6 @@ def astify(x):
     # Constants (Python 3.6+).
     elif tx in (int, float, str, bytes, bool, type(None)):
         return ast.Constant(value=x)
-
-    # All these have been replaced by `ast.Constant` in Python 3.8.
-    # Technically, Python 3.6 already supports `ast.Constant`, but the
-    # parser doesn't generate `ast.Constant` nodes until Python 3.8.
-    # elif tx in (int, float):
-    #     return ast.Num(n=x)
-    # elif isinstance(x, str):
-    #     return ast.Str(s=x)
-    # elif tx is bytes:
-    #     return ast.Bytes(s=x)
-    # elif tx in (bool, type(None)):
-    #     return ast.NameConstant(value=x)
 
     # Containers.
     elif tx is list:
@@ -426,6 +388,8 @@ def n(tree, *, syntax, expand_macros, **kw):
     assert syntax == "expr"
     tree = expand_macros(tree)
     # Output:  ast.Name(id=..., ctx=ast.Load())
+    #
+    # Leaving this here for documentation purposes:
     # return ASTLiteral(ast.Call(ast.Attribute(value=ast.Name(id='ast', ctx=ast.Load()),
     #                                          attr='Name', ctx=ast.Load()),
     #                            [],
@@ -438,7 +402,8 @@ def n(tree, *, syntax, expand_macros, **kw):
     #                                                                       ctx=ast.Load()),
     #                                                         [],
     #                                                         []))]))
-    # Easier way to say the same thing.
+    #
+    # Easier way to say the same thing:
     # The inner `ASTLiteral` tells `astify` not to astify that part, and then vanishes.
     return ASTLiteral(astify(ast.Name(id=ASTLiteral(tree),
                                       ctx=ast.Load())))
@@ -448,7 +413,6 @@ def n(tree, *, syntax, expand_macros, **kw):
 def a(tree, *, syntax, **kw):
     """Splice an AST into quasiquoted code."""
     assert syntax == "expr"
-    # Output:  tree
     return ASTLiteral(tree)
 
 # TODO: Generalize to capture `Attribute` and `Subscript` nodes, to capture the thing itself.
@@ -469,12 +433,3 @@ def h(tree, *, syntax, **kw):
     assert syntax == "expr"
     assert type(tree) is ast.Name
     return Hygienic(tree.id)
-
-# --------------------------------------------------------------------------------
-
-# TODO: for macro debugging, we need something like MacroPy's show_expanded.
-# def expand(tree, *, syntax, expand_macros, **kw):
-#     """Macroexpand an AST and return the result."""
-#     tree = expand_macros(tree)
-#     # We must use q as a regular function, since we can't import it as a macro in this module itself.
-#     return q(tree, syntax=syntax, expand_macros=expand_macros)
