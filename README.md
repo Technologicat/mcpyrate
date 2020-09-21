@@ -1,7 +1,9 @@
 # mcpy
-A small and compact Python 3 library to enable syntactic macros at importing time strongly inspired by [macropy](https://github.com/lihaoyi/macropy).
+
+A small and compact Python 3 library to enable syntactic macros at import time, strongly inspired by [macropy](https://github.com/lihaoyi/macropy).
 
 ## Install
+
 Install from PyPI:
 
 ```
@@ -16,18 +18,19 @@ Due to mcpy macro extension procedure, you need to enable `mcpy` before importin
 import mcpy.activate
 import application
 
-# mymacros.py with your macros definitions
+# mymacros.py with your macro definitions
 def echo(expr, **kw):
   print('Echo')
   return expr
 
 # application.py 
 from mymacros import macros, echo
-echo[6*7]
+echo[6 * 7]
 ```
 
 ### Syntax
-`mcpy` macros can be used in three forms following `macropy` syntax:
+
+`mcpy` macros can be used in three forms, following `macropy` syntax:
 
 ```python
 # block form
@@ -42,16 +45,17 @@ macro[...]
 ...
 ```
 
-For each case, the macro will receive `...` as input and will replace the invokation with the expanded content. Expansion occurs first for outermost nodes. I.e, from outside to inside.
+In each case, the macro will receive `...` as input and will replace the invocation with the expanded content. Expansion occurs first for outermost nodes. I.e, from outside to inside.
 
 ### Importing macros
+
 Macros are simple functions. To use functions from a module as macros, use:
 
 ```python
 from module import macros, ...
 ```
 
-Replacing `...` with the macros you want to use. Importing all via `*` won't work. You must declare the macros you want explicitely. `mcpy` prevents you from accidentally using macros as functions in your code by transforming that import into:
+replacing `...` with the macros you want to use. Importing all via `*` won't work. You must declare the macros you want explicitly. `mcpy` prevents you from accidentally using macros as functions in your code by transforming that import into:
 
 ```pyhon
 import module
@@ -79,12 +83,12 @@ from module import macros, macroname as alias
 No special imports are needed to write your own macros. Just read the documentation for the [AST module](https://docs.python.org/3.5/library/ast.html) and consider a macro as a function accepting an AST tree and returning another AST.
 
 ```python
-def macro(tree, **): return tree
+def macro(tree, **kw): return tree
 ```
 
 The `tree` parameter is the only positional parameter the macro is called with. Remaining parameters are called by name and includes a set of useful functionality.
 
-In addittion to a node, you can return `None` to remove the node, or a list of `AST` nodes. The expanded macros are recursively expanded until no new macros are found.
+Beside a node, you can return `None` to remove the node, or a list of `AST` nodes. The expanded macros are recursively expanded until no new macros are found.
 
 ```python
 from ast import *
@@ -92,24 +96,25 @@ def log(expr, to_source, **kw):
     '''Replaces log[expr] with print('expr: ', expr)'''
     label = to_source(expr) + ': '
     return Call(func=Name(id='print', ctx=Load()),
-                args=[Str(s=label), expr], keywords=[], starargs=None,
-                kwargs=None)
+                args=[Str(s=label), expr], keywords=[],
+                starargs=None, kwargs=None)
 ```
 
 ### Distinguish how the macro is called
 
-A macro can be called in three different ways. The way a macro is called is recorded in the `syntax` named parameter (one of `'block'`, `'expr'` or `'decorator'`) so you can distinguish the syntax used in the source code and provide different implementations for each one.
+A macro can be called in three different ways. The way a macro is called is recorded in the `syntax` named parameter (one of `'block'`, `'expr'` or '`decorator`'), so you can distinguish the syntax used in the source code and provide different implementations for each one.
 
 ### Getting the source of an AST
 
-A macro is passed with a named parameter `to_source` which is a function able to get the Python code for an AST.
+A macro is passed a named parameter `to_source`, which is a function able to get the Python code for an AST.
 
 ### Expand macros
 
 Use the named parameter `expand_macros` with an AST to expand the macros in that AST. This is useful to expand innermost macros first.
 
 ### Examples
-`mcpy` focuses on the mechanisms to expand macros, not in authoring tools or macros libraries. Anyway, a `demo` folder is provided to see `mcpy` in actions. Simply navigate to it and run a Python console, then import `run`:
+
+`mcpy` focuses on the mechanisms to expand macros, not in authoring tools or macro libraries. Anyway, a `demo` folder is provided to see `mcpy` in action. Simply navigate to it and run a Python console, then import `run`:
 
 ```python
 import run
