@@ -7,7 +7,7 @@
   - `u` value-unquote, like in MacroPy.
   - `n` name-unquote, like MacroPy's `name`.
   - `a` AST-unquote, like MacroPy's `ast_literal`.
-  - `h` hygienify.
+  - `h` hygienic-unquote.
 
 
 **Introduction**
@@ -15,52 +15,40 @@
 By default, quasiquoting in `mcpy` is non-hygienic. If you're familiar with
 Common Lisp's `defmacro`, you'll feel almost right at home.
 
-But we provide one important convenience, `h[]`, which allows to selectively
-quote identifiers hygienically.
-
 Almost always:
 
-  - If the quoted code is calling a function, you'll want the function name to
-    be quoted hygienically. That way, at your macro's use site, it's guaranteed
-    to really call the function you expect, and not some other function that
-    just happens to have the same name at the use site.
+  - If the quasiquoted code is calling a function, you'll want the function
+    to be unquoted hygienically. That way, at your macro's use site, it's
+    guaranteed to really call the function you expect, and not some other
+    function that just happens to have the same name at the use site.
 
-  - If your macro establishes any new bindings, you'll want their names to be
-    gensyms, so they won't conflict with any names already in scope at the
-    macro use site, no matter what names already exist there. See `gensym`.
+  - If your macro needs to establish any new bindings, you'll want to `gensym`
+    their names, so they won't conflict with any names already in scope at the
+    macro use site, no matter what names already exist there.
+
+    See `mcpy.utilities.gensym`.
 
 
 **Hygienic quasiquoting**
 
 In `mcpy`, there is no separate hygienic-quasiquote macro. Instead, use `h[]`
-inside a `q[]` to mark a use of an identifier that you want to be quoted
-hygienically.
-
-It doesn't matter whether the identifier is a local, nonlocal or global,
-as long as it's in scope within the `q[]`. The identifier must be a bare name.
-
-So if you have an object or an array, `h[]` just the thing itself. If you
-need to perform any attribute or subscript accesses, do that on the result::
-
-    q[h[x]]
-    q[h[obj].someattr]
-    q[h[array][42]]
+inside a `q[]` to mark a value you want to be unquoted hygienically.
 
 To avoid capturing the same thing multiple times, assign the hygienically
-quoted identifier (which is represented as an AST) to a variable, and then
+quasiquote-unquoted identifier (which is represented as an AST that, when
+compiled and run, will perform the lookup) to a variable, and then
 AST-unquote that variable as many times as you need::
 
     hygx = q[h[x]]
     tree = q[...a[hygx]...]
 
-This is the `mcpy` equivalent of the Common Lisp pattern, where one gensyms
-a new name, `let`-binds that to the value of the old name, and then uses the
-new name in the quoted code. The implementation details differ a bit, but
+This is the `mcpy` equivalent of the Common Lisp pattern, where one gensyms a
+new name, `let`-binds that to the value of the old name, and then unquotes the
+new name in the quasiquoted code. The implementation details differ a bit, but
 such a uniqifying bind is essentially what `h[]` does.
 
-Because it's a bind operation, the hygienically quoted identifier points to the
-value the identifier had at capture time, not to the name. It won't track any
-rebinds of the original identifier within your macro code::
+Because it's a bind operation, the result of `h[expr]` will forever point to
+the *value* `expr` had at capture time::
 
     x = "tabby"
     firstcat = q[h[x]]
@@ -68,42 +56,68 @@ rebinds of the original identifier within your macro code::
 
     x = "scottishfold"
 
-    # firstcat still points to "tabby". If you want to refer to the new value
-    # at the macro use site, capture again:
+    # firstcat still points to "tabby". If you want a hygienic reference
+    # to the new value, capture again:
     secondcat = q[h[x]]
 
     # firstcat points to "tabby", secondcat points to "scottishfold".
+
+So if you have an object or an array, you might want to `h[]` just the thing
+itself, and perform any attribute or subscript accesses on the result::
+
+    q[h[x]]
+    q[h[cat].wantsfood]
+    q[h[shoppinglist][0]]
+
+This way, modifications to the state of `obj`, or to the contents of `array`,
+will be seen by the code that uses the hygienic value.
+
+
+**Difference between `h[]` and `u[]`**
+
+The `h[]` operator, because it accepts any run-time value (also those
+that have no meaningful repr), must bridge between macro-expansion-time
+and run-time. It takes a value that exists at macro-expansion-time, and
+arranges things to make that value available at run-time.
+
+The `u[]` operator takes the value apart, and creates an AST that will
+re-construct it. It does not need to bridge between the different times,
+but it only works for values that, essentially, can be easily transmitted
+as building instructions.
 
 
 **Advanced uses of non-hygienic quasiquoting**
 
 Macro hygiene has its place, but non-hygienic quoting leads to two advanced
-techniques that sometimes turn out useful:
+techniques that are sometimes useful:
 
   - *Anaphora*. The macro defines an identifier that has a specific name.
     Typically, the macro computes some value and binds it to that identifier,
-    meant to be read by the macro's use site. For example, the `it` in the
+    meant to be used at the macro's use site. For example, the `it` in the
     classic *anaphoric if*.
 
     This is sometimes so useful that also Lisps that have a macro system that
     is hygienic by default (such as Scheme and Racket), provide a way to
-    selectively break hygiene. For example, in Racket it's possible to produce
-    a `return` "keyword" using this approach (by binding the function's escape
-    continuation to a variable named `return`, and then leaking that identifier
-    on purpose).
+    selectively *break hygiene*.
 
-  - *Free variable injection*, the lesser-known dual to anaphora. The
-    *use site* is expected to define an identifier having a specific name.
-    The macro just assumes that name is in scope (without defining it itself)
-    and proceeds to use it. (The term comes from Doug Hoyte, in Let Over
-    Lambda: 50 Years of Lisp.)
+    For example, in Racket it's possible to produce a `return` "keyword" using
+    this approach, by binding the function's escape continuation to a variable
+    named `return`, and then leaking that identifier on purpose.
+
+  - *Free variable injection*, the lesser-known dual to anaphora. The term
+    comes from Doug Hoyte, in Let Over Lambda: 50 Years of Lisp.
+
+    In this technique, the *use site* is expected to define an identifier
+    having a specific name, and bind some particular value to it. The macro
+    assumes that name is in scope (without defining it itself) and proceeds
+    to use it.
 
 Obviously, when using either of these techniques, it is absolutely critical to
 document the expectations in the macro's documentation. And, they're slightly
-magic, so it's best to avoid them except where absolutely needed.
+magic, so they are discouraged unless absolutely needed.
 
 
-**Summary**
+**Examples**
 
 Keep in mind that in `mcpy`, quasiquotes are a tool to make building macros easier.
 
@@ -111,33 +125,39 @@ Here *macro definition site* and *macro use site* refer to those sites for the
 macro in whose implementation `q` is used to construct (part of) the output
 AST.
 
-Some simple cases, explained:
+Quasiquoted code and what it means:
 
-    `q[x]`      --> The thing the name `x` refers to at the macro *use site*.
-                    In other words, just the bare name `x` at the macro use site.
+    `q[x]`      --> The bare name `x`. Remains `x` at the macro use site, so it
+                    really refers to whatever `x` refers to at the macro use site.
 
-    `q[h[x]]`   --> The thing the name `x` refers to at the macro *definition site*.
+    `q[h[x]]`   --> The value of the expression `x` at the macro definition site.
 
-                    `x` must be a bare name. It doesn't matter what, if anything,
-                    the name `x` refers to at the macro use site; the purpose of
-                    `h[]` is to avoid such name conflicts.
+                    The value that results from evaluating `x` can be any
+                    run-time value.
 
-    `q[u[x]]`   --> Value of the variable `x` at the macro definition site.
+    `q[u[x]]`   --> The value of the expression `x` at the macro definition site.
 
                     The value that results from evaluating `x` must be something
                     that can be easily lifted into an AST that, when compiled and run,
                     re-constructs that value.
 
-                    Explicitly: constants (number, string, bytes, boolean or None),
-                    containers (`list`, `dict` or `set`) containing such constants,
-                    and trees built out of multiple levels of such containers,
-                    where all the leaves are constants.
+                    Explicitly: the evaluation result must be a constant
+                    (number, string, bytes, boolean or None), a container
+                    (`list`, `dict` or `set`) containing such constants, or a
+                    tree built out of multiple levels of such containers, where
+                    all the leaves are constants.
 
-    `q[n[x]]`   --> Identifier with its name taken from the value of the str
-                    variable `x` at the macro definition site.
+                    In cases where that's all you need, prefer `u[]`; it's cheaper
+                    on memory use than `h[]`, because it doesn't need to make an
+                    entry in the hygienic capture registry.
 
-                    With this, you can compute a name (as a string) and then
-                    use it as an identifier.
+    `q[n[x]]`   --> An identifier, with its name determined by evaluating the
+                    expression `x` at the macro definition site.
+
+                    `x` must evaluate to a string.
+
+                    With this, you can compute a name (e.g. by `gensym`) and then
+                    use it as an identifier in quasiquoted code.
 
     `q[a[x]]`   --> The AST stored in the variable `x` at the macro definition
                     site. Same thing as just `x` (note no `q[]`).
@@ -145,7 +165,7 @@ Some simple cases, explained:
                     The point of `a[]` is that it can appear as a part of the
                     expression inside the `q[]`, so you can construct subtrees
                     separately (using any strategy of your choosing) and then
-                    splice them into a quoted code snippet.
+                    splice them into a quasiquoted code snippet.
 
 Note that:
 
@@ -168,36 +188,102 @@ Also, we must provide several types of unquotes (`u`, `n`, `a`), because Python
 has a surface syntax, instead of representing source code directly as a lightly
 dressed up AST, like Lisps do.
 
-Our implementation closely follows MacroPy's, except `h`, which is simpler.
-We don't pickle/unpickle, and the implementation is short enough that the
-whole quasiquote system fits into one module.
+Our implementation closely follows MacroPy's, except `h`, which is both
+slightly simpler and more general. We don't pickle/unpickle, and by using uuids
+in the keys, we avoid the need for a whole-file lexical scan. We allow capturing
+any expr, not just identifiers. However, we also take a somewhat different approach,
+in that we don't even pretend to capture names; our `h[]` captures *values*.
 """
+
+__all__ = ["capture", "lookup", "astify",
+           "q", "u", "n", "a", "h"]
 
 import ast
 
 from .unparse import unparse
-from .utilities import gensym
+from .utilities import gensym, ast_aware_repr
 
 # --------------------------------------------------------------------------------
 
-class Hygienic(ast.expr):
-    """Pseudo-node. Tell `astify` to hygienically capture the given identifier.
+class PseudoNode(ast.expr):
+    """Almost like a real AST node.
 
-    This is essentially an AST marker used internally by `q[]`.
-    It is expanded away by `astify`, to allow the rest of `mcpy`
-    to deal with real AST nodes only.
+    Pseudonodes are AST markers used internally by `q[]`. They are expanded
+    away by `astify`, to allow the rest of `mcpy` to deal with real AST nodes
+    only.
 
-    Like MacroPy's `Captured`. We inherit from `ast.expr` to let
-    `mcpy`'s expander know this behaves somewhat like an expr node.
+    We inherit from `ast.expr` to let `mcpy`'s expander know this behaves
+    somewhat like an expr node, so it won't choke on this while expanding
+    quasiquotes.
     """
-    def __init__(self, id):
-        self.id = id
-        self._fields = ["id"]
+    def __init__(self, body):
+        """body: the real AST"""
+        self.body = body
+        self._fields = ["body"]  # support ast.iterfields
 
     def __repr__(self):
-        return "Hygienic({})".format(self.id)
+        return "{}({})".format(self.__class__.__name__, ast_aware_repr(self.body))
 
-# Memory usage:
+class ASTLiteral(PseudoNode):
+    """Keep the given subtree as-is.
+
+    Similar to MacroPy's `Literal`.
+    """
+    pass
+
+class CaptureLater(PseudoNode):
+    """Capture the value the given subtree evaluates to at the use site of `q[]`.
+
+    Similar to MacroPy's `Captured`.
+    """
+    def __init__(self, body, name):
+        super().__init__(body)
+        self.name = name
+        self._fields += "name"
+
+    def __repr__(self):
+        return "{}({}, {})".format(self.__class__.__name__, ast_aware_repr(self.body), repr(self.name))
+
+# --------------------------------------------------------------------------------
+
+_captured = {}  # hygienic capture registry
+
+def capture(value, basename):
+    """Store a value into the hygienic capture registry. Used by `q[h[]]`.
+
+    `value`: Any run-time value.
+
+    `basename`: Basename for gensymming a unique key for the value.
+
+                For human-readability, to see in an AST dump (that contains just
+                a lookup command with the unique key) what that captured thing is.
+
+                The original identifier name, when available, is the recommended
+                `basename`; but any human-readable label is fine.
+
+                It does not need to be a valid identifier.
+
+    The return value is an AST that, when compiled and run, looks up the
+    captured value.
+    """
+    key = gensym(basename)
+    _captured[key] = value
+    # print("capture: registry now:")  # DEBUG
+    # for k, v in captured.items():  # DEBUG
+    #     print("    ", k, "-->", ast_aware_repr(v))  # DEBUG
+    return _generate_lookup_ast(key)
+
+def lookup(key):
+    """Look up a hygienically captured value. Used in the output of `q[h[]]`."""
+    # print("lookup:", key, "-->", ast_aware_repr(captured[key]))  # DEBUG
+    return _captured[key]
+
+def _generate_lookup_ast(key):
+    """Create an AST that, when compiled and run, looks up the given hygienically captured value."""
+    # print("creating lookup for:", key)  # DEBUG
+    return ast.Call(ast.Name(id="lookup", ctx=ast.Load()), [ast.Constant(value=key)], [])
+
+# Memory usage of the hygienic capture system:
 #
 # The hygienic capture occurs anew each time `q[]` expands (inside your macro
 # definition). So for each `h[]` in a macro definition, a new capture will
@@ -206,13 +292,13 @@ class Hygienic(ast.expr):
 #
 # Currently, these captures are never deleted, so this potentially produces a
 # memory leak; but a mild one that depends only on lexical properties of the
-# codebase using macros.
+# codebase that uses macros.
 #
 # The memory required for the hygienic captures is proportional to the number
 # of times `h[]` occurs in each macro definition, times the number of
 # invocations of that macro in the target codebase, summed over all macros
 # invoked by the target codebase. Furthermore, each item is only a string key,
-# paired with an object reference, so they don't take much memory.
+# paired with an object reference, so that in itself doesn't take much memory.
 #
 # (Another question is how much memory that object takes, since it'll never
 #  become unreachable; but the most common use case of hygienic quasiquoting
@@ -227,92 +313,43 @@ class Hygienic(ast.expr):
 # In a majority of realistic use cases, not deleting the captures is just fine.
 #
 # One exception is a long-lived REPL session involving many reloads of macro
-# definitions (to test them interactively in an agile way); in such a use case,
-# if those macros use `q[h[]]`, the memory usage of the capture registry will
-# grow at each reload (as the uses of `h[]` get expanded).
-#
-captured = {}  # hygienic capture registry
-def capture(value, asname):
-    """Store a value into the hygienic capture registry. Used by `q[h[]]`.
-
-    `value`: Any run-time value.
-
-    `asname`: Basename for gensymming a unique key for the value.
-
-              For human-readability, to see in an AST dump (that contains just
-              a lookup command with the unique key) what that captured thing is.
-
-              The original identifier name, when available, is the recommended
-              `asname`; but any human-readable label is fine.
-
-    The return value is an AST that, when compiled and run, looks up the
-    captured value.
-
-    This runs when `q[]` expands. Available to be used from other
-    macro-writing-utility macros.
-    """
-    unique_name = gensym(asname)
-    captured[unique_name] = value
-    # print("capture: registry now:")  # DEBUG
-    # for k, v in captured.items():  # DEBUG
-    #     print("    ", k, "-->", ast_aware_repr(v))
-    return generate_lookup_ast(unique_name)
-
-def lookup(captured_sym):
-    """Look up a hygienically captured name. Used in the output of `q[h[]]`."""
-    # print("lookup:", captured_sym, "-->", ast_aware_repr(captured[captured_sym]))
-    return captured[captured_sym]
-
-def generate_lookup_ast(captured_sym):
-    """Create the AST that, when compiled and run, looks up the given hygienically captured name."""
-    # print("creating lookup for:", captured_sym)
-    return ast.Call(ast.Name(id="lookup", ctx=ast.Load()), [ast.Constant(value=captured_sym)], [])
+# definitions (to test interactively in an agile way, while developing macros);
+# in such a use case, if those macros use `q[h[]]`, the memory usage of the
+# capture registry will grow at each reload (as the uses of `h[]` get expanded).
 
 # --------------------------------------------------------------------------------
-
-class ASTLiteral(ast.expr):
-    """Pseudo-node. Tell `astify` to keep the given expr as-is.
-
-    This is essentially an AST marker used internally by `q[]`.
-    It is expanded away by `astify`, to allow the rest of `mcpy`
-    to deal with real AST nodes only.
-
-    Like MacroPy's `Literal`. We inherit from `ast.expr` to let
-    `mcpy`'s expander know this behaves somewhat like an expr node.
-    """
-    def __init__(self, body):
-        """body: the original AST to preserve"""
-        self.body = body
-        self._fields = ["body"]  # support ast.iterfields
-
-    def __repr__(self):
-        return "ASTLiteral({})".format(unparse(self.body))
 
 def astify(x):
     """Lift a value into its AST representation, if possible.
 
-    When the AST is compiled and run, it will return the given value.
+    When the AST is compiled and run, it will return `x`.
+
+    If `x` itself is an AST, then produce an AST that, when compiled and run,
+    will generate the AST `x`.
+
+    Raises `TypeError` when the lifting fails.
 
     Like MacroPy's `ast_repr`.
     """
     tx = type(x)
 
+    # We just drop the ASTLiteral pseudo-node wrapper; its only purpose is
+    # to tell us this subtree needs no further processing.
     if tx is ASTLiteral:
-        # We just drop the ASTLiteral pseudo-node wrapper; its only purpose is
-        # to tell us this subtree needs no further processing.
         return x.body
 
-    elif tx is Hygienic:
-        # This is the magic part of q[h[]]. We convert the `Hygienic`
-        # pseudo-node into an AST which, when compiled and run, captures the
-        # value the desired name (at that time) points to. The return value of
-        # the capture call is the AST to perform a lookup for that captured value.
-        #
-        # So at the use site of q[], it captures the value, and at the use site of
-        # the macro that used q[], it looks up the captured value.
+    # This is the magic part of q[h[]]. We convert the `CaptureLater`
+    # pseudo-node into an AST which, when compiled and run, captures the
+    # value the desired name (at that time) points to. The capture call
+    # returns an AST, which represents a lookup for that captured value.
+    #
+    # So at the use site of q[], this captures the value and rewrites itself
+    # into a lookup, and at the use site of the macro that used q[], that
+    # rewritten code looks up the captured value.
+    elif tx is CaptureLater:
         return ast.Call(ast.Name(id='capture', ctx=ast.Load()),
-                        [ast.Name(id=x.id, ctx=ast.Load()),
-                         ast.Constant(value=x.id)],
+                        [x.body,
+                         ast.Constant(value=x.name)],
                         [])
 
     # Constants (Python 3.6+).
@@ -338,7 +375,7 @@ def astify(x):
         # the AST we got as input.
         fields = [ast.keyword(a, astify(b)) for a, b in ast.iter_fields(x)]
         # TODO: Instead of `ast.Name(id='ast')` here, have `ast` in the capture registry,
-        # TODO: and look it up from there. Can use `generate_lookup_ast` to build the lookup AST.
+        # TODO: and look it up from there. Can use `_generate_lookup_ast` to build the lookup AST.
         return ast.Call(ast.Attribute(value=ast.Name(id='ast', ctx=ast.Load()),
                                       attr=x.__class__.__name__, ctx=ast.Load()),
                         [],
@@ -349,24 +386,37 @@ def astify(x):
 # --------------------------------------------------------------------------------
 # Macros
 
+# These operators are named after Qu'nah, the goddess of quasiquotes in high-tech-elven mythology.
+
 # TODO: block variants. Use the macro interface as a dispatcher.
 
 # TODO: `u`, `n`, `a` are not really independent macros, but only valid inside a `q`.
 #
 # TODO: Use/implement a walker and then, in `q`, act on `Subscript` nodes with the appropriate names.
-# TODO: This would also make `q` behave like in Lisps - quoted macro invocations
+# TODO: This would also make `q` behave like in Lisps - quasiquoted macro invocations
 # TODO: will then not be expanded (the caller is expected to do that if they want).
 #
-# TODO: Should assert that the final output does not contain pseudo-nodes such as `ASTLiteral` and `Hygienic`.
+# TODO: q[] should assert the final output does not contain pseudo-nodes such as `ASTLiteral` and `CaptureLater`.
+# TODO: Doing that needs a walker.
 def q(tree, *, syntax, expand_macros, **kw):
     """Quasiquote an expr, lifting it into its AST representation."""
     assert syntax == "expr"
     tree = expand_macros(tree)
+    # The key idea here is that a macro system already lifts code into its AST
+    # representation; to access that AST representation, we just need to define
+    # a macro and look at the `tree` that arrives as input.
+    #
+    # A macro is expected to return a replacement for `tree`. If we return the
+    # original `tree`, the macro system will compile and run the original code
+    # - not what we want.
+    #
+    # The trick is to wrap the original AST such that when the macro system
+    # compiles and runs our return value, that produces `tree`.
     return astify(tree)
 
 # TODO: u[] should expand macros only when the quotelevel hits zero. Track it.
 def u(tree, *, syntax, expand_macros, **kw):
-    """Splice a value into quasiquoted code."""
+    """Splice a simple value into quasiquoted code."""
     assert syntax == "expr"
     tree = expand_macros(tree)
     # Output:  astify(<value of tree>)
@@ -381,15 +431,17 @@ def u(tree, *, syntax, expand_macros, **kw):
     # value of `tree`, without astifying it yet.
     return ASTLiteral(ast.Call(ast.Name(id="astify", ctx=ast.Load()), [tree], []))
 
-# TODO: to allow use on the LHS of an assignment, don't assume Load context;
-# TODO: rather, leave ctx undefined here and fix missing ctx in a walker afterward.
+# TODO: To allow use on the LHS of an assignment, don't assume Load context.
+# TODO: Leave ctx undefined here and fix missing ctx in a walker afterward.
+# TODO: The place to do that is in `mcpy.visitors.BaseMacroExpander._visit_expansion`,
+# TODO: probably just after calling `fix_missing_locations`.
 def n(tree, *, syntax, expand_macros, **kw):
     """Splice an str, lifted into a lexical identifier in Load context, into quasiquoted code."""
     assert syntax == "expr"
     tree = expand_macros(tree)
     # Output:  ast.Name(id=..., ctx=ast.Load())
     #
-    # Leaving this here for documentation purposes:
+    # This is clumsy to do manually. For documentation purposes:
     # return ASTLiteral(ast.Call(ast.Attribute(value=ast.Name(id='ast', ctx=ast.Load()),
     #                                          attr='Name', ctx=ast.Load()),
     #                            [],
@@ -403,8 +455,8 @@ def n(tree, *, syntax, expand_macros, **kw):
     #                                                         [],
     #                                                         []))]))
     #
-    # Easier way to say the same thing:
-    # The inner `ASTLiteral` tells `astify` not to astify that part, and then vanishes.
+    # But wait, that looks familiar... like the output of `astify`?
+    # The inner `ASTLiteral` here tells `astify` not to astify that part, and then vanishes.
     return ASTLiteral(astify(ast.Name(id=ASTLiteral(tree),
                                       ctx=ast.Load())))
 
@@ -415,21 +467,8 @@ def a(tree, *, syntax, **kw):
     assert syntax == "expr"
     return ASTLiteral(tree)
 
-# TODO: Generalize to capture `Attribute` and `Subscript` nodes, to capture the thing itself.
-# TODO: Unpythonic needs that to support h-capturing `let` variables, which expand to an `Attribute`.
 def h(tree, *, syntax, **kw):
-    """Splice a reference into quasiquoted code (hygienic quote).
-
-    `tree` must be an `ast.Name`.
-
-    When used inside a `q[]`, the end result is an AST, which, when compiled
-    and run, refers to the unquoted name as it was at the use site of `h`,
-    which is typically inside another macro.
-
-    So using this, you can be sure the macro expansion calls the function you
-    intended, and no other function that just happened to have the same name
-    at the macro use site.
-    """
+    """Splice any value into quasiquoted code (hygienic unquote)."""
     assert syntax == "expr"
-    assert type(tree) is ast.Name
-    return Hygienic(tree.id)
+    name = unparse(tree)
+    return CaptureLater(tree, name)
