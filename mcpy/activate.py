@@ -1,3 +1,4 @@
+# -*- coding: utf-8; -*-
 '''Install mcpy hooks to preprocess source files.
 
 Actually, the library monkey-patches SourceFileLoader to compile the code

@@ -1,5 +1,5 @@
+# -*- coding: utf-8; -*-
 
-from functools import wraps
 from ast import NodeTransformer, AST, copy_location, fix_missing_locations
 from .unparse import unparse
 
@@ -16,11 +16,11 @@ class BaseMacroExpander(NodeTransformer):
     def visit(self, tree):
         '''Short-circuit visit() to avoid expansions if no macros.'''
         return super().visit(tree) if self.bindings else tree
-    
+
     def _expand(self, syntax, target, macroname, tree, kw=None):
         '''
         Transform `target` node, replacing it with the expansion result of
-        aplying the named macro on the proper node and recursively treat the
+        applying the named macro on the proper node and recursively treat the
         expansion as well.
         '''
         macro = self.bindings[macroname]
@@ -48,12 +48,12 @@ class BaseMacroExpander(NodeTransformer):
             expansion = list(expansion).pop() if is_node else list(expansion)
 
         return expansion
-        
+
     def _ismacro(self, name):
         return name in self.bindings
 
 def _apply_macro(macro, tree, kw):
     '''
-    Executes the macro on tree passing extra kwargs.
+    Execute the macro on tree passing extra kwargs.
     '''
     return macro(tree, **kw)

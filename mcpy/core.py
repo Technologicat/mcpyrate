@@ -1,26 +1,27 @@
+# -*- coding: utf-8; -*-
 '''Provide the functionality to find and expand macros.'''
 
 import sys
-from ast import *
+from ast import Name, Import, ImportFrom, alias, copy_location
 from .visitors import BaseMacroExpander
 
 class _MacroExpander(BaseMacroExpander):
 
     def visit_With(self, withstmt):
         '''
-        Check for a with macro as
+        Check for a with macro as::
 
             with macroname:
                 # with's body is the argument
 
-        It replaces the with node with the result of the macro.
+        It replaces the `with` node with the result of the macro.
         '''
         with_item = withstmt.items[0]
         candidate = with_item.context_expr
         if isinstance(candidate, Name) and self._ismacro(candidate.id):
             macro = candidate.id
             tree = withstmt.body
-            kw = { 'optional_vars': with_item.optional_vars }
+            kw = {'optional_vars': with_item.optional_vars}
             new_tree = self._expand('block', withstmt, macro, tree, kw)
         else:
             new_tree = self.generic_visit(withstmt)
@@ -29,7 +30,7 @@ class _MacroExpander(BaseMacroExpander):
 
     def visit_Subscript(self, subscript):
         '''
-        Check for a expression macro as
+        Check for a expression macro as::
 
             macroname['index expression is the argument']
 
@@ -53,18 +54,18 @@ class _MacroExpander(BaseMacroExpander):
 
     def _visit_Decorated(self, decorated):
         '''
-        Check for a expression macro as
+        Check for a decorator macro as::
 
             @macroname
             def f():
                 # The whole function is the target of the macro
 
-        Or
+        Or::
 
             @macroname
             class C():
                 # The whole class is the target of the macro
-                
+
         It replaces the whole decorated node with the result of the macro.
         '''
         macros, decorators = self._filter_out_macros(decorated.decorator_list)
@@ -89,8 +90,8 @@ class _MacroExpander(BaseMacroExpander):
             else:
                 remaining.append(d)
 
-        return macros, remaining 
-        
+        return macros, remaining
+
 def expand_macros(tree, bindings):
     '''
     Return an expanded version of tree with macros applied.
@@ -100,8 +101,8 @@ def expand_macros(tree, bindings):
 
 def find_macros(tree):
     '''
-    Looks for `from ... import macros, ...` statements in the module body and
-    returns a dict with names and implementations for found macros or an empty
+    Look for `from ... import macros, ...` statements in the module body, and
+    return a dict with names and implementations for found macros, or an empty
     dict if no macros are used.
     '''
     bindings = {}
@@ -119,7 +120,7 @@ def find_macros(tree):
 
 def _is_macro_import(statement):
     '''
-    A "macro import" is a statement with the form of
+    A "macro import" is a statement of the form::
 
         from ... import macros, ...
 
@@ -134,10 +135,10 @@ def _is_macro_import(statement):
 
 def _get_macros(macroimport):
     '''
-    Returns a map with names and macros from the macro import statement.
+    Return a map with names and macros from the macro import statement.
     '''
     modulename = macroimport.module
     __import__(modulename)
     module = sys.modules[modulename]
-    return { name.asname or name.name : getattr(module, name.name)
-             for name in macroimport.names[1:] }
+    return {name.asname or name.name: getattr(module, name.name)
+             for name in macroimport.names[1:]}

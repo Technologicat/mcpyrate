@@ -1,9 +1,12 @@
-"Usage: unparse.py <path to source file>"
+# -*- coding: utf-8; -*-
+"""Usage: unparse.py <path to source file>
+
+Or from Python, use `unparse(tree)`.
+"""
+
 import sys
 import ast
-import tokenize
 import io
-import os
 
 # Large float and imaginary literals get turned into infinities in the AST.
 # We unparse those infinities to INFSTR.
@@ -27,7 +30,7 @@ class Unparser:
     output source code for the abstract syntax; original formatting
     is disregarded. """
 
-    def __init__(self, tree, file = sys.stdout):
+    def __init__(self, tree, file=sys.stdout):
         """Unparser(tree, file=sys.stdout) -> None.
          Print the source for tree to file."""
         self.f = file
@@ -36,9 +39,9 @@ class Unparser:
         print("", file=self.f)
         self.f.flush()
 
-    def fill(self, text = ""):
+    def fill(self, text=""):
         "Indent a piece of text, according to the current indentation level"
-        self.f.write("\n"+"    "*self._indent + text)
+        self.f.write("\n" + "    " * self._indent + text)
 
     def write(self, text):
         "Append a piece of text to the current line."
@@ -59,9 +62,8 @@ class Unparser:
             for t in tree:
                 self.dispatch(t)
             return
-        meth = getattr(self, "_"+tree.__class__.__name__)
+        meth = getattr(self, "_" + tree.__class__.__name__)
         meth(tree)
-
 
     ############### Unparsing methods ######################
     # There should be one method per concrete grammar type #
@@ -101,7 +103,7 @@ class Unparser:
     def _AugAssign(self, t):
         self.fill()
         self.dispatch(t.target)
-        self.write(" "+self.binop[t.op.__class__.__name__]+"= ")
+        self.write(" " + self.binop[t.op.__class__.__name__] + "= ")
         self.dispatch(t.value)
 
     def _Return(self, t):
@@ -208,16 +210,20 @@ class Unparser:
         for deco in t.decorator_list:
             self.fill("@")
             self.dispatch(deco)
-        self.fill("class "+t.name)
+        self.fill("class " + t.name)
         self.write("(")
         comma = False
         for e in t.bases:
-            if comma: self.write(", ")
-            else: comma = True
+            if comma:
+                self.write(", ")
+            else:
+                comma = True
             self.dispatch(e)
         for e in t.keywords:
-            if comma: self.write(", ")
-            else: comma = True
+            if comma:
+                self.write(", ")
+            else:
+                comma = True
             self.dispatch(e)
         self.write(")")
 
@@ -236,7 +242,7 @@ class Unparser:
         for deco in t.decorator_list:
             self.fill("@")
             self.dispatch(deco)
-        def_str = fill_suffix+" "+t.name + "("
+        def_str = fill_suffix + " " + t.name + "("
         self.fill(def_str)
         self.dispatch(t.args)
         self.write(")")
@@ -386,7 +392,7 @@ class Unparser:
         self.write(")")
 
     def _Set(self, t):
-        assert(t.elts) # should be at least one element
+        assert(t.elts)  # should be at least one element
         self.write("{")
         interleave(lambda: self.write(", "), self.dispatch, t.elts)
         self.write("}")
@@ -411,7 +417,7 @@ class Unparser:
             interleave(lambda: self.write(", "), self.dispatch, t.elts)
         self.write(")")
 
-    unop = {"Invert":"~", "Not": "not", "UAdd":"+", "USub":"-"}
+    unop = {"Invert": "~", "Not": "not", "UAdd": "+", "USub": "-"}
     def _UnaryOp(self, t):
         self.write("(")
         self.write(self.unop[t.op.__class__.__name__])
@@ -419,9 +425,9 @@ class Unparser:
         self.dispatch(t.operand)
         self.write(")")
 
-    binop = { "Add":"+", "Sub":"-", "Mult":"*", "MatMult":"@", "Div":"/", "Mod":"%",
-                    "LShift":"<<", "RShift":">>", "BitOr":"|", "BitXor":"^", "BitAnd":"&",
-                    "FloorDiv":"//", "Pow": "**"}
+    binop = {"Add": "+", "Sub": "-", "Mult": "*", "MatMult": "@", "Div": "/", "Mod": "%",
+                    "LShift": "<<", "RShift": ">>", "BitOr": "|", "BitXor": "^", "BitAnd": "&",
+                    "FloorDiv": "//", "Pow": "**"}
     def _BinOp(self, t):
         self.write("(")
         self.dispatch(t.left)
@@ -429,8 +435,8 @@ class Unparser:
         self.dispatch(t.right)
         self.write(")")
 
-    cmpops = {"Eq":"==", "NotEq":"!=", "Lt":"<", "LtE":"<=", "Gt":">", "GtE":">=",
-                        "Is":"is", "IsNot":"is not", "In":"in", "NotIn":"not in"}
+    cmpops = {"Eq": "==", "NotEq": "!=", "Lt": "<", "LtE": "<=", "Gt": ">", "GtE": ">=",
+                        "Is": "is", "IsNot": "is not", "In": "in", "NotIn": "not in"}
     def _Compare(self, t):
         self.write("(")
         self.dispatch(t.left)
@@ -446,7 +452,7 @@ class Unparser:
         interleave(lambda: self.write(s), self.dispatch, t.values)
         self.write(")")
 
-    def _Attribute(self,t):
+    def _Attribute(self, t):
         self.dispatch(t.value)
         # Special case: 3.__abs__() is a syntax error, so if t.value
         # is an integer literal then we need to either parenthesize
@@ -461,12 +467,16 @@ class Unparser:
         self.write("(")
         comma = False
         for e in t.args:
-            if comma: self.write(", ")
-            else: comma = True
+            if comma:
+                self.write(", ")
+            else:
+                comma = True
             self.dispatch(e)
         for e in t.keywords:
-            if comma: self.write(", ")
-            else: comma = True
+            if comma:
+                self.write(", ")
+            else:
+                comma = True
             self.dispatch(e)
         self.write(")")
 
@@ -513,8 +523,10 @@ class Unparser:
         # normal arguments
         defaults = [None] * (len(t.args) - len(t.defaults)) + t.defaults
         for a, d in zip(t.args, defaults):
-            if first:first = False
-            else: self.write(", ")
+            if first:
+                first = False
+            else:
+                self.write(", ")
             self.dispatch(a)
             if d:
                 self.write("=")
@@ -522,8 +534,10 @@ class Unparser:
 
         # varargs, or bare '*' if no varargs but keyword-only arguments present
         if t.vararg or t.kwonlyargs:
-            if first:first = False
-            else: self.write(", ")
+            if first:
+                first = False
+            else:
+                self.write(", ")
             self.write("*")
             if t.vararg:
                 self.write(t.vararg.arg)
@@ -534,8 +548,10 @@ class Unparser:
         # keyword-only arguments
         if t.kwonlyargs:
             for a, d in zip(t.kwonlyargs, t.kw_defaults):
-                if first:first = False
-                else: self.write(", ")
+                if first:
+                    first = False
+                else:
+                    self.write(", ")
                 self.dispatch(a),
                 if d:
                     self.write("=")
@@ -543,9 +559,11 @@ class Unparser:
 
         # kwargs
         if t.kwarg:
-            if first:first = False
-            else: self.write(", ")
-            self.write("**"+t.kwarg.arg)
+            if first:
+                first = False
+            else:
+                self.write(", ")
+            self.write("**" + t.kwarg.arg)
             if t.kwarg.annotation:
                 self.write(": ")
                 self.dispatch(t.kwarg.annotation)
@@ -569,7 +587,7 @@ class Unparser:
     def _alias(self, t):
         self.write(t.name)
         if t.asname:
-            self.write(" as "+t.asname)
+            self.write(" as " + t.asname)
 
     def _withitem(self, t):
         self.dispatch(t.context_expr)
