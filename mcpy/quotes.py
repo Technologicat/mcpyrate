@@ -268,11 +268,19 @@ def capture(value, basename):
 
     The return value is an AST that, when compiled and run, looks up the
     captured value.
+
+    If the value `is` already in the registry, return an AST to look up
+    with the existing key.
     """
-    key = gensym(basename)
-    _captured[key] = value
+    for k, v in _captured.items():
+        if v is value:
+            key = k
+            break
+    else:
+        key = gensym(basename)
+        _captured[key] = value
     # print("capture: registry now:")  # DEBUG
-    # for k, v in captured.items():  # DEBUG
+    # for k, v in _captured.items():  # DEBUG
     #     print("    ", k, "-->", ast_aware_repr(v))  # DEBUG
     return _generate_lookup_ast(key)
 
