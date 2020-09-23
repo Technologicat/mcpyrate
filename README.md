@@ -102,6 +102,10 @@ def log(expr, to_source, **kw):
                 starargs=None, kwargs=None)
 ```
 
+### Quasiquotes
+
+We provide [a quasiquote system](quasiquotes.md) (both basic and hygienic) to ease writing macros. It's similar to MacroPy's, but there are differences in the details.
+
 ### Distinguish how the macro is called
 
 A macro can be called in three different ways. The way a macro is called is recorded in the `syntax` named parameter (one of `'block'`, `'expr'` or '`decorator`'), so you can distinguish the syntax used in the source code and provide different implementations for each one.
