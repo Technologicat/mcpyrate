@@ -18,6 +18,7 @@ def ast_aware_repr(thing):
         return '[{}]'.format(', '.join(ast_aware_repr(elt) for elt in thing))
     return repr(thing)
 
+_previous_gensyms = set()
 def gensym(basename=None):
     """Create a name for a new, unused lexical identifier, and return the name as an `str`.
 
@@ -26,11 +27,20 @@ def gensym(basename=None):
     Can also be used for globally unique string keys, in which case `basename`
     does not need to be a valid identifier.
     """
-    unique = "gensym_{}".format(str(uuid.uuid4()).replace('-', ''))
-    if basename:
-        sym = "{}_{}".format(basename, unique)
-    else:
-        sym = unique
+    def generate():
+        unique = "gensym_{}".format(str(uuid.uuid4()).replace('-', ''))
+        if basename:
+            sym = "{}_{}".format(basename, unique)
+        else:
+            sym = unique
+        return sym
+    sym = generate()
+    # This will never trigger, but let's be obsessively correct. The uuid
+    # spec does not guarantee no collisions; they're only astronomically
+    # unlikely.
+    while sym in _previous_gensyms:
+        generate()
+    _previous_gensyms.add(sym)
     return sym
 
 # TODO: for macro debugging, we need something like MacroPy's show_expanded.
