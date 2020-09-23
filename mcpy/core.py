@@ -12,7 +12,7 @@ class _MacroExpander(BaseMacroExpander):
         Check for a with macro as::
 
             with macroname:
-                # with's body is the argument
+                # with's body is the target of the macro
 
         It replaces the `with` node with the result of the macro.
         '''
@@ -32,7 +32,7 @@ class _MacroExpander(BaseMacroExpander):
         '''
         Check for a expression macro as::
 
-            macroname['index expression is the argument']
+            macroname['index expression is the target of the macro']
 
         It replaces the expression node with the result of the macro.
         '''
