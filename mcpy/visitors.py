@@ -1,6 +1,7 @@
 # -*- coding: utf-8; -*-
 
 from ast import NodeTransformer, AST, copy_location, fix_missing_locations
+from .ctxfixer import fix_missing_ctx
 from .unparse import unparse
 
 __all__ = ['BaseMacroExpander']
@@ -69,6 +70,7 @@ class BaseMacroExpander(NodeTransformer):
             expansion = [expansion] if is_node else expansion
             expansion = map(lambda n: copy_location(n, target), expansion)
             expansion = map(fix_missing_locations, expansion)
+            expansion = map(fix_missing_ctx, expansion)
             if self.recursive:
                 expansion = map(self.visit, expansion)
             expansion = list(expansion).pop() if is_node else list(expansion)
