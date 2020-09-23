@@ -110,7 +110,7 @@ We provide [a quasiquote system](quasiquotes.md) (both basic and hygienic) to ea
 
 A macro can be called in three different ways. The way a macro is called is recorded in the `syntax` named parameter (one of `'block'`, `'expr'` or '`decorator`'), so you can distinguish the syntax used in the source code and provide different implementations for each one.
 
-### Getting the source of an AST
+### Get the source of an AST
 
 A macro is passed a named parameter `to_source`, which is a function able to get the Python code for an AST.
 
