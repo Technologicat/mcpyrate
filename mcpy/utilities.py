@@ -3,6 +3,8 @@
 import ast
 import uuid
 
+__all__ = ['ast_aware_repr', 'gensym']
+
 # TODO: monkey-patch ast.AST.__repr__ instead?
 def ast_aware_repr(thing):
     """Like repr(), but supports ASTs.

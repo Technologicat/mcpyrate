@@ -3,6 +3,8 @@
 import ast
 from .core import find_macros, expand_macros
 
+__all__ = ['nop', 'source_to_xcode']
+
 def nop(*args, **kw): pass
 
 def source_to_xcode(self, data, path, *, _optimize=-1):

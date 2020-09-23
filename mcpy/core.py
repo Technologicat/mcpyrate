@@ -5,6 +5,8 @@ import sys
 from ast import Name, Import, ImportFrom, alias, copy_location
 from .visitors import BaseMacroExpander
 
+__all__ = ['expand_macros', 'find_macros']
+
 class _MacroExpander(BaseMacroExpander):
 
     def visit_With(self, withstmt):
