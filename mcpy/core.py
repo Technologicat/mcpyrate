@@ -92,11 +92,11 @@ class _MacroExpander(BaseMacroExpander):
 
         return macros, remaining
 
-def expand_macros(tree, bindings):
+def expand_macros(tree, bindings, filepath):
     '''
     Return an expanded version of tree with macros applied.
     '''
-    expansion = _MacroExpander(bindings).visit(tree)
+    expansion = _MacroExpander(bindings, filepath).visit(tree)
     return expansion
 
 def find_macros(tree):

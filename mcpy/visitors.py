@@ -4,7 +4,10 @@ from ast import NodeTransformer, AST, copy_location, fix_missing_locations
 from .ctxfixer import fix_missing_ctx
 from .unparse import unparse
 
-__all__ = ['BaseMacroExpander']
+__all__ = ['BaseMacroExpander', 'MacroExpansionError']
+
+class MacroExpansionError(Exception):
+    '''Represents an error during macro expansion.'''
 
 class BaseMacroExpander(NodeTransformer):
     '''
@@ -13,8 +16,9 @@ class BaseMacroExpander(NodeTransformer):
     method with the proper arguments.
     '''
 
-    def __init__(self, bindings):
+    def __init__(self, bindings, filepath):
         self.bindings = bindings
+        self.filepath = filepath
         self.recursive = True
 
     def visit(self, tree):
@@ -51,7 +55,13 @@ class BaseMacroExpander(NodeTransformer):
             'expand_macros': self.visit,
             'expand_once': self.visit_once})
 
-        expansion = _apply_macro(macro, tree, kw)
+        original_code = unparse(target)
+        try:
+            expansion = _apply_macro(macro, tree, kw)
+        except Exception as err:
+            lineno = target.lineno if hasattr(target, 'lineno') else None
+            msg = f'use site was at {self.filepath}:{lineno}: {original_code}'
+            raise MacroExpansionError(msg) from err
 
         # TODO: Fix coverage info here by injecting something if syntax='block' or syntax='decorator'.
         # TODO: The `target` node has the right location info.
