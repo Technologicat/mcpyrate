@@ -120,6 +120,8 @@ This is backconverted from the AST representation, so the result may differ in m
 
 Use the named parameter `expand_macros` with an AST to expand the macros in that AST. This is useful to expand innermost macros first.
 
+In any particular macro implementation, any code that runs before a call to `expand_macros` behaves outside-in; any code that runs after behaves inside-out.
+
 ### Examples
 
 `mcpy` focuses on the mechanisms to expand macros, not in authoring tools or macro libraries. Anyway, a `demo` folder is provided to see `mcpy` in action. Simply navigate to it and run a Python console, then import `run`:
