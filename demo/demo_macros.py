@@ -1,34 +1,35 @@
 
-from ast import *
+from ast import (Call, arg, Name, Attribute, Str, FunctionDef, Assign, Load, Store,
+                 NodeTransformer, copy_location)
 
-def customliterals(sentences, expand_macros, **kw):
+def customliterals(statements, expand_macros, **kw):
     '''
-    Allow to provide custom meaning to literals. Example:
+    Provide custom meaning to literals. Example:
 
         class MyStr(str): pass
-        
+
         with customliterals:
             str = MyStr
             assert('hi!'.__class__ is MyStr)
-        
+
         assert('hi!'.__class__ is not MyStr)
 
     You can use `str`, `tuple`, `list`, `dict`, `set` and `num` to customize
     literals.
     '''
-    visitor = _WrapLiterals() 
-    return map(visitor.visit, map(expand_macros, sentences))
+    visitor = _WrapLiterals()
+    return map(visitor.visit, map(expand_macros, statements))
 
 def log(expr, to_source, **kw):
     '''
-    Prints the passed value labeling the output with the expression. Example:
+    Print the passed value, labeling the output with the expression. Example:
 
         d = { 'a': 1 }
         log[d['a']]
 
         # prints
         # d['a']: 1
-        
+
     '''
     label = to_source(expr) + ': '
     return Call(func=Name(id='print', ctx=Load()),
@@ -37,7 +38,7 @@ def log(expr, to_source, **kw):
 
 def value(classdef, **kw):
     '''
-    Allows quick definition of singleton values a-la Scala. Example:
+    Quick definition of singleton values a-la Scala. Example:
 
         @value
         class superman:
@@ -48,23 +49,23 @@ def value(classdef, **kw):
         assert(not isinstance(superman, type))
         assert(isinstance(superman, object))
         assert(superman.completename() == 'Klark Kent')
-        
+
     '''
     symbols = _gather_symbols(classdef)
     baked_class = _IntoValueTransformer(symbols).visit(classdef)
     replacement = Assign(targets=[Name(id=baked_class.name, ctx=Store())],
                          value=Call(func=Name(id=baked_class.name, ctx=Load()),
-                         args=[], keywords=[], starargs=None, kwargs=None))
+                                    args=[], keywords=[], starargs=None, kwargs=None))
     return [baked_class, replacement]
 
 class _WrapLiterals(NodeTransformer):
     '''
-    A visitor to wrap each literal appariton with a proper name.
+    Wrap each appearance of a literal with a constructor call to that literal type.
     '''
 
     def _wrap(self, fname, node):
         '''
-        Converts a node in fname(node)
+        Convert `node` into `fname(node)`
         '''
         return copy_location(
             Call(func=Name(id=fname, ctx=Load()),
@@ -89,11 +90,10 @@ class _WrapLiterals(NodeTransformer):
 
     def visit_Num(self, node):
         return self._wrap('num', node)
-    
+
 class _IntoValueTransformer(NodeTransformer):
     '''
-    A visitor to convert simplified method syntax into traditional Python
-    syntax.
+    Convert simplified method syntax into traditional Python syntax.
     '''
 
     def __init__(self, symbols):
@@ -101,7 +101,7 @@ class _IntoValueTransformer(NodeTransformer):
 
     def visit_FunctionDef(self, functiondef):
         '''
-        Adds self as first argument of the simplified method and bind to
+        Add self as first argument of the simplified method, and bind to
         self all the internal names belonging to symbols.
         '''
         args = functiondef.args.args
@@ -111,8 +111,8 @@ class _IntoValueTransformer(NodeTransformer):
 
 class _NameBinder(NodeTransformer):
     '''
-    A visitor to transform each Name into an access to `self` if the Name
-    belongs to a set of symbols.
+    Transform each `Name` into an access to `self` if the `Name`
+    belongs to a given set of symbols.
     '''
 
     def __init__(self, symbols):
