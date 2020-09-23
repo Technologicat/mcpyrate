@@ -26,7 +26,7 @@ def gensym(basename=None):
     Can also be used for globally unique string keys, in which case `basename`
     does not need to be a valid identifier.
     """
-    unique = "{}_gensym".format(str(uuid.uuid4()).replace('-', ''))
+    unique = "gensym_{}".format(str(uuid.uuid4()).replace('-', ''))
     if basename:
         sym = "{}_{}".format(basename, unique)
     else:
