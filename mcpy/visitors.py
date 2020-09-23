@@ -14,10 +14,27 @@ class BaseMacroExpander(NodeTransformer):
 
     def __init__(self, bindings):
         self.bindings = bindings
+        self.recursive = True
 
     def visit(self, tree):
-        '''Short-circuit visit() to avoid expansions if no macros.'''
-        return super().visit(tree) if self.bindings else tree
+        '''Expand macros.
+
+        Short-circuit visit() to avoid expansions if no macros.
+        '''
+        return tree if not self.bindings else super().visit(tree)
+
+    def visit_once(self, tree):
+        '''Expand only one layer of macros.
+
+        Useful for debugging implementations of macros that invoke other macros
+        in their output.
+        '''
+        oldrec = self.recursive
+        try:
+            self.recursive = False
+            return self.visit(tree)
+        finally:
+            self.recursive = oldrec
 
     def _expand(self, syntax, target, macroname, tree, kw=None):
         '''
@@ -30,23 +47,30 @@ class BaseMacroExpander(NodeTransformer):
         kw.update({
             'syntax': syntax,
             'to_source': unparse,
-            'expand_macros': self.visit
-        })
+            'expand_macros': self.visit,
+            'expand_once': self.visit_once})
+
         expansion = _apply_macro(macro, tree, kw)
+
+        # TODO: Fix coverage info here by injecting something if syntax='block' or syntax='decorator'.
+        # TODO: The `target` node has the right location info.
 
         return self._visit_expansion(expansion, target)
 
     def _visit_expansion(self, expansion, target):
         '''
-        Ensures the macro expansions into None (deletions), other nodes or
-        list of nodes are expanded too.
+        Perform postprocessing fix-ups such as adding in missing source
+        location info.
+
+        Then recurse (using `visit`) into the once-expanded macro output.
         '''
         if expansion is not None:
             is_node = isinstance(expansion, AST)
             expansion = [expansion] if is_node else expansion
             expansion = map(lambda n: copy_location(n, target), expansion)
             expansion = map(fix_missing_locations, expansion)
-            expansion = map(self.visit, expansion)
+            if self.recursive:
+                expansion = map(self.visit, expansion)
             expansion = list(expansion).pop() if is_node else list(expansion)
 
         return expansion
