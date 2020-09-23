@@ -45,6 +45,17 @@ class CaptureLater(PseudoNode):
 
 # --------------------------------------------------------------------------------
 
+_registry = {}
+
+def _mcpy_quotes_attr(attr):
+    """Create an AST that, when compiled and run, looks up `mcpy.quotes.attr` in `Load` context."""
+    mcpy_quotes_module = ast.Attribute(value=ast.Name(id="mcpy", ctx=ast.Load()),
+                                       attr="quotes",
+                                       ctx=ast.Load())
+    return ast.Attribute(value=mcpy_quotes_module,
+                         attr=attr,
+                         ctx=ast.Load())
+
 def capture(value, basename):
     """Store a value into the hygienic capture registry. Used by `q[h[]]`.
 
@@ -66,47 +77,24 @@ def capture(value, basename):
     If the value `is` already in the registry, return an AST to look up
     with the existing key.
     """
-    for k, v in registry.items():
+    for k, v in _registry.items():
         if v is value:
             key = k
             break
     else:
         key = gensym(basename)
-        registry[key] = value
+        _registry[key] = value
     # print("capture: registry now:")  # DEBUG
-    # for k, v in registry.items():  # DEBUG
+    # for k, v in _registry.items():  # DEBUG
     #     print("    ", k, "-->", ast_aware_repr(v))  # DEBUG
-    return _generate_hygienic_lookup_ast(key)
+    return ast.Call(_mcpy_quotes_attr("lookup"),
+                    [ast.Constant(value=key)],
+                    [])
 
 def lookup(key):
     """Look up a hygienically captured value. Used in the output of `q[h[]]`."""
-    # print("lookup:", key, "-->", ast_aware_repr(captured[key]))  # DEBUG
-    return registry[key]
-
-def _generate_hygienic_lookup_ast(key):
-    """Create an AST that, when compiled and run, looks up the given hygienically captured value."""
-    # print("creating lookup for:", key)  # DEBUG
-    # The idea:
-    #     return ast.Call(ast.Name(id="lookup", ctx=ast.Load()), [ast.Constant(value=key)], [])
-    # But this way we only need to auto-inject one name, `registry`.
-    # return ast.Call(ast.Subscript(value=ast.Name(id="registry", ctx=ast.Load()),
-    #                               slice=ast.Index(value=ast.Constant(value="lookup")),
-    #                               ctx=ast.Load()),
-    #                 [ast.Constant(value=key)],
-    #                 [])
-    # And this way we don't need to auto-inject anything, because mcpy transforms a
-    # `from module import macros, ...` into `import module` at runtime.
-    mcpy_quotes_module = ast.Attribute(value=ast.Name(id="mcpy", ctx=ast.Load()),
-                                       attr="quotes",
-                                       ctx=ast.Load())
-    the_registry = ast.Attribute(value=mcpy_quotes_module,
-                                 attr="registry",
-                                 ctx=ast.Load())
-    return ast.Call(ast.Subscript(value=the_registry,
-                                  slice=ast.Index(value=ast.Constant(value="lookup")),
-                                  ctx=ast.Load()),
-                    [ast.Constant(value=key)],
-                    [])
+    # print("lookup:", key, "-->", ast_aware_repr(_registry[key]))  # DEBUG
+    return _registry[key]
 
 # --------------------------------------------------------------------------------
 
@@ -138,13 +126,7 @@ def astify(x):
     # into a lookup, and at the use site of the macro that used q[], that
     # rewritten code looks up the captured value.
     elif tx is CaptureLater:
-        # The idea:
-        #     return ast.Call(ast.Name(id='capture', ctx=ast.Load()),
-        #                     [x.body,
-        #                      ast.Constant(value=x.name)],
-        #                     [])
-        # But this way we only need to auto-inject one name, `registry`.
-        return ast.Call(_generate_hygienic_lookup_ast('capture'),
+        return ast.Call(_mcpy_quotes_attr('capture'),
                         [x.body,
                          ast.Constant(value=x.name)],
                         [])
@@ -170,8 +152,11 @@ def astify(x):
         # The magic is in the Call. We take apart the original input AST,
         # and construct a new AST, that (when compiled and run) will re-generate
         # the AST we got as input.
+        #
+        # We refer to the stdlib `ast` module as `mcpy.quotes.ast` to avoid
+        # name conflicts with anything the user may want to refer to as `ast`.
         fields = [ast.keyword(a, astify(b)) for a, b in ast.iter_fields(x)]
-        return ast.Call(ast.Attribute(value=_generate_hygienic_lookup_ast('ast'),
+        return ast.Call(ast.Attribute(value=_mcpy_quotes_attr('ast'),
                                       attr=x.__class__.__name__, ctx=ast.Load()),
                         [],
                         fields)
@@ -224,11 +209,7 @@ def u(tree, *, syntax, expand_macros, **kw):
     #
     # The magic is in the Call (this causes the delay), and in splicing in the
     # value of `tree`, without astifying it yet.
-    #
-    # The idea:
-    #     return ASTLiteral(ast.Call(ast.Name(id="astify", ctx=ast.Load()), [tree], []))
-    # But this way we only need to auto-inject one name, `registry`.
-    return ASTLiteral(ast.Call(_generate_hygienic_lookup_ast("astify"), [tree], []))
+    return ASTLiteral(ast.Call(_mcpy_quotes_attr("astify"), [tree], []))
 
 # TODO: To allow use on the LHS of an assignment, don't assume Load context.
 # TODO: Leave ctx undefined here and fix missing ctx in a walker afterward.
@@ -270,9 +251,3 @@ def h(tree, *, syntax, **kw):
     assert syntax == "expr"
     name = unparse(tree)
     return CaptureLater(tree, name)
-
-# This is the actual hygienic capture registry.
-#
-# Beside any user-defined captures, we store any objects the expanded code
-# generated by the quasiquote system itself needs.
-registry = {"ast": ast, "astify": astify, "lookup": lookup, "capture": capture}
