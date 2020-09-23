@@ -3,6 +3,8 @@
 from ast import NodeTransformer, AST, copy_location, fix_missing_locations
 from .unparse import unparse
 
+__all__ = ['BaseMacroExpander']
+
 class BaseMacroExpander(NodeTransformer):
     '''
     A base class for macro expander visitors. After identifying valid macro
