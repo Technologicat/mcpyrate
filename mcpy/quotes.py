@@ -17,8 +17,7 @@ class PseudoNode(ast.AST):
     by `astify`, to allow the rest of `mcpy` to deal with real AST nodes only.
 
     We inherit from `ast.AST` to let `mcpy`'s expander know this behaves
-    somewhat like an AST node, so it won't choke on this while expanding
-    quasiquotes.
+    somewhat like a single AST node.
     """
     def __init__(self, body):
         """body: the real AST"""
@@ -56,7 +55,7 @@ def _mcpy_quotes_attr(attr):
                          ctx=ast.Load())
 
 def capture(value, basename):
-    """Store a value into the hygienic capture registry. Used by `q[h[]]`.
+    """Store a value into the hygienic capture registry.
 
     `value`:    Any run-time value.
     `basename`: Basename for gensymming a unique key for the value.
@@ -72,16 +71,12 @@ def capture(value, basename):
     else:
         key = gensym(basename)
         _registry[key] = value
-    # print("capture: registry now:")  # DEBUG
-    # for k, v in _registry.items():  # DEBUG
-    #     print("    ", k, "-->", ast_aware_repr(v))  # DEBUG
     return ast.Call(_mcpy_quotes_attr("lookup"),
                     [ast.Constant(value=key)],
                     [])
 
 def lookup(key):
-    """Look up a hygienically captured value. Used in the output of `q[h[]]`."""
-    # print("lookup:", key, "-->", ast_aware_repr(_registry[key]))  # DEBUG
+    """Look up a hygienically captured value."""
     return _registry[key]
 
 # --------------------------------------------------------------------------------
@@ -98,7 +93,7 @@ def astify(x):  # like MacroPy's `ast_repr`
     """
     tx = type(x)
 
-    # Drop the ASTLiteral pseudo-node wrapper; it only tells us to skip further processing.
+    # Drop the ASTLiteral wrapper; it only tells us to pass through this subtree as-is.
     if tx is ASTLiteral:
         return x.body
 
@@ -113,11 +108,9 @@ def astify(x):  # like MacroPy's `ast_repr`
                          ast.Constant(value=x.name)],
                         [])
 
-    # Constants (Python 3.6+).
     elif tx in (int, float, str, bytes, bool, type(None)):
         return ast.Constant(value=x)
 
-    # Containers.
     elif tx is list:
         return ast.List(elts=list(astify(elt) for elt in x))
     elif tx is dict:
@@ -126,7 +119,6 @@ def astify(x):  # like MacroPy's `ast_repr`
     elif tx is set:
         return ast.Set(elts=list(astify(elt) for elt in x))
 
-    # Anything that is already an AST node (e.g. `Name`).
     elif isinstance(x, ast.AST):
         # The magic is in the Call. Take apart the input AST, and construct a
         # new AST, that (when compiled and run) will re-generate the input AST.
@@ -155,14 +147,11 @@ def astify(x):  # like MacroPy's `ast_repr`
 # TODO: This would also make `q` behave like in Lisps - quasiquoted macro invocations
 # TODO: will then not be expanded (the caller is expected to `expand_macros` on them if they want).
 #
-# TODO: q[] should assert the final output does not contain `PseudoNode` instances, those are internal.
-# TODO: Doing that needs a walker.
+# TODO: q[] should assert the final output does not contain `PseudoNode` instances. Needs a walker.
 def q(tree, *, syntax, expand_macros, **kw):
     """Quasiquote an expr, lifting it into its AST representation."""
     assert syntax == "expr"
     tree = expand_macros(tree)
-    # The trick is to wrap the original AST such that when the macro system
-    # compiles and runs our return value, that produces our input `tree`.
     return astify(tree)
 
 # TODO: u[] should expand macros only when the quotelevel hits zero. Track it.
