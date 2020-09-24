@@ -104,7 +104,7 @@ def log(expr, to_source, **kw):
 
 ### Quasiquotes
 
-We provide [a quasiquote system](quasiquotes.md) (both basic and hygienic) to ease writing macros. It's similar to MacroPy's, but there are differences in the details.
+We provide [a quasiquote system](quasiquotes.md) (both classical and hygienic) to ease writing macros. It's similar to MacroPy's, but there are differences in the details.
 
 ### Distinguish how the macro is called
 
