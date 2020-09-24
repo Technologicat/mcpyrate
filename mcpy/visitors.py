@@ -91,7 +91,5 @@ class BaseMacroExpander(NodeTransformer):
         return name in self.bindings
 
 def _apply_macro(macro, tree, kw):
-    '''
-    Execute the macro on tree passing extra kwargs.
-    '''
+    '''Execute the macro on tree passing extra kwargs.'''
     return macro(tree, **kw)
