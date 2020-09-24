@@ -1,4 +1,9 @@
 # -*- coding: utf-8; -*-
+'''Fix any missing `ctx` attributes in an AST.
+
+Allows you to build your ASTs without caring about that stuff and just
+fill it in later.
+'''
 
 from ast import (NodeTransformer,
                  Load, Store, Del,
@@ -19,11 +24,6 @@ except ImportError:
 __all__ = ['fix_missing_ctx']
 
 class _CtxFixer(NodeTransformer):
-    '''Fix any missing `ctx` attributes in an AST.
-
-    Allows you to build your ASTs without caring about that stuff and just
-    fill it in later.
-    '''
     def __init__(self):
         self.stack = [Load]
         self.subtrees = {}
@@ -65,7 +65,7 @@ class _CtxFixer(NodeTransformer):
             self._set_ctx_for(tree.annotation, Load)
             if tree.value:
                 self._set_ctx_for(tree.value, Load)
-        elif tt is NamedExpr:  # TODO
+        elif tt is NamedExpr:
             self._set_ctx_for(tree.target, Store)
             self._set_ctx_for(tree.value, Load)
         elif tt is AugAssign:
@@ -101,10 +101,9 @@ class _CtxFixer(NodeTransformer):
                 self._set_ctx_for(x, Del)
 
 def fix_missing_ctx(tree):
-    '''Fix any missing `ctx` attributes in an AST.
+    '''Fix any missing `ctx` attributes in `tree`.
 
-    Allows you to build your ASTs without caring about that stuff and just
-    fill it in later.
+    Modifies `tree` in-place. For convenience, returns the modified `tree`.
     '''
     ctxfixer = _CtxFixer()
     return ctxfixer.visit(tree)
