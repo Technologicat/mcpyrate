@@ -183,3 +183,5 @@ def h(tree, *, syntax, **kw):
     assert syntax == "expr"
     name = unparse(tree)
     return CaptureLater(tree, name)
+
+# TODO: add s[] to splice a list value as an ast.List
