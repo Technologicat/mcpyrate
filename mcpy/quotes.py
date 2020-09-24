@@ -170,12 +170,9 @@ def u(tree, *, syntax, expand_macros, **kw):
     """Splice a simple value into quasiquoted code."""
     assert syntax == "expr"
     tree = expand_macros(tree)
-    # If e.g. `tree=ast.Name(id=v)`, we **don't** want to generate an AST that
-    # compiles to a reference to a lexical variable named `v`. We want to
-    # generate an AST that compiles to the *value* of `v`. But when this runs,
-    # it is too early. We must astify when *our output* is compiled and run.
-    #
-    # The magic is in the Call, and in splicing in `tree` as-is.
+    # We want to generate an AST that compiles to the *value* of `v`. But when
+    # this runs, it is too early. We must astify *at the use site*. So use an
+    # `ast.Call` to delay, and in there, splice in `tree` as-is.
     return ASTLiteral(ast.Call(_mcpy_quotes_attr("astify"), [tree], []))
 
 def n(tree, *, syntax, expand_macros, **kw):
