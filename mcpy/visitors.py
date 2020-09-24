@@ -63,9 +63,6 @@ class BaseMacroExpander(NodeTransformer):
             msg = f'use site was at {self.filepath}:{lineno}: {original_code}'
             raise MacroExpansionError(msg) from err
 
-        # TODO: Fix coverage info here by injecting something if syntax='block' or syntax='decorator'.
-        # TODO: The `target` node has the right location info.
-
         return self._visit_expansion(expansion, target)
 
     def _visit_expansion(self, expansion, target):
