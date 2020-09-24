@@ -1,12 +1,11 @@
 # -*- coding: utf-8; -*-
-"""Usage: unparse.py <path to source file>
-
-Or from Python, use `unparse(tree)`.
-"""
+"""Back-convert a Python AST into source code. Original formatting is disregarded."""
 
 import sys
 import ast
 import io
+
+__all__ = ['unparse']
 
 # Large float and imaginary literals get turned into infinities in the AST.
 # We unparse those infinities to INFSTR.
@@ -72,14 +71,15 @@ class Unparser:
     # currently doesn't.                                   #
     ########################################################
 
-    def _Module(self, tree):
-        for stmt in tree.body:
+    def _Module(self, t):
+        for stmt in t.body:
             self.dispatch(stmt)
+        # TODO: Python 3.8 type_ignores. Since we don't store the source text, maybe ignore that?
 
     # stmt
-    def _Expr(self, tree):
+    def _Expr(self, t):
         self.fill()
-        self.dispatch(tree.value)
+        self.dispatch(t.value)
 
     def _Import(self, t):
         self.fill("import ")
@@ -99,6 +99,20 @@ class Unparser:
             self.dispatch(target)
             self.write(" = ")
         self.dispatch(t.value)
+
+    def _AnnAssign(self, t):
+        self.fill()
+        if not t.simple:
+            self.write("(")
+        self.dispatch(t.target)
+        if not t.simple:
+            self.write(")")
+        self.write(": ")
+        self.dispatch(t.annotation)
+        if t.value:
+            self.write(" = ")
+            self.dispatch(t.value)
+        # TODO: Python 3.8 type_comment, ignore it?
 
     def _AugAssign(self, t):
         self.fill()
@@ -252,6 +266,7 @@ class Unparser:
         self.enter()
         self.dispatch(t.body)
         self.leave()
+        # TODO: Python 3.8 type_comment, ignore it?
 
     def _For(self, t):
         self.__For_helper("for ", t)
@@ -272,6 +287,7 @@ class Unparser:
             self.enter()
             self.dispatch(t.orelse)
             self.leave()
+        # TODO: Python 3.8 type_comment, ignore it?
 
     def _If(self, t):
         self.fill("if ")
@@ -313,6 +329,7 @@ class Unparser:
         self.enter()
         self.dispatch(t.body)
         self.leave()
+        # TODO: Python 3.8 type_comment, ignore it?
 
     def _AsyncWith(self, t):
         self.fill("async with ")
@@ -322,20 +339,41 @@ class Unparser:
         self.leave()
 
     # expr
-    def _Bytes(self, t):
+    def _NamedExpr(self, t):  # Python 3.8+
+        self.write("(")
+        self.dispatch(t.target)
+        self.write(" := ")
+        self.dispatch(t.value)
+        self.write(")")
+
+    def _Constant(self, t):  # Python 3.8+
+        # Actually added in 3.6, but Python's parser only produces them starting with 3.8.
+        # Replaces the node types Bytes, Str, Num, NameConstant, and Ellipsis.
+        if hasattr(t, "kind") and t.kind == "u":  # 3.8+: u"..." vs. "..."
+            self.write("u")
+        if type(t.value) in (int, float, complex):
+            # Represent AST infinity as an overflowing decimal literal.
+            v = repr(t.value).replace("inf", INFSTR)
+        elif t.value is Ellipsis:
+            v = "..."
+        else:
+            v = repr(t.value)
+        self.write(v)
+
+    def _Bytes(self, t):  # up to Python 3.7
         self.write(repr(t.s))
 
-    def _Str(self, tree):
+    def _Str(self, tree):  # up to Python 3.7
         self.write(repr(tree.s))
 
     def _Name(self, t):
         self.write(t.id)
 
-    def _NameConstant(self, t):
+    def _NameConstant(self, t):  # up to Python 3.7
         self.write(repr(t.value))
 
-    def _Num(self, t):
-        # Substitute overflowing decimal literal for AST infinities.
+    def _Num(self, t):  # up to Python 3.7
+        # Represent AST infinity as an overflowing decimal literal.
         self.write(repr(t.n).replace("inf", INFSTR))
 
     def _List(self, t):
@@ -374,6 +412,8 @@ class Unparser:
         self.write("}")
 
     def _comprehension(self, t):
+        if t.is_async:
+            self.write(" async")
         self.write(" for ")
         self.dispatch(t.target)
         self.write(" in ")
@@ -453,11 +493,13 @@ class Unparser:
         self.write(")")
 
     def _Attribute(self, t):
-        self.dispatch(t.value)
+        v = t.value
+        self.dispatch(v)
         # Special case: 3.__abs__() is a syntax error, so if t.value
         # is an integer literal then we need to either parenthesize
         # it or add an extra space to get 3 .__abs__().
-        if isinstance(t.value, ast.Num) and isinstance(t.value.n, int):
+        if ((isinstance(v, ast.Constant) and isinstance(v.value, int)) or
+                (isinstance(v, ast.Num) and isinstance(v.n, int))):
             self.write(" ")
         self.write(".")
         self.write(t.attr)
@@ -480,6 +522,52 @@ class Unparser:
             self.dispatch(e)
         self.write(")")
 
+    def _FormattedValue(self, t):
+        # Node representing a single formatting field in an f-string. If the
+        # string contains a single formatting field and nothing else the node
+        # can be isolated otherwise it appears in `JoinedStr`.
+        # TODO: implement quote character handling
+        self.write('f"')
+        self._FormattedValue_helper(t, '"')
+        self.write('"')
+
+    def _FormatterValue_helper(self, t, outer_q):
+        self.write("{")
+        self.dispatch(t.value)
+        if t.conversion == 115:
+            self.write("!s")
+        elif t.conversion == 114:
+            self.write("!r")
+        elif t.conversion == 97:
+            self.write("!a")
+        elif t.conversion == -1:  # no formatting
+            pass
+        else:
+            raise ValueError(f"Don't know how to unparse conversion code {t.conversion}")
+        if t.format_spec:
+            self.write(":")
+            self._JoinedStr_helper(t.format_spec, outer_q)
+        self.write("}")
+
+    def _JoinedStr(self, t):
+        # TODO: implement quote character handling
+        # TODO: Must scan the values for `\n` to know whether to use triple quotes at this level.
+        self.write(f'"')
+        self._JoinedStr_helper(t, '"')
+        self.write('"')
+
+    def _JoinedStr_helper(self, t, outer_q):
+        for v in t.values:
+            # Omit the surrounding quotes in string snippets
+            if type(v) is ast.Constant:
+                self.write(v.value)
+            elif type(v) is ast.Str:  # up to Python 3.7
+                self.write(v.s)
+            elif type(v) is ast.FormattedValue:
+                self._FormattedValue_helper(v, outer_q)
+            else:
+                raise ValueError(f"Don't know how to unparse {t!r} inside an f-string")
+
     def _Subscript(self, t):
         self.dispatch(t.value)
         self.write("[")
@@ -491,7 +579,7 @@ class Unparser:
         self.dispatch(t.value)
 
     # slice
-    def _Ellipsis(self, t):
+    def _Ellipsis(self, t):  # up to Python 3.7
         self.write("...")
 
     def _Index(self, t):
@@ -520,17 +608,34 @@ class Unparser:
     # others
     def _arguments(self, t):
         first = True
-        # normal arguments
-        defaults = [None] * (len(t.args) - len(t.defaults)) + t.defaults
-        for a, d in zip(t.args, defaults):
-            if first:
-                first = False
-            else:
-                self.write(", ")
-            self.dispatch(a)
-            if d:
-                self.write("=")
-                self.dispatch(d)
+
+        # positional-only, and positional-or-keyword arguments
+        nposargs = len(t.args)
+        if hasattr(t, "posonlyargs"):
+            nposonlyargs = len(t.posonlyargs)
+            nposargs += nposonlyargs
+        defaults = [None] * (nposargs - len(t.defaults)) + t.defaults
+
+        if hasattr(t, "posonlyargs"):
+            args_sets = [t.posonlyargs, t.args]
+            defaults_sets = [defaults[:nposonlyargs], defaults[nposonlyargs:]]
+            set_separator = ', /'
+        else:
+            args_sets = [t.args]
+            defaults_sets = [defaults]
+            set_separator = ''
+
+        for args, defaults in zip(args_sets, defaults_sets):
+            for a, d in zip(args, defaults):
+                if first:
+                    first = False
+                else:
+                    self.write(", ")
+                self.dispatch(a)
+                if d:
+                    self.write("=")
+                    self.dispatch(d)
+            self.write(set_separator)
 
         # varargs, or bare '*' if no varargs but keyword-only arguments present
         if t.vararg or t.kwonlyargs:
