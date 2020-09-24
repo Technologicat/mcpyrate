@@ -137,15 +137,12 @@ def astify(x):
 
     # Containers.
     elif tx is list:
-        return ast.List(elts=list(astify(elt) for elt in x),
-                        ctx=ast.Load())
+        return ast.List(elts=list(astify(elt) for elt in x))
     elif tx is dict:
         return ast.Dict(keys=list(astify(k) for k in x.keys()),
-                        values=list(astify(v) for v in x.values()),
-                        ctx=ast.Load())
+                        values=list(astify(v) for v in x.values()))
     elif tx is set:
-        return ast.Set(elts=list(astify(elt) for elt in x),
-                       ctx=ast.Load())
+        return ast.Set(elts=list(astify(elt) for elt in x))
 
     # Anything that is already an AST node (e.g. `Name`).
     elif isinstance(x, ast.AST):
@@ -157,7 +154,8 @@ def astify(x):
         # name conflicts with anything the user may want to refer to as `ast`.
         fields = [ast.keyword(a, astify(b)) for a, b in ast.iter_fields(x)]
         return ast.Call(ast.Attribute(value=_mcpy_quotes_attr('ast'),
-                                      attr=x.__class__.__name__, ctx=ast.Load()),
+                                      attr=x.__class__.__name__,
+                                      ctx=ast.Load()),
                         [],
                         fields)
 
@@ -211,14 +209,15 @@ def u(tree, *, syntax, expand_macros, **kw):
     # value of `tree`, without astifying it yet.
     return ASTLiteral(ast.Call(_mcpy_quotes_attr("astify"), [tree], []))
 
-# TODO: To allow use on the LHS of an assignment, don't assume Load context.
-# TODO: Leave ctx undefined here and fix missing ctx in a walker afterward.
-# TODO: The place to do that is in `mcpy.visitors.BaseMacroExpander._visit_expansion`,
-# TODO: probably just after calling `fix_missing_locations`.
 def n(tree, *, syntax, expand_macros, **kw):
-    """Splice an str, lifted into a lexical identifier in Load context, into quasiquoted code."""
+    """Splice an str, lifted into a lexical identifier, into quasiquoted code.
+
+    The resulting node's `ctx` is handled automatically by the macro expander later.
+    """
     assert syntax == "expr"
     tree = expand_macros(tree)
+    # These notes are from the first version that supported only `Load` context.
+    #
     # Output:  ast.Name(id=..., ctx=ast.Load())
     #
     # This is clumsy to do manually. For documentation purposes:
@@ -236,8 +235,10 @@ def n(tree, *, syntax, expand_macros, **kw):
     #
     # But wait, that looks familiar... like the output of `astify`?
     # The inner `ASTLiteral` here tells `astify` not to astify that part, and then vanishes.
-    return ASTLiteral(astify(ast.Name(id=ASTLiteral(tree),
-                                      ctx=ast.Load())))
+    #
+    # We leave ctx undefined here, and fix missing ctx in a walker afterward,
+    # so it gets either `Load`, `Store` or `Del`, depending on where the `n[]` appeared.
+    return ASTLiteral(astify(ast.Name(id=ASTLiteral(tree))))
 
 # TODO: Typecheck that the `tree` really is an AST. Difficult to do, since this is a
 # TODO: macro - even the wrong kind of input is technically represented as an AST.
