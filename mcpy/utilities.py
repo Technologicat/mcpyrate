@@ -40,12 +40,6 @@ def gensym(basename=None):
     _previous_gensyms.add(sym)
     return sym
 
-# TODO: for macro debugging, we need something like MacroPy's show_expanded.
-# def expand(tree, *, syntax, expand_macros, **kw):
-#     """Macroexpand an AST and return the result."""
-#     tree = expand_macros(tree)
-#     # We must use q as a regular function, since we can't import it as a macro in this module itself.
-#     return q(tree, syntax=syntax, expand_macros=expand_macros)
 
 class Bunch:
     """A bunch of named values.
