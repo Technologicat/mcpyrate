@@ -59,6 +59,11 @@ class BaseMacroExpander(NodeTransformer):
         try:
             expansion = _apply_macro(macro, tree, kw)
         except Exception as err:
+            # For nested macro invocations, we may get a large number of
+            # chained exceptions, one for each level. Report only the outermost
+            # once.
+            if isinstance(err, MacroExpansionError):
+                err = err.__cause__
             lineno = target.lineno if hasattr(target, 'lineno') else None
             msg = f'use site was at {self.filepath}:{lineno}: {original_code}'
             raise MacroExpansionError(msg) from err
