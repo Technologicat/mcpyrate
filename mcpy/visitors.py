@@ -19,7 +19,7 @@ class BaseMacroExpander(NodeTransformer):
     def __init__(self, bindings, filepath):
         self.bindings = bindings
         self.filepath = filepath
-        self.recursive = True
+        self._recursive = True
 
     def visit(self, tree):
         '''Expand macros.
@@ -33,12 +33,12 @@ class BaseMacroExpander(NodeTransformer):
 
         Helps debugging macros that invoke other macros.
         '''
-        oldrec = self.recursive
+        oldrec = self._recursive
         try:
-            self.recursive = False
+            self._recursive = False
             return self.visit(tree)
         finally:
-            self.recursive = oldrec
+            self._recursive = oldrec
 
     def _expand(self, syntax, target, macroname, tree, kw=None):
         '''
@@ -83,7 +83,7 @@ class BaseMacroExpander(NodeTransformer):
             expansion = map(lambda n: copy_location(n, target), expansion)
             expansion = map(fix_missing_locations, expansion)
             expansion = map(fix_missing_ctx, expansion)
-            if self.recursive:
+            if self._recursive:
                 expansion = map(self.visit, expansion)
             expansion = list(expansion).pop() if is_node else list(expansion)
 
