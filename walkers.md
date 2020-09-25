@@ -23,6 +23,7 @@ walker base class, with a state stack and a node collector.
 
 The selling points are `withstate`, `state`, `collect`, `collected`, which see below.
 
+
 ## Attributes
 
  - `state: mcpy.utilities.Bunch`: stores named values as its attributes.
@@ -31,11 +32,19 @@ The selling points are `withstate`, `state`, `collect`, `collected`, which see b
    (`self.state = ...`).
 
    It's essentially a namespace, implemented as an object that internally stores
-   its things in a dict.
+   things in a dict. The point of using `Bunch` here is more convenient access
+   syntax; `self.state.x` instead of `self.state['x']`.
+
+   If you're familiar with MacroPy's `Walker`, this replaces the `set_ctx`,
+   `set_ctx_for` mechanism. Mutating the state is equivalent to `set_ctx`,
+   and `withstate` is equivalent to `set_ctx_for`.
 
  - `collected: list`: list of collected values.
 
+
 ## Methods
+
+ - `__init__`: load the given bindings into the walker's initial state.
 
  - `visit`: start walking. Can also be used to manually recurse selectively.
 
@@ -60,13 +69,13 @@ The selling points are `withstate`, `state`, `collect`, `collected`, which see b
    nodes (when syntactically admissible, i.e. in statement suites), or `None`
    to delete this subtree.
 
-   *It is the responsibility of this method to recurse explicitly.*
+   *This method must recurse explicitly.*
 
    Like in any `ast.NodeTransformer`, call `self.generic_visit(tree)` to
    recurse into all children of `tree`.
 
    To recurse selectively, `self.visit` the desired subtrees (statement suites
-   are also ok). Be sure to use `visit`, not `transform`, to make any `withstate`
+   are also ok). Be sure to use `visit`, not `transform`, to make `withstate`
    updates take effect.
 
  - `generic_visit`: recurse into all children. Inherited from `ast.NodeTransformer`.
