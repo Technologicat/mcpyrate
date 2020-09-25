@@ -31,7 +31,7 @@ class BaseMacroExpander(NodeTransformer):
     def visit_once(self, tree):
         '''Expand only one layer of macros.
 
-        Helps debugging macros that invoke other macros.
+        Helps debug macros that invoke other macros.
         '''
         oldrec = self._recursive
         try:
@@ -54,7 +54,7 @@ class BaseMacroExpander(NodeTransformer):
             'to_source': unparse,
             'expand_macros': self.visit,
             'expand_once': self.visit_once,
-            'expander': self})  # For advanced hackery. See mcpy.quotes.
+            'expander': self})  # For advanced hackery.
 
         original_code = unparse(target)
         try:
