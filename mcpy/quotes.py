@@ -44,9 +44,9 @@ class CaptureLater(PseudoNode):  # like MacroPy's `Captured`
         return "{}({}, {})".format(self.__class__.__name__, ast_aware_repr(self.body), repr(self.name))
 
 def get_pseudonodes(tree):
-    """Return a `list` of any `PseudoNode` instances found in `tree`. For output sanity checking."""
+    """Return a `list` of any `PseudoNode` instances found in `tree`. For output validation."""
     class PseudoNodeCollector(Walker):
-        def process(self, tree):
+        def transform(self, tree):
             if isinstance(tree, PseudoNode):
                 self.collect(tree)
             self.generic_visit(tree)
@@ -153,7 +153,7 @@ def astify(x):  # like MacroPy's `ast_repr`
 
 _quotelevel = 0
 @contextmanager
-def _change_level(delta):
+def _quotelevel_changed_by(delta):
     global _quotelevel
     _quotelevel += delta
     try:
@@ -171,10 +171,13 @@ def _change_level(delta):
 #
 # Use/implement a walker and then, in `q`, act on `Subscript` nodes with the appropriate names.
 # The unquote operators won't then be independent macros.
+#
+# But think about the implications first - we can't currently hygienically unquote macro names,
+# so the use site will have to import any macros that weren't expanded, to make the expander see them.
 def q(tree, *, syntax, expand_macros, **kw):
     """Quasiquote an expr, lifting it into its AST representation."""
     assert syntax == "expr"
-    with _change_level(+1):
+    with _quotelevel_changed_by(+1):
         tree = expand_macros(tree)
         tree = astify(tree)
         ps = get_pseudonodes(tree)  # sanity check output
@@ -182,13 +185,13 @@ def q(tree, *, syntax, expand_macros, **kw):
             assert False, f"Internal PseudoNode instances remaining in output: {ps}"
         return tree
 
-# TODO: u[] should expand macros only when the quotelevel hits zero. Track it.
 def u(tree, *, syntax, expand_macros, **kw):
     """Splice a simple value into quasiquoted code."""
     assert syntax == "expr"
     if _quotelevel < 1:
         raise SyntaxError("u[] encountered while quotelevel < 1")
-    with _change_level(-1):
+    with _quotelevel_changed_by(-1):
+        # TODO: we should still expand other quote/unquote macros?
         if _quotelevel == 0:
             tree = expand_macros(tree)
     # We want to generate an AST that compiles to the *value* of `v`. But when
@@ -204,7 +207,8 @@ def n(tree, *, syntax, expand_macros, **kw):
     assert syntax == "expr"
     if _quotelevel < 1:
         raise SyntaxError("n[] encountered while quotelevel < 1")
-    with _change_level(-1):
+    with _quotelevel_changed_by(-1):
+        # TODO: we should still expand other quote/unquote macros?
         if _quotelevel == 0:
             tree = expand_macros(tree)
     return ASTLiteral(astify(ast.Name(id=ASTLiteral(tree))))
@@ -214,7 +218,7 @@ def a(tree, *, syntax, **kw):
     assert syntax == "expr"
     if _quotelevel < 1:
         raise SyntaxError("a[] encountered while quotelevel < 1")
-    with _change_level(-1):
+    with _quotelevel_changed_by(-1):
         return ASTLiteral(tree)
 
 def h(tree, *, syntax, **kw):
@@ -222,7 +226,7 @@ def h(tree, *, syntax, **kw):
     assert syntax == "expr"
     if _quotelevel < 1:
         raise SyntaxError("h[] encountered while quotelevel < 1")
-    with _change_level(-1):
+    with _quotelevel_changed_by(-1):
         name = unparse(tree)
         return CaptureLater(tree, name)
 
