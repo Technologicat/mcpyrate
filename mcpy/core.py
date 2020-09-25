@@ -2,7 +2,7 @@
 '''Provide the functionality to find and expand macros.'''
 
 import sys
-from ast import Name, Import, ImportFrom, alias, copy_location
+from ast import Name, Import, ImportFrom, alias, AST, Expr, Constant, copy_location
 from .visitors import BaseMacroExpander
 
 __all__ = ['expand_macros', 'find_macros']
@@ -21,10 +21,11 @@ class _MacroExpander(BaseMacroExpander):
         with_item = withstmt.items[0]
         candidate = with_item.context_expr
         if isinstance(candidate, Name) and self._ismacro(candidate.id):
-            macro = candidate.id
+            macroname = candidate.id
             tree = withstmt.body
             kw = {'optional_vars': with_item.optional_vars}
-            new_tree = self._expand('block', withstmt, macro, tree, kw)
+            new_tree = self._expand('block', withstmt, macroname, tree, kw)
+            new_tree = _fix_coverage_reporting(new_tree, withstmt)
         else:
             new_tree = self.generic_visit(withstmt)
 
@@ -40,9 +41,9 @@ class _MacroExpander(BaseMacroExpander):
         '''
         candidate = subscript.value
         if isinstance(candidate, Name) and self._ismacro(candidate.id):
-            macro = candidate.id
+            macroname = candidate.id
             tree = subscript.slice.value
-            new_tree = self._expand('expr', subscript, macro, tree)
+            new_tree = self._expand('expr', subscript, macroname, tree)
         else:
             new_tree = self.generic_visit(subscript)
 
@@ -74,7 +75,10 @@ class _MacroExpander(BaseMacroExpander):
         decorated.decorator_list = decorators
         if macros:
             for macro in reversed(macros):
-                new_tree = self._expand('decorator', decorated, macro, decorated)
+                macroname = macro.id
+                new_tree = self._expand('decorator', decorated, macroname, decorated)
+            for macro in reversed(macros):
+                new_tree = _fix_coverage_reporting(new_tree, macro)
         else:
             new_tree = self.generic_visit(decorated)
 
@@ -83,12 +87,12 @@ class _MacroExpander(BaseMacroExpander):
     def _filter_out_macros(self, decorators):
         '''
         Identify macro names inside a decorator list, and return a pair with
-        macro names and the decorators not identified as macros.
+        macro decorators and the decorators not identified as macros.
         '''
         macros, remaining = [], []
         for d in decorators:
             if isinstance(d, Name) and self._ismacro(d.id):
-                macros.append(d.id)
+                macros.append(d)
             else:
                 remaining.append(d)
 
@@ -148,3 +152,23 @@ def _get_macros(macroimport):
     module = sys.modules[modulename]
     return {name.asname or name.name: getattr(module, name.name)
              for name in macroimport.names[1:]}
+
+def _fix_coverage_reporting(tree, target):
+    '''
+    Fix Coverage.py test coverage reporting for block and decorator macros.
+
+    The issue is the line invoking the macro is compiled away, so we insert a
+    dummy node, copying source location information from the AST node `target`.
+
+    `tree` must appear in a position where `ast.NodeTransformer.visit` is
+    allowed to return a list of nodes.
+    '''
+    if tree is None:
+        tree = []
+    elif isinstance(tree, AST):
+        tree = [tree]
+    # The dummy node must be something that actually runs, an `ast.Pass` won't do.
+    non = copy_location(Constant(value=None), target)
+    dummy = copy_location(Expr(value=non), target)
+    tree.insert(0, dummy)
+    return tree

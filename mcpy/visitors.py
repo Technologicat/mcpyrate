@@ -80,7 +80,7 @@ class BaseMacroExpander(NodeTransformer):
         if expansion is not None:
             is_node = isinstance(expansion, AST)
             expansion = [expansion] if is_node else expansion
-            expansion = map(lambda n: copy_location(n, target), expansion)
+            # expansion = map(lambda n: copy_location(n, target), expansion)
             expansion = map(fix_missing_locations, expansion)
             expansion = map(fix_missing_ctx, expansion)
             if self._recursive:
