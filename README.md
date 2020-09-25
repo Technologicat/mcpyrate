@@ -102,9 +102,13 @@ def log(expr, to_source, **kw):
                 starargs=None, kwargs=None)
 ```
 
+Any missing source locations and `ctx` fields are fixed automatically in a postprocessing step, so you don't need to care about those when writing your AST.
+
+If you get an error saying an AST node is missing the mandatory field `lineno`, the actual error is likely something else. The first thing to check is that your macro is really inserting AST nodes where the compiler expects those, instead of accidentally inserting bare values.
+
 ### Quasiquotes
 
-We provide [a quasiquote system](quasiquotes.md) (both classical and hygienic) to ease writing macros. It's similar to MacroPy's, but there are differences in the details.
+We provide [a quasiquote system](quasiquotes.md) (both classical and hygienic) to make macro code both much more readable and simpler to write. It's similar to MacroPy's, but there are differences in the details.
 
 ### Walk an AST
 
@@ -125,6 +129,14 @@ This is backconverted from the AST representation, so the result may differ in m
 Use the named parameter `expand_macros` with an AST to expand the macros in that AST. This is useful to expand innermost macros first.
 
 In any particular macro implementation, any code that runs before a call to `expand_macros` behaves outside-in; any code that runs after behaves inside-out.
+
+Using `expand_macros`, expansion continues recursively until no macros are left in the AST that was given to it. To instead expand only one layer of macros, use the named parameter `expand_once`. This can be useful during debugging of a macro implementation.
+
+### Macro expansion error reporting
+
+An exception raised during macro expansion is reported immediately, and the program exits. The error report includes two source locations: the macro use site (which was being expanded, not running yet), and the macro code that raised the exception (that was running and was terminated due to the exception).
+
+The use site source location is reported in a chained exception (`raise from`), so if the second stack trace is long, scroll back in your terminal to see the original exception that was raised by the macro.
 
 ### Examples
 
