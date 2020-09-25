@@ -31,8 +31,7 @@ class BaseMacroExpander(NodeTransformer):
     def visit_once(self, tree):
         '''Expand only one layer of macros.
 
-        Useful for debugging implementations of macros that invoke other macros
-        in their output.
+        Helps debugging macros that invoke other macros.
         '''
         oldrec = self.recursive
         try:
@@ -59,9 +58,8 @@ class BaseMacroExpander(NodeTransformer):
         try:
             expansion = _apply_macro(macro, tree, kw)
         except Exception as err:
-            # For nested macro invocations, we may get a large number of
-            # chained exceptions, one for each level. Report only the outermost
-            # once.
+            # If expansion fails, report macro use site as well as the definition site.
+            # Discard inner levels in nested macro invocations to keep the error report short.
             if isinstance(err, MacroExpansionError):
                 err = err.__cause__
             lineno = target.lineno if hasattr(target, 'lineno') else None
@@ -73,9 +71,9 @@ class BaseMacroExpander(NodeTransformer):
     def _visit_expansion(self, expansion, target):
         '''
         Perform postprocessing fix-ups such as adding in missing source
-        location info.
+        location info and `ctx`.
 
-        Then recurse (using `visit`) into the once-expanded macro output.
+        Then recurse into (`visit`) the once-expanded macro output.
         '''
         if expansion is not None:
             is_node = isinstance(expansion, AST)
