@@ -5,14 +5,14 @@ Allows you to build your ASTs without caring about that stuff and just
 fill it in later.
 '''
 
-from ast import (NodeTransformer,
-                 Load, Store, Del,
+from ast import (Load, Store, Del,
                  Assign, AnnAssign, AugAssign,
                  Attribute, Subscript,
                  comprehension,
                  For, AsyncFor,
                  withitem,
                  Delete)
+from .walkers import Walker
 
 try:
     from ast import NamedExpr  # Python 3.8+
@@ -23,32 +23,20 @@ except ImportError:
 
 __all__ = ['fix_missing_ctx']
 
-class _CtxFixer(NodeTransformer):
+class _CtxFixer(Walker):
     def __init__(self):
-        self.stack = [Load]
-        self.subtrees = {}
+        super().__init__(ctx=Load)
 
-    def visit(self, tree):
-        newctx = self.subtrees.pop(id(tree), False)
-        if newctx:
-            self.stack.append(newctx)
-
+    def process(self, tree):
         self._fix_one(tree)
         self._analyze_subtrees(tree)
         self.generic_visit(tree)
-
-        if newctx:
-            self.stack.pop()
         return tree
 
     def _fix_one(self, tree):
-        '''Fix one missing `ctx` attribute, using the currently active ctx.'''
+        '''Fix one missing `ctx` attribute, using the currently active ctx class.'''
         if ("ctx" in type(tree)._fields and (not hasattr(tree, "ctx") or tree.ctx is None)):
-            tree.ctx = self.stack[-1]()
-
-    def _set_ctx_for(self, tree, newctx):
-        '''Use ctx class `newctx` for `tree` and its subtrees, recursively.'''
-        self.subtrees[id(tree)] = newctx
+            tree.ctx = self.state.ctx()
 
     def _analyze_subtrees(self, tree):
         '''Automatically set up which `ctx` to use for subtrees of `tree`, depending on `type(tree)`.'''
@@ -57,48 +45,45 @@ class _CtxFixer(NodeTransformer):
         # that have `Store` or `Del` (that mainly concerns expressions).
         tt = type(tree)
         if tt is Assign:
-            for x in tree.targets:
-                self._set_ctx_for(x, Store)
-            self._set_ctx_for(tree.value, Load)
+            self.withstate(tree.targets, ctx=Store)
+            self.withstate(tree.value, ctx=Load)
         elif tt is AnnAssign:
-            self._set_ctx_for(tree.target, Store)
-            self._set_ctx_for(tree.annotation, Load)
+            self.withstate(tree.target, ctx=Store)
+            self.withstate(tree.annotation, ctx=Load)
             if tree.value:
-                self._set_ctx_for(tree.value, Load)
+                self.withstate(tree.value, ctx=Load)
         elif tt is NamedExpr:
-            self._set_ctx_for(tree.target, Store)
-            self._set_ctx_for(tree.value, Load)
+            self.withstate(tree.target, ctx=Store)
+            self.withstate(tree.value, ctx=Load)
         elif tt is AugAssign:
             # `AugStore` and `AugLoad` are for internal use only, not even
             # meant to be exposed to the user; the compiler expects `Store`
             # and `Load` here. https://bugs.python.org/issue39988
-            self._set_ctx_for(tree.target, Store)
-            self._set_ctx_for(tree.value, Load)
+            self.withstate(tree.target, ctx=Store)
+            self.withstate(tree.value, ctx=Load)
 
         elif tt is Attribute:
             # The tree's own `ctx` can be whatever, but `value` always has `Load`.
-            self._set_ctx_for(tree.value, Load)
+            self.withstate(tree.value, ctx=Load)
         elif tt is Subscript:
             # The tree's own `ctx` can be whatever, but `value` and `slice` always have `Load`.
-            self._set_ctx_for(tree.value, Load)
-            self._set_ctx_for(tree.slice, Load)
+            self.withstate(tree.value, ctx=Load)
+            self.withstate(tree.slice, ctx=Load)
 
         elif tt is comprehension:
-            self._set_ctx_for(tree.target, Store)
-            self._set_ctx_for(tree.iter, Load)
-            for x in tree.ifs:
-                self._set_ctx_for(x, Load)
+            self.withstate(tree.target, ctx=Store)
+            self.withstate(tree.iter, ctx=Load)
+            self.withstate(tree.ifs, ctx=Load)
 
         elif tt in (For, AsyncFor):
-            self._set_ctx_for(tree.target, Store)
-            self._set_ctx_for(tree.iter, Load)
+            self.withstate(tree.target, ctx=Store)
+            self.withstate(tree.iter, ctx=Load)
         elif tt is withitem:
-            self._set_ctx_for(tree.context_expr, Load)
-            self._set_ctx_for(tree.optional_vars, Store)
+            self.withstate(tree.context_expr, ctx=Load)
+            self.withstate(tree.optional_vars, ctx=Store)
 
         elif tt is Delete:
-            for x in tree.targets:
-                self._set_ctx_for(x, Del)
+            self.withstate(tree.targets, ctx=Del)
 
 def fix_missing_ctx(tree):
     '''Fix any missing `ctx` attributes in `tree`.
