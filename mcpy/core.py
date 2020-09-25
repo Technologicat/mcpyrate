@@ -97,6 +97,8 @@ class _MacroExpander(BaseMacroExpander):
 def expand_macros(tree, bindings, filepath):
     '''
     Return an expanded version of tree with macros applied.
+
+    `filepath` is the path to the `.py` being macroexpanded, for error reporting.
     '''
     expansion = _MacroExpander(bindings, filepath).visit(tree)
     return expansion
