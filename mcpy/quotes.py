@@ -6,6 +6,7 @@ __all__ = ['capture', 'lookup', 'astify',
 
 import ast
 from contextlib import contextmanager
+from .core import expand_macros
 from .unparse import unparse
 from .utilities import gensym, ast_aware_repr
 from .walkers import Walker
@@ -162,45 +163,35 @@ def _quotelevel_changed_by(delta):
         _quotelevel -= delta
     assert _quotelevel >= 0
 
-# These operators are named after Qu'nah, the goddess of quasiquotes in high-tech-elven mythology.
+# These operators are named after Qu'nash, the goddess of quasiquotes in high-tech-elven mythology.
 
-# TODO: block variants. Use the macro interface as a dispatcher, in true mcpy style.
+# TODO: Block variants. Use the macro interface as a dispatcher, in true mcpy style.
 
-# TODO: Make `q` behave like in Lisps - quasiquoted macro invocations (other than quotes/unquotes)
-# should not be expanded (the caller is expected to `expand_macros` on them if they want).
-#
-# Use/implement a walker and then, in `q`, act on `Subscript` nodes with the appropriate names.
-# The unquote operators won't then be independent macros.
-#
-# But think about the implications first - we can't currently hygienically unquote macro names,
-# so the use site will have to import any macros that weren't expanded, to make the expander see them.
-def q(tree, *, syntax, expand_macros, **kw):
+def q(tree, *, syntax, expander, **kw):
     """Quasiquote an expr, lifting it into its AST representation."""
     assert syntax == "expr"
     with _quotelevel_changed_by(+1):
-        tree = expand_macros(tree)
+        tree = _expand_quasiquotes(tree, expander)
         tree = astify(tree)
         ps = get_pseudonodes(tree)  # sanity check output
         if ps:
             assert False, f"Internal PseudoNode instances remaining in output: {ps}"
         return tree
 
-def u(tree, *, syntax, expand_macros, **kw):
+def u(tree, *, syntax, expander, **kw):
     """Splice a simple value into quasiquoted code."""
     assert syntax == "expr"
     if _quotelevel < 1:
         raise SyntaxError("u[] encountered while quotelevel < 1")
     with _quotelevel_changed_by(-1):
-        # TODO: we should still expand other quote/unquote macros?
-        if _quotelevel == 0:
-            tree = expand_macros(tree)
-    # We want to generate an AST that compiles to the *value* of `v`. But when
-    # this runs, it is too early. We must astify *at the use site*. So use an
-    # `ast.Call` to delay, and in there, splice in `tree` as-is.
-    return ASTLiteral(ast.Call(_mcpy_quotes_attr("astify"), [tree], []))
+        tree = _expand_quasiquotes(tree, expander)
+        # We want to generate an AST that compiles to the *value* of `v`. But when
+        # this runs, it is too early. We must astify *at the use site*. So use an
+        # `ast.Call` to delay, and in there, splice in `tree` as-is.
+        return ASTLiteral(ast.Call(_mcpy_quotes_attr("astify"), [tree], []))
 
-def n(tree, *, syntax, expand_macros, **kw):
-    """Splice an str, lifted into a lexical identifier, into quasiquoted code.
+def n(tree, *, syntax, **kw):
+    """Splice a string, lifted into a lexical identifier, into quasiquoted code.
 
     The resulting node's `ctx` is filled in automatically by the macro expander later.
     """
@@ -208,10 +199,7 @@ def n(tree, *, syntax, expand_macros, **kw):
     if _quotelevel < 1:
         raise SyntaxError("n[] encountered while quotelevel < 1")
     with _quotelevel_changed_by(-1):
-        # TODO: we should still expand other quote/unquote macros?
-        if _quotelevel == 0:
-            tree = expand_macros(tree)
-    return ASTLiteral(astify(ast.Name(id=ASTLiteral(tree))))
+        return ASTLiteral(astify(ast.Name(id=ASTLiteral(tree))))
 
 def a(tree, *, syntax, **kw):
     """Splice an AST into quasiquoted code."""
@@ -220,6 +208,16 @@ def a(tree, *, syntax, **kw):
         raise SyntaxError("a[] encountered while quotelevel < 1")
     with _quotelevel_changed_by(-1):
         return ASTLiteral(tree)
+
+def s(tree, *, syntax, **kw):
+    """Splice a `list` of ASTs as an `ast.List` into quasiquoted code."""
+    assert syntax == "expr"
+    if _quotelevel < 1:
+        raise SyntaxError("s[] encountered while quotelevel < 1")
+    return ASTLiteral(ast.Call(ast.Attribute(value=_mcpy_quotes_attr('ast'),
+                                             attr='List'),
+                               [],
+                               [ast.keyword("elts", tree)]))
 
 def h(tree, *, syntax, **kw):
     """Splice any value into quasiquoted code (hygienic unquote)."""
@@ -230,4 +228,8 @@ def h(tree, *, syntax, **kw):
         name = unparse(tree)
         return CaptureLater(tree, name)
 
-# TODO: add s[] to splice a list value as an ast.List
+def _expand_quasiquotes(tree, expander):
+    """Expand quasiquote macros only."""
+    # Account for as-imports of the quasiquote macros.
+    bindings = {k: v for k, v in expander.bindings.items() if v in (q, u, n, a, s, h)}
+    return expand_macros(tree, bindings, expander.filepath)

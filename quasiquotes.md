@@ -21,14 +21,14 @@ Build ASTs in your macros, using syntax that mostly looks like regular code.
   - `u` value-unquote,
   - `n` name-unquote,
   - `a` AST-unquote,
+  - `s` AST-list-unquote,
   - `h` hygienic-unquote.
 
 
 ## Full reference
 
 Here *macro definition site* and *macro use site* refer to those sites for the
-macro in whose implementation `q` is used to construct (part of) the output
-AST.
+macro in whose implementation `q` is used to construct (part of) the output AST.
 
 The operators:
 
@@ -64,6 +64,11 @@ The operators:
    The point is `a[]` can appear as a part of the expression inside the `q[]`,
    so you can construct subtrees separately (using any strategy of your
    choosing), and then interpolate them into a quasiquoted code snippet.
+
+ - `s[lst]`, appearing inside a `q[]`, is the `ast.List` with its elements
+   taken from `lst`.
+
+   This allows interpolating a list of ASTs as an `ast.List` node.
 
 Unquote operators may only appear inside quasiquoted code.
 
