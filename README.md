@@ -106,6 +106,10 @@ def log(expr, to_source, **kw):
 
 We provide [a quasiquote system](quasiquotes.md) (both classical and hygienic) to ease writing macros. It's similar to MacroPy's, but there are differences in the details.
 
+### Walk an AST
+
+To bridge the feature gap between [`ast.NodeTransformer`](https://docs.python.org/3/library/ast.html#ast.NodeTransformer) and MacroPy's `Walker`, we provide [`mcpy.walkers.Walker`](walkers.md), a zen-minimalistic AST walker base class, with a state stack and a node collector.
+
 ### Distinguish how the macro is called
 
 A macro can be called in three different ways. The way a macro is called is recorded in the `syntax` named parameter (one of `'block'`, `'expr'` or '`decorator`'), so you can distinguish the syntax used in the source code and provide different implementations for each one.
