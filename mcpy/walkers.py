@@ -13,6 +13,7 @@ class Walker(NodeTransformer, metaclass=ABCMeta):
         self.reset(**bindings)
 
     def reset(self, **bindings):
+        """Clear everything. Load new bindings into a blank `self.state`."""
         self._stack = [Bunch(**bindings)]
         self._subtree_overrides = {}
         self.collected = []
@@ -22,13 +23,14 @@ class Walker(NodeTransformer, metaclass=ABCMeta):
         return newstate
     def _getstate(self):
         return self._stack[-1]
-    state = property(fget=_getstate, fset=_setstate, doc="The current state. Can be rebound to replace it.")
+    state = property(fget=_getstate, fset=_setstate, doc="The current state. Mutable. Can be rebound to replace it.")
 
     def withstate(self, tree, **bindings):
         """Arrange to visit a subtree with a temporarily replaced, updated state.
 
         `tree` can be an AST node or a statement suite (`list` of AST nodes).
-        It is identified by `id(tree)` at enter time.
+        It is identified by `id(tree)` at enter time. Bindings update a copy
+        of `self.state`.
         """
         self._subtree_overrides[id(tree)] = self.state.copy().update(**bindings)
 
@@ -57,17 +59,16 @@ class Walker(NodeTransformer, metaclass=ABCMeta):
             if newstate:
                 self._stack.pop()
 
-    # TODO: should we directly hand statement suites to `transform`, more general that way?
+    # TODO: Should we directly hand statement suites to `transform`, more general that way?
     @abstractmethod
     def transform(self, tree):
         """Examine and/or transform one node. **Abstract method, override this.**
 
         There is only one `transform` method. To detect node type, use `type(tree)`.
 
-        It is the responsibility of this method to recurse where needed. Use
-        `self.generic_visit(tree)` to visit all children of `tree`, or
-        `self.visit(tree.something)` to recurse selectively where you want.
+        This method must recurse where needed. Use `self.generic_visit(tree)`
+        to visit all children of `tree`, or `self.visit(tree.something)` to
+        selectively visit only some children.
 
-        Return value as in `ast.NodeTransformer`. Particularly, to make no
-        changes, `return tree`.
+        Return value as in `ast.NodeTransformer`. If no changes, `return tree`.
         """
