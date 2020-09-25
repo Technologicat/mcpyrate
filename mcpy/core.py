@@ -14,7 +14,7 @@ class _MacroExpander(BaseMacroExpander):
         Check for a with macro as::
 
             with macroname:
-                # with's body is the target of the macro
+                "with's body is the target of the macro"
 
         It replaces the `with` node with the result of the macro.
         '''
@@ -32,7 +32,7 @@ class _MacroExpander(BaseMacroExpander):
 
     def visit_Subscript(self, subscript):
         '''
-        Check for a expression macro as::
+        Check for an expression macro as::
 
             macroname['index expression is the target of the macro']
 
@@ -60,13 +60,13 @@ class _MacroExpander(BaseMacroExpander):
 
             @macroname
             def f():
-                # The whole function is the target of the macro
+                "The whole function is the target of the macro"
 
         Or::
 
             @macroname
             class C():
-                # The whole class is the target of the macro
+                "The whole class is the target of the macro"
 
         It replaces the whole decorated node with the result of the macro.
         '''
@@ -106,12 +106,15 @@ def find_macros(tree):
     Look for `from ... import macros, ...` statements in the module body, and
     return a dict with names and implementations for found macros, or an empty
     dict if no macros are used.
+
+    As a side effect, transform each macro import statement into `import ...`,
+    where `...` is the module the macros are being imported from.
     '''
     bindings = {}
     for index, statement in enumerate(tree.body):
         if _is_macro_import(statement):
             bindings.update(_get_macros(statement))
-            # Remove all names to prevent macro names to be used
+            # Remove all names to prevent the macros being accidentally used as regular run-time objects
             module = statement.module
             tree.body[index] = copy_location(
                 Import(names=[alias(name=module, asname=None)]),
@@ -125,7 +128,6 @@ def _is_macro_import(statement):
     A "macro import" is a statement of the form::
 
         from ... import macros, ...
-
     '''
     is_macro_import = False
     if isinstance(statement, ImportFrom):
@@ -137,7 +139,7 @@ def _is_macro_import(statement):
 
 def _get_macros(macroimport):
     '''
-    Return a map with names and macros from the macro import statement.
+    Return a dict with names and macros from the macro import statement.
     '''
     modulename = macroimport.module
     __import__(modulename)
