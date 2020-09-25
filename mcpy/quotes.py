@@ -8,6 +8,7 @@ import ast
 from contextlib import contextmanager
 from .unparse import unparse
 from .utilities import gensym, ast_aware_repr
+from .walkers import Walker
 
 # --------------------------------------------------------------------------------
 
@@ -41,6 +42,18 @@ class CaptureLater(PseudoNode):  # like MacroPy's `Captured`
 
     def __repr__(self):
         return "{}({}, {})".format(self.__class__.__name__, ast_aware_repr(self.body), repr(self.name))
+
+def get_pseudonodes(tree):
+    """Return a `list` of any `PseudoNode` instances found in `tree`. For output sanity checking."""
+    class PseudoNodeCollector(Walker):
+        def process(self, tree):
+            if isinstance(tree, PseudoNode):
+                self.collect(tree)
+            self.generic_visit(tree)
+            return tree
+    p = PseudoNodeCollector()
+    p.visit(tree)
+    return p.collected
 
 # --------------------------------------------------------------------------------
 
@@ -158,14 +171,16 @@ def _change_level(delta):
 #
 # Use/implement a walker and then, in `q`, act on `Subscript` nodes with the appropriate names.
 # The unquote operators won't then be independent macros.
-#
-# TODO: q[] should assert the final output does not contain `PseudoNode` instances. Needs a walker.
 def q(tree, *, syntax, expand_macros, **kw):
     """Quasiquote an expr, lifting it into its AST representation."""
     assert syntax == "expr"
     with _change_level(+1):
         tree = expand_macros(tree)
-        return astify(tree)
+        tree = astify(tree)
+        ps = get_pseudonodes(tree)  # sanity check output
+        if ps:
+            assert False, f"Internal PseudoNode instances remaining in output: {ps}"
+        return tree
 
 # TODO: u[] should expand macros only when the quotelevel hits zero. Track it.
 def u(tree, *, syntax, expand_macros, **kw):
