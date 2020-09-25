@@ -46,13 +46,15 @@ class BaseMacroExpander(NodeTransformer):
         applying the named macro on the proper node and recursively treat the
         expansion as well.
         '''
+        # TODO: Remove 'to_source'? unparse needs no parameters from here, and flat is better than nested.
         macro = self.bindings[macroname]
         kw = kw or {}
         kw.update({
             'syntax': syntax,
             'to_source': unparse,
             'expand_macros': self.visit,
-            'expand_once': self.visit_once})
+            'expand_once': self.visit_once,
+            'expander': self})  # For advanced hackery. See mcpy.quotes.
 
         original_code = unparse(target)
         try:
