@@ -62,12 +62,10 @@ class BaseMacroExpander(NodeTransformer):
         try:
             expansion = _apply_macro(macro, tree, kw)
         except Exception as err:
-            # If expansion fails, report macro use site as well as the definition site.
-            # Discard inner levels in nested macro invocations to keep the error report short.
-            if isinstance(err, MacroExpansionError):
-                err = err.__cause__
+            # If expansion fails, report macro use site (possibly nested) as well as the definition site.
             lineno = target.lineno if hasattr(target, 'lineno') else None
-            msg = f'use site was at {self.filepath}:{lineno}: {original_code}'
+            sep = " " if "\n" not in original_code else "\n"
+            msg = f'use site was at {self.filepath}:{lineno}:{sep}{original_code}'
             raise MacroExpansionError(msg) from err
 
         return self._visit_expansion(expansion, target)
