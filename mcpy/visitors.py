@@ -22,11 +22,13 @@ class BaseMacroExpander(NodeTransformer):
         self._recursive = True
 
     def visit(self, tree):
-        '''Expand macros.
-
-        Short-circuit visit() to avoid expansions if no macros.
-        '''
-        return tree if not self.bindings else super().visit(tree)
+        '''Expand macros. No-op if no macro bindings. '''
+        if not self.bindings:
+            return tree
+        supervisit = super().visit
+        if isinstance(tree, AST):  # single node
+            return supervisit(tree)
+        return [supervisit(elt) for elt in tree]  # statement suite
 
     def visit_once(self, tree):
         '''Expand only one layer of macros.
