@@ -44,6 +44,7 @@ class _MacroExpander(BaseMacroExpander):
             macroname = candidate.id
             tree = subscript.slice.value
             new_tree = self._expand('expr', subscript, macroname, tree)
+            new_tree = copy_location(new_tree, subscript)
         else:
             new_tree = self.generic_visit(subscript)
 
