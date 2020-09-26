@@ -49,6 +49,8 @@ class BaseMacroExpander(NodeTransformer):
         expansion as well.
         '''
         # TODO: Remove 'to_source'? unparse needs no parameters from here, and flat is better than nested.
+        # TODO: Remove 'expand_macros' and 'expand_once'? Would be cleaner to have just 'expander'
+        #       and document to use `expander.visit(tree)`, `expander.visit_once(tree)`.
         macro = self.bindings[macroname]
         kw = kw or {}
         kw.update({
