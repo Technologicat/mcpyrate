@@ -99,13 +99,13 @@ class _MacroExpander(BaseMacroExpander):
 
         return macros, remaining
 
-def expand_macros(tree, bindings, filepath):
+def expand_macros(tree, bindings, filename):
     '''
     Return an expanded version of tree with macros applied.
 
-    `filepath` is the path to the `.py` being macroexpanded, for error reporting.
+    `filename` is the full path to the `.py` being macroexpanded, for error reporting.
     '''
-    expansion = _MacroExpander(bindings, filepath).visit(tree)
+    expansion = _MacroExpander(bindings, filename).visit(tree)
     return expansion
 
 def find_macros(tree):

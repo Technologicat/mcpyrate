@@ -12,6 +12,6 @@ def source_to_xcode(self, data, path, *, _optimize=-1):
     before compiling to actual code.'''
     tree = ast.parse(data)
     module_macro_bindings = find_macros(tree)
-    expansion = expand_macros(tree, bindings=module_macro_bindings, filepath=path)
+    expansion = expand_macros(tree, bindings=module_macro_bindings, filename=path)
     return compile(expansion, path, 'exec', dont_inherit=True,
                    optimize=_optimize)

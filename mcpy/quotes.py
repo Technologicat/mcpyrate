@@ -260,4 +260,4 @@ def _expand_quasiquotes(tree, expander):
     """Expand quasiquote macros only."""
     # Account for as-imports of the quasiquote macros.
     bindings = {k: v for k, v in expander.bindings.items() if v in (q, u, n, a, s, h)}
-    return expand_macros(tree, bindings, expander.filepath)
+    return expand_macros(tree, bindings, expander.filename)

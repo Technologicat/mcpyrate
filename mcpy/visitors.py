@@ -16,9 +16,9 @@ class BaseMacroExpander(NodeTransformer):
     method with the proper arguments.
     '''
 
-    def __init__(self, bindings, filepath):
+    def __init__(self, bindings, filename):
         self.bindings = bindings
-        self.filepath = filepath
+        self.filename = filename
         self._recursive = True
 
     def visit(self, tree):
@@ -67,7 +67,7 @@ class BaseMacroExpander(NodeTransformer):
             # If expansion fails, report macro use site (possibly nested) as well as the definition site.
             lineno = target.lineno if hasattr(target, 'lineno') else None
             sep = " " if "\n" not in original_code else "\n"
-            msg = f'use site was at {self.filepath}:{lineno}:{sep}{original_code}'
+            msg = f'use site was at {self.filename}:{lineno}:{sep}{original_code}'
             raise MacroExpansionError(msg) from err
 
         return self._visit_expansion(expansion, target)
