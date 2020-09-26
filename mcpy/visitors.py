@@ -1,6 +1,6 @@
 # -*- coding: utf-8; -*-
 
-from ast import NodeTransformer, AST, copy_location, fix_missing_locations
+from ast import NodeTransformer, AST, fix_missing_locations
 from .ctxfixer import fix_missing_ctx
 from .unparse import unparse
 
