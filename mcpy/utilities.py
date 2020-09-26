@@ -4,7 +4,7 @@ import ast
 from collections.abc import Mapping, MutableMapping, Container, Iterable, Sized
 import uuid
 
-__all__ = ['ast_aware_repr', 'gensym', 'Bunch']
+__all__ = ['ast_aware_repr', 'gensym', 'flatten_suite', 'Bunch']
 
 def ast_aware_repr(thing):
     """Like repr(), but supports ASTs.
@@ -39,6 +39,22 @@ def gensym(basename=None):
         sym = generate()  # pragma: no cover
     _previous_gensyms.add(sym)
     return sym
+
+
+def flatten_suite(lst):
+    """Flatten a statement suite (by one level).
+
+    `lst` may contain both individual items and `list`s. Any item that
+    `is None` is omitted. If the final result is empty, then instead of
+    an empty list, return `None`.
+    """
+    out = []
+    for elt in lst:
+        if isinstance(elt, list):
+            out.extend(elt)
+        elif elt is not None:
+            out.append(elt)
+    return out if out else None
 
 
 class Bunch:

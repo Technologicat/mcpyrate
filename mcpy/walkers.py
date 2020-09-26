@@ -2,7 +2,7 @@
 
 from abc import ABCMeta, abstractmethod
 from ast import NodeTransformer
-from .utilities import Bunch
+from .utilities import Bunch, flatten_suite
 
 __all__ = ["Walker"]
 
@@ -45,15 +45,8 @@ class Walker(NodeTransformer, metaclass=ABCMeta):
         if newstate:
             self._stack.append(newstate)
         try:
-            if isinstance(tree, list):  # statement suite, unpack it
-                result = []
-                for elt in tree:
-                    newelt = self.visit(elt)
-                    if isinstance(newelt, list):  # flatten
-                        result.extend(newelt)
-                    elif newelt is not None:
-                        result.append(newelt)
-                return result if result else None
+            if isinstance(tree, list):
+                return flatten_suite(self.visit(elt) for elt in tree)
             return self.transform(tree)
         finally:
             if newstate:

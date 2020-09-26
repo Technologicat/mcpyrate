@@ -3,6 +3,7 @@
 from ast import NodeTransformer, AST, fix_missing_locations
 from .ctxfixer import fix_missing_ctx
 from .unparse import unparse
+from .utilities import flatten_suite
 
 __all__ = ['BaseMacroExpander', 'MacroExpansionError']
 
@@ -26,9 +27,9 @@ class BaseMacroExpander(NodeTransformer):
         if not self.bindings:
             return tree
         supervisit = super().visit
-        if isinstance(tree, AST):  # single node
-            return supervisit(tree)
-        return [supervisit(elt) for elt in tree]  # statement suite
+        if isinstance(tree, list):
+            return flatten_suite(supervisit(elt) for elt in tree)
+        return supervisit(tree)
 
     def visit_once(self, tree):
         '''Expand only one layer of macros.
