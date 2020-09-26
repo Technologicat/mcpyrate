@@ -22,7 +22,7 @@ class BaseMacroExpander(NodeTransformer):
         self._recursive = True
 
     def visit(self, tree):
-        '''Expand macros. No-op if no macro bindings. '''
+        '''Expand macros. No-op if no macro bindings.'''
         if not self.bindings:
             return tree
         supervisit = super().visit
