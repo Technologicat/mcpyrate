@@ -7,6 +7,8 @@ import sys
 import ast
 import io
 
+from .markers import ASTMarker
+
 # Large float and imaginary literals get turned into infinities in the AST.
 # We unparse those infinities to INFSTR.
 INFSTR = "1e" + repr(sys.float_info.max_10_exp + 1)
@@ -59,6 +61,12 @@ class Unparser:
         if isinstance(tree, list):
             for t in tree:
                 self.dispatch(t)
+            return
+        if isinstance(tree, ASTMarker):  # mcpy and macro communication internal
+            self.write("$" + tree.__class__.__name__)  # markers cannot be eval'd
+            self.write("(")
+            self.dispatch(tree.body)
+            self.write(")")
             return
         meth = getattr(self, "_" + tree.__class__.__name__)
         meth(tree)
