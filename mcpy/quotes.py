@@ -7,54 +7,26 @@ __all__ = ['capture', 'lookup', 'astify',
 import ast
 from contextlib import contextmanager
 from .core import expand_macros
+from .markers import ASTMarker, get_markers
 from .unparse import unparse
-from .utilities import gensym, ast_aware_repr
-from .walkers import Walker
+from .utilities import gensym
 
 # --------------------------------------------------------------------------------
 
-class PseudoNode(ast.AST):
-    """Almost like a real AST node.
+class QuasiquoteMarker(ASTMarker):
+    """Base class for AST markers used by `q[]`, which are expanded away by `astify`."""
+    pass
 
-    Pseudonodes are internal AST markers used by `q[]`. They are expanded away
-    by `astify`, to allow the rest of `mcpy` to deal with real AST nodes only.
-
-    We inherit from `ast.AST` to let `mcpy`'s expander know this behaves
-    somewhat like a single AST node.
-    """
-    def __init__(self, body):
-        """body: the real AST"""
-        self.body = body
-        self._fields = ["body"]  # support ast.iterfields
-
-    def __repr__(self):
-        return "{}({})".format(self.__class__.__name__, ast_aware_repr(self.body))
-
-class ASTLiteral(PseudoNode):  # like MacroPy's `Literal`
+class ASTLiteral(QuasiquoteMarker):  # like MacroPy's `Literal`
     """Keep the given subtree as-is."""
     pass
 
-class CaptureLater(PseudoNode):  # like MacroPy's `Captured`
+class CaptureLater(QuasiquoteMarker):  # like MacroPy's `Captured`
     """Capture the value the given subtree evaluates to at the use site of `q[]`."""
     def __init__(self, body, name):
         super().__init__(body)
         self.name = name
         self._fields += "name"
-
-    def __repr__(self):
-        return "{}({}, {})".format(self.__class__.__name__, ast_aware_repr(self.body), repr(self.name))
-
-def get_pseudonodes(tree):
-    """Return a `list` of any `PseudoNode` instances found in `tree`. For output validation."""
-    class PseudoNodeCollector(Walker):
-        def transform(self, tree):
-            if isinstance(tree, PseudoNode):
-                self.collect(tree)
-            self.generic_visit(tree)
-            return tree
-    p = PseudoNodeCollector()
-    p.visit(tree)
-    return p.collected
 
 # --------------------------------------------------------------------------------
 
@@ -157,6 +129,8 @@ def astify(x):  # like MacroPy's `ast_repr`
 
 # --------------------------------------------------------------------------------
 # Macros
+#
+# These operators are named after Qu'nash, the goddess of quasiquotes in high-tech-elven mythology.
 
 _quotelevel = 0
 @contextmanager
@@ -169,7 +143,12 @@ def _quotelevel_changed_by(delta):
         _quotelevel -= delta
     assert _quotelevel >= 0
 
-# These operators are named after Qu'nash, the goddess of quasiquotes in high-tech-elven mythology.
+def _unquote_expand(tree, expander):
+    """Expand quasiquote macros in `tree`. If quotelevel is zero, expand all macros in `tree`."""
+    if _quotelevel == 0:
+        tree = expander.visit(tree)
+    else:
+        tree = _expand_quasiquotes(tree, expander)
 
 def q(tree, *, syntax, expander, **kw):
     """quasiquote. Lift code into its AST representation."""
@@ -178,9 +157,9 @@ def q(tree, *, syntax, expander, **kw):
     with _quotelevel_changed_by(+1):
         tree = _expand_quasiquotes(tree, expander)
         tree = astify(tree)
-        ps = get_pseudonodes(tree)  # postcondition: no remaining pseudonodes
+        ps = get_markers(tree, QuasiquoteMarker)  # postcondition: no remaining QuasiquoteMarkers
         if ps:
-            assert False, f"internal PseudoNode instances remaining in output: {ps}"
+            assert False, f"QuasiquoteMarker instances remaining in output: {ps}"
         if syntax == 'block':
             target = kw['optional_vars']  # List, Tuple, Name
             if type(target) is not ast.Name:
@@ -191,17 +170,14 @@ def q(tree, *, syntax, expander, **kw):
 def u(tree, *, syntax, expander, **kw):
     """unquote. Splice a simple value into a quasiquote.
 
-    The value is lifted into an AST that re-constructs that value
+    The value is lifted into an AST that re-constructs that value.
     """
     if syntax != "expr":
         raise SyntaxError("u is an expr macro only")
     if _quotelevel < 1:
         raise SyntaxError("u[] encountered while quotelevel < 1")
     with _quotelevel_changed_by(-1):
-        if _quotelevel == 0:
-            tree = expander.visit(tree)
-        else:
-            tree = _expand_quasiquotes(tree, expander)
+        _unquote_expand(tree, expander)
         # We want to generate an AST that compiles to the *value* of `v`. But when
         # this runs, it is too early. We must astify *at the use site*. So use an
         # `ast.Call` to delay, and in there, splice in `tree` as-is.
@@ -250,10 +226,7 @@ def h(tree, *, syntax, expander, **kw):
         raise SyntaxError("h[] encountered while quotelevel < 1")
     with _quotelevel_changed_by(-1):
         name = unparse(tree)
-        if _quotelevel == 0:
-            tree = expander.visit(tree)
-        else:
-            tree = _expand_quasiquotes(tree, expander)
+        _unquote_expand(tree, expander)
         return CaptureLater(tree, name)
 
 def _expand_quasiquotes(tree, expander):
