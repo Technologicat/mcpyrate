@@ -62,6 +62,10 @@ replacing `...` with the macros you want to use. Importing all via `*` won't wor
 import module
 ```
 
+This also implies that if the expanded form of your macro needs to refer to `thing` that exists in (whether is defined in, or has been imported to) the global scope of the module that defines the macro, just make your expansion refer to `module.thing`. Hence `mcpy` does not need an `unhygienic_expose` mechanism.
+
+If your expansion needs to refer to some other value from the macro definition site (including local and nonlocal variables), see [the quasiquote system](quasiquotes.md), specifically the `h[]` (hygienic-unquote) operator.
+
 If you want to use some of your macros as regular functions, simply use:
 
 ```python
