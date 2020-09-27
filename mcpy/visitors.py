@@ -37,7 +37,7 @@ class BaseMacroExpander(NodeTransformer):
 
     def _needs_expansion(self, tree):
         '''No-op if no macro bindings or if `tree` is marked `Done`.'''
-        return self.bindings and not isinstance(tree, Done)
+        return self.bindings and not type(tree) is Done
 
     def visit(self, tree):
         '''Expand macros in `tree`. Treat `visit(stmt_suite)` as a loop for individual elements.'''
