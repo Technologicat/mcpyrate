@@ -83,10 +83,10 @@ def astify(x):  # like MacroPy's `ast_repr`
 
     Raises `TypeError` when the lifting fails.
     """
-    tx = type(x)
+    T = type(x)
 
     # Drop the ASTLiteral wrapper; it only tells us to pass through this subtree as-is.
-    if tx is ASTLiteral:
+    if T is ASTLiteral:
         return x.body
 
     # This is the magic part of q[h[]].
@@ -94,21 +94,23 @@ def astify(x):  # like MacroPy's `ast_repr`
     # At the use site of q[], this captures the value, and rewrites itself
     # into a lookup. At the use site of the macro that used q[], that
     # rewritten code looks up the captured value.
-    elif tx is CaptureLater:
+    elif T is CaptureLater:
         return ast.Call(_mcpy_quotes_attr('capture'),
                         [x.body,
                          ast.Constant(value=x.name)],
                         [])
 
-    elif tx in (int, float, str, bytes, bool, type(None)):
+    elif T in (int, float, str, bytes, bool, type(None)):
         return ast.Constant(value=x)
 
-    elif tx is list:
+    elif T is list:
         return ast.List(elts=list(astify(elt) for elt in x))
-    elif tx is dict:
+    elif T is tuple:
+        return ast.Tuple(elts=list(astify(elt) for elt in x))
+    elif T is dict:
         return ast.Dict(keys=list(astify(k) for k in x.keys()),
                         values=list(astify(v) for v in x.values()))
-    elif tx is set:
+    elif T is set:
         return ast.Set(elts=list(astify(elt) for elt in x))
 
     elif isinstance(x, ast.AST):
