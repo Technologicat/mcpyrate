@@ -112,7 +112,7 @@ We provide [a quasiquote system](quasiquotes.md) (both classical and hygienic) t
 
 ### Walk an AST
 
-To bridge the feature gap between [`ast.NodeTransformer`](https://docs.python.org/3/library/ast.html#ast.NodeTransformer) and MacroPy's `Walker`, we provide [`mcpy.walkers.Walker`](walkers.md), a zen-minimalistic AST walker base class, with a state stack and a node collector.
+To bridge the feature gap between [`ast.NodeTransformer`](https://docs.python.org/3/library/ast.html#ast.NodeTransformer) and MacroPy's `Walker`, we provide [`mcpy.walkers.Walker`](walkers.md), a zen-minimalistic AST walker base class based on `ast.NodeTransformer`, with a state stack and a node collector.
 
 ### Distinguish how the macro is called
 
