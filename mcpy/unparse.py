@@ -12,8 +12,7 @@ __all__ = ['unparse']
 INFSTR = "1e" + repr(sys.float_info.max_10_exp + 1)
 
 def interleave(inter, f, seq):
-    """Call f on each item in seq, calling inter() in between.
-    """
+    """Call f on each item in seq, calling inter() in between."""
     seq = iter(seq)
     try:
         f(next(seq))
@@ -27,7 +26,7 @@ def interleave(inter, f, seq):
 class Unparser:
     """Methods in this class recursively traverse an AST and
     output source code for the abstract syntax; original formatting
-    is disregarded. """
+    is disregarded."""
 
     def __init__(self, tree, file=sys.stdout):
         """Unparser(tree, file=sys.stdout) -> None.
@@ -52,7 +51,7 @@ class Unparser:
         self._indent += 1
 
     def leave(self):
-        "Decrease the indentation level."
+        "Decrease the indentation."
         self._indent -= 1
 
     def dispatch(self, tree):
@@ -64,12 +63,13 @@ class Unparser:
         meth = getattr(self, "_" + tree.__class__.__name__)
         meth(tree)
 
-    ############### Unparsing methods ######################
-    # There should be one method per concrete grammar type #
-    # Constructors should be grouped by sum type. Ideally, #
-    # this would follow the order in the grammar, but      #
-    # currently doesn't.                                   #
-    ########################################################
+    # --------------------------------------------------------------------------------
+    # Unparsing methods
+    #
+    # There should be one method per concrete grammar type.
+    # Constructors should be grouped by sum type. Ideally,
+    # this would follow the order in the grammar, but
+    # currently doesn't.
 
     def _Module(self, t):
         for stmt in t.body:
@@ -526,12 +526,11 @@ class Unparser:
         # Node representing a single formatting field in an f-string. If the
         # string contains a single formatting field and nothing else the node
         # can be isolated otherwise it appears in `JoinedStr`.
-        # TODO: implement quote character handling
-        self.write('f"')
-        self._FormattedValue_helper(t, '"')
-        self.write('"')
+        self.write("f'")
+        self._FormattedValue_helper(t)
+        self.write("'")
 
-    def _FormatterValue_helper(self, t, outer_q):
+    def _FormattedValue_helper(self, t):
         self.write("{")
         self.dispatch(t.value)
         if t.conversion == 115:
@@ -546,25 +545,25 @@ class Unparser:
             raise ValueError(f"Don't know how to unparse conversion code {t.conversion}")
         if t.format_spec:
             self.write(":")
-            self._JoinedStr_helper(t.format_spec, outer_q)
+            self._JoinedStr_helper(t.format_spec)
         self.write("}")
 
     def _JoinedStr(self, t):
-        # TODO: implement quote character handling
-        # TODO: Must scan the values for `\n` to know whether to use triple quotes at this level.
-        self.write(f'"')
-        self._JoinedStr_helper(t, '"')
-        self.write('"')
+        self.write("f'")
+        self._JoinedStr_helper(t)
+        self.write("'")
 
-    def _JoinedStr_helper(self, t, outer_q):
+    def _JoinedStr_helper(self, t):
+        def escape(s):
+            return s.replace("'", r"\'").replace("\n", r"\n")
         for v in t.values:
             # Omit the surrounding quotes in string snippets
             if type(v) is ast.Constant:
-                self.write(v.value)
+                self.write(escape(v.value))
             elif type(v) is ast.Str:  # up to Python 3.7
-                self.write(v.s)
+                self.write(escape(v.s))
             elif type(v) is ast.FormattedValue:
-                self._FormattedValue_helper(v, outer_q)
+                self._FormattedValue_helper(v)
             else:
                 raise ValueError(f"Don't know how to unparse {t!r} inside an f-string")
 
