@@ -8,7 +8,10 @@ from .visitors import BaseMacroExpander
 __all__ = ['expand_macros', 'find_macros', 'MacroExpander']
 
 class MacroExpander(BaseMacroExpander):
-    '''This concrete macro expander layer defines macro invocation syntax.'''
+    '''This concrete macro expander layer defines macro invocation syntax.
+
+    When a macro invocation is detected, we delegate to `BaseMacroExpander`.
+    '''
 
     def visit_With(self, withstmt):
         '''
@@ -101,6 +104,29 @@ class MacroExpander(BaseMacroExpander):
 
         return macros, remaining
 
+
+def _fix_coverage_reporting(tree, target):
+    '''
+    Fix Coverage.py test coverage reporting for block and decorator macros.
+
+    The line invoking the macro is compiled away, so we insert a dummy node,
+    copying source location information from the AST node `target`.
+
+    `tree` must appear in a position where `ast.NodeTransformer.visit` is
+    allowed to return a list of nodes.
+    '''
+    if tree is None:
+        tree = []
+    elif isinstance(tree, AST):
+        tree = [tree]
+    # The dummy node must be something that actually runs so it gets
+    # a coverage hit, an `ast.Pass` won't do.
+    non = copy_location(Constant(value=None), target)
+    dummy = copy_location(Expr(value=non), target)
+    tree.insert(0, dummy)
+    return tree
+
+
 def expand_macros(tree, bindings, filename):
     '''
     Return an expanded version of `tree` with macros applied.
@@ -111,6 +137,7 @@ def expand_macros(tree, bindings, filename):
     '''
     expansion = MacroExpander(bindings, filename).visit(tree)
     return expansion
+
 
 def find_macros(tree):
     '''
@@ -157,24 +184,3 @@ def _get_macros(macroimport):
     module = sys.modules[modulename]
     return {name.asname or name.name: getattr(module, name.name)
              for name in macroimport.names[1:]}
-
-def _fix_coverage_reporting(tree, target):
-    '''
-    Fix Coverage.py test coverage reporting for block and decorator macros.
-
-    The line invoking the macro is compiled away, so we insert a dummy node,
-    copying source location information from the AST node `target`.
-
-    `tree` must appear in a position where `ast.NodeTransformer.visit` is
-    allowed to return a list of nodes.
-    '''
-    if tree is None:
-        tree = []
-    elif isinstance(tree, AST):
-        tree = [tree]
-    # The dummy node must be something that actually runs so it gets
-    # a coverage hit, an `ast.Pass` won't do.
-    non = copy_location(Constant(value=None), target)
-    dummy = copy_location(Expr(value=non), target)
-    tree.insert(0, dummy)
-    return tree
