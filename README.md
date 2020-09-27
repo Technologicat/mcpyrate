@@ -126,11 +126,11 @@ This is backconverted from the AST representation, so the result may differ in m
 
 ### Expand macros
 
-Use the named parameter `expand_macros` with an AST to expand the macros in that AST. This is useful to expand innermost macros first.
+Use the named parameter `expander` to access the macro expander. You can optionally call `expander.visit(tree)` with an AST `tree` to expand the macros in that AST. This is useful for making inner macro invocations expand first.
 
-In any particular macro implementation, any code that runs before a call to `expand_macros` behaves outside-in; any code that runs after behaves inside-out.
+Right after the expansion of a macro, the macro expander automatically expands again in the result, repeating this until no macros are left in the AST.
 
-Using `expand_macros`, expansion continues recursively until no macros are left in the AST that was given to it. To instead expand only one layer of macros, use the named parameter `expand_once`. This can be useful during debugging of a macro implementation.
+To expand only one layer of inner macro invocations, call `expander.visit_once(tree)`. This can be useful during debugging of a macro implementation. You can then convert the result into a printable form using `mcpy.unparse` or `mcpy.ast_aware_repr`.
 
 ### Macro expansion error reporting
 

@@ -4,7 +4,7 @@ from ast import (Call, arg, Name, Attribute, Str, FunctionDef, Assign, Load, Sto
                  NodeTransformer, copy_location)
 from mcpy import unparse
 
-def customliterals(statements, expand_macros, **kw):
+def customliterals(statements, expander, **kw):
     '''
     Provide custom meaning to literals. Example:
 
@@ -20,7 +20,7 @@ def customliterals(statements, expand_macros, **kw):
     literals.
     '''
     visitor = _WrapLiterals()
-    return map(visitor.visit, map(expand_macros, statements))
+    return map(visitor.visit, map(expander.visit, statements))
 
 def log(expr, **kw):
     '''

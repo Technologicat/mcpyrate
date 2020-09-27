@@ -10,7 +10,7 @@ def read(*relpath, **kwargs):
 
 setup(
     name="mcpy",
-    version="2.1.0",
+    version="3.0.0",
     packages=["mcpy"],
     provides=["mcpy"],
     keywords=["macros", "syntactic-macros", "import", "importer", "github"],

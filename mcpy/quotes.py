@@ -188,7 +188,7 @@ def q(tree, *, syntax, expander, **kw):
             tree = ast.Assign([target], tree)
         return tree
 
-def u(tree, *, syntax, expand_macros, expander, **kw):
+def u(tree, *, syntax, expander, **kw):
     """unquote. Splice a simple value into a quasiquote.
 
     The value is lifted into an AST that re-constructs that value
@@ -199,7 +199,7 @@ def u(tree, *, syntax, expand_macros, expander, **kw):
         raise SyntaxError("u[] encountered while quotelevel < 1")
     with _quotelevel_changed_by(-1):
         if _quotelevel == 0:
-            tree = expand_macros(tree)
+            tree = expander.visit(tree)
         else:
             tree = _expand_quasiquotes(tree, expander)
         # We want to generate an AST that compiles to the *value* of `v`. But when
@@ -239,7 +239,7 @@ def s(tree, *, syntax, **kw):
                                [],
                                [ast.keyword("elts", tree)]))
 
-def h(tree, *, syntax, expand_macros, expander, **kw):
+def h(tree, *, syntax, expander, **kw):
     """hygienic-unquote. Splice any value, from the macro definition site, into a quasiquote.
 
     Supports also values that have no meaningful `repr`.
@@ -251,13 +251,15 @@ def h(tree, *, syntax, expand_macros, expander, **kw):
     with _quotelevel_changed_by(-1):
         name = unparse(tree)
         if _quotelevel == 0:
-            tree = expand_macros(tree)
+            tree = expander.visit(tree)
         else:
             tree = _expand_quasiquotes(tree, expander)
         return CaptureLater(tree, name)
 
 def _expand_quasiquotes(tree, expander):
     """Expand quasiquote macros only."""
-    # Account for as-imports of the quasiquote macros.
+    # Use a second expander instance, with different bindings. Copy only the
+    # bindings of the quasiquote macros from the main `expander`. Account for
+    # as-imports of the quasiquote macros.
     bindings = {k: v for k, v in expander.bindings.items() if v in (q, u, n, a, s, h)}
     return expand_macros(tree, bindings, expander.filename)
