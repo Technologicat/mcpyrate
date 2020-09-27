@@ -149,7 +149,7 @@ def _expand_quasiquotes(tree, expander):
     return expand_macros(tree, bindings, expander.filename)
 
 def q(tree, *, syntax, expander, **kw):
-    """quasiquote. Lift code into its AST representation."""
+    """[syntax, expr/block] quasiquote. Lift code into its AST representation."""
     if syntax not in ("expr", "block"):
         raise SyntaxError("q is an expr and block macro only")
     with _quotelevel.changed_by(+1):
@@ -166,7 +166,7 @@ def q(tree, *, syntax, expander, **kw):
         return tree
 
 def u(tree, *, syntax, expander, **kw):
-    """unquote. Splice a simple value into a quasiquote.
+    """[syntax, expr] unquote. Splice a simple value into a quasiquote.
 
     The value is lifted into an AST that re-constructs that value.
     """
@@ -182,7 +182,7 @@ def u(tree, *, syntax, expander, **kw):
         return ASTLiteral(ast.Call(_mcpy_quotes_attr("astify"), [tree], []))
 
 def n(tree, *, syntax, **kw):
-    """name-unquote. Splice a string, lifted into a lexical identifier, into a quasiquote.
+    """[syntax, expr] name-unquote. Splice a string, lifted into a lexical identifier, into a quasiquote.
 
     The resulting node's `ctx` is filled in automatically by the macro expander later.
     """
@@ -194,7 +194,7 @@ def n(tree, *, syntax, **kw):
         return ASTLiteral(astify(ast.Name(id=ASTLiteral(tree))))
 
 def a(tree, *, syntax, **kw):
-    """AST-unquote. Splice an AST into a quasiquote."""
+    """[syntax, expr] AST-unquote. Splice an AST into a quasiquote."""
     if syntax != "expr":
         raise SyntaxError("a is an expr macro only")
     if _quotelevel.value < 1:
@@ -203,7 +203,7 @@ def a(tree, *, syntax, **kw):
         return ASTLiteral(tree)
 
 def s(tree, *, syntax, **kw):
-    """list-unquote. Splice a `list` of ASTs, as an `ast.List`, into a quasiquote."""
+    """[syntax, expr] list-unquote. Splice a `list` of ASTs, as an `ast.List`, into a quasiquote."""
     if syntax != "expr":
         raise SyntaxError("s is an expr macro only")
     if _quotelevel.value < 1:
@@ -214,7 +214,7 @@ def s(tree, *, syntax, **kw):
                                [ast.keyword("elts", tree)]))
 
 def h(tree, *, syntax, expander, **kw):
-    """hygienic-unquote. Splice any value, from the macro definition site, into a quasiquote.
+    """[syntax, expr] unquote. Splice any value, from the macro definition site, into a quasiquote.
 
     Supports also values that have no meaningful `repr`.
     """
