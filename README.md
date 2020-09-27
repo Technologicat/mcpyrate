@@ -120,9 +120,9 @@ A macro can be called in three different ways. The way a macro is called is reco
 
 ### Get the source of an AST
 
-`mcpy.unparse` is a function able to get the Python code for an AST.
+`mcpy.unparse` is a function that converts an AST back into Python code.
 
-This is backconverted from the AST representation, so the result may differ in minute details of surface syntax, such as parenthesization, and which quote syntax is used for quoting string literals.
+Because the code is backconverted from the AST representation, the result may differ in minute details of surface syntax, such as parenthesization, and which quote syntax is used for quoting string literals.
 
 ### Expand macros
 
