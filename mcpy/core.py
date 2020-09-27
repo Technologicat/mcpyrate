@@ -5,9 +5,10 @@ import sys
 from ast import Name, Import, ImportFrom, alias, AST, Expr, Constant, copy_location
 from .visitors import BaseMacroExpander
 
-__all__ = ['expand_macros', 'find_macros']
+__all__ = ['expand_macros', 'find_macros', 'MacroExpander']
 
-class _MacroExpander(BaseMacroExpander):
+class MacroExpander(BaseMacroExpander):
+    '''This concrete macro expander layer defines which AST layouts are macro invocations.'''
 
     def visit_With(self, withstmt):
         '''
@@ -107,7 +108,7 @@ def expand_macros(tree, bindings, filename):
 
     `filename` is the full path to the `.py` being macroexpanded, for error reporting.
     '''
-    expansion = _MacroExpander(bindings, filename).visit(tree)
+    expansion = MacroExpander(bindings, filename).visit(tree)
     return expansion
 
 def find_macros(tree):
