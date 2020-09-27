@@ -1,11 +1,17 @@
 # -*- coding: utf-8; -*-
-'''Provide the functionality to find and expand macros.'''
+'''Provide the functionality to find and expand macros.
+
+This concrete macro expander layer defines:
+
+ - types of macro invocation (`macroname[...]`, `with macroname:`, `@macroname`),
+ - syntax for establishing macro bindings (`from module import macros, ...`).
+'''
 
 __all__ = ['expand_macros', 'find_macros', 'MacroExpander']
 
 import sys
 from ast import Name, Import, ImportFrom, alias, AST, Expr, Constant, copy_location
-from .visitors import BaseMacroExpander
+from .visitors import BaseMacroExpander, postprocess
 
 class MacroExpander(BaseMacroExpander):
     '''This concrete macro expander layer defines macro invocation syntax.
@@ -136,6 +142,7 @@ def expand_macros(tree, bindings, filename):
     `filename` is the full path to the `.py` being macroexpanded, for error reporting.
     '''
     expansion = MacroExpander(bindings, filename).visit(tree)
+    expansion = postprocess(expansion)
     return expansion
 
 

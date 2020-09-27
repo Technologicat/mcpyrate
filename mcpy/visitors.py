@@ -1,14 +1,27 @@
 # -*- coding: utf-8; -*-
+'''Expander core; essentially, how to apply a macro invocation.'''
 
-__all__ = ['BaseMacroExpander', 'MacroExpansionError']
+__all__ = ['BaseMacroExpander',
+           'MacroExpansionError',
+           'MacroExpanderMarker',
+           'postprocess']
 
 from ast import NodeTransformer, AST, fix_missing_locations
 from .ctxfixer import fix_missing_ctx
+from .markers import ASTMarker
 from .unparse import unparse
 from .utilities import flatten_suite
 
 class MacroExpansionError(Exception):
-    '''Represents an error during macro expansion.'''
+    '''Error during macro expansion.'''
+
+class MacroExpanderMarker(ASTMarker):
+    '''Base class for AST markers used by the macro expander itself.'''
+
+class Done(MacroExpanderMarker):
+    '''Mark a subtree as done, so further visits by the expander won't affect it.
+
+    Emitted by `visit_once`.'''
 
 class BaseMacroExpander(NodeTransformer):
     '''
@@ -22,9 +35,13 @@ class BaseMacroExpander(NodeTransformer):
         self.filename = filename
         self._recursive = True
 
+    def _needs_expansion(self, tree):
+        '''No-op if no macro bindings or if `tree` is marked `Done`.'''
+        return self.bindings and not isinstance(tree, Done)
+
     def visit(self, tree):
-        '''Expand macros. No-op if no macro bindings.'''
-        if not self.bindings:
+        '''Expand macros in `tree`. Treat `visit(stmt_suite)` as a loop for individual elements.'''
+        if not self._needs_expansion(tree):
             return tree
         supervisit = super().visit
         if isinstance(tree, list):
@@ -32,22 +49,19 @@ class BaseMacroExpander(NodeTransformer):
         return supervisit(tree)
 
     def visit_once(self, tree):
-        '''Expand only one layer of macros.
-
-        Helps debug macros that invoke other macros.
-        '''
+        '''Expand one layer of macros in `tree`. Helps debug macros that invoke other macros. '''
         oldrec = self._recursive
         try:
             self._recursive = False
-            return self.visit(tree)
+            return Done(self.visit(tree))
         finally:
             self._recursive = oldrec
 
     def _expand(self, syntax, target, macroname, tree, kw=None):
         '''
         Transform `target` node, replacing it with the expansion result of
-        applying the named macro on the proper node and recursively treat the
-        expansion as well.
+        applying `macroname` on `tree`, and recursively treat the expansion
+        as well.
         '''
         macro = self.bindings[macroname]
         kw = kw or {}
@@ -91,3 +105,22 @@ class BaseMacroExpander(NodeTransformer):
 def _apply_macro(macro, tree, kw):
     '''Execute the macro on tree passing extra kwargs.'''
     return macro(tree, **kw)
+
+def postprocess(tree):
+    '''Perform final postprocessing fix-ups.
+
+    Call this after macro expansion is otherwise done, before sending `tree`
+    to Python's `compile`.
+
+    Currently, this deletes any AST markers emitted by the macro expander to
+    talk with itself during expansion.
+    '''
+    class InternalMarkerDeleter(NodeTransformer):
+        def visit(self, tree):
+            if isinstance(tree, list):
+                return flatten_suite(self.visit(elt) for elt in tree)
+            self.generic_visit(tree)
+            if isinstance(tree, MacroExpanderMarker):
+                return tree.body
+            return tree
+    return InternalMarkerDeleter().visit(tree)

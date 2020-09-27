@@ -226,3 +226,25 @@ def h(tree, *, syntax, expander, **kw):
         name = unparse(tree)
         _unquote_expand(tree, expander)
         return CaptureLater(tree, name)
+
+def expand(tree, *, expander, **kw):
+    '''[syntax, expr/block] Expand all macros in `tree`, quote the result.
+
+    For macro debugging. The result can be `unparse`d or `ast_aware_repr`d for printing.'''
+    tree = expander.visit(tree)
+    return q(tree, expander=expander, **kw)
+
+def expand_once(tree, *, expander, **kw):
+    '''[syntax, expr/block] Expand only one layer of macros in `tree`, quote the result.
+
+    For macro debugging. The result can be `unparse`d or `ast_aware_repr`d for printing.'''
+    tree = expander.visit_once(tree)
+    return q(tree, expander=expander, **kw)
+
+def expand_twice(tree, *, expander, **kw):
+    '''[syntax, expr/block] Expand two first layers of macros in `tree`, quote the result.
+
+    For macro debugging. The result can be `unparse`d or `ast_aware_repr`d for printing.'''
+    tree = expander.visit_once(tree)  # -> Done(body=...)
+    tree = expander.visit_once(tree.body)
+    return q(tree, expander=expander, **kw)
