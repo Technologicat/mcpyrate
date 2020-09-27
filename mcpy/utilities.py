@@ -1,10 +1,10 @@
 # -*- coding: utf-8; -*-
 
+__all__ = ['ast_aware_repr', 'gensym', 'flatten_suite', 'Bunch']
+
 import ast
 from collections.abc import Mapping, MutableMapping, Container, Iterable, Sized
 import uuid
-
-__all__ = ['ast_aware_repr', 'gensym', 'flatten_suite', 'Bunch']
 
 def ast_aware_repr(thing):
     """Like repr(), but supports ASTs.

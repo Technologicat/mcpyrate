@@ -1,11 +1,11 @@
 # -*- coding: utf-8; -*-
 '''Provide the functionality to find and expand macros.'''
 
+__all__ = ['expand_macros', 'find_macros', 'MacroExpander']
+
 import sys
 from ast import Name, Import, ImportFrom, alias, AST, Expr, Constant, copy_location
 from .visitors import BaseMacroExpander
-
-__all__ = ['expand_macros', 'find_macros', 'MacroExpander']
 
 class MacroExpander(BaseMacroExpander):
     '''This concrete macro expander layer defines macro invocation syntax.

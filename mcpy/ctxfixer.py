@@ -5,6 +5,8 @@ Allows you to build your ASTs without caring about that stuff and just
 fill it in later.
 '''
 
+__all__ = ['fix_missing_ctx']
+
 from ast import (Load, Store, Del,
                  Assign, AnnAssign, AugAssign,
                  Attribute, Subscript,
@@ -20,8 +22,6 @@ except ImportError:
     class _NoSuchNodeType:
         pass
     NamedExpr = _NoSuchNodeType
-
-__all__ = ['fix_missing_ctx']
 
 class _CtxFixer(Walker):
     def __init__(self):

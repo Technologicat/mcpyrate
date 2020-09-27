@@ -1,11 +1,11 @@
 # -*- coding: utf-8; -*-
 
+__all__ = ['BaseMacroExpander', 'MacroExpansionError']
+
 from ast import NodeTransformer, AST, fix_missing_locations
 from .ctxfixer import fix_missing_ctx
 from .unparse import unparse
 from .utilities import flatten_suite
-
-__all__ = ['BaseMacroExpander', 'MacroExpansionError']
 
 class MacroExpansionError(Exception):
     '''Represents an error during macro expansion.'''

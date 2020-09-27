@@ -1,11 +1,11 @@
 # -*- coding: utf-8; -*-
 
+__all__ = ['nop', 'source_to_xcode']
+
 import ast
 from .core import find_macros, expand_macros
 from .markers import get_markers
 from .visitors import MacroExpansionError
-
-__all__ = ['nop', 'source_to_xcode']
 
 def nop(*args, **kw): pass
 

@@ -1,11 +1,11 @@
 # -*- coding: utf-8; -*-
 """Back-convert a Python AST into source code. Original formatting is disregarded."""
 
+__all__ = ['unparse']
+
 import sys
 import ast
 import io
-
-__all__ = ['unparse']
 
 # Large float and imaginary literals get turned into infinities in the AST.
 # We unparse those infinities to INFSTR.
