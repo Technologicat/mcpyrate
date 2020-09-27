@@ -1,6 +1,8 @@
+# -*- coding: utf-8; -*-
 
 from ast import (Call, arg, Name, Attribute, Str, FunctionDef, Assign, Load, Store,
                  NodeTransformer, copy_location)
+from mcpy import unparse
 
 def customliterals(statements, expand_macros, **kw):
     '''
@@ -20,7 +22,7 @@ def customliterals(statements, expand_macros, **kw):
     visitor = _WrapLiterals()
     return map(visitor.visit, map(expand_macros, statements))
 
-def log(expr, to_source, **kw):
+def log(expr, **kw):
     '''
     Print the passed value, labeling the output with the expression. Example:
 
@@ -29,9 +31,8 @@ def log(expr, to_source, **kw):
 
         # prints
         # d['a']: 1
-
     '''
-    label = to_source(expr) + ': '
+    label = unparse(expr) + ': '
     return Call(func=Name(id='print', ctx=Load()),
                 args=[Str(s=label), expr], keywords=[], starargs=None,
                 kwargs=None)
@@ -49,7 +50,6 @@ def value(classdef, **kw):
         assert(not isinstance(superman, type))
         assert(isinstance(superman, object))
         assert(superman.completename() == 'Klark Kent')
-
     '''
     symbols = _gather_symbols(classdef)
     baked_class = _IntoValueTransformer(symbols).visit(classdef)
@@ -69,9 +69,25 @@ class _WrapLiterals(NodeTransformer):
         '''
         return copy_location(
             Call(func=Name(id=fname, ctx=Load()),
-                 args=[node], keywords=[], starargs=None, kwargs=None),
+                 args=[node], keywords=[]),
             node
         )
+
+    def visit_Constant(self, node):  # Python 3.8+
+        v = node.value
+        tv = type(v)
+        if tv is tuple:
+            return self._wrap('tuple', node)
+        elif tv is str:
+            return self._wrap('str', node)
+        elif tv is list:
+            return self._wrap('list', node)
+        elif tv is set:
+            return self._wrap('set', node)
+        elif tv is dict:
+            return self._wrap('dict', node)
+        elif tv in (int, float, complex):
+            return self._wrap('num', node)
 
     def visit_Tuple(self, node):
         return self._wrap('tuple', node)
