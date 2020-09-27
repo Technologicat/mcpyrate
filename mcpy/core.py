@@ -73,7 +73,7 @@ class MacroExpander(BaseMacroExpander):
 
         It replaces the whole decorated node with the result of the macro.
         '''
-        macros, decorators = self._filter_out_macros(decorated.decorator_list)
+        macros, decorators = self._detect_decorator_macros(decorated.decorator_list)
         decorated.decorator_list = decorators
         if macros:
             for macro in reversed(macros):
@@ -86,7 +86,7 @@ class MacroExpander(BaseMacroExpander):
 
         return new_tree
 
-    def _filter_out_macros(self, decorators):
+    def _detect_decorator_macros(self, decorators):
         '''
         Identify macro names inside a decorator list, and return a pair with
         macro decorators and the decorators not identified as macros.
