@@ -16,8 +16,8 @@ from ast import (Load, Store, Del,
                  Delete)
 from .walkers import Walker
 
-try:
-    from ast import NamedExpr  # Python 3.8+
+try:  # Python 3.8+
+    from ast import NamedExpr
 except ImportError:
     class _NoSuchNodeType:
         pass
