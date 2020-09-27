@@ -8,7 +8,7 @@ import ast
 from .core import expand_macros
 from .markers import ASTMarker, get_markers, NestingLevelTracker
 from .unparse import unparse
-from .utilities import gensym
+from .utilities import gensym, ast_aware_repr
 
 # --------------------------------------------------------------------------------
 
@@ -128,8 +128,76 @@ def astify(x):  # like MacroPy's `ast_repr`
 
     raise TypeError(f"Don't know how to astify {repr(x)}")
 
+def unastify(tree):
+    """Inverse of `astify`. Only works if `tree` was produced by `astify`.
+
+    Essentially a top-level unquote (not inside any `q`).
+    """
+    # CAUTION: in `unastify`, we implement only what we minimally need.
+    def attr_ast_to_dotted_name(tree):
+        # Input is like:
+        #     (mcpy.quotes).thing
+        #     ((mcpy.quotes).ast).thing
+        assert type(tree) is ast.Attribute
+        acc = []
+        def recurse(tree):
+            acc.append(tree.attr)
+            if type(tree.value) is ast.Attribute:
+                recurse(tree.value)
+            elif type(tree.value) is ast.Name:
+                acc.append(tree.value.id)
+            else:
+                raise NotImplementedError
+        recurse(tree)
+        return ".".join(reversed(acc))
+
+    mcpy_quotes_attrs = globals()
+    def lookup_thing(dotted_name):
+        if not dotted_name.startswith("mcpy.quotes"):
+            raise NotImplementedError
+        path = dotted_name.split(".")
+        if len(path) < 3 or len(path) > 4:
+            raise NotImplementedError
+        name_of_thing = path[2]
+        thing = mcpy_quotes_attrs[name_of_thing]
+        if len(path) == 4:
+            attrname = path[3]
+            thing = getattr(thing, attrname)
+        return thing
+
+    T = type(tree)
+
+    if T is ast.Constant:
+        return tree.value
+
+    # Support machinery for `Call` AST node. This serendipitously supports also
+    # *args and **kwargs, because as of Python 3.6 those appear in `args` and
+    # `keywords`, and `Starred` needs no special support.
+    elif T is list:
+        return [unastify(elt) for elt in tree]
+    elif T is ast.keyword:
+        return tree.arg, unastify(tree.value)
+
+    elif T is ast.List:
+        return [unastify(elt) for elt in tree.elts]
+    elif T is ast.Tuple:
+        return tuple(unastify(elt) for elt in tree.elts)
+    elif T is ast.Dict:
+        return {unastify(k): unastify(v) for k, v in zip(tree.keys, tree.values)}
+    elif T is ast.Set:
+        return {unastify(elt) for elt in tree.elts}
+
+    elif T is ast.Call:
+        dotted_name = attr_ast_to_dotted_name(tree.func)
+        callee = lookup_thing(dotted_name)
+        args = unastify(tree.args)
+        kwargs = {k: v for k, v in unastify(tree.keywords)}
+        return callee(*args, **kwargs)
+
+    raise TypeError(f"Don't know how to unastify {ast_aware_repr(tree)}")
+
 # --------------------------------------------------------------------------------
-# Macros
+# Quasiquote macros
 #
 # These operators are named after Qu'nash, the goddess of quasiquotes in high-tech-elven mythology.
 
@@ -228,6 +296,9 @@ def h(tree, *, syntax, expander, **kw):
         name = unparse(tree)
         _unquote_expand(tree, expander)
         return CaptureLater(tree, name)
+
+# --------------------------------------------------------------------------------
+# Debug macros
 
 def expand(tree, *, expander, **kw):
     '''[syntax, expr/block] Expand all macros in `tree`, quote the result.
