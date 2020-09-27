@@ -5,7 +5,7 @@
 macros may use them to work together.
 """
 
-__all__ = ["ASTMarker", "get_markers"]
+__all__ = ["ASTMarker", "get_markers", "LevelTracker"]
 
 import ast
 from contextlib import contextmanager
