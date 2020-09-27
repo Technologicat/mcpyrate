@@ -8,7 +8,7 @@ from .visitors import BaseMacroExpander
 __all__ = ['expand_macros', 'find_macros', 'MacroExpander']
 
 class MacroExpander(BaseMacroExpander):
-    '''This concrete macro expander layer defines which AST layouts are macro invocations.'''
+    '''This concrete macro expander layer defines macro invocation syntax.'''
 
     def visit_With(self, withstmt):
         '''
@@ -17,7 +17,7 @@ class MacroExpander(BaseMacroExpander):
             with macroname:
                 "with's body is the target of the macro"
 
-        It replaces the `with` node with the result of the macro.
+        Replace the `With` node with the result of the macro.
         '''
         with_item = withstmt.items[0]
         candidate = with_item.context_expr
@@ -38,7 +38,7 @@ class MacroExpander(BaseMacroExpander):
 
             macroname['index expression is the target of the macro']
 
-        It replaces the expression node with the result of the macro.
+        Replace the `SubScript` node with the result of the macro.
         '''
         candidate = subscript.value
         if isinstance(candidate, Name) and self._ismacro(candidate.id):
@@ -71,7 +71,7 @@ class MacroExpander(BaseMacroExpander):
             class C():
                 "The whole class is the target of the macro"
 
-        It replaces the whole decorated node with the result of the macro.
+        Replace the whole decorated node with the result of the macro.
         '''
         macros, decorators = self._detect_decorator_macros(decorated.decorator_list)
         decorated.decorator_list = decorators
@@ -88,8 +88,9 @@ class MacroExpander(BaseMacroExpander):
 
     def _detect_decorator_macros(self, decorators):
         '''
-        Identify macro names inside a decorator list, and return a pair with
-        macro decorators and the decorators not identified as macros.
+        Identify macro names in a decorator list, and return a pair with
+        macro decorators and the decorators not identified as macros,
+        preserving ordering within each of the two subsets.
         '''
         macros, remaining = [], []
         for d in decorators:
@@ -161,8 +162,8 @@ def _fix_coverage_reporting(tree, target):
     '''
     Fix Coverage.py test coverage reporting for block and decorator macros.
 
-    The issue is the line invoking the macro is compiled away, so we insert a
-    dummy node, copying source location information from the AST node `target`.
+    The line invoking the macro is compiled away, so we insert a dummy node,
+    copying source location information from the AST node `target`.
 
     `tree` must appear in a position where `ast.NodeTransformer.visit` is
     allowed to return a list of nodes.
@@ -171,7 +172,8 @@ def _fix_coverage_reporting(tree, target):
         tree = []
     elif isinstance(tree, AST):
         tree = [tree]
-    # The dummy node must be something that actually runs, an `ast.Pass` won't do.
+    # The dummy node must be something that actually runs so it gets
+    # a coverage hit, an `ast.Pass` won't do.
     non = copy_location(Constant(value=None), target)
     dummy = copy_location(Expr(value=non), target)
     tree.insert(0, dummy)
