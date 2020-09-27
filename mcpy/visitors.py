@@ -55,14 +55,14 @@ class BaseMacroExpander(NodeTransformer):
             'syntax': syntax,
             'expander': self})
 
-        original_code = unparse(target)
+        approximate_sourcecode = unparse(target)
         try:
             expansion = _apply_macro(macro, tree, kw)
         except Exception as err:
             # If expansion fails, report macro use site (possibly nested) as well as the definition site.
             lineno = target.lineno if hasattr(target, 'lineno') else None
-            sep = " " if "\n" not in original_code else "\n"
-            msg = f'use site was at {self.filename}:{lineno}:{sep}{original_code}'
+            sep = " " if "\n" not in approximate_sourcecode else "\n"
+            msg = f'use site was at {self.filename}:{lineno}:{sep}{approximate_sourcecode}'
             raise MacroExpansionError(msg) from err
 
         return self._visit_expansion(expansion, target)
