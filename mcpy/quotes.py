@@ -2,7 +2,7 @@
 """Quasiquotes. Build ASTs in your macros, using syntax that mostly looks like regular code.."""
 
 __all__ = ['capture', 'lookup', 'astify',
-           'q', 'u', 'n', 'a', 'h']
+           'q', 'u', 'n', 'a', 's', 'h']
 
 import ast
 from contextlib import contextmanager
