@@ -5,9 +5,8 @@ __all__ = ['capture', 'lookup', 'astify',
            'q', 'u', 'n', 'a', 's', 'h']
 
 import ast
-from contextlib import contextmanager
 from .core import expand_macros
-from .markers import ASTMarker, get_markers
+from .markers import ASTMarker, get_markers, LevelTracker
 from .unparse import unparse
 from .utilities import gensym
 
@@ -78,9 +77,9 @@ def astify(x):  # like MacroPy's `ast_repr`
 
     If the input is a `list` of ASTs for a statement suite, the return value
     is a single `ast.List` node, with its `elts` taken from the input list.
-    It's however not used this way, because `_BaseMacroExpander` already
-    translates a `visit` to a statement suite into visits to individual nodes,
-    because otherwise `ast.NodeTransformer` chokes on the input.
+    It's however not used this way, because `BaseMacroExpander` already
+    translates a `visit` to a statement suite into visits to individual
+    nodes, because otherwise `ast.NodeTransformer` chokes on the input.
 
     Raises `TypeError` when the lifting fails.
     """
@@ -132,29 +131,28 @@ def astify(x):  # like MacroPy's `ast_repr`
 #
 # These operators are named after Qu'nash, the goddess of quasiquotes in high-tech-elven mythology.
 
-_quotelevel = 0
-@contextmanager
-def _quotelevel_changed_by(delta):
-    global _quotelevel
-    _quotelevel += delta
-    try:
-        yield
-    finally:
-        _quotelevel -= delta
-    assert _quotelevel >= 0
+_quotelevel = LevelTracker()
 
 def _unquote_expand(tree, expander):
     """Expand quasiquote macros in `tree`. If quotelevel is zero, expand all macros in `tree`."""
-    if _quotelevel == 0:
+    if _quotelevel.value == 0:
         tree = expander.visit(tree)
     else:
         tree = _expand_quasiquotes(tree, expander)
+
+def _expand_quasiquotes(tree, expander):
+    """Expand quasiquote macros only."""
+    # Use a second expander instance, with different bindings. Copy only the
+    # bindings of the quasiquote macros from the main `expander`, accounting
+    # for possible as-imports.
+    bindings = {k: v for k, v in expander.bindings.items() if v in (q, u, n, a, s, h)}
+    return expand_macros(tree, bindings, expander.filename)
 
 def q(tree, *, syntax, expander, **kw):
     """quasiquote. Lift code into its AST representation."""
     if syntax not in ("expr", "block"):
         raise SyntaxError("q is an expr and block macro only")
-    with _quotelevel_changed_by(+1):
+    with _quotelevel.changed_by(+1):
         tree = _expand_quasiquotes(tree, expander)
         tree = astify(tree)
         ps = get_markers(tree, QuasiquoteMarker)  # postcondition: no remaining QuasiquoteMarkers
@@ -174,9 +172,9 @@ def u(tree, *, syntax, expander, **kw):
     """
     if syntax != "expr":
         raise SyntaxError("u is an expr macro only")
-    if _quotelevel < 1:
+    if _quotelevel.value < 1:
         raise SyntaxError("u[] encountered while quotelevel < 1")
-    with _quotelevel_changed_by(-1):
+    with _quotelevel.changed_by(-1):
         _unquote_expand(tree, expander)
         # We want to generate an AST that compiles to the *value* of `v`. But when
         # this runs, it is too early. We must astify *at the use site*. So use an
@@ -190,25 +188,25 @@ def n(tree, *, syntax, **kw):
     """
     if syntax != "expr":
         raise SyntaxError("n is an expr macro only")
-    if _quotelevel < 1:
+    if _quotelevel.value < 1:
         raise SyntaxError("n[] encountered while quotelevel < 1")
-    with _quotelevel_changed_by(-1):
+    with _quotelevel.changed_by(-1):
         return ASTLiteral(astify(ast.Name(id=ASTLiteral(tree))))
 
 def a(tree, *, syntax, **kw):
     """AST-unquote. Splice an AST into a quasiquote."""
     if syntax != "expr":
         raise SyntaxError("a is an expr macro only")
-    if _quotelevel < 1:
+    if _quotelevel.value < 1:
         raise SyntaxError("a[] encountered while quotelevel < 1")
-    with _quotelevel_changed_by(-1):
+    with _quotelevel.changed_by(-1):
         return ASTLiteral(tree)
 
 def s(tree, *, syntax, **kw):
     """list-unquote. Splice a `list` of ASTs, as an `ast.List`, into a quasiquote."""
     if syntax != "expr":
         raise SyntaxError("s is an expr macro only")
-    if _quotelevel < 1:
+    if _quotelevel.value < 1:
         raise SyntaxError("s[] encountered while quotelevel < 1")
     return ASTLiteral(ast.Call(ast.Attribute(value=_mcpy_quotes_attr('ast'),
                                              attr='List'),
@@ -222,17 +220,9 @@ def h(tree, *, syntax, expander, **kw):
     """
     if syntax != "expr":
         raise SyntaxError("h is an expr macro only")
-    if _quotelevel < 1:
+    if _quotelevel.value < 1:
         raise SyntaxError("h[] encountered while quotelevel < 1")
-    with _quotelevel_changed_by(-1):
+    with _quotelevel.changed_by(-1):
         name = unparse(tree)
         _unquote_expand(tree, expander)
         return CaptureLater(tree, name)
-
-def _expand_quasiquotes(tree, expander):
-    """Expand quasiquote macros only."""
-    # Use a second expander instance, with different bindings. Copy only the
-    # bindings of the quasiquote macros from the main `expander`, accounting
-    # for possible as-imports.
-    bindings = {k: v for k, v in expander.bindings.items() if v in (q, u, n, a, s, h)}
-    return expand_macros(tree, bindings, expander.filename)
