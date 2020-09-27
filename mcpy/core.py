@@ -101,7 +101,9 @@ class _MacroExpander(BaseMacroExpander):
 
 def expand_macros(tree, bindings, filename):
     '''
-    Return an expanded version of tree with macros applied.
+    Return an expanded version of `tree` with macros applied.
+
+    `bindings` is a dictionary of the macro name/function pairs.
 
     `filename` is the full path to the `.py` being macroexpanded, for error reporting.
     '''

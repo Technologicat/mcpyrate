@@ -259,7 +259,7 @@ def h(tree, *, syntax, expander, **kw):
 def _expand_quasiquotes(tree, expander):
     """Expand quasiquote macros only."""
     # Use a second expander instance, with different bindings. Copy only the
-    # bindings of the quasiquote macros from the main `expander`. Account for
-    # as-imports of the quasiquote macros.
+    # bindings of the quasiquote macros from the main `expander`, accounting
+    # for possible as-imports.
     bindings = {k: v for k, v in expander.bindings.items() if v in (q, u, n, a, s, h)}
     return expand_macros(tree, bindings, expander.filename)
