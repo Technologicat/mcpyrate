@@ -125,7 +125,7 @@ def astify(x):  # like MacroPy's `ast_repr`
                         [],
                         fields)
 
-    raise TypeError("Don't know how to astify {}".format(repr(x)))
+    raise TypeError(f"Don't know how to astify {repr(x)}")
 
 # --------------------------------------------------------------------------------
 # Macros

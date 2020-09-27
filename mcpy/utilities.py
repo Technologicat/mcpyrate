@@ -14,9 +14,11 @@ def ast_aware_repr(thing):
     """
     if isinstance(thing, ast.AST):
         fields = [ast_aware_repr(b) for a, b in ast.iter_fields(thing)]
-        return '{}({})'.format(thing.__class__.__name__, ', '.join(fields))
-    elif isinstance(thing, list):  # e.g. multi-statement body
-        return '[{}]'.format(', '.join(ast_aware_repr(elt) for elt in thing))
+        args = ', '.join(fields)
+        return f"{thing.__class__.__name__}({args})"
+    elif isinstance(thing, list):  # statement suite
+        elts = ', '.join(ast_aware_repr(elt) for elt in thing)
+        return f"[{elts}]"
     return repr(thing)
 
 
@@ -32,7 +34,7 @@ def gensym(basename=None):
     basename = basename or "gensym"
     def generate():
         unique = str(uuid.uuid4()).replace('-', '')
-        return "{}_{}".format(basename, unique)
+        return f"{basename}_{unique}"
     sym = generate()
     # The uuid spec does not guarantee no collisions, only a vanishingly small chance.
     while sym in _previous_gensyms:
@@ -113,8 +115,9 @@ class Bunch:
     def setdefault(self, name, *default): return self._data.setdefault(name, *default)
 
     def __repr__(self):  # pragma: no cover
-        bindings = ["{:s}={}".format(name, repr(value)) for name, value in self._data.items()]
-        return "Bunch({})".format(", ".join(bindings))
+        bindings = [f"{name:s}={repr(value)}" for name, value in self._data.items()]
+        args = ", ".join(bindings)
+        return f"Bunch({args})"
 
 for abscls in (Mapping, MutableMapping, Container, Iterable, Sized):  # virtual ABCs
     abscls.register(Bunch)
