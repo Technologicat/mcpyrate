@@ -46,7 +46,7 @@ macro[...]
 ...
 ```
 
-In each case, the macro will receive `...` as input and will replace the invocation with the expanded content. Expansion occurs first for outermost nodes. I.e, from outside to inside.
+In each case, the macro will receive `...` as input and will replace the invocation with the expanded content. Expansion occurs first for outermost nodes, i.e, from outside to inside.
 
 ### Importing macros
 
@@ -58,7 +58,7 @@ from module import macros, ...
 
 replacing `...` with the macros you want to use. Importing all via `*` won't work. You must declare the macros you want explicitly. `mcpy` prevents you from accidentally using macros as functions in your code by transforming that import into:
 
-```pyhon
+```python
 import module
 ```
 
@@ -88,15 +88,16 @@ No special imports are needed to write your own macros. Just read the documentat
 def macro(tree, **kw): return tree
 ```
 
-The `tree` parameter is the only positional parameter the macro is called with. Remaining parameters are called by name and includes a set of useful functionality.
+The `tree` parameter is the only positional parameter the macro is called with. Remaining parameters are called by name and include a set of useful functionality.
 
 Beside a node, you can return `None` to remove the node, or a list of `AST` nodes. The expanded macros are recursively expanded until no new macros are found.
 
 ```python
 from ast import *
-def log(expr, to_source, **kw):
-    '''Replaces log[expr] with print('expr: ', expr)'''
-    label = to_source(expr) + ': '
+from mcpy import unparse
+def log(expr, **kw):
+    '''Replace log[expr] with print('expr: ', expr)'''
+    label = unparse(expr) + ': '
     return Call(func=Name(id='print', ctx=Load()),
                 args=[Str(s=label), expr], keywords=[],
                 starargs=None, kwargs=None)
@@ -106,17 +107,19 @@ Any missing source locations and `ctx` fields are fixed automatically in a postp
 
 If you get an error saying an AST node is missing the mandatory field `lineno`, the actual error is likely something else. The first thing to check is that your macro is really inserting AST nodes where the compiler expects those, instead of accidentally inserting bare values.
 
+*Changed in v3.0.0.* The named parameter `to_source` has been removed; use the function `mcpy.unparse`. The named parameter `expand_macros` has been replaced with `expander`, which grants access to the macro expander instance; use `expander.visit`.
+
 ### Quasiquotes
 
-We provide [a quasiquote system](quasiquotes.md) (both classical and hygienic) to make macro code both much more readable and simpler to write. It's similar to MacroPy's, but there are differences in the details.
+*New in v3.0.0.* We provide [a quasiquote system](quasiquotes.md) (both classical and hygienic) to make macro code both much more readable and simpler to write. It's similar to MacroPy's, but details of usage differ.
 
 ### Walk an AST
 
-To bridge the feature gap between [`ast.NodeTransformer`](https://docs.python.org/3/library/ast.html#ast.NodeTransformer) and MacroPy's `Walker`, we provide [`mcpy.walkers.Walker`](walkers.md), a zen-minimalistic AST walker base class based on `ast.NodeTransformer`, with a state stack and a node collector.
+*New in v3.0.0.* To bridge the feature gap between [`ast.NodeTransformer`](https://docs.python.org/3/library/ast.html#ast.NodeTransformer) and MacroPy's `Walker`, we provide [`mcpy.walkers.Walker`](walkers.md), a zen-minimalistic AST walker base class based on `ast.NodeTransformer`, with a state stack and a node collector. If you need a walker that can temporarily change state while in a given subtree, maybe look here.
 
 ### Distinguish how the macro is called
 
-A macro can be called in three different ways. The way a macro is called is recorded in the `syntax` named parameter (one of `'block'`, `'expr'` or '`decorator`'), so you can distinguish the syntax used in the source code and provide different implementations for each one.
+A macro can be called in three different ways. The way a macro is called is recorded in the `syntax` named parameter (one of `'block'`, `'expr'` or `'decorator'`), so you can distinguish the syntax used in the source code and provide different implementations for each one. In other words, the macro interface acts as the dispatcher.
 
 ### Get the source of an AST
 
@@ -126,21 +129,23 @@ Because the code is backconverted from the AST representation, the result may di
 
 ### Expand macros
 
-Use the named parameter `expander` to access the macro expander. You can optionally call `expander.visit(tree)` with an AST `tree` to expand the macros in that AST. This is useful for making inner macro invocations expand first.
-
-Right after the expansion of a macro, the macro expander automatically expands again in the result, repeating this until no macros are left in the AST.
+Use the named parameter `expander` to access the macro expander. You can call `expander.visit(tree)` with an AST `tree` to expand the macros in that AST. This is useful for making inner macro invocations expand first.
 
 To expand only one layer of inner macro invocations, call `expander.visit_once(tree)`. This can be useful during debugging of a macro implementation. You can then convert the result into a printable form using `mcpy.unparse` or `mcpy.ast_aware_repr`.
 
+If you need to temporarily run with different macro bindings, see `expander.bindings`, `expander.filename` and use `mcpy.core.expand_macros` to instantiate a new expander with the desired bindings. Then use its `visit` method.
+
 ### Macro expansion error reporting
 
-An exception raised during macro expansion is reported immediately, and the program exits. The error report includes two source locations: the macro use site (which was being expanded, not running yet), and the macro code that raised the exception (that was running and was terminated due to the exception).
+An exception raised during macro expansion is reported immediately, and the program exits.
+
+The error report includes two source locations: the macro use site (which was being expanded, not running yet), and the macro code that raised the exception (that was running and was terminated due to the exception).
 
 The use site source location is reported in a chained exception (`raise from`), so if the second stack trace is long, scroll back in your terminal to see the original exception that was raised by the macro.
 
 ### Examples
 
-`mcpy` focuses on the mechanisms to expand macros, not in authoring tools or macro libraries. Anyway, a `demo` folder is provided to see `mcpy` in action. Simply navigate to it and run a Python console, then import `run`:
+`mcpy` is a macro expander, not a library containing macros. But a `demo` folder is provided, to see `mcpy` in action. Navigate to it and run a Python console, then import `run`:
 
 ```python
 import run

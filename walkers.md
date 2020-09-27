@@ -23,6 +23,8 @@ walker base class based on `ast.NodeTransformer`, with a state stack and a node 
 
 The selling points are `withstate`, `state`, `collect`, `collected`, which see below.
 
+For a realistic example, see [`mcpy.ctxfixer`](mcpy/ctxfixer.py).
+
 
 ## Attributes
 
