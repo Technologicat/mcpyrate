@@ -1,5 +1,5 @@
 # -*- coding: utf-8; -*-
-"""Quasiquotes. Build ASTs in your macros, using syntax that mostly looks like regular code.."""
+"""Quasiquotes. Build ASTs in your macros, using syntax that mostly looks like regular code."""
 
 __all__ = ['capture', 'lookup', 'astify',
            'q', 'u', 'n', 'a', 's', 'h']
