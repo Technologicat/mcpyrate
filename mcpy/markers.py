@@ -5,7 +5,7 @@
 macros may use them to work together.
 """
 
-__all__ = ["ASTMarker", "get_markers", "LevelTracker"]
+__all__ = ["ASTMarker", "get_markers", "NestingLevelTracker"]
 
 import ast
 from contextlib import contextmanager
@@ -52,7 +52,7 @@ def get_markers(tree, cls=ASTMarker):
     return p.collected
 
 
-class LevelTracker:
+class NestingLevelTracker:
     """Track the nesting level in a set of co-operating, related macros.
 
     Useful for implementing macros that are only syntactically valid inside the

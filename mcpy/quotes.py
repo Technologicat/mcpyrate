@@ -6,7 +6,7 @@ __all__ = ['capture', 'lookup', 'astify',
 
 import ast
 from .core import expand_macros
-from .markers import ASTMarker, get_markers, LevelTracker
+from .markers import ASTMarker, get_markers, NestingLevelTracker
 from .unparse import unparse
 from .utilities import gensym
 
@@ -131,7 +131,7 @@ def astify(x):  # like MacroPy's `ast_repr`
 #
 # These operators are named after Qu'nash, the goddess of quasiquotes in high-tech-elven mythology.
 
-_quotelevel = LevelTracker()
+_quotelevel = NestingLevelTracker()
 
 def _unquote_expand(tree, expander):
     """Expand quasiquote macros in `tree`. If quotelevel is zero, expand all macros in `tree`."""
