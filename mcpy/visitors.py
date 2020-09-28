@@ -44,7 +44,16 @@ class BaseMacroExpander(NodeTransformer):
         return self.bindings and not type(tree) is Done
 
     def visit(self, tree):
-        '''Expand macros in `tree`. Treat `visit(stmt_suite)` as a loop for individual elements.'''
+        '''Expand macros in `tree`.
+
+        Treat `visit(stmt_suite)` as a loop for individual elements.
+
+        Use whatever is the current setting for recursive mode. If your
+        macro needs to know that, look at `self.recursive` (bool value).
+
+        This is the standard visitor method; it effectively continues an
+        ongoing visit.
+        '''
         if not self._needs_expansion(tree):
             return tree
         supervisit = super().visit
@@ -52,9 +61,38 @@ class BaseMacroExpander(NodeTransformer):
             return flatten_suite(supervisit(elt) for elt in tree)
         return supervisit(tree)
 
+    def visit_recursively(self, tree):
+        '''Expand macros in `tree`, in recursive mode.
+
+        That is, iterate the expansion process until no macros are left.
+
+        This starts a new visit. (Visits may be nested.)
+
+        Recursive mode is forced even if currently inside the dynamic extent
+        of a `visit_once`.
+        '''
+        oldrec = self.recursive
+        try:
+            self.recursive = True
+            return self.visit(tree)
+        finally:
+            self.recursive = oldrec
+
     def visit_once(self, tree):
-        '''Expand one layer of macros in `tree`. Helps debug macros that invoke other macros. '''
-        oldrec = self._recursive
+        '''Expand macros in `tree`, in non-recursive mode.
+
+        That is, make just one pass, regardless of whether there are macros
+        remaining in the output. Then mark `tree` as `Done`, so the rest of
+        the macro expansion process won't expand it further.
+
+        This starts a new visit. (Visits may be nested.)
+
+        Non-recursive mode is forced even if currently inside the dynamic extent
+        of a `visit_recursively`.
+
+        The use case is to help debug macros that invoke other macros.
+        '''
+        oldrec = self.recursive
         try:
             self.recursive = False
             return Done(self.visit(tree))
@@ -64,8 +102,7 @@ class BaseMacroExpander(NodeTransformer):
     def _expand(self, syntax, target, macroname, tree, kw=None):
         '''
         Transform `target` node, replacing it with the expansion result of
-        applying `macroname` on `tree`, and recursively treat the expansion
-        as well.
+        applying `macroname` on `tree`. Then postprocess by `_visit_expansion`.
         '''
         macro = self.bindings[macroname]
         kw = kw or {}
@@ -87,10 +124,12 @@ class BaseMacroExpander(NodeTransformer):
 
     def _visit_expansion(self, expansion, target):
         '''
-        Perform postprocessing fix-ups such as adding in missing source
-        location info and `ctx`.
+        Perform local postprocessing fix-ups such as adding in missing
+        source location info and `ctx`.
 
-        Then recurse into (`visit`) the once-expanded macro output.
+        Then, if currently in recursive mode, recurse into (`visit`)
+        the once-expanded macro output. (It'll `_expand` again if there
+        are macros remaining.)
         '''
         if expansion is not None:
             is_node = isinstance(expansion, AST)
