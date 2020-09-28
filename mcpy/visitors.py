@@ -37,7 +37,7 @@ class BaseMacroExpander(NodeTransformer):
         '''
         self.bindings = bindings
         self.filename = filename
-        self._recursive = True
+        self.recursive = True
 
     def _needs_expansion(self, tree):
         '''No-op if no macro bindings or if `tree` is marked as `Done`.'''
@@ -56,10 +56,10 @@ class BaseMacroExpander(NodeTransformer):
         '''Expand one layer of macros in `tree`. Helps debug macros that invoke other macros. '''
         oldrec = self._recursive
         try:
-            self._recursive = False
+            self.recursive = False
             return Done(self.visit(tree))
         finally:
-            self._recursive = oldrec
+            self.recursive = oldrec
 
     def _expand(self, syntax, target, macroname, tree, kw=None):
         '''
@@ -97,7 +97,7 @@ class BaseMacroExpander(NodeTransformer):
             expansion = [expansion] if is_node else expansion
             expansion = map(fix_missing_locations, expansion)
             expansion = map(fix_missing_ctx, expansion)
-            if self._recursive:
+            if self.recursive:
                 expansion = map(self.visit, expansion)
             expansion = list(expansion).pop() if is_node else list(expansion)
 
