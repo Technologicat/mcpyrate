@@ -4,7 +4,7 @@
 __all__ = ['BaseMacroExpander',
            'MacroExpansionError',
            'MacroExpanderMarker',
-           'postprocess']
+           'toplevel_postprocess']
 
 from ast import NodeTransformer, AST, fix_missing_locations
 from .ctxfixer import fix_missing_ctx
@@ -106,8 +106,11 @@ def _apply_macro(macro, tree, kw):
     '''Execute the macro on tree passing extra kwargs.'''
     return macro(tree, **kw)
 
-def postprocess(tree):
-    '''Perform final postprocessing fix-ups.
+# Final postprocessing for the top-level walk can't be done at the end of the
+# entrypoints `visit_once` and `visit_recursively`, because it is valid for a
+# macro to call those for a subtree.
+def toplevel_postprocess(tree):
+    '''Perform final postprocessing fix-ups for the top-level expansion.
 
     Call this after macro expansion is otherwise done, before sending `tree`
     to Python's `compile`.

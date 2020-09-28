@@ -11,7 +11,7 @@ __all__ = ['expand_macros', 'find_macros', 'MacroExpander']
 
 import sys
 from ast import Name, Import, ImportFrom, alias, AST, Expr, Constant, copy_location
-from .visitors import BaseMacroExpander, postprocess
+from .visitors import BaseMacroExpander, toplevel_postprocess
 
 class MacroExpander(BaseMacroExpander):
     '''This concrete macro expander layer defines macro invocation syntax.
@@ -142,7 +142,7 @@ def expand_macros(tree, bindings, filename):
     `filename` is the full path to the `.py` being macroexpanded, for error reporting.
     '''
     expansion = MacroExpander(bindings, filename).visit(tree)
-    expansion = postprocess(expansion)
+    expansion = toplevel_postprocess(expansion)
     return expansion
 
 
