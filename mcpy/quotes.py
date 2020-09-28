@@ -172,7 +172,7 @@ def unastify(tree):
 
     # Support machinery for `Call` AST node. This serendipitously supports also
     # *args and **kwargs, because as of Python 3.6 those appear in `args` and
-    # `keywords`, and `Starred` needs no special support.
+    # `keywords`, and `Starred` needs no special support here.
     elif T is list:
         return [unastify(elt) for elt in tree]
     elif T is ast.keyword:
