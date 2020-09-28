@@ -11,7 +11,7 @@ from ast import NodeTransformer, AST, fix_missing_locations
 from contextlib import contextmanager
 from .ctxfixer import fix_missing_ctx
 from .markers import ASTMarker
-from .unparse import unparse
+from .unparser import unparse
 from .utilities import flatten_suite
 
 class MacroExpansionError(Exception):
