@@ -15,8 +15,8 @@ class ASTMarker(ast.AST):
     """Base class for AST markers.
 
     Markers are AST-node-like entities meant for communication between
-    co-operating, related macros. They are also used within the `mcpy`
-    macro expander and its subsystems (such as quasiquotes).
+    co-operating, related macros. They are also used by the macro expander
+    to talk with itself during expansion.
 
     We inherit from `ast.AST`, so that during macro expansion, a marker
     behaves like a single AST node.
@@ -25,8 +25,8 @@ class ASTMarker(ast.AST):
     remain in the AST.
 
     To help fail-fast, if you define your own marker types, use `get_markers`
-    to check (where appropriate) that the expanded AST has no instances of
-    your own markers remaining.
+    to check (at an appropriate point) that the expanded AST has no instances
+    of your own markers remaining.
 
     A typical usage example is in the quasiquote system, where the unquote
     operators (some of which expand to markers) may only appear inside a quoted
@@ -55,7 +55,7 @@ def get_markers(tree, cls=ASTMarker):
 class NestingLevelTracker:
     """Track the nesting level in a set of co-operating, related macros.
 
-    Useful for implementing macros that are only syntactically valid inside the
+    Useful for implementing macros that are syntactically only valid inside the
     invocation of another macro (i.e. when the level is `> 0`).
     """
     def __init__(self, start=0):
