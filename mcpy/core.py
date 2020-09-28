@@ -1,23 +1,20 @@
 # -*- coding: utf-8; -*-
-'''Provide the functionality to find and expand macros.
+'''Find and expand macros.
 
-This concrete macro expander layer defines:
+This layer provides the actual macro expander, defining:
 
- - types of macro invocation (`macroname[...]`, `with macroname:`, `@macroname`),
- - syntax for establishing macro bindings (`from module import macros, ...`).
+ - types of macro invocation: `macroname[...]`, `with macroname:`, `@macroname`,
+ - syntax for establishing macro bindings: `from module import macros, ...`.
 '''
 
 __all__ = ['expand_macros', 'find_macros', 'MacroExpander']
 
 import sys
 from ast import Name, Import, ImportFrom, alias, AST, Expr, Constant, copy_location
-from .visitors import BaseMacroExpander, toplevel_postprocess
+from .visitors import BaseMacroExpander, global_postprocess
 
 class MacroExpander(BaseMacroExpander):
-    '''This concrete macro expander layer defines macro invocation syntax.
-
-    When a macro invocation is detected, we delegate to `BaseMacroExpander`.
-    '''
+    '''The actual macro expander.'''
 
     def visit_With(self, withstmt):
         '''
@@ -30,11 +27,11 @@ class MacroExpander(BaseMacroExpander):
         '''
         with_item = withstmt.items[0]
         candidate = with_item.context_expr
-        if isinstance(candidate, Name) and self._ismacro(candidate.id):
+        if isinstance(candidate, Name) and self.ismacro(candidate.id):
             macroname = candidate.id
             tree = withstmt.body
             kw = {'optional_vars': with_item.optional_vars}
-            new_tree = self._expand('block', withstmt, macroname, tree, kw)
+            new_tree = self.expand('block', withstmt, macroname, tree, kw)
             new_tree = _fix_coverage_reporting(new_tree, withstmt)
         else:
             new_tree = self.generic_visit(withstmt)
@@ -50,10 +47,10 @@ class MacroExpander(BaseMacroExpander):
         Replace the `SubScript` node with the result of the macro.
         '''
         candidate = subscript.value
-        if isinstance(candidate, Name) and self._ismacro(candidate.id):
+        if isinstance(candidate, Name) and self.ismacro(candidate.id):
             macroname = candidate.id
             tree = subscript.slice.value
-            new_tree = self._expand('expr', subscript, macroname, tree)
+            new_tree = self.expand('expr', subscript, macroname, tree)
             new_tree = copy_location(new_tree, subscript)
         else:
             new_tree = self.generic_visit(subscript)
@@ -87,7 +84,7 @@ class MacroExpander(BaseMacroExpander):
         if macros:
             for macro in reversed(macros):
                 macroname = macro.id
-                new_tree = self._expand('decorator', decorated, macroname, decorated)
+                new_tree = self.expand('decorator', decorated, macroname, decorated)
             for macro in reversed(macros):
                 new_tree = _fix_coverage_reporting(new_tree, macro)
         else:
@@ -103,7 +100,7 @@ class MacroExpander(BaseMacroExpander):
         '''
         macros, remaining = [], []
         for d in decorators:
-            if isinstance(d, Name) and self._ismacro(d.id):
+            if isinstance(d, Name) and self.ismacro(d.id):
                 macros.append(d)
             else:
                 remaining.append(d)
@@ -125,8 +122,8 @@ def _fix_coverage_reporting(tree, target):
         tree = []
     elif isinstance(tree, AST):
         tree = [tree]
-    # The dummy node must be something that actually runs so it gets
-    # a coverage hit, an `ast.Pass` won't do.
+    # The dummy node must actually run to get coverage, an `ast.Pass` won't do.
+    # We must set location info, because we run after `expand`.
     non = copy_location(Constant(value=None), target)
     dummy = copy_location(Expr(value=non), target)
     tree.insert(0, dummy)
@@ -136,13 +133,16 @@ def _fix_coverage_reporting(tree, target):
 def expand_macros(tree, bindings, filename):
     '''
     Return an expanded version of `tree` with macros applied.
+    Perform top-level postprocessing when done.
+
+    This is meant to be called with `tree` the AST of a module that uses macros.
 
     `bindings` is a dictionary of the macro name/function pairs.
 
     `filename` is the full path to the `.py` being macroexpanded, for error reporting.
     '''
     expansion = MacroExpander(bindings, filename).visit(tree)
-    expansion = toplevel_postprocess(expansion)
+    expansion = global_postprocess(expansion)
     return expansion
 
 
@@ -154,6 +154,8 @@ def find_macros(tree):
 
     As a side effect, transform each macro import statement into `import ...`,
     where `...` is the module the macros are being imported from.
+
+    This is meant to be called with `tree` the AST of a module that uses macros.
     '''
     bindings = {}
     for index, statement in enumerate(tree.body):
@@ -185,6 +187,8 @@ def _is_macro_import(statement):
 def _get_macros(macroimport):
     '''
     Return a dict with names and macros from the macro import statement.
+
+    As a side effect, import the macro definition modules.
     '''
     modulename = macroimport.module
     __import__(modulename)

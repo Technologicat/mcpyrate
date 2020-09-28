@@ -4,9 +4,10 @@
 __all__ = ['BaseMacroExpander',
            'MacroExpansionError',
            'MacroExpanderMarker',
-           'toplevel_postprocess']
+           'global_postprocess']
 
 from ast import NodeTransformer, AST, fix_missing_locations
+from contextlib import contextmanager
 from .ctxfixer import fix_missing_ctx
 from .markers import ASTMarker
 from .unparse import unparse
@@ -19,15 +20,17 @@ class MacroExpanderMarker(ASTMarker):
     '''Base class for AST markers used by the macro expander itself.'''
 
 class Done(MacroExpanderMarker):
-    '''Mark a subtree as done, so further visits by the expander won't affect it.
+    '''A subtree that is done. Any further visits by the expander will skip it.
 
-    Emitted by `visit_once`.'''
+    Emitted by `BaseMacroExpander.visit_once`, to protect the once-expanded form
+    from further expansion.
+    '''
 
 class BaseMacroExpander(NodeTransformer):
     '''
-    A base class for macro expander visitors. After identifying valid macro
-    syntax, the actual expander should return the result of calling `_expand()`
-    method with the proper arguments.
+    A base class for macro expanders. After identifying valid macro syntax, the
+    actual expander should return the result of calling the `expand()` method
+    with the proper arguments.
     '''
 
     def __init__(self, bindings, filename):
@@ -39,22 +42,16 @@ class BaseMacroExpander(NodeTransformer):
         self.filename = filename
         self.recursive = True
 
-    def _needs_expansion(self, tree):
-        '''No-op if no macro bindings or if `tree` is marked as `Done`.'''
-        return self.bindings and not type(tree) is Done
-
     def visit(self, tree):
-        '''Expand macros in `tree`.
+        '''Expand macros in `tree`, using current setting for recursive mode.
 
         Treat `visit(stmt_suite)` as a loop for individual elements.
 
-        Use whatever is the current setting for recursive mode. If your
-        macro needs to know that, look at `self.recursive` (bool value).
+        No-op if no macro bindings, or if `tree` is marked as `Done`.
 
-        This is the standard visitor method; it effectively continues an
-        ongoing visit.
+        This is the standard visitor method; it continues an ongoing visit.
         '''
-        if not self._needs_expansion(tree):
+        if not self.bindings or type(tree) is Done:
             return tree
         supervisit = super().visit
         if isinstance(tree, list):
@@ -65,44 +62,60 @@ class BaseMacroExpander(NodeTransformer):
         '''Expand macros in `tree`, in recursive mode.
 
         That is, iterate the expansion process until no macros are left.
-
-        This starts a new visit. (Visits may be nested.)
-
-        Recursive mode is forced even if currently inside the dynamic extent
+        Recursive mode is used even if currently inside the dynamic extent
         of a `visit_once`.
+
+        This is an entrypoint that starts a new visit. The dynamic extents of
+        visits may be nested.
         '''
-        oldrec = self.recursive
-        try:
-            self.recursive = True
+        with self._recursive_mode(True):
             return self.visit(tree)
-        finally:
-            self.recursive = oldrec
 
     def visit_once(self, tree):
-        '''Expand macros in `tree`, in non-recursive mode.
+        '''Expand macros in `tree`, in non-recursive mode. Useful for debugging.
 
         That is, make just one pass, regardless of whether there are macros
-        remaining in the output. Then mark `tree` as `Done`, so the rest of
-        the macro expansion process won't expand it further.
+        remaining in the output. Then mark `tree` as `Done`, so the rest of the
+        macro expansion process will leave it alone. Non-recursive mode is used
+        even if currently inside the dynamic extent of a `visit_recursively`.
 
-        This starts a new visit. (Visits may be nested.)
-
-        Non-recursive mode is forced even if currently inside the dynamic extent
-        of a `visit_recursively`.
-
-        The use case is to help debug macros that invoke other macros.
+        This is an entrypoint that starts a new visit. The dynamic extents of
+        visits may be nested.
         '''
-        oldrec = self.recursive
-        try:
-            self.recursive = False
+        with self._recursive_mode(False):
             return Done(self.visit(tree))
-        finally:
-            self.recursive = oldrec
 
-    def _expand(self, syntax, target, macroname, tree, kw=None):
+    def _recursive_mode(self, isrecursive):
+        '''Context manager. Change recursive mode, restoring the old mode when the context exits.'''
+        @contextmanager
+        def recursive_mode():
+            wasrecursive = self.recursive
+            try:
+                self.recursive = isrecursive
+                yield
+            finally:
+                self.recursive = wasrecursive
+        return recursive_mode()
+
+    def expand(self, syntax, target, macroname, tree, kw=None):
         '''
+        Hook for actual macro expanders. Macro libraries typically don't need
+        to care about this; you'll want one of the `visit` methods instead.
+
         Transform `target` node, replacing it with the expansion result of
         applying `macroname` on `tree`. Then postprocess by `_visit_expansion`.
+
+        `syntax` is the type of macro invocation detected by the actual macro
+        expander. It is sent to the macro implementation as a named argument,
+        to allow it to dispatch on the type. (We don't care what it is; that's
+        between the actual expander and the macro implementations to agree on.)
+
+        The `expander` named argument is automatically filled in with a
+        reference to the expander instance.
+
+        If the actual expander wants to send additional named arguments to
+        the macro implementation, place them in a dictionary and pass that
+        dictionary as `kw`.
         '''
         macro = self.bindings[macroname]
         kw = kw or {}
@@ -110,14 +123,13 @@ class BaseMacroExpander(NodeTransformer):
             'syntax': syntax,
             'expander': self})
 
-        approximate_sourcecode = unparse(target)
+        approx_sourcecode_before_expansion = unparse(target)
         try:
             expansion = _apply_macro(macro, tree, kw)
         except Exception as err:
-            # If expansion fails, report macro use site (possibly nested) as well as the definition site.
             lineno = target.lineno if hasattr(target, 'lineno') else None
-            sep = " " if "\n" not in approximate_sourcecode else "\n"
-            msg = f'use site was at {self.filename}:{lineno}:{sep}{approximate_sourcecode}'
+            sep = " " if "\n" not in approx_sourcecode_before_expansion else "\n"
+            msg = f'use site was at {self.filename}:{lineno}:{sep}{approx_sourcecode_before_expansion}'
             raise MacroExpansionError(msg) from err
 
         return self._visit_expansion(expansion, target)
@@ -127,9 +139,9 @@ class BaseMacroExpander(NodeTransformer):
         Perform local postprocessing fix-ups such as adding in missing
         source location info and `ctx`.
 
-        Then, if currently in recursive mode, recurse into (`visit`)
-        the once-expanded macro output. (It'll `_expand` again if there
-        are macros remaining.)
+        Then, if in recursive mode, recurse into (`visit`) the once-expanded
+        macro output. That will cause the actual expander to `expand` again
+        if it detects any more macro invocations.
         '''
         if expansion is not None:
             is_node = isinstance(expansion, AST)
@@ -142,24 +154,25 @@ class BaseMacroExpander(NodeTransformer):
 
         return expansion
 
-    def _ismacro(self, name):
+    def ismacro(self, name):
+        '''Return whether the string `name` has been bound to a macro in this expander.'''
         return name in self.bindings
 
 def _apply_macro(macro, tree, kw):
-    '''Execute the macro on tree passing extra kwargs.'''
+    '''Execute `macro` on `tree`, with the dictionary `kw` unpacked into macro's named arguments.'''
     return macro(tree, **kw)
 
 # Final postprocessing for the top-level walk can't be done at the end of the
 # entrypoints `visit_once` and `visit_recursively`, because it is valid for a
 # macro to call those for a subtree.
-def toplevel_postprocess(tree):
+def global_postprocess(tree):
     '''Perform final postprocessing fix-ups for the top-level expansion.
 
     Call this after macro expansion is otherwise done, before sending `tree`
     to Python's `compile`.
 
-    Currently, this deletes any AST markers emitted by the macro expander to
-    talk with itself during expansion.
+    This deletes any AST markers emitted by the macro expander that it uses
+    to talk with itself during expansion.
     '''
     class InternalMarkerDeleter(NodeTransformer):
         def visit(self, tree):
