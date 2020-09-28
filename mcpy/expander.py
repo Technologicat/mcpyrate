@@ -11,7 +11,7 @@ __all__ = ['expand_macros', 'find_macros', 'MacroExpander']
 
 import sys
 from ast import Name, Import, ImportFrom, alias, AST, Expr, Constant, copy_location
-from .visitors import BaseMacroExpander, global_postprocess
+from .core import BaseMacroExpander, global_postprocess
 
 class MacroExpander(BaseMacroExpander):
     '''The actual macro expander.'''
