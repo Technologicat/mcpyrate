@@ -139,7 +139,7 @@ To expand only one layer of inner macro invocations, call `expander.visit_once(t
 
 To use the current setting for recursive mode, use `expander.visit(tree)`. The default mode is recursive.
 
-If you need to temporarily run a second expander with different macro bindings, see `expander.bindings`, `expander.filename` and use `mcpy.core.expand_macros` to instantiate a new expander with the desired bindings. Then use its `visit` method.
+If you need to temporarily run a second expander with different macro bindings, see `expander.bindings`, `expander.filename` and use `mcpy.expander.expand_macros` to instantiate a new expander with the desired bindings. Then use its `visit` method.
 
 ### Macro expansion error reporting
 

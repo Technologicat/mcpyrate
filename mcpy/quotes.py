@@ -7,7 +7,7 @@ __all__ = ['capture', 'lookup', 'astify', 'unastify',
            'expand1_quoted', 'expand_quoted']
 
 import ast
-from .core import expand_macros
+from .expander import expand_macros
 from .markers import ASTMarker, get_markers, NestingLevelTracker
 from .unparse import unparse
 from .utilities import gensym
