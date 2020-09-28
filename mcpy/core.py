@@ -1,10 +1,10 @@
 # -*- coding: utf-8; -*-
 '''Expander core; essentially, how to apply a macro invocation.'''
 
-__all__ = ['BaseMacroExpander',
-           'MacroExpansionError',
+__all__ = ['MacroExpansionError',
            'MacroExpanderMarker',
            'Done',
+           'BaseMacroExpander',
            'global_postprocess']
 
 from ast import NodeTransformer, AST, fix_missing_locations
