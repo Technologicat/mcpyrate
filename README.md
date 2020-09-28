@@ -111,7 +111,7 @@ Any missing source locations and `ctx` fields are fixed automatically in a postp
 
 If you get an error saying an AST node is missing the mandatory field `lineno`, the actual error is likely something else. The first thing to check is that your macro is really inserting AST nodes where the compiler expects those, instead of accidentally inserting bare values.
 
-*Changed in v3.0.0.* The named parameter `to_source` has been removed; use the function `mcpy.unparse`. The named parameter `expand_macros` has been replaced with `expander`, which grants access to the macro expander instance; use `expander.visit`.
+*Changed in v3.0.0.* The named parameter `to_source` has been removed; use the function `mcpy.unparse`. The named parameter `expand_macros` has been replaced with `expander`, which grants access to the macro expander instance; use `expander.visit_recursively` or `expander.visit_once`, depending on whether you want expansion to continue until no macros remain. (Use `expander.visit` to use current setting for recursive mode.)
 
 ### Quasiquotes
 
@@ -133,11 +133,13 @@ Because the code is backconverted from the AST representation, the result may di
 
 ### Expand macros
 
-Use the named parameter `expander` to access the macro expander. You can call `expander.visit(tree)` with an AST `tree` to expand the macros in that AST. This is useful for making inner macro invocations expand first.
+Use the named parameter `expander` to access the macro expander. You can call `expander.visit_recursively(tree)` with an AST `tree` to expand all macros in that AST, until no macros remain. This is useful for making inner macro invocations expand first.
 
 To expand only one layer of inner macro invocations, call `expander.visit_once(tree)`. This can be useful during debugging of a macro implementation. You can then convert the result into a printable form using `mcpy.unparse` or `mcpy.ast_aware_repr`.
 
-If you need to temporarily run with different macro bindings, see `expander.bindings`, `expander.filename` and use `mcpy.core.expand_macros` to instantiate a new expander with the desired bindings. Then use its `visit` method.
+To use the current setting for recursive mode, use `expander.visit(tree)`. The default mode is recursive.
+
+If you need to temporarily run a second expander with different macro bindings, see `expander.bindings`, `expander.filename` and use `mcpy.core.expand_macros` to instantiate a new expander with the desired bindings. Then use its `visit` method.
 
 ### Macro expansion error reporting
 
