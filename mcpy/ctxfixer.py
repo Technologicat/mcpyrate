@@ -10,7 +10,7 @@ from ast import (Load, Store, Del,
                  For, AsyncFor,
                  withitem,
                  Delete)
-from .walkers import Walker
+from .walker import Walker
 
 try:  # Python 3.8+
     from ast import NamedExpr

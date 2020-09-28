@@ -1,4 +1,4 @@
-# AST walkers
+# AST walker
 
 ```python
     def kittify(mytree):
@@ -18,7 +18,7 @@
 
 To bridge the feature gap between
 [`ast.NodeTransformer`](https://docs.python.org/3/library/ast.html#ast.NodeTransformer)
-and MacroPy's `Walker`, we provide `mcpy.walkers.Walker`, a zen-minimalistic AST
+and MacroPy's `Walker`, we provide `mcpy.walker.Walker`, a zen-minimalistic AST
 walker base class based on `ast.NodeTransformer`, with a state stack and a node collector.
 
 The selling points are `withstate`, `state`, `collect`, `collected`, which see below.
