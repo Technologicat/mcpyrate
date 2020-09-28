@@ -40,7 +40,7 @@ class BaseMacroExpander(NodeTransformer):
         self._recursive = True
 
     def _needs_expansion(self, tree):
-        '''No-op if no macro bindings or if `tree` is marked `Done`.'''
+        '''No-op if no macro bindings or if `tree` is marked as `Done`.'''
         return self.bindings and not type(tree) is Done
 
     def visit(self, tree):
