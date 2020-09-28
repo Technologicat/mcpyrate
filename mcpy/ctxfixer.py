@@ -1,9 +1,5 @@
 # -*- coding: utf-8; -*-
-'''Fix any missing `ctx` attributes in an AST.
-
-Allows you to build your ASTs without caring about that stuff and just
-fill it in later.
-'''
+'''Fix any missing `ctx` attributes in an AST.'''
 
 __all__ = ['fix_missing_ctx']
 
@@ -29,7 +25,7 @@ class _CtxFixer(Walker):
 
     def transform(self, tree):
         self._fix_one(tree)
-        self._analyze_subtrees(tree)
+        self._setup_subtree_contexts(tree)
         self.generic_visit(tree)
         return tree
 
@@ -38,7 +34,7 @@ class _CtxFixer(Walker):
         if ("ctx" in type(tree)._fields and (not hasattr(tree, "ctx") or tree.ctx is None)):
             tree.ctx = self.state.ctxclass()
 
-    def _analyze_subtrees(self, tree):
+    def _setup_subtree_contexts(self, tree):
         '''Autoselect correct `ctx` class for subtrees of `tree`.'''
         # The default ctx class is `Load`. We set up any `Store` and `Del`, as
         # well as any `Load` for trees that may appear inside others that are
@@ -84,6 +80,7 @@ class _CtxFixer(Walker):
 
         elif tt is Delete:
             self.withstate(tree.targets, ctxclass=Del)
+
 
 def fix_missing_ctx(tree):
     '''Fix any missing `ctx` attributes in `tree`.
