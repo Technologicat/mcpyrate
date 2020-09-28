@@ -3,18 +3,19 @@
 
 __all__ = ['capture', 'lookup', 'astify', 'unastify',
            'q', 'u', 'n', 'a', 's', 'h',
-           'expand', 'expand_once', 'expand_again', 'expand_twice']
+           'expandq', 'expand1q', 'expand2q',
+           'expand1_quoted', 'expand_quoted']
 
 import ast
 from .core import expand_macros
 from .markers import ASTMarker, get_markers, NestingLevelTracker
 from .unparse import unparse
-from .utilities import gensym, ast_aware_repr
+from .utilities import gensym
 
 # --------------------------------------------------------------------------------
 
 class QuasiquoteMarker(ASTMarker):
-    """Base class for AST markers used by `q[]`, which are expanded away by `astify`."""
+    """Base class for AST markers used by quasiquotes. Compiled away by `astify`."""
     pass
 
 class ASTLiteral(QuasiquoteMarker):  # like MacroPy's `Literal`
@@ -22,7 +23,7 @@ class ASTLiteral(QuasiquoteMarker):  # like MacroPy's `Literal`
     pass
 
 class CaptureLater(QuasiquoteMarker):  # like MacroPy's `Captured`
-    """Capture the value the given subtree evaluates to at the use site of `q[]`."""
+    """Capture the value the given subtree evaluates to at the use site of `q`."""
     def __init__(self, body, name):
         super().__init__(body)
         self.name = name
@@ -78,9 +79,10 @@ def astify(x):  # like MacroPy's `ast_repr`
 
     If the input is a `list` of ASTs for a statement suite, the return value
     is a single `ast.List` node, with its `elts` taken from the input list.
-    It's however not used this way, because `BaseMacroExpander` already
-    translates a `visit` to a statement suite into visits to individual
-    nodes, because otherwise `ast.NodeTransformer` chokes on the input.
+    However, most of the time it's not used this way, because `BaseMacroExpander`
+    already translates a `visit` to a statement suite into visits to individual
+    nodes, because otherwise `ast.NodeTransformer` chokes on the input. (The only
+    exception is `q` in block mode; it'll produce a `List` this way.)
 
     Raises `TypeError` when the lifting fails.
     """
@@ -130,16 +132,26 @@ def astify(x):  # like MacroPy's `ast_repr`
     raise TypeError(f"Don't know how to astify {repr(x)}")
 
 def unastify(tree):
-    """Inverse of `astify`. Only works if `tree` was produced by `astify`.
+    """Inverse of `astify`.
 
-    Essentially a top-level unquote (not inside any `q`).
+    `tree` must have been produced by `astify`. Otherwise raises `TypeError`.
+
+    Essentially, this turns an AST representing quoted code back into an AST
+    that represents that code directly, not quoted. So in a sense, `unastify`
+    is a top-level unquote operator.
+
+    Note subtle difference in meaning to `u[]`. The `u[]` operator interpolates
+    a value from outside the quote context into the quoted representation - so
+    that the value actually becomes quoted! - whereas `unastify` inverts the
+    quote operation.
     """
     # CAUTION: in `unastify`, we implement only what we minimally need.
     def attr_ast_to_dotted_name(tree):
         # Input is like:
         #     (mcpy.quotes).thing
         #     ((mcpy.quotes).ast).thing
-        assert type(tree) is ast.Attribute
+        if type(tree) is not ast.Attribute:
+            raise TypeError
         acc = []
         def recurse(tree):
             acc.append(tree.attr)
@@ -152,18 +164,18 @@ def unastify(tree):
         recurse(tree)
         return ".".join(reversed(acc))
 
-    mcpy_quotes_attrs = globals()
+    our_module_globals = globals()
     def lookup_thing(dotted_name):
         if not dotted_name.startswith("mcpy.quotes"):
             raise NotImplementedError
         path = dotted_name.split(".")
-        if len(path) < 3 or len(path) > 4:
+        if len(path) < 3:
             raise NotImplementedError
         name_of_thing = path[2]
-        thing = mcpy_quotes_attrs[name_of_thing]
-        if len(path) == 4:
-            attrname = path[3]
-            thing = getattr(thing, attrname)
+        thing = our_module_globals[name_of_thing]
+        if len(path) > 3:
+            for attrname in path[3:]:
+                thing = getattr(thing, attrname)
         return thing
 
     T = type(tree)
@@ -195,7 +207,7 @@ def unastify(tree):
         kwargs = {k: v for k, v in unastify(tree.keywords)}
         return callee(*args, **kwargs)
 
-    raise TypeError(f"Don't know how to unastify {ast_aware_repr(tree)}")
+    raise TypeError(f"Don't know how to unastify {unparse(tree)}")
 
 # --------------------------------------------------------------------------------
 # Quasiquote macros
@@ -207,7 +219,7 @@ _quotelevel = NestingLevelTracker()
 def _unquote_expand(tree, expander):
     """Expand quasiquote macros in `tree`. If quotelevel is zero, expand all macros in `tree`."""
     if _quotelevel.value == 0:
-        tree = expander.visit_recursively(tree)
+        tree = expander.visit_recursively(tree)  # result should be runnable, so always use recursive mode.
     else:
         tree = _expand_quasiquotes(tree, expander)
 
@@ -224,7 +236,7 @@ def q(tree, *, syntax, expander, **kw):
     if syntax not in ("expr", "block"):
         raise SyntaxError("q is an expr and block macro only")
     with _quotelevel.changed_by(+1):
-        tree = _expand_quasiquotes(tree, expander)
+        tree = _expand_quasiquotes(tree, expander)  # expand any inner quotes and unquotes first
         tree = astify(tree)
         ps = get_markers(tree, QuasiquoteMarker)  # postcondition: no remaining QuasiquoteMarkers
         if ps:
@@ -233,7 +245,8 @@ def q(tree, *, syntax, expander, **kw):
             target = kw['optional_vars']  # List, Tuple, Name
             if type(target) is not ast.Name:
                 raise SyntaxError(f"expected a single asname, got {unparse(target)}")
-            tree = ast.Assign([target], tree)
+            # Note the `Assign` runs at the use site of `q`, it's not part of the quoted code section.
+            tree = ast.Assign([target], tree)  # here `tree` is a List.
         return tree
 
 def u(tree, *, syntax, expander, **kw):
@@ -301,39 +314,57 @@ def h(tree, *, syntax, expander, **kw):
 # --------------------------------------------------------------------------------
 # Macros for macro-expanding quoted code
 
-def expand(tree, *, expander, **kw):
-    '''[syntax, expr/block] expand-then-quote.
-
-    Expand `tree` until no macros remain, then quote the result.'''
-    # We must force recursive mode, because `expand[...]` may appear inside an `expand_again[...]`
-    # (or `expand_once[...]`, `expand_twice[...]`; all those set the expander mode to non-recursive
-    #  while working).
-    tree = expander.visit_recursively(tree)
-    return q(tree, expander=expander, **kw)
-
-def expand_once(tree, *, expander, **kw):
+def expand1q(tree, *, expander, **kw):
     '''[syntax, expr/block] expand-once-then-quote.
 
-    Expand one layer of macros in `tree`, quote the result.'''
+    Expand one layer of macros in `tree`, then quote the result.'''
     tree = expander.visit_once(tree)  # -> Done(body=...)
     return q(tree, expander=expander, **kw)
 
-def expand_again(tree, *, expander, **kw):
-    '''[syntax, expr/block] unquote, expand-once, requote.
+def expand2q(tree, *, expander, **kw):
+    '''[syntax, expr/block] expand-twice-then-quote.
 
-    Expand one more layer of macros in quoted `tree`, re-quote the result.
+    Expand first two layers of macros in `tree`, then quote the result.'''
+    tree = expander.visit_once(tree)  # -> Done(body=...)
+    tree = expander.visit_once(tree.body)  # to expand more layers, this step could be repeated.
+    return q(tree, expander=expander, **kw)
 
-    `tree` must be output from `q`, `expand_once`, `expand_twice`, or `expand_again` itself.
-    For any other AST, raises `TypeError` (because a general AST cannot be unastified).
+def expandq(tree, *, expander, **kw):
+    '''[syntax, expr/block] expand-then-quote.
+
+    Expand `tree` until no macros remain, then quote the result.'''
+    # Always use recursive mode, because `expandq[...]` may appear inside an `expand1_quoted[...]`,
+    # `expand1q[...]`, or `expand2q[...]`; all those use `visit_once`, which sets the
+    # expander mode to non-recursive for the dynamic extent of the visit.
+    tree = expander.visit_recursively(tree)
+    return q(tree, expander=expander, **kw)
+
+def expand1_quoted(tree, *, expander, **kw):
+    '''[syntax, expr/block] unquote a quoted AST, expand once, re-quote.
+
+    `tree` must be output from, or an invocation of, `q`, `expand1q`, `expand2q`,
+    or `expand1_quoted` itself.
+
+    For any other AST, raises `TypeError`, because for a general AST that isn't
+    the result of quoting, `unastify` (top-level unquote) makes no sense.
     '''
+    # The input is quoted; the first `visit_once` makes the quotes inside this invocation expand first.
+    # If the input `tree` is an already expanded `q`, the `visit_once` will do nothing, because any
+    # macro invocations are then in a quoted form, which don't look like macro invocations to the expander.
     tree = expander.visit_once(tree)  # -> Done(body=...)
     tree = expander.visit_once(unastify(tree.body))
     return q(tree, expander=expander, **kw)
 
-def expand_twice(tree, *, expander, **kw):
-    '''[syntax, expr/block] expand-twice-then-quote.
+def expand_quoted(tree, *, expander, **kw):
+    '''[syntax, expr/block] unquote a quoted AST, expand until no macros remain, re-quote.
 
-    Expand first two layers of macros in `tree`, quote the result.'''
-    tree = expander.visit_once(tree)  # -> Done(body=...)
-    tree = expander.visit_once(tree.body)
+    `tree` must be output from, or an invocation of, `q`, `expand1q`, `expand2q`,
+    or `expand1_quoted` itself.
+
+    For any other AST, raises `TypeError`, because for a general AST that isn't
+    the result of quoting, `unastify` (top-level unquote) makes no sense.
+    '''
+    # The input is quoted; the `visit_once` makes the quotes inside this invocation expand first.
+    tree = expander.visit_once(tree)  # make the quotes inside this invocation expand first; -> Done(body=...)
+    tree = expander.visit_recursively(unastify(tree.body))
     return q(tree, expander=expander, **kw)
