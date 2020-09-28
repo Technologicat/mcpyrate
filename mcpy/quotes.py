@@ -206,7 +206,7 @@ _quotelevel = NestingLevelTracker()
 def _unquote_expand(tree, expander):
     """Expand quasiquote macros in `tree`. If quotelevel is zero, expand all macros in `tree`."""
     if _quotelevel.value == 0:
-        tree = expander.visit(tree)
+        tree = expander.visit_recursively(tree)
     else:
         tree = _expand_quasiquotes(tree, expander)
 
