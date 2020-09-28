@@ -31,6 +31,10 @@ class BaseMacroExpander(NodeTransformer):
     '''
 
     def __init__(self, bindings, filename):
+        '''
+        bindings: dict of macro name/function pairs
+        filename: full path to `.py` file being expanded, for error reporting
+        '''
         self.bindings = bindings
         self.filename = filename
         self._recursive = True
