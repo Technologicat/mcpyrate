@@ -1,8 +1,9 @@
 # -*- coding: utf-8; -*-
 """Quasiquotes. Build ASTs in your macros, using syntax that mostly looks like regular code."""
 
-__all__ = ['capture', 'lookup', 'astify',
-           'q', 'u', 'n', 'a', 's', 'h']
+__all__ = ['capture', 'lookup', 'astify', 'unastify',
+           'q', 'u', 'n', 'a', 's', 'h',
+           'expand', 'expand_once', 'expand_again', 'expand_twice']
 
 import ast
 from .core import expand_macros
