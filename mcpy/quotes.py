@@ -298,26 +298,41 @@ def h(tree, *, syntax, expander, **kw):
         return CaptureLater(tree, name)
 
 # --------------------------------------------------------------------------------
-# Debug macros
+# Macros for macro-expanding quoted code
 
 def expand(tree, *, expander, **kw):
-    '''[syntax, expr/block] Expand all macros in `tree`, quote the result.
+    '''[syntax, expr/block] expand-then-quote.
 
-    For macro debugging. The result can be `unparse`d or `ast_aware_repr`d for printing.'''
-    tree = expander.visit(tree)
+    Expand all macros in `tree`, then quote the result.'''
+    # We must force recursive mode, because `expand[...]` may appear inside an `expand_again[...]`
+    # (or `expand_once[...]`, `expand_twice[...]`; all those set the expander mode to non-recursive
+    #  while working).
+    tree = expander.visit_recursively(tree)
     return q(tree, expander=expander, **kw)
 
 def expand_once(tree, *, expander, **kw):
-    '''[syntax, expr/block] Expand only one layer of macros in `tree`, quote the result.
+    '''[syntax, expr/block] expand-once-then-quote.
 
-    For macro debugging. The result can be `unparse`d or `ast_aware_repr`d for printing.'''
-    tree = expander.visit_once(tree)
+    Expand one layer of macros in `tree`, quote the result.'''
+    tree = expander.visit_once(tree)  # -> Done(body=...)
+    return q(tree, expander=expander, **kw)
+
+def expand_again(tree, *, expander, **kw):
+    '''[syntax, expr/block] unquote, expand-once, requote.
+
+    Expand one more layer of macros in quoted `tree`, re-quote the result.
+
+    `tree` must be output from `q`, `expand_once`, `expand_twice`, or `expand_again` itself.
+    For any other AST, raises `TypeError` (because a general AST cannot be unastified).
+    '''
+    tree = expander.visit_once(tree)  # -> Done(body=...)
+    tree = expander.visit_once(unastify(tree.body))
     return q(tree, expander=expander, **kw)
 
 def expand_twice(tree, *, expander, **kw):
-    '''[syntax, expr/block] Expand two first layers of macros in `tree`, quote the result.
+    '''[syntax, expr/block] expand-twice-then-quote.
 
-    For macro debugging. The result can be `unparse`d or `ast_aware_repr`d for printing.'''
+    Expand first two layers of macros in `tree`, quote the result.'''
     tree = expander.visit_once(tree)  # -> Done(body=...)
     tree = expander.visit_once(tree.body)
     return q(tree, expander=expander, **kw)
