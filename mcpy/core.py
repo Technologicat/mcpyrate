@@ -4,6 +4,7 @@
 __all__ = ['BaseMacroExpander',
            'MacroExpansionError',
            'MacroExpanderMarker',
+           'Done',
            'global_postprocess']
 
 from ast import NodeTransformer, AST, fix_missing_locations
