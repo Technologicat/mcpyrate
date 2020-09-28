@@ -8,9 +8,9 @@ __all__ = ['capture', 'lookup', 'astify', 'unastify',
 
 import ast
 from .expander import expand_macros
-from .markers import ASTMarker, get_markers, NestingLevelTracker
+from .markers import ASTMarker, get_markers
 from .unparse import unparse
-from .utilities import gensym
+from .utilities import gensym, NestingLevelTracker
 
 # --------------------------------------------------------------------------------
 

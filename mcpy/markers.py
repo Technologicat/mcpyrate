@@ -5,10 +5,9 @@
 macros may use them to work together.
 """
 
-__all__ = ["ASTMarker", "get_markers", "NestingLevelTracker"]
+__all__ = ["ASTMarker", "get_markers"]
 
 import ast
-from contextlib import contextmanager
 from .walkers import Walker
 
 class ASTMarker(ast.AST):
@@ -50,38 +49,3 @@ def get_markers(tree, cls=ASTMarker):
     p = ASTMarkerCollector()
     p.visit(tree)
     return p.collected
-
-
-class NestingLevelTracker:
-    """Track the nesting level in a set of co-operating, related macros.
-
-    Useful for implementing macros that are syntactically only valid inside the
-    invocation of another macro (i.e. when the level is `> 0`).
-    """
-    def __init__(self, start=0):
-        """start: int, initial level"""
-        self.stack = [start]
-
-    def _get_value(self):
-        return self.stack[-1]
-    value = property(fget=_get_value, doc="The current level. Read-only.")
-
-    def set_to(self, value):
-        """Context manager. Run a section of code with the level set to `value`."""
-        if not isinstance(value, int):
-            raise TypeError(f"Expected integer `value`, got {type(value)} with value {repr(value)}")
-        if value < 0:
-            raise ValueError(f"`value` must be >= 0, got {repr(value)}")
-        @contextmanager
-        def _set_to():
-            self.stack.append(value)
-            try:
-                yield
-            finally:
-                self.stack.pop()
-                assert self.stack  # postcondition
-        return _set_to()
-
-    def changed_by(self, delta):
-        """Context manager. Run a section of code with the level incremented by `delta`."""
-        return self.set_to(self.value + delta)

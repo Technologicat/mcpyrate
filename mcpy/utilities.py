@@ -1,8 +1,10 @@
 # -*- coding: utf-8; -*-
 
-__all__ = ['ast_aware_repr', 'gensym', 'flatten_suite', 'Bunch']
+__all__ = ['ast_aware_repr', 'flatten_suite', 'gensym',
+           'Bunch', 'NestingLevelTracker']
 
 import ast
+from contextlib import contextmanager
 from collections.abc import Mapping, MutableMapping, Container, Iterable, Sized
 import uuid
 
@@ -20,6 +22,22 @@ def ast_aware_repr(thing):
         elts = ', '.join(ast_aware_repr(elt) for elt in thing)
         return f"[{elts}]"
     return repr(thing)
+
+
+def flatten_suite(lst):
+    """Flatten a statement suite (by one level).
+
+    `lst` may contain both individual items and `list`s. Any item that
+    `is None` is omitted. If the final result is empty, then instead of
+    an empty list, return `None`.
+    """
+    out = []
+    for elt in lst:
+        if isinstance(elt, list):
+            out.extend(elt)
+        elif elt is not None:
+            out.append(elt)
+    return out if out else None
 
 
 _previous_gensyms = set()
@@ -41,22 +59,6 @@ def gensym(basename=None):
         sym = generate()  # pragma: no cover
     _previous_gensyms.add(sym)
     return sym
-
-
-def flatten_suite(lst):
-    """Flatten a statement suite (by one level).
-
-    `lst` may contain both individual items and `list`s. Any item that
-    `is None` is omitted. If the final result is empty, then instead of
-    an empty list, return `None`.
-    """
-    out = []
-    for elt in lst:
-        if isinstance(elt, list):
-            out.extend(elt)
-        elif elt is not None:
-            out.append(elt)
-    return out if out else None
 
 
 class Bunch:
@@ -122,3 +124,38 @@ class Bunch:
 for abscls in (Mapping, MutableMapping, Container, Iterable, Sized):  # virtual ABCs
     abscls.register(Bunch)
 del abscls
+
+
+class NestingLevelTracker:
+    """Track the nesting level in a set of co-operating, related macros.
+
+    Useful for implementing macros that are syntactically only valid inside the
+    invocation of another macro (i.e. when the level is `> 0`).
+    """
+    def __init__(self, start=0):
+        """start: int, initial level"""
+        self.stack = [start]
+
+    def _get_value(self):
+        return self.stack[-1]
+    value = property(fget=_get_value, doc="The current level. Read-only.")
+
+    def set_to(self, value):
+        """Context manager. Run a section of code with the level set to `value`."""
+        if not isinstance(value, int):
+            raise TypeError(f"Expected integer `value`, got {type(value)} with value {repr(value)}")
+        if value < 0:
+            raise ValueError(f"`value` must be >= 0, got {repr(value)}")
+        @contextmanager
+        def _set_to():
+            self.stack.append(value)
+            try:
+                yield
+            finally:
+                self.stack.pop()
+                assert self.stack  # postcondition
+        return _set_to()
+
+    def changed_by(self, delta):
+        """Context manager. Run a section of code with the level incremented by `delta`."""
+        return self.set_to(self.value + delta)
