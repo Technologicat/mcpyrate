@@ -63,13 +63,16 @@ class Unparser:
                 self.dispatch(t)
             return
         if isinstance(tree, ASTMarker):  # mcpy and macro communication internal
-            self.write("$" + tree.__class__.__name__)  # markers cannot be eval'd
-            self.write("(")
-            self.dispatch(tree.body)
-            self.write(")")
+            self.astmarker(tree)
             return
         meth = getattr(self, "_" + tree.__class__.__name__)
         meth(tree)
+
+    def astmarker(self, tree):
+        self.write("$" + tree.__class__.__name__)  # markers cannot be eval'd
+        self.write("(")
+        self.dispatch(tree.body)
+        self.write(")")
 
     # --------------------------------------------------------------------------------
     # Unparsing methods
