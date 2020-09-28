@@ -304,7 +304,7 @@ def h(tree, *, syntax, expander, **kw):
 def expand(tree, *, expander, **kw):
     '''[syntax, expr/block] expand-then-quote.
 
-    Expand all macros in `tree`, then quote the result.'''
+    Expand `tree` until no macros remain, then quote the result.'''
     # We must force recursive mode, because `expand[...]` may appear inside an `expand_again[...]`
     # (or `expand_once[...]`, `expand_twice[...]`; all those set the expander mode to non-recursive
     #  while working).
