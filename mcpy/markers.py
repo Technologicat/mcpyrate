@@ -35,7 +35,7 @@ class ASTMarker(ast.AST):
     def __init__(self, body):
         """body: the actual AST that is annotated by this marker"""
         self.body = body
-        self._fields = ["body"]  # support ast.iterfields
+        self._fields = ["body"]  # support ast.iter_fields
 
 
 def get_markers(tree, cls=ASTMarker):
