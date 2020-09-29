@@ -326,32 +326,38 @@ def h(tree, *, syntax, expander, **kw):
 # --------------------------------------------------------------------------------
 # Macros for macro-expanding quoted code
 
-def expand1q(tree, *, expander, **kw):
+def expand1q(tree, *, syntax, expander, **kw):
     '''[syntax, expr/block] expand-once-then-quote.
 
     Expand one layer of macros in `tree`, then quote the result.'''
+    if syntax == "name":
+        return tree
     tree = expander.visit_once(tree)  # -> Done(body=...)
-    return q(tree, expander=expander, **kw)
+    return q(tree, syntax=syntax, expander=expander, **kw)
 
-def expand2q(tree, *, expander, **kw):
+def expand2q(tree, *, syntax, expander, **kw):
     '''[syntax, expr/block] expand-twice-then-quote.
 
     Expand first two layers of macros in `tree`, then quote the result.'''
+    if syntax == "name":
+        return tree
     tree = expander.visit_once(tree)  # -> Done(body=...)
     tree = expander.visit_once(tree.body)  # to expand more layers, this step could be repeated.
-    return q(tree, expander=expander, **kw)
+    return q(tree, syntax=syntax, expander=expander, **kw)
 
-def expandq(tree, *, expander, **kw):
+def expandq(tree, *, syntax, expander, **kw):
     '''[syntax, expr/block] expand-then-quote.
 
     Expand `tree` until no macros remain, then quote the result.'''
     # Always use recursive mode, because `expandq[...]` may appear inside an `expand1_quoted[...]`,
     # `expand1q[...]`, or `expand2q[...]`; all those use `visit_once`, which sets the
     # expander mode to non-recursive for the dynamic extent of the visit.
+    if syntax == "name":
+        return tree
     tree = expander.visit_recursively(tree)
-    return q(tree, expander=expander, **kw)
+    return q(tree, syntax=syntax, expander=expander, **kw)
 
-def expand1_quoted(tree, *, expander, **kw):
+def expand1_quoted(tree, *, syntax, expander, **kw):
     '''[syntax, expr/block] unquote a quoted AST, expand once, re-quote.
 
     `tree` must be output from, or an invocation of, `q`, `expand1q`, `expand2q`,
@@ -363,11 +369,13 @@ def expand1_quoted(tree, *, expander, **kw):
     # The input is quoted; the first `visit_once` makes the quotes inside this invocation expand first.
     # If the input `tree` is an already expanded `q`, the `visit_once` will do nothing, because any
     # macro invocations are then in a quoted form, which don't look like macro invocations to the expander.
+    if syntax == "name":
+        return tree
     tree = expander.visit_once(tree)  # -> Done(body=...)
     tree = expander.visit_once(unastify(tree.body))
-    return q(tree, expander=expander, **kw)
+    return q(tree, syntax=syntax, expander=expander, **kw)
 
-def expand_quoted(tree, *, expander, **kw):
+def expand_quoted(tree, *, syntax, expander, **kw):
     '''[syntax, expr/block] unquote a quoted AST, expand until no macros remain, re-quote.
 
     `tree` must be output from, or an invocation of, `q`, `expand1q`, `expand2q`,
@@ -377,6 +385,8 @@ def expand_quoted(tree, *, expander, **kw):
     the result of quoting, `unastify` (top-level unquote) makes no sense.
     '''
     # The input is quoted; the `visit_once` makes the quotes inside this invocation expand first.
+    if syntax == "name":
+        return tree
     tree = expander.visit_once(tree)  # make the quotes inside this invocation expand first; -> Done(body=...)
     tree = expander.visit_recursively(unastify(tree.body))
-    return q(tree, expander=expander, **kw)
+    return q(tree, syntax=syntax, expander=expander, **kw)
