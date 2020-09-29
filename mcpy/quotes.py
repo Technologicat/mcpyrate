@@ -27,7 +27,7 @@ class CaptureLater(QuasiquoteMarker):  # like MacroPy's `Captured`
     def __init__(self, body, name):
         super().__init__(body)
         self.name = name
-        self._fields += "name"
+        self._fields += ["name"]
 
 # --------------------------------------------------------------------------------
 
