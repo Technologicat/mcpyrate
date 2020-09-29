@@ -214,6 +214,10 @@ def unastify(tree):
 #
 # These operators are named after Qu'nash, the goddess of quasiquotes in high-tech-elven mythology.
 
+# TODO: Support nested quasiquotes properly, like Lisps do.
+# (For higher-order macros that generate macros parametrically. Though that's not very useful
+# until we can call other macros from the same module. We can, as a function, but the syntax...)
+
 _quotelevel = NestingLevelTracker()
 
 def _unquote_expand(tree, expander):
@@ -338,7 +342,7 @@ def expand1q(tree, *, syntax, expander, **kw):
 def expand2q(tree, *, syntax, expander, **kw):
     '''[syntax, expr/block] expand-twice-then-quote.
 
-    Expand first two layers of macros in `tree`, then quote the result.'''
+    Expand two layers of macros in `tree`, then quote the result.'''
     if syntax == "name":
         return tree
     tree = expander.visit_once(tree)  # -> Done(body=...)
@@ -361,16 +365,16 @@ def expand1_quoted(tree, *, syntax, expander, **kw):
     '''[syntax, expr/block] unquote a quoted AST, expand once, re-quote.
 
     `tree` must be output from, or an invocation of, `q`, `expand1q`, `expand2q`,
-    or `expand1_quoted` itself.
+    `expand1_quoted`, or `expand_quoted`.
 
     For any other AST, raises `TypeError`, because for a general AST that isn't
     the result of quoting, `unastify` (top-level unquote) makes no sense.
     '''
+    if syntax == "name":
+        return tree
     # The input is quoted; the first `visit_once` makes the quotes inside this invocation expand first.
     # If the input `tree` is an already expanded `q`, the `visit_once` will do nothing, because any
     # macro invocations are then in a quoted form, which don't look like macro invocations to the expander.
-    if syntax == "name":
-        return tree
     tree = expander.visit_once(tree)  # -> Done(body=...)
     tree = expander.visit_once(unastify(tree.body))
     return q(tree, syntax=syntax, expander=expander, **kw)
@@ -379,12 +383,11 @@ def expand_quoted(tree, *, syntax, expander, **kw):
     '''[syntax, expr/block] unquote a quoted AST, expand until no macros remain, re-quote.
 
     `tree` must be output from, or an invocation of, `q`, `expand1q`, `expand2q`,
-    or `expand1_quoted` itself.
+    `expand1_quoted`, or `expand_quoted`.
 
     For any other AST, raises `TypeError`, because for a general AST that isn't
     the result of quoting, `unastify` (top-level unquote) makes no sense.
     '''
-    # The input is quoted; the `visit_once` makes the quotes inside this invocation expand first.
     if syntax == "name":
         return tree
     tree = expander.visit_once(tree)  # make the quotes inside this invocation expand first; -> Done(body=...)
