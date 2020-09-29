@@ -138,11 +138,12 @@ class MacroExpander(BaseMacroExpander):
             with self._recursive_mode(False):
                 new_tree = self.expand('name', name, macroname, name)
             if ismodified(new_tree):
-                # We already expanded once; only re-expand if we should. If we
-                # were called by `visit_once`, it'll slap on the `Done` marker
-                # itself, so we shouldn't.
+                # We already expanded once; only re-expand (to expand until no
+                # macros left) if we should. If we were called by `visit_once`,
+                # it'll slap on the `Done` marker itself, so we shouldn't.
                 if self.recursive:
-                    new_tree = self.expand('name', name, macroname, new_tree)
+                    new_tree = copy_location(new_tree, name)  # for use by debug messages inside the macro
+                    self.visit(new_tree)
                 new_tree = copy_location(new_tree, name)
         else:
             new_tree = self.generic_visit(name)
