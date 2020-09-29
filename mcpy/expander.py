@@ -18,7 +18,7 @@ class MacroExpander(BaseMacroExpander):
 
     def visit_With(self, withstmt):
         '''
-        Check for a with macro as::
+        Check for a block macro as::
 
             with macroname:
                 "with's body is the target of the macro"
