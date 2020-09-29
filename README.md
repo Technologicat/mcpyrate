@@ -31,7 +31,7 @@ echo[6 * 7]
 
 ### Syntax
 
-`mcpy` macros can be used in three forms, following `macropy` syntax:
+`mcpy` macros can be used in four forms, the first three following `macropy` syntax:
 
 ```python
 # block form
@@ -44,9 +44,14 @@ macro[...]
 # decorator form
 @macro
 ...
+
+# identifier form
+macro
 ```
 
-In each case, the macro will receive `...` as input and will replace the invocation with the expanded content. Expansion occurs first for outermost nodes, i.e, from outside to inside.
+In the first three cases, the macro will receive `...` as input. An identifier macro will receive the `Name` AST node itself.
+
+In each case, the expander will replace the invocation with the expanded content. Expansion occurs first for outermost nodes, i.e, from outside to inside.
 
 ### Importing macros
 
@@ -123,7 +128,7 @@ If you get an error saying an AST node is missing the mandatory field `lineno`, 
 
 ### Distinguish how the macro is called
 
-A macro can be called in three different ways. The way a macro is called is recorded in the `syntax` named parameter (one of `'block'`, `'expr'` or `'decorator'`), so you can distinguish the syntax used in the source code and provide different implementations for each one. In other words, the macro interface acts as the dispatcher.
+A macro can be called in three different ways. The way a macro is called is recorded in the `syntax` named parameter (one of `'block'`, `'expr'`, `'decorator'`, or `'name'`), so you can distinguish the syntax used in the source code and provide different implementations for each one. In other words, the macro interface acts as the dispatcher.
 
 ### Get the source of an AST
 

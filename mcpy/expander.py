@@ -107,6 +107,48 @@ class MacroExpander(BaseMacroExpander):
 
         return macros, remaining
 
+    def visit_Name(self, name):
+        '''
+        Check for an identifier macro as::
+
+            macroname
+
+        Replace the `Name` node with the result of the macro.
+
+        The main use case of identifier macros is to define magic variables
+        that are only meaningful inside the invocation of some other macro.
+        An classic example is the anaphoric if's `it`.
+
+        Use an `mcpy.utilities.NestingLevelTracker` to keep track of whether
+        the identifier macro is being expanded inside an invocation of your
+        other macro (which must expand inner macros explicitly!). Then, in
+        your identifier macro, if it's trying to expand in an invalid context,
+        raise `SyntaxError` with an appropriate explanation. When in a valid
+        context, just `return tree`. This way any invalid, stray mentions of
+        the magic variable will be promoted to compile-time errors.
+        '''
+        if self.ismacro(name.id):
+            macroname = name.id
+            def ismodified(tree):
+                return type(tree) is not Name or tree.id != macroname
+            # Prevent an infinite loop in case the macro no-ops, returning `tree` as-is.
+            # Most macros are not interested in being identifier macros. Identifier macros
+            # are special in that for them, there's no part of the tree that could be
+            # guaranteed to be compiled away in the expansion.
+            with self._recursive_mode(False):
+                new_tree = self.expand('name', name, macroname, name)
+            if ismodified(new_tree):
+                # We already expanded once; only re-expand if we should. If we
+                # were called by `visit_once`, it'll slap on the `Done` marker
+                # itself, so we shouldn't.
+                if self.recursive:
+                    new_tree = self.expand('name', name, macroname, new_tree)
+                new_tree = copy_location(new_tree, name)
+        else:
+            new_tree = self.generic_visit(name)
+
+        return new_tree
+
 
 def _fix_coverage_reporting(tree, target):
     '''

@@ -233,6 +233,8 @@ def _expand_quasiquotes(tree, expander):
 
 def q(tree, *, syntax, expander, **kw):
     """[syntax, expr/block] quasiquote. Lift code into its AST representation."""
+    if syntax == "name":
+        return tree
     if syntax not in ("expr", "block"):
         raise SyntaxError("q is an expr and block macro only")
     with _quotelevel.changed_by(+1):
@@ -254,6 +256,8 @@ def u(tree, *, syntax, expander, **kw):
 
     The value is lifted into an AST that re-constructs that value.
     """
+    if syntax == "name":
+        return tree
     if syntax != "expr":
         raise SyntaxError("u is an expr macro only")
     if _quotelevel.value < 1:
@@ -270,6 +274,8 @@ def n(tree, *, syntax, **kw):
 
     The resulting node's `ctx` is filled in automatically by the macro expander later.
     """
+    if syntax == "name":
+        return tree
     if syntax != "expr":
         raise SyntaxError("n is an expr macro only")
     if _quotelevel.value < 1:
@@ -279,6 +285,8 @@ def n(tree, *, syntax, **kw):
 
 def a(tree, *, syntax, **kw):
     """[syntax, expr] AST-unquote. Splice an AST into a quasiquote."""
+    if syntax == "name":
+        return tree
     if syntax != "expr":
         raise SyntaxError("a is an expr macro only")
     if _quotelevel.value < 1:
@@ -288,6 +296,8 @@ def a(tree, *, syntax, **kw):
 
 def s(tree, *, syntax, **kw):
     """[syntax, expr] list-unquote. Splice a `list` of ASTs, as an `ast.List`, into a quasiquote."""
+    if syntax == "name":
+        return tree
     if syntax != "expr":
         raise SyntaxError("s is an expr macro only")
     if _quotelevel.value < 1:
@@ -302,6 +312,8 @@ def h(tree, *, syntax, expander, **kw):
 
     Supports also values that have no meaningful `repr`.
     """
+    if syntax == "name":
+        return tree
     if syntax != "expr":
         raise SyntaxError("h is an expr macro only")
     if _quotelevel.value < 1:
