@@ -63,6 +63,9 @@ def capture(value, basename):
 
     The return value is an AST that, when compiled and run, looks up the
     captured value. Each unique value (by `id`) is only stored once.
+
+    This is for garden variety run-time values. Hygienically captured macros
+    are treated using another mechanism; see `mcpy.core._hygienic_bindings`.
     """
     key = _capture_into(_registry, value, basename)
     return ast.Call(_mcpy_quotes_attr("lookup"),
@@ -70,7 +73,7 @@ def capture(value, basename):
                     [])
 
 def lookup(key):
-    """Look up a hygienically captured value."""
+    """Look up a hygienically captured run-time value."""
     return _registry[key]
 
 # --------------------------------------------------------------------------------
@@ -104,19 +107,22 @@ def astify(x, expander=None):  # like MacroPy's `ast_repr`
             return x.body
 
         # This is the magic part of q[h[]].
-        #
-        # At the use site of q[], this captures the value, and rewrites itself
-        # into a lookup. At the use site of the macro that used q[], that
-        # rewritten code looks up the captured value.
         elif T is CaptureLater:
             if expander and type(x.body) is ast.Name and expander.ismacro(x.body.id):
-                # Hygienically capture a macro invocation, to be applied at use site of `q`
-                # (or once the expander returns from that use site).
+                # Hygienically capture a macro name. We do this immediately,
+                # during the expansion of `q`. This allows macros in scope at
+                # the use site of `q` to be hygienically propagated out to the
+                # use site of the macro that used `q`. So you can write macros
+                # that `q[h[macroname][...]]` and `macroname` doesn't have to be
+                # macro-imported wherever that code gets spliced in.
                 macroname = x.body.id
                 function = expander.bindings[macroname]
                 uniquename = _capture_into(_hygienic_bindings, function, macroname)
                 return doit(ast.Name(id=uniquename))
             # Hygienically capture a garden variety run-time value.
+            # At the use site of q[], this captures the value, and rewrites itself
+            # into a lookup. At the use site of the macro that used q[], that
+            # rewritten code looks up the captured value.
             return ast.Call(_mcpy_quotes_attr('capture'),
                             [x.body,
                              ast.Constant(value=x.name)],
