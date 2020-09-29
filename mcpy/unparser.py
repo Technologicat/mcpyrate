@@ -25,6 +25,7 @@ def interleave(inter, f, seq):
             inter()
             f(x)
 
+
 class Unparser:
     """Methods in this class recursively traverse an AST and
     output source code for the abstract syntax; original formatting
@@ -71,7 +72,17 @@ class Unparser:
     def astmarker(self, tree):
         self.write("$" + tree.__class__.__name__)  # markers cannot be eval'd
         self.write("(")
-        self.dispatch(tree.body)
+        first = True
+        for k, v in ast.iter_fields(tree):
+            if first:
+                first = False
+            else:
+                self.write(", ")
+            self.write(f"{k}=")
+            if isinstance(v, ast.AST):
+                self.dispatch(v)
+            else:
+                self.write(repr(v))
         self.write(")")
 
     # --------------------------------------------------------------------------------
@@ -709,6 +720,7 @@ class Unparser:
         if t.optional_vars:
             self.write(" as ")
             self.dispatch(t.optional_vars)
+
 
 def unparse(tree):
     output = io.StringIO()
