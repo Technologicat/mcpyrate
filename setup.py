@@ -13,7 +13,7 @@ setup(
     version="3.0.0",
     packages=["mcpy"],
     provides=["mcpy"],
-    keywords=["macros", "syntactic-macros", "import", "importer", "github"],
+    keywords=["macros", "syntactic-macros", "macro-expander", "metaprogramming", "import", "importer", "github"],
     python_requires=">=3.6",
     author="Salvador de la Puente González and Juha Jeronen",
     author_email="salva@unoyunodiez.com",
