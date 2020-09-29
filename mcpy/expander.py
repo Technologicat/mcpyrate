@@ -231,7 +231,7 @@ def _get_macros(macroimport):
     '''
     Return a dict with names and macros from the macro import statement.
 
-    As a side effect, import the macro definition modules.
+    As a side effect, import the macro definition module.
     '''
     modulename = macroimport.module
     __import__(modulename)
