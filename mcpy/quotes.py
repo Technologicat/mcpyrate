@@ -3,7 +3,7 @@
 
 __all__ = ['capture', 'lookup', 'astify', 'unastify',
            'q', 'u', 'n', 'a', 's', 'h',
-           'expandq', 'expand1q', 'expand2q',
+           'expandq', 'expand1q',
            'expand1', 'expand']
 
 import ast
@@ -332,51 +332,34 @@ def h(tree, *, syntax, expander, **kw):
 
 # --------------------------------------------------------------------------------
 
-# TODO: In the `expand*q` variants, `tree` can't use any unquote operators,
-# TODO: because they would be expanded before the `q` kicks in. Fix this?
-# TODO: (Just quote first to expand the quote and any unquotes, and then
-# TODO:  delegate to `expand1`.)
-# TODO: So we should make this quote-then-expand-once.
-def expand1q(tree, *, syntax, expander, **kw):
-    '''[syntax, expr/block] expand-once-then-quote.
+def expand1q(tree, *, syntax, **kw):
+    '''[syntax, expr/block] quote-then-expand-once.
 
-    Expand one layer of macros in AST `tree`, then `q` the result.
+    Quasiquote `tree`, then expand one layer of macros in it. Return the result
+    quasiquoted.
 
-    If you have a quasiquoted `tree`, use `expand1` instead.
+    If your tree is already quasiquoted, use `expand1` instead.
     '''
     if syntax == "name":
         return tree
-    tree = expander.visit_once(tree)  # -> Done(body=...)
-    return q(tree, syntax=syntax, expander=expander, **kw)
+    tree = q(tree, syntax=syntax, **kw)
+    return expand1(tree, syntax=syntax, **kw)
 
-def expand2q(tree, *, syntax, expander, **kw):
-    '''[syntax, expr/block] expand-twice-then-quote.
+def expandq(tree, *, syntax, **kw):
+    '''[syntax, expr/block] quote-then-expand.
 
-    Expand two layers of macros in AST `tree`, then `q` the result.
+    Quasiquote `tree`, then expand it until no macros remain. Return the result
+    quasiquoted. This operator is equivalent to MacroPy's `q`.
 
-    If you have a quasiquoted `tree`, use `expand1` twice instead.
-    '''
-    if syntax == "name":
-        return tree
-    tree = expander.visit_once(tree)  # -> Done(body=...)
-    tree = expander.visit_once(tree.body)  # To expand more layers, this step could be repeated.
-    return q(tree, syntax=syntax, expander=expander, **kw)
-
-def expandq(tree, *, syntax, expander, **kw):
-    '''[syntax, expr/block] expand-then-quote.
-
-    Expand AST `tree` until no macros remain, then `q` the result.
-    This operator is equivalent to MacroPy's `q`.
-
-    If you have a quasiquoted `tree`, use `expand` instead.
+    If your tree is already quasiquoted, use `expand` instead.
     '''
     # Always use recursive mode, because `expandq[...]` may appear inside
     # another macro invocation that uses `visit_once` (which sets the expander
     # mode to non-recursive for the dynamic extent of the visit).
     if syntax == "name":
         return tree
-    tree = expander.visit_recursively(tree)
-    return q(tree, syntax=syntax, expander=expander, **kw)
+    tree = q(tree, syntax=syntax, **kw)
+    return expand(tree, syntax=syntax, **kw)
 
 # --------------------------------------------------------------------------------
 
@@ -385,14 +368,14 @@ def expand1(tree, *, syntax, expander, **kw):
 
     The result remains in quasiquoted form.
 
-    Like calling `expander.visit_once(tree)`, but for a quoted code section.
+    Like calling `expander.visit_once(tree)`, but for quasiquoted `tree`.
 
     `tree` must be a quasiquoted AST; i.e. output from, or an invocation of,
-    `q`, `expand1q`, `expand2q`, `expandq`, `expand1`, or `expand`. Passing
-    any other AST as `tree` raises `TypeError`.
+    `q`, `expand1q`, `expandq`, `expand1`, or `expand`. Passing any other AST
+    as `tree` raises `TypeError`.
 
-    If your `tree` is not quasiquoted, `expand1q` is a shorthand for
-    expand-once-then-quote.
+    If your `tree` is not quasiquoted, `expand1q[...]` is a shorthand for
+    `expand1[q[...]]`.
     '''
     if syntax == "name":
         return tree
@@ -404,7 +387,7 @@ def expand1(tree, *, syntax, expander, **kw):
     # are then in a quoted form, which don't look like macro invocations to the expander.
     # If the input `tree` is a `Done`, it will likewise do nothing.
     tree = expander.visit_once(tree)  # -> Done(body=...)
-    tree = expander.visit_once(unastify(tree.body))  # On invalid input, `unastify` will `TypeError` for us.
+    tree = expander.visit_once(unastify(tree.body))  # On wrong kind of input, `unastify` will `TypeError` for us.
     return q(tree, syntax=syntax, expander=expander, **kw)
 
 def expand(tree, *, syntax, expander, **kw):
@@ -412,14 +395,14 @@ def expand(tree, *, syntax, expander, **kw):
 
     The result remains in quasiquoted form.
 
-    Like calling `expander.visit_recursively(tree)`, but for a quoted code section.
+    Like calling `expander.visit_recursively(tree)`, but for quasiquoted `tree`.
 
     `tree` must be a quasiquoted AST; i.e. output from, or an invocation of,
-    `q`, `expand1q`, `expand2q`, `expandq`, `expand1`, or `expand`. Passing
-    any other AST as `tree` raises `TypeError`.
+    `q`, `expand1q`, `expandq`, `expand1`, or `expand`. Passing any other AST
+    as `tree` raises `TypeError`.
 
-    If your `tree` is not quasiquoted, `expandq` is a shorthand for
-    expand-then-quote.
+    If your `tree` is not quasiquoted, `expandq[...]` is a shorthand for
+    `expand[q[...]]`.
     '''
     if syntax == "name":
         return tree
