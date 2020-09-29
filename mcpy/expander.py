@@ -3,7 +3,7 @@
 
 This layer provides the actual macro expander, defining:
 
- - types of macro invocation: `macroname[...]`, `with macroname:`, `@macroname`,
+ - macro invocation types: `macroname[...]`, `with macroname:`, `@macroname`, `macroname`
  - syntax for establishing macro bindings: `from module import macros, ...`.
 '''
 
