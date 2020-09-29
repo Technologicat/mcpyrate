@@ -130,7 +130,13 @@ class BaseMacroExpander(NodeTransformer):
         except Exception as err:
             lineno = target.lineno if hasattr(target, 'lineno') else None
             sep = " " if "\n" not in approx_sourcecode_before_expansion else "\n"
-            msg = f'use site was at {self.filename}:{lineno}:{sep}{approx_sourcecode_before_expansion}'
+            msg = f'at {self.filename}:{lineno}:{sep}{approx_sourcecode_before_expansion}'
+            if isinstance(err, MacroExpansionError):  # telescope nested use site reports
+                oldmsg = err.args[0]
+                if oldmsg[0] == "\n":
+                    oldmsg = oldmsg[1:]
+                msg = f'\n{msg}\n{oldmsg}'
+                err = err.__cause__
             raise MacroExpansionError(msg) from err
 
         return self._visit_expansion(expansion, target)
