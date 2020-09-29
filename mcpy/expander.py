@@ -123,12 +123,13 @@ class MacroExpander(BaseMacroExpander):
         An classic example is the anaphoric if's `it`.
 
         Use an `mcpy.utilities.NestingLevelTracker` to keep track of whether
-        the identifier macro is being expanded inside an invocation of your
-        other macro (which must expand inner macros explicitly!). Then, in
-        your identifier macro, if it's trying to expand in an invalid context,
-        raise `SyntaxError` with an appropriate explanation. When in a valid
-        context, just `return tree`. This way any invalid, stray mentions of
-        the magic variable will be promoted to compile-time errors.
+        your identifier macro is being expanded inside an invocation of your
+        other macro (which must expand inner macros explicitly for the nesting
+        level check to be able to detect that). Then, in your identifier macro,
+        if it's trying to expand in an invalid context, raise `SyntaxError`
+        with an appropriate explanation. When in a valid context, just `return
+        tree`. This way any invalid, stray mentions of the magic variable will
+        be promoted to compile-time errors.
         '''
         if self.ismacro(name.id):
             macroname = name.id
