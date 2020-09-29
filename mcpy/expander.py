@@ -16,6 +16,25 @@ from .core import BaseMacroExpander, global_postprocess
 class MacroExpander(BaseMacroExpander):
     '''The actual macro expander.'''
 
+    def visit_Subscript(self, subscript):
+        '''
+        Check for an expression macro as::
+
+            macroname['index expression is the target of the macro']
+
+        Replace the `SubScript` node with the result of the macro.
+        '''
+        candidate = subscript.value
+        if isinstance(candidate, Name) and self.ismacro(candidate.id):
+            macroname = candidate.id
+            tree = subscript.slice.value
+            new_tree = self.expand('expr', subscript, macroname, tree)
+            new_tree = copy_location(new_tree, subscript)
+        else:
+            new_tree = self.generic_visit(subscript)
+
+        return new_tree
+
     def visit_With(self, withstmt):
         '''
         Check for a block macro as::
@@ -35,25 +54,6 @@ class MacroExpander(BaseMacroExpander):
             new_tree = _fix_coverage_reporting(new_tree, withstmt)
         else:
             new_tree = self.generic_visit(withstmt)
-
-        return new_tree
-
-    def visit_Subscript(self, subscript):
-        '''
-        Check for an expression macro as::
-
-            macroname['index expression is the target of the macro']
-
-        Replace the `SubScript` node with the result of the macro.
-        '''
-        candidate = subscript.value
-        if isinstance(candidate, Name) and self.ismacro(candidate.id):
-            macroname = candidate.id
-            tree = subscript.slice.value
-            new_tree = self.expand('expr', subscript, macroname, tree)
-            new_tree = copy_location(new_tree, subscript)
-        else:
-            new_tree = self.generic_visit(subscript)
 
         return new_tree
 
