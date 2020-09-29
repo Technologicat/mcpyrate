@@ -133,8 +133,8 @@ class MacroExpander(BaseMacroExpander):
                 return type(tree) is not Name or tree.id != macroname
             # Prevent an infinite loop in case the macro no-ops, returning `tree` as-is.
             # Most macros are not interested in being identifier macros. Identifier macros
-            # are special in that for them, there's no part of the tree that could be
-            # guaranteed to be compiled away in the expansion.
+            # are special in that for them, there's no part of the tree that is guaranteed
+            # to be compiled away in the expansion.
             with self._recursive_mode(False):
                 new_tree = self.expand('name', name, macroname, name)
             if ismodified(new_tree):
