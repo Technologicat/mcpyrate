@@ -4,7 +4,7 @@
 __all__ = ['capture', 'lookup', 'astify', 'unastify',
            'q', 'u', 'n', 'a', 's', 'h',
            'expandq', 'expand1q', 'expand2q',
-           'expand1_quoted', 'expand_quoted']
+           'expand1', 'expand']
 
 import ast
 from .expander import expand_macros
@@ -237,13 +237,16 @@ def _expand_quasiquotes(tree, expander):
 
 def q(tree, *, syntax, expander, **kw):
     """[syntax, expr/block] quasiquote. Lift code into its AST representation."""
+    # Most macros, just like this one, are not interested in being identifier
+    # macros. To allow using `q` (or whatever asname this macro is bound to at
+    # the use site) as a regular run-time name, if `syntax == "name"`, we no-op.
     if syntax == "name":
         return tree
     if syntax not in ("expr", "block"):
         raise SyntaxError("q is an expr and block macro only")
     with _quotelevel.changed_by(+1):
         tree = _expand_quasiquotes(tree, expander)  # expand any inner quotes and unquotes first
-        tree = astify(tree)
+        tree = astify(tree)  # This is the magic part of `q`.
         ps = get_markers(tree, QuasiquoteMarker)  # postcondition: no remaining QuasiquoteMarkers
         if ps:
             assert False, f"QuasiquoteMarker instances remaining in output: {ps}"
@@ -251,8 +254,8 @@ def q(tree, *, syntax, expander, **kw):
             target = kw['optional_vars']  # List, Tuple, Name
             if type(target) is not ast.Name:
                 raise SyntaxError(f"expected a single asname, got {unparse(target)}")
-            # Note the `Assign` runs at the use site of `q`, it's not part of the quoted code section.
-            tree = ast.Assign([target], tree)  # here `tree` is a List.
+            # Note this `Assign` runs at the use site of `q`, it's not part of the quoted code section.
+            tree = ast.Assign([target], tree)  # Here `tree` is a List.
         return tree
 
 def u(tree, *, syntax, expander, **kw):
@@ -328,12 +331,19 @@ def h(tree, *, syntax, expander, **kw):
         return CaptureLater(tree, name)
 
 # --------------------------------------------------------------------------------
-# Macros for macro-expanding quoted code
 
+# TODO: In the `expand*q` variants, `tree` can't use any unquote operators,
+# TODO: because they would be expanded before the `q` kicks in. Fix this?
+# TODO: (Just quote first to expand the quote and any unquotes, and then
+# TODO:  delegate to `expand1`.)
+# TODO: So we should make this quote-then-expand-once.
 def expand1q(tree, *, syntax, expander, **kw):
     '''[syntax, expr/block] expand-once-then-quote.
 
-    Expand one layer of macros in `tree`, then quote the result.'''
+    Expand one layer of macros in AST `tree`, then `q` the result.
+
+    If you have a quasiquoted `tree`, use `expand1` instead.
+    '''
     if syntax == "name":
         return tree
     tree = expander.visit_once(tree)  # -> Done(body=...)
@@ -342,51 +352,74 @@ def expand1q(tree, *, syntax, expander, **kw):
 def expand2q(tree, *, syntax, expander, **kw):
     '''[syntax, expr/block] expand-twice-then-quote.
 
-    Expand two layers of macros in `tree`, then quote the result.'''
+    Expand two layers of macros in AST `tree`, then `q` the result.
+
+    If you have a quasiquoted `tree`, use `expand1` twice instead.
+    '''
     if syntax == "name":
         return tree
     tree = expander.visit_once(tree)  # -> Done(body=...)
-    tree = expander.visit_once(tree.body)  # to expand more layers, this step could be repeated.
+    tree = expander.visit_once(tree.body)  # To expand more layers, this step could be repeated.
     return q(tree, syntax=syntax, expander=expander, **kw)
 
 def expandq(tree, *, syntax, expander, **kw):
     '''[syntax, expr/block] expand-then-quote.
 
-    Expand `tree` until no macros remain, then quote the result.'''
-    # Always use recursive mode, because `expandq[...]` may appear inside an `expand1_quoted[...]`,
-    # `expand1q[...]`, or `expand2q[...]`; all those use `visit_once`, which sets the
-    # expander mode to non-recursive for the dynamic extent of the visit.
+    Expand AST `tree` until no macros remain, then `q` the result.
+    This operator is equivalent to MacroPy's `q`.
+
+    If you have a quasiquoted `tree`, use `expand` instead.
+    '''
+    # Always use recursive mode, because `expandq[...]` may appear inside
+    # another macro invocation that uses `visit_once` (which sets the expander
+    # mode to non-recursive for the dynamic extent of the visit).
     if syntax == "name":
         return tree
     tree = expander.visit_recursively(tree)
     return q(tree, syntax=syntax, expander=expander, **kw)
 
-def expand1_quoted(tree, *, syntax, expander, **kw):
-    '''[syntax, expr/block] unquote a quoted AST, expand once, re-quote.
+# --------------------------------------------------------------------------------
 
-    `tree` must be output from, or an invocation of, `q`, `expand1q`, `expand2q`,
-    `expand1_quoted`, or `expand_quoted`.
+def expand1(tree, *, syntax, expander, **kw):
+    '''[syntax, expr/block] expand one layer of macros in quasiquoted `tree`.
 
-    For any other AST, raises `TypeError`, because for a general AST that isn't
-    the result of quoting, `unastify` (top-level unquote) makes no sense.
+    The result remains in quasiquoted form.
+
+    Like calling `expander.visit_once(tree)`, but for a quoted code section.
+
+    `tree` must be a quasiquoted AST; i.e. output from, or an invocation of,
+    `q`, `expand1q`, `expand2q`, `expandq`, `expand1`, or `expand`. Passing
+    any other AST as `tree` raises `TypeError`.
+
+    If your `tree` is not quasiquoted, `expand1q` is a shorthand for
+    expand-once-then-quote.
     '''
     if syntax == "name":
         return tree
-    # The input is quoted; the first `visit_once` makes the quotes inside this invocation expand first.
-    # If the input `tree` is an already expanded `q`, the `visit_once` will do nothing, because any
-    # macro invocations are then in a quoted form, which don't look like macro invocations to the expander.
+    # We first invert the quasiquote operation, then use the garden variety
+    # `expander` on the result, and then re-quote the expanded AST.
+    #
+    # The first `visit_once` makes any quote invocations inside this macro invocation expand first.
+    # If the input `tree` is an already expanded `q`, it will do nothing, because any macro invocations
+    # are then in a quoted form, which don't look like macro invocations to the expander.
+    # If the input `tree` is a `Done`, it will likewise do nothing.
     tree = expander.visit_once(tree)  # -> Done(body=...)
-    tree = expander.visit_once(unastify(tree.body))
+    tree = expander.visit_once(unastify(tree.body))  # On invalid input, `unastify` will `TypeError` for us.
     return q(tree, syntax=syntax, expander=expander, **kw)
 
-def expand_quoted(tree, *, syntax, expander, **kw):
-    '''[syntax, expr/block] unquote a quoted AST, expand until no macros remain, re-quote.
+def expand(tree, *, syntax, expander, **kw):
+    '''[syntax, expr/block] expand quasiquoted `tree` until no macros remain.
 
-    `tree` must be output from, or an invocation of, `q`, `expand1q`, `expand2q`,
-    `expand1_quoted`, or `expand_quoted`.
+    The result remains in quasiquoted form.
 
-    For any other AST, raises `TypeError`, because for a general AST that isn't
-    the result of quoting, `unastify` (top-level unquote) makes no sense.
+    Like calling `expander.visit_recursively(tree)`, but for a quoted code section.
+
+    `tree` must be a quasiquoted AST; i.e. output from, or an invocation of,
+    `q`, `expand1q`, `expand2q`, `expandq`, `expand1`, or `expand`. Passing
+    any other AST as `tree` raises `TypeError`.
+
+    If your `tree` is not quasiquoted, `expandq` is a shorthand for
+    expand-then-quote.
     '''
     if syntax == "name":
         return tree
