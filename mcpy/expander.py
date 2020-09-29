@@ -29,7 +29,8 @@ class MacroExpander(BaseMacroExpander):
             macroname = candidate.id
             tree = subscript.slice.value
             new_tree = self.expand('expr', subscript, macroname, tree)
-            new_tree = copy_location(new_tree, subscript)
+            if new_tree is not None:
+                new_tree = copy_location(new_tree, subscript)
         else:
             new_tree = self.generic_visit(subscript)
 
@@ -85,6 +86,8 @@ class MacroExpander(BaseMacroExpander):
             for macro in reversed(macros):
                 macroname = macro.id
                 new_tree = self.expand('decorator', decorated, macroname, decorated)
+                if new_tree is None:
+                    break
             for macro in reversed(macros):
                 new_tree = _fix_coverage_reporting(new_tree, macro)
         else:
@@ -137,7 +140,7 @@ class MacroExpander(BaseMacroExpander):
             # to be compiled away in the expansion.
             with self._recursive_mode(False):
                 new_tree = self.expand('name', name, macroname, name)
-            if ismodified(new_tree):
+            if new_tree is not None and ismodified(new_tree):
                 # We already expanded once; only re-expand (to expand until no
                 # macros left) if we should. If we were called by `visit_once`,
                 # it'll slap on the `Done` marker itself, so we shouldn't.
