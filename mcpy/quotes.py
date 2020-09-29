@@ -44,18 +44,18 @@ def _mcpy_quotes_attr(attr):
                          attr=attr,
                          ctx=ast.Load())
 
-def _capture_into(destination, value, basename):  # destination: dict
-    for k, v in destination.items():
+def _capture_into(mapping, value, basename):
+    for k, v in mapping.items():
         if v is value:
             key = k
             break
     else:
         key = gensym(basename)
-        destination[key] = value
+        mapping[key] = value
     return key
 
 def capture(value, basename):
-    """Store a value into the hygienic capture registry.
+    """Store value into the hygienic capture registry.
 
     `value`:    Any run-time value.
     `basename`: Basename for gensymming a unique key for the value.
