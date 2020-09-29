@@ -9,10 +9,15 @@ __all__ = ['MacroExpansionError',
 
 from ast import NodeTransformer, AST, fix_missing_locations
 from contextlib import contextmanager
+from collections import ChainMap
 from .ctxfixer import fix_missing_ctx
 from .markers import ASTMarker
 from .unparser import unparse
 from .utilities import flatten_suite
+
+# Hygienically captured macro functions.
+# Global registry (across all modules being expanded) with unique keys, filled in by `mcpy.quotes`.
+_hygienic_bindings = {}
 
 class MacroExpansionError(Exception):
     '''Error during macro expansion.'''
@@ -39,7 +44,8 @@ class BaseMacroExpander(NodeTransformer):
         bindings: dict of macro name/function pairs
         filename: full path to `.py` file being expanded, for error reporting
         '''
-        self.bindings = bindings
+        self._bindings = bindings
+        self.bindings = ChainMap(self._bindings, _hygienic_bindings)
         self.filename = filename
         self.recursive = True
 
@@ -163,7 +169,7 @@ class BaseMacroExpander(NodeTransformer):
 
     def ismacro(self, name):
         '''Return whether the string `name` has been bound to a macro in this expander.'''
-        return name in self.bindings
+        return name in self.bindings or name in _hygienic_bindings
 
 def _apply_macro(macro, tree, kw):
     '''Execute `macro` on `tree`, with the dictionary `kw` unpacked into macro's named arguments.'''

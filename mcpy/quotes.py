@@ -7,6 +7,7 @@ __all__ = ['capture', 'lookup', 'astify', 'unastify',
            'expand1', 'expand']
 
 import ast
+from .core import _hygienic_bindings
 from .expander import expand_macros
 from .markers import ASTMarker, get_markers
 from .unparser import unparse
@@ -31,6 +32,7 @@ class CaptureLater(QuasiquoteMarker):  # like MacroPy's `Captured`
 
 # --------------------------------------------------------------------------------
 
+# Hygienically captured run-time values.
 _registry = {}
 
 def _mcpy_quotes_attr(attr):
@@ -42,6 +44,16 @@ def _mcpy_quotes_attr(attr):
                          attr=attr,
                          ctx=ast.Load())
 
+def _capture_into(destination, value, basename):  # destination: dict
+    for k, v in destination.items():
+        if v is value:
+            key = k
+            break
+    else:
+        key = gensym(basename)
+        destination[key] = value
+    return key
+
 def capture(value, basename):
     """Store a value into the hygienic capture registry.
 
@@ -52,13 +64,7 @@ def capture(value, basename):
     The return value is an AST that, when compiled and run, looks up the
     captured value. Each unique value (by `id`) is only stored once.
     """
-    for k, v in _registry.items():
-        if v is value:
-            key = k
-            break
-    else:
-        key = gensym(basename)
-        _registry[key] = value
+    key = _capture_into(_registry, value, basename)
     return ast.Call(_mcpy_quotes_attr("lookup"),
                     [ast.Constant(value=key)],
                     [])
@@ -69,7 +75,7 @@ def lookup(key):
 
 # --------------------------------------------------------------------------------
 
-def astify(x):  # like MacroPy's `ast_repr`
+def astify(x, expander=None):  # like MacroPy's `ast_repr`
     """Lift a value into its AST representation, if possible.
 
     When the AST is compiled and run, it will evaluate to `x`.
@@ -84,52 +90,66 @@ def astify(x):  # like MacroPy's `ast_repr`
     nodes, because otherwise `ast.NodeTransformer` chokes on the input. (The only
     exception is `q` in block mode; it'll produce a `List` this way.)
 
+    `expander` is a `BaseMacroExpander` instance, used for detecting macro names
+    inside `CaptureLater` markers. If no `expander` is provided, macros cannot be
+    hygienically unquoted.
+
     Raises `TypeError` when the lifting fails.
     """
-    T = type(x)
+    def doit(x):  # second layer just to auto-pass `expander` by closure.
+        T = type(x)
 
-    # Drop the ASTLiteral wrapper; it only tells us to pass through this subtree as-is.
-    if T is ASTLiteral:
-        return x.body
+        # Drop the ASTLiteral wrapper; it only tells us to pass through this subtree as-is.
+        if T is ASTLiteral:
+            return x.body
 
-    # This is the magic part of q[h[]].
-    #
-    # At the use site of q[], this captures the value, and rewrites itself
-    # into a lookup. At the use site of the macro that used q[], that
-    # rewritten code looks up the captured value.
-    elif T is CaptureLater:
-        return ast.Call(_mcpy_quotes_attr('capture'),
-                        [x.body,
-                         ast.Constant(value=x.name)],
-                        [])
-
-    elif T in (int, float, str, bytes, bool, type(None)):
-        return ast.Constant(value=x)
-
-    elif T is list:
-        return ast.List(elts=list(astify(elt) for elt in x))
-    elif T is tuple:
-        return ast.Tuple(elts=list(astify(elt) for elt in x))
-    elif T is dict:
-        return ast.Dict(keys=list(astify(k) for k in x.keys()),
-                        values=list(astify(v) for v in x.values()))
-    elif T is set:
-        return ast.Set(elts=list(astify(elt) for elt in x))
-
-    elif isinstance(x, ast.AST):
-        # The magic is in the Call. Take apart the input AST, and construct a
-        # new AST, that (when compiled and run) will re-generate the input AST.
+        # This is the magic part of q[h[]].
         #
-        # We refer to the stdlib `ast` module as `mcpy.quotes.ast` to avoid
-        # name conflicts at the use site of `q[]`.
-        fields = [ast.keyword(a, astify(b)) for a, b in ast.iter_fields(x)]
-        return ast.Call(ast.Attribute(value=_mcpy_quotes_attr('ast'),
-                                      attr=x.__class__.__name__,
-                                      ctx=ast.Load()),
-                        [],
-                        fields)
+        # At the use site of q[], this captures the value, and rewrites itself
+        # into a lookup. At the use site of the macro that used q[], that
+        # rewritten code looks up the captured value.
+        elif T is CaptureLater:
+            if expander and type(x.body) is ast.Name and expander.ismacro(x.body.id):
+                # Hygienically capture a macro invocation, to be applied at use site of `q`
+                # (or once the expander returns from that use site).
+                macroname = x.body.id
+                function = expander.bindings[macroname]
+                uniquename = _capture_into(_hygienic_bindings, function, macroname)
+                return doit(ast.Name(id=uniquename))
+            # Hygienically capture a garden variety run-time value.
+            return ast.Call(_mcpy_quotes_attr('capture'),
+                            [x.body,
+                             ast.Constant(value=x.name)],
+                            [])
 
-    raise TypeError(f"Don't know how to astify {repr(x)}")
+        elif T in (int, float, str, bytes, bool, type(None)):
+            return ast.Constant(value=x)
+
+        elif T is list:
+            return ast.List(elts=list(doit(elt) for elt in x))
+        elif T is tuple:
+            return ast.Tuple(elts=list(doit(elt) for elt in x))
+        elif T is dict:
+            return ast.Dict(keys=list(doit(k) for k in x.keys()),
+                            values=list(doit(v) for v in x.values()))
+        elif T is set:
+            return ast.Set(elts=list(doit(elt) for elt in x))
+
+        elif isinstance(x, ast.AST):
+            # The magic is in the Call. Take apart the input AST, and construct a
+            # new AST, that (when compiled and run) will re-generate the input AST.
+            #
+            # We refer to the stdlib `ast` module as `mcpy.quotes.ast` to avoid
+            # name conflicts at the use site of `q[]`.
+            fields = [ast.keyword(a, doit(b)) for a, b in ast.iter_fields(x)]
+            return ast.Call(ast.Attribute(value=_mcpy_quotes_attr('ast'),
+                                          attr=x.__class__.__name__,
+                                          ctx=ast.Load()),
+                            [],
+                            fields)
+
+        raise TypeError(f"Don't know how to astify {repr(x)}")
+    return doit(x)
 
 def unastify(tree):
     """Inverse of `astify`.
@@ -231,7 +251,8 @@ def _expand_quasiquotes(tree, expander):
     """Expand quasiquote macros only."""
     # Use a second expander instance, with different bindings. Copy only the
     # bindings of the quasiquote macros from the main `expander`, accounting
-    # for possible as-imports.
+    # for possible as-imports. This second expander won't even see other macros,
+    # thus leaving them alone.
     bindings = {k: v for k, v in expander.bindings.items() if v in (q, u, n, a, s, h)}
     return expand_macros(tree, bindings, expander.filename)
 
@@ -246,7 +267,7 @@ def q(tree, *, syntax, expander, **kw):
         raise SyntaxError("q is an expr and block macro only")
     with _quotelevel.changed_by(+1):
         tree = _expand_quasiquotes(tree, expander)  # expand any inner quotes and unquotes first
-        tree = astify(tree)  # This is the magic part of `q`.
+        tree = astify(tree, expander=expander)  # Magic part of `q`. Supply `expander` for `h[macro]` detection.
         ps = get_markers(tree, QuasiquoteMarker)  # postcondition: no remaining QuasiquoteMarkers
         if ps:
             assert False, f"QuasiquoteMarker instances remaining in output: {ps}"
