@@ -11,7 +11,7 @@ def read(*relpath, **kwargs):
 setup(
     name="mcpy",
     version="3.0.0",
-    packages=["mcpy"],
+    packages=["mcpy", "mcpy.repl"],
     provides=["mcpy"],
     keywords=["macros", "syntactic-macros", "macro-expander", "metaprogramming", "import", "importer", "github"],
     python_requires=">=3.6",
