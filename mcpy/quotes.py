@@ -380,9 +380,6 @@ def expandq(tree, *, syntax, **kw):
 
     If your tree is already quasiquoted, use `expand` instead.
     '''
-    # Always use recursive mode, because `expandq[...]` may appear inside
-    # another macro invocation that uses `visit_once` (which sets the expander
-    # mode to non-recursive for the dynamic extent of the visit).
     if syntax == "name":
         return tree
     tree = q(tree, syntax=syntax, **kw)
@@ -434,5 +431,8 @@ def expand(tree, *, syntax, expander, **kw):
     if syntax == "name":
         return tree
     tree = expander.visit_once(tree)  # make the quotes inside this invocation expand first; -> Done(body=...)
+    # Always use recursive mode, because `expand[...]` may appear inside
+    # another macro invocation that uses `visit_once` (which sets the expander
+    # mode to non-recursive for the dynamic extent of the visit).
     tree = expander.visit_recursively(unastify(tree.body))
     return q(tree, syntax=syntax, expander=expander, **kw)
