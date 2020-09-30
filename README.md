@@ -118,6 +118,8 @@ If you get an error saying an AST node is missing the mandatory field `lineno`, 
 
 *Changed in v3.0.0.* The named parameter `to_source` has been removed; use the function `mcpy.unparse`. The named parameter `expand_macros` has been replaced with `expander`, which grants access to the macro expander instance; use `expander.visit_recursively` or `expander.visit_once`, depending on whether you want expansion to continue until no macros remain. (Use `expander.visit` to use current setting for recursive mode.)
 
+See [`mcpy.core.BaseMacroExpander`](mcpy/core.py) and [`mcpy.expander.MacroExpander`](mcpy/expander.py) for the expander API; it's just a few methods and attributes.
+
 ### Quasiquotes
 
 *New in v3.0.0.* We provide [a quasiquote system](quasiquotes.md) (both classical and hygienic) to make macro code both much more readable and simpler to write. It's similar to MacroPy's, but details of usage differ.
