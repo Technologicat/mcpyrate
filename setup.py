@@ -41,5 +41,6 @@ setup(
         "Topic :: Software Development :: Code Generators",
         "Topic :: Utilities"
     ],
+    entry_points={"console_scripts": ["macropython=mcpy.repl.macropython:main"]},
     zip_safe=False  # macros are not zip safe, because the zip importer fails to find sources.
 )
