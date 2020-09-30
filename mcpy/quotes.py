@@ -33,7 +33,7 @@ class CaptureLater(QuasiquoteMarker):  # like MacroPy's `Captured`
 # --------------------------------------------------------------------------------
 
 # Hygienically captured run-time values.
-_registry = {}
+_hygienic_registry = {}
 
 def _mcpy_quotes_attr(attr):
     """Create an AST that, when compiled and run, looks up `mcpy.quotes.attr` in `Load` context."""
@@ -64,17 +64,17 @@ def capture(value, basename):
     The return value is an AST that, when compiled and run, looks up the
     captured value. Each unique value (by `id`) is only stored once.
 
-    This is for garden variety run-time values. Hygienically captured macros
-    are treated using another mechanism; see `mcpy.core._hygienic_bindings`.
+    Hygienically captured macros are treated using a different mechanism;
+    see `mcpy.core._hygienic_bindings`.
     """
-    key = _capture_into(_registry, value, basename)
+    key = _capture_into(_hygienic_registry, value, basename)
     return ast.Call(_mcpy_quotes_attr("lookup"),
                     [ast.Constant(value=key)],
                     [])
 
 def lookup(key):
     """Look up a hygienically captured run-time value."""
-    return _registry[key]
+    return _hygienic_registry[key]
 
 # --------------------------------------------------------------------------------
 
