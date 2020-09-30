@@ -33,17 +33,19 @@ class Done(MacroExpanderMarker):
     '''
 
 class BaseMacroExpander(NodeTransformer):
-    '''
-    A base class for macro expanders. After identifying valid macro syntax, the
-    actual expander should return the result of calling the `expand()` method
-    with the proper arguments.
+    '''Expander core. Base class for macro expanders.
+
+    After identifying valid macro syntax, each `visit` method of the actual
+    expander should return the result of calling the `expand()` method with
+    the proper arguments.
+
+    Constructor parameters:
+
+        bindings: dictionary of macro name/function pairs
+        filename: full path to `.py` file being expanded, for error reporting
     '''
 
     def __init__(self, bindings, filename):
-        '''
-        bindings: dict of macro name/function pairs
-        filename: full path to `.py` file being expanded, for error reporting
-        '''
         self._bindings = bindings
         self.bindings = ChainMap(self._bindings, _hygienic_bindings)
         self.filename = filename
@@ -66,28 +68,27 @@ class BaseMacroExpander(NodeTransformer):
         return supervisit(tree)
 
     def visit_recursively(self, tree):
-        '''Expand macros in `tree`, in recursive mode.
+        '''Entrypoint. Expand macros in `tree`, in recursive mode.
 
         That is, iterate the expansion process until no macros are left.
-        Recursive mode is used even if currently inside the dynamic extent
-        of a `visit_once`.
+        Recursive mode is temporarily enabled even if currently inside the
+        dynamic extent of a `visit_once`.
 
-        This is an entrypoint that starts a new visit. The dynamic extents of
-        visits may be nested.
+        This starts a new visit. The dynamic extents of visits may be nested.
         '''
         with self._recursive_mode(True):
             return self.visit(tree)
 
     def visit_once(self, tree):
-        '''Expand macros in `tree`, in non-recursive mode. Useful for debugging.
+        '''Entrypoint. Expand macros in `tree`, in non-recursive mode.
 
         That is, make just one pass, regardless of whether there are macros
-        remaining in the output. Then mark `tree` as `Done`, so the rest of the
-        macro expansion process will leave it alone. Non-recursive mode is used
-        even if currently inside the dynamic extent of a `visit_recursively`.
+        remaining in the output. Then mark `tree` as `Done`, so the rest of
+        the macro expansion process will leave it alone. Recursive mode is
+        temporarily disabled even if currently inside the dynamic extent
+        of a `visit_recursively`.
 
-        This is an entrypoint that starts a new visit. The dynamic extents of
-        visits may be nested.
+        This starts a new visit. The dynamic extents of visits may be nested.
         '''
         with self._recursive_mode(False):
             return Done(self.visit(tree))
@@ -179,13 +180,13 @@ def _apply_macro(macro, tree, kw):
 # entrypoints `visit_once` and `visit_recursively`, because it is valid for a
 # macro to call those for a subtree.
 def global_postprocess(tree):
-    '''Perform final postprocessing fix-ups for the top-level expansion.
+    '''Perform global postprocessing for the top-level expansion.
+
+    Delete any AST markers emitted by the macro expander that it uses to talk
+    with itself during expansion.
 
     Call this after macro expansion is otherwise done, before sending `tree`
     to Python's `compile`.
-
-    This deletes any AST markers emitted by the macro expander that it uses
-    to talk with itself during expansion.
     '''
     class InternalMarkerDeleter(NodeTransformer):
         def visit(self, tree):
