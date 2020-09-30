@@ -27,13 +27,14 @@ def interleave(inter, f, seq):
 
 
 class Unparser:
-    """Methods in this class recursively traverse an AST and
-    output source code for the abstract syntax; original formatting
-    is disregarded."""
+    """Convert an AST into source code.
+
+    Methods in this class recursively traverse an AST and output source code
+    for the abstract syntax. Original formatting is disregarded.
+    """
 
     def __init__(self, tree, file=sys.stdout):
-        """Unparser(tree, file=sys.stdout) -> None.
-         Print the source for tree to file."""
+        """Print the source for `tree` to `file`."""
         self.f = file
         self._indent = 0
         self.dispatch(tree)
@@ -41,7 +42,7 @@ class Unparser:
         self.f.flush()
 
     def fill(self, text=""):
-        "Indent a piece of text, according to the current indentation level"
+        "Indent a piece of text, according to the current indentation level."
         self.f.write("\n" + "    " * self._indent + text)
 
     def write(self, text):
@@ -49,16 +50,16 @@ class Unparser:
         self.f.write(text)
 
     def enter(self):
-        "Print ':', and increase the indentation."
+        "Print ':', and increase the indentation level."
         self.write(":")
         self._indent += 1
 
     def leave(self):
-        "Decrease the indentation."
+        "Decrease the indentation level."
         self._indent -= 1
 
     def dispatch(self, tree):
-        "Dispatcher function, dispatching tree type T to method _T."
+        "Dispatcher. Dispatch tree type `T` to method `_T`."
         if isinstance(tree, list):
             for t in tree:
                 self.dispatch(t)
@@ -68,6 +69,14 @@ class Unparser:
             return
         meth = getattr(self, "_" + tree.__class__.__name__)
         meth(tree)
+
+    # --------------------------------------------------------------------------------
+    # Unparsing methods
+    #
+    # There should be one method per concrete grammar type.
+    # Constructors should be grouped by sum type. Ideally,
+    # this would follow the order in the grammar, but
+    # currently doesn't.
 
     def astmarker(self, tree):
         self.write("$" + tree.__class__.__name__)  # markers cannot be eval'd
@@ -84,14 +93,6 @@ class Unparser:
             else:
                 self.write(repr(v))
         self.write(")")
-
-    # --------------------------------------------------------------------------------
-    # Unparsing methods
-    #
-    # There should be one method per concrete grammar type.
-    # Constructors should be grouped by sum type. Ideally,
-    # this would follow the order in the grammar, but
-    # currently doesn't.
 
     def _Module(self, t):
         for stmt in t.body:
@@ -723,8 +724,8 @@ class Unparser:
 
 
 def unparse(tree):
-    output = io.StringIO()
-    Unparser(tree, output)
-    code = output.getvalue().strip()
-    output.close()
+    """Convert the AST `tree` into source code. Return the code as a string."""
+    with io.StringIO() as output:
+        Unparser(tree, file=output)
+        code = output.getvalue().strip()
     return code
