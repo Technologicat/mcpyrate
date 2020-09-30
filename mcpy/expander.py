@@ -199,8 +199,8 @@ class MacroCollector(NodeVisitor):
         candidate = subscript.value
         if isinstance(candidate, Name) and self.ismacroname(candidate.id):
             self.collected.add((candidate.id, 'expr'))
-        # We can't just `self.generic_visit(subscript)` because that'll incorrectly
-        # detect the name part as an identifier macro. So recurse only where safe.
+        # We can't just `self.generic_visit(subscript)`, because that'll incorrectly detect
+        # the name part of the invocation as an identifier macro. So recurse only where safe.
         self.visit(subscript.slice.value)
 
     def visit_With(self, withstmt):
@@ -257,7 +257,7 @@ def _add_coverage_dummy_node(tree, target):
     elif isinstance(tree, AST):
         tree = [tree]
     # The dummy node must actually run to get coverage, an `ast.Pass` won't do.
-    # We must set location info, because we run after `expand`.
+    # We must set location info manually, because we run after `expand`.
     non = copy_location(Constant(value=None), target)
     dummy = copy_location(Expr(value=non), target)
     tree.insert(0, dummy)
