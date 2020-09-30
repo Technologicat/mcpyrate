@@ -284,7 +284,7 @@ def find_macros(tree):
     for index, statement in enumerate(tree.body):
         if _is_macro_import(statement):
             bindings.update(_get_macros(statement))
-            # Remove all names to prevent the macros being accidentally used as regular run-time objects
+            # Remove all names to prevent the macros being accidentally used as regular run-time objects.
             module = statement.module
             tree.body[index] = copy_location(
                 Import(names=[alias(name=module, asname=None)]),
