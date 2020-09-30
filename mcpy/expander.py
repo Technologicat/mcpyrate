@@ -104,20 +104,22 @@ class MacroExpander(BaseMacroExpander):
 
         return new_tree
 
-    def _detect_decorator_macros(self, decorators):
+    def _detect_decorator_macros(self, decorator_list):
+        '''Identify macros in a `decorator_list`.
+
+        Return a pair `(macros, others)`, where `macros` is a `list` of macro
+        decorator AST nodes, and `others` is a `list` of the decorator AST
+        nodes not identified as macros. Ordering is preserved within each
+        of the two subsets.
         '''
-        Identify macro names in a decorator list, and return a pair with
-        macro decorators and the decorators not identified as macros,
-        preserving ordering within each of the two subsets.
-        '''
-        macros, remaining = [], []
-        for d in decorators:
+        macros, others = [], []
+        for d in decorator_list:
             if isinstance(d, Name) and self.ismacroname(d.id):
                 macros.append(d)
             else:
-                remaining.append(d)
+                others.append(d)
 
-        return macros, remaining
+        return macros, others
 
     def visit_Name(self, name):
         '''Detect an identifier (name) macro invocation.
