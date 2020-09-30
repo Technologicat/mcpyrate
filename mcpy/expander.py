@@ -3,8 +3,13 @@
 
 This layer provides the actual macro expander, defining:
 
- - macro invocation types: `macroname[...]`, `with macroname:`, `@macroname`, `macroname`
- - syntax for establishing macro bindings: `from module import macros, ...`.
+ - Macro invocation types:
+   - expr: `macroname[...]`,
+   - block: `with macroname:`,
+   - decorator: `@macroname`,
+   - name: `macroname`.
+ - Syntax for establishing macro bindings:
+   - `from module import macros, ...`.
 '''
 
 __all__ = ['expand_macros', 'find_macros', 'MacroExpander', 'MacroCollector']
@@ -18,8 +23,9 @@ class MacroExpander(BaseMacroExpander):
     '''The actual macro expander.'''
 
     def visit_Subscript(self, subscript):
-        '''
-        Check for an expression macro as::
+        '''Detect an expression (expr) macro invocation.
+
+        Detected syntax::
 
             macroname['index expression is the target of the macro']
 
@@ -36,8 +42,9 @@ class MacroExpander(BaseMacroExpander):
         return new_tree
 
     def visit_With(self, withstmt):
-        '''
-        Check for a block macro as::
+        '''Detect a block macro invocation.
+
+        Detected syntax::
 
             with macroname:
                 "with's body is the target of the macro"
@@ -64,8 +71,9 @@ class MacroExpander(BaseMacroExpander):
         return self._visit_Decorated(functiondef)
 
     def _visit_Decorated(self, decorated):
-        '''
-        Check for a decorator macro as::
+        '''Detect a decorator macro invocation.
+
+        Detected syntax::
 
             @macroname
             def f():
@@ -110,8 +118,9 @@ class MacroExpander(BaseMacroExpander):
         return macros, remaining
 
     def visit_Name(self, name):
-        '''
-        Check for an identifier macro as::
+        '''Detect an identifier (name) macro invocation.
+
+        Detected syntax::
 
             macroname
 
@@ -155,9 +164,13 @@ class MacroExpander(BaseMacroExpander):
 
 
 class MacroCollector(NodeVisitor):
-    '''Scan `tree` for macro invocations.
+    '''Scan `tree` for macro invocations, with respect to a given expander.
 
     Collect a set where each item is `(macroname, syntax)`.
+
+    Constructor parameters:
+
+        - `expander`: a `MacroExpander` instance to query macro bindings from.
 
     Usage::
 
@@ -173,7 +186,6 @@ class MacroCollector(NodeVisitor):
     detects macro invocations that are currently in bindings.
     '''
     def __init__(self, expander):
-        '''expander: a `MacroExpander` instance to query macro bindings from.'''
         self.expander = expander
         self.clear()
 
