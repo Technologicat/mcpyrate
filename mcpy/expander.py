@@ -29,9 +29,7 @@ class MacroExpander(BaseMacroExpander):
         if isinstance(candidate, Name) and self.ismacroname(candidate.id):
             macroname = candidate.id
             tree = subscript.slice.value
-            new_tree = self.expand('expr', subscript, macroname, tree)
-            if new_tree is not None:
-                new_tree = copy_location(new_tree, subscript)
+            new_tree = self.expand('expr', subscript, macroname, tree, fill_root_location=True)
         else:
             new_tree = self.generic_visit(subscript)
 
@@ -52,8 +50,8 @@ class MacroExpander(BaseMacroExpander):
             macroname = candidate.id
             tree = withstmt.body
             kw = {'optional_vars': with_item.optional_vars}
-            new_tree = self.expand('block', withstmt, macroname, tree, kw)
             new_tree = _fix_coverage_reporting(new_tree, withstmt)
+            new_tree = self.expand('block', withstmt, macroname, tree, fill_root_location=False, kw=kw)
         else:
             new_tree = self.generic_visit(withstmt)
 
@@ -86,7 +84,7 @@ class MacroExpander(BaseMacroExpander):
         if macros:
             for macro in reversed(macros):
                 macroname = macro.id
-                new_tree = self.expand('decorator', decorated, macroname, decorated)
+                new_tree = self.expand('decorator', decorated, macroname, decorated, fill_root_location=False)
                 if new_tree is None:
                     break
             for macro in reversed(macros):
@@ -141,7 +139,6 @@ class MacroExpander(BaseMacroExpander):
             # are special in that for them, there's no part of the tree that is guaranteed
             # to be compiled away in the expansion.
             with self._recursive_mode(False):
-                new_tree = self.expand('name', name, macroname, name)
             if new_tree is not None and ismodified(new_tree):
                 # We already expanded once; only re-expand (to expand until no
                 # macros left) if we should. If we were called by `visit_once`,
@@ -150,6 +147,7 @@ class MacroExpander(BaseMacroExpander):
                     new_tree = copy_location(new_tree, name)  # for use by debug messages inside the macro
                     self.visit(new_tree)
                 new_tree = copy_location(new_tree, name)
+                new_tree = self.expand('name', name, macroname, name, fill_root_location=True)
         else:
             new_tree = self.generic_visit(name)
 

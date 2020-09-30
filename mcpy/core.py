@@ -7,7 +7,7 @@ __all__ = ['MacroExpansionError',
            'BaseMacroExpander',
            'global_postprocess']
 
-from ast import NodeTransformer, AST, fix_missing_locations
+from ast import NodeTransformer, AST, copy_location, fix_missing_locations
 from contextlib import contextmanager
 from collections import ChainMap
 from .ctxfixer import fix_missing_ctx
@@ -105,25 +105,41 @@ class BaseMacroExpander(NodeTransformer):
                 self.recursive = wasrecursive
         return recursive_mode()
 
-    def expand(self, syntax, target, macroname, tree, kw=None):
-        '''
-        Hook for actual macro expanders. Macro libraries typically don't need
-        to care about this; you'll want one of the `visit` methods instead.
+    def expand(self, syntax, target, macroname, tree, fill_root_location, kw=None):
+        '''Expand a macro invocation.
 
-        Transform `target` node, replacing it with the expansion result of
-        applying `macroname` on `tree`. Then postprocess by `_visit_expansion`.
+        This is a hook for actual macro expanders. Macro libraries typically
+        don't need to care about this; you'll want one of the `visit` methods
+        instead.
+
+        Transform the `target` node, replacing it with the expansion result
+        of applying `macroname` on `tree`. Then postprocess locally, by
+        `_visit_expansion`.
 
         `syntax` is the type of macro invocation detected by the actual macro
-        expander. It is sent to the macro implementation as a named argument,
-        to allow it to dispatch on the type. (We don't care what it is; that's
-        between the actual expander and the macro implementations to agree on.)
+        expander, such as `expr` or `block`. What invocation types exist and
+        what values of `syntax` represent them are defined by the actual macro
+        expander. The value of `syntax` and its type can be anything; we don't
+        even look at it, but just pass it on.
 
-        The `expander` named argument is automatically filled in with a
-        reference to the expander instance.
+        `fill_root_location` sets whether to fill the source location info at
+        the top level of the expansion from the AST node `target`. Whether that
+        should be done depends on the type of macro invocation.
 
-        If the actual expander wants to send additional named arguments to
-        the macro implementation, place them in a dictionary and pass that
-        dictionary as `kw`.
+        For example, in the default `mcpy.expander.MacroExpander`, block and
+        decorator macro invocations have the top level of the expanded code
+        come from below the macro invocation line in the unexpaded source (so they
+        use `fill_root_location=False`), whereas for expression and identifier
+        macros, it comes from the same line (so they use `fill_root_location=True`).
+
+        When calling the macro function, we pass the following named arguments:
+
+          - `syntax`: our `syntax` argument, as-is.
+          - `expander`: the expander instance.
+
+        To send additional named arguments from the actual expander to the
+        macro function, place them in a dictionary and pass that dictionary
+        as `kw`.
         '''
         macro = self.bindings[macroname]
         kw = kw or {}
@@ -146,20 +162,26 @@ class BaseMacroExpander(NodeTransformer):
                 err = err.__cause__
             raise MacroExpansionError(msg) from err
 
-        return self._visit_expansion(expansion, target)
+        return self._visit_expansion(expansion, target, fill_root_location)
 
-    def _visit_expansion(self, expansion, target):
-        '''
-        Perform local postprocessing fix-ups such as adding in missing
-        source location info and `ctx`.
+    def _visit_expansion(self, expansion, target, fill_root_location):
+        '''Perform local postprocessing.
+
+        Add in missing source location info and `ctx`.
 
         Then, if in recursive mode, recurse into (`visit`) the once-expanded
         macro output. That will cause the actual expander to `expand` again
         if it detects any more macro invocations.
+
+        `fill_root_location` sets whether to fill the source location info at
+        the top level of the expansion from the AST node `target`. Whether that
+        should be done depends on the type of macro invocation.
         '''
         if expansion is not None:
             is_node = isinstance(expansion, AST)
             expansion = [expansion] if is_node else expansion
+            if fill_root_location:
+                expansion = map(lambda n: copy_location(n, target), expansion)
             expansion = map(fix_missing_locations, expansion)
             expansion = map(fix_missing_ctx, expansion)
             if self.recursive:
