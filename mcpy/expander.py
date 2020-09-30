@@ -26,7 +26,7 @@ class MacroExpander(BaseMacroExpander):
         Replace the `SubScript` node with the result of the macro.
         '''
         candidate = subscript.value
-        if isinstance(candidate, Name) and self.ismacro(candidate.id):
+        if isinstance(candidate, Name) and self.ismacroname(candidate.id):
             macroname = candidate.id
             tree = subscript.slice.value
             new_tree = self.expand('expr', subscript, macroname, tree)
@@ -48,7 +48,7 @@ class MacroExpander(BaseMacroExpander):
         '''
         with_item = withstmt.items[0]
         candidate = with_item.context_expr
-        if isinstance(candidate, Name) and self.ismacro(candidate.id):
+        if isinstance(candidate, Name) and self.ismacroname(candidate.id):
             macroname = candidate.id
             tree = withstmt.body
             kw = {'optional_vars': with_item.optional_vars}
@@ -104,7 +104,7 @@ class MacroExpander(BaseMacroExpander):
         '''
         macros, remaining = [], []
         for d in decorators:
-            if isinstance(d, Name) and self.ismacro(d.id):
+            if isinstance(d, Name) and self.ismacroname(d.id):
                 macros.append(d)
             else:
                 remaining.append(d)
@@ -132,7 +132,7 @@ class MacroExpander(BaseMacroExpander):
         tree`. This way any invalid, stray mentions of the magic variable will
         be promoted to compile-time errors.
         '''
-        if self.ismacro(name.id):
+        if self.ismacroname(name.id):
             macroname = name.id
             def ismodified(tree):
                 return type(tree) is not Name or tree.id != macroname
@@ -182,12 +182,12 @@ class MacroCollector(NodeVisitor):
     def clear(self):
         self.collected = set()
 
-    def ismacro(self, name):
-        return self.expander.ismacro(name)
+    def ismacroname(self, name):
+        return self.expander.ismacroname(name)
 
     def visit_Subscript(self, subscript):
         candidate = subscript.value
-        if isinstance(candidate, Name) and self.ismacro(candidate.id):
+        if isinstance(candidate, Name) and self.ismacroname(candidate.id):
             self.collected.add((candidate.id, 'expr'))
         # We can't just `self.generic_visit(subscript)` because that'll incorrectly
         # detect the name part as an identifier macro. So recurse only where safe.
@@ -196,7 +196,7 @@ class MacroCollector(NodeVisitor):
     def visit_With(self, withstmt):
         with_item = withstmt.items[0]
         candidate = with_item.context_expr
-        if isinstance(candidate, Name) and self.ismacro(candidate.id):
+        if isinstance(candidate, Name) and self.ismacroname(candidate.id):
             self.collected.add((candidate.id, 'block'))
         self.visit(withstmt.body)
 
@@ -216,7 +216,7 @@ class MacroCollector(NodeVisitor):
                 self.visit(value)
 
     def visit_Name(self, name):
-        if self.ismacro(name.id):
+        if self.ismacroname(name.id):
             self.collected.add((name.id, 'name'))
         self.generic_visit(name)
 
