@@ -17,7 +17,7 @@ __all__ = ['expand_macros', 'find_macros', 'MacroExpander', 'MacroCollector']
 import sys
 from ast import (Name, Import, ImportFrom, alias, AST, Expr, Constant,
                  copy_location, iter_fields, NodeVisitor)
-from .core import BaseMacroExpander, global_postprocess
+from .core import BaseMacroExpander, global_postprocess, Done
 
 class MacroExpander(BaseMacroExpander):
     '''The actual macro expander.'''
@@ -260,7 +260,7 @@ def _add_coverage_dummy_node(tree, target):
     # We must set location info manually, because we run after `expand`.
     non = copy_location(Constant(value=None), target)
     dummy = copy_location(Expr(value=non), target)
-    tree.insert(0, dummy)
+    tree.insert(0, Done(dummy))  # mark as Done so any expansions further out won't mess this up.
     return tree
 
 
