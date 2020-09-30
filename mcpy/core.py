@@ -188,7 +188,7 @@ def global_postprocess(tree):
     Call this after macro expansion is otherwise done, before sending `tree`
     to Python's `compile`.
     '''
-    class InternalMarkerDeleter(NodeTransformer):
+    class MacroExpanderMarkerDeleter(NodeTransformer):
         def visit(self, tree):
             if isinstance(tree, list):
                 return flatten_suite(self.visit(elt) for elt in tree)
@@ -196,4 +196,4 @@ def global_postprocess(tree):
             if isinstance(tree, MacroExpanderMarker):
                 return tree.body
             return tree
-    return InternalMarkerDeleter().visit(tree)
+    return MacroExpanderMarkerDeleter().visit(tree)
