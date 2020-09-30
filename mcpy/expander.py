@@ -87,15 +87,17 @@ class MacroExpander(BaseMacroExpander):
 
         Replace the whole decorated node with the result of the macro.
         '''
-        macros, decorators = self._detect_decorator_macros(decorated.decorator_list)
-        decorated.decorator_list = decorators
+        macros, others = self._detect_decorator_macros(decorated.decorator_list)
+        decorated.decorator_list = others
         if macros:
+            macros_executed = []
             for macro in reversed(macros):
                 macroname = macro.id
                 new_tree = self.expand('decorator', decorated, macroname, decorated, fill_root_location=False)
+                macros_executed.append(macro)
                 if new_tree is None:
                     break
-            for macro in reversed(macros):
+            for macro in macros_executed:
                 new_tree = _add_coverage_dummy_node(new_tree, macro)
         else:
             new_tree = self.generic_visit(decorated)
