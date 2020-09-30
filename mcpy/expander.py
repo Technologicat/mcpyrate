@@ -146,21 +146,16 @@ class MacroExpander(BaseMacroExpander):
         if self.ismacroname(name.id):
             macroname = name.id
             def ismodified(tree):
-                return type(tree) is not Name or tree.id != macroname
-            # Prevent an infinite loop in case the macro no-ops, returning `tree` as-is.
-            # Most macros are not interested in being identifier macros. Identifier macros
-            # are special in that for them, there's no part of the tree that is guaranteed
-            # to be compiled away in the expansion.
+                return not (type(tree) is Name and tree.id == macroname)
+            # Identifier macros are special in that for them, there's no part of the tree
+            # that is guaranteed to be compiled away in the expansion.
+            #
+            # So prevent an infinite loop in case the macro no-ops, returning `tree` as-is.
+            # (Most macros are not interested in acting as identifier macros.)
             with self._recursive_mode(False):
-            if new_tree is not None and ismodified(new_tree):
-                # We already expanded once; only re-expand (to expand until no
-                # macros left) if we should. If we were called by `visit_once`,
-                # it'll slap on the `Done` marker itself, so we shouldn't.
-                if self.recursive:
-                    new_tree = copy_location(new_tree, name)  # for use by debug messages inside the macro
-                    self.visit(new_tree)
-                new_tree = copy_location(new_tree, name)
                 new_tree = self.expand('name', name, macroname, name, fill_root_location=True)
+            if self.recursive and new_tree is not None and ismodified(new_tree):
+                new_tree = self.visit(new_tree)
         else:
             new_tree = self.generic_visit(name)
 
