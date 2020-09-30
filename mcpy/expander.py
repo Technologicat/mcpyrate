@@ -177,6 +177,9 @@ class MacroCollector(NodeVisitor):
     def __init__(self, expander):
         '''expander: a `MacroExpander` instance to query macro bindings from.'''
         self.expander = expander
+        self.clear()
+
+    def clear(self):
         self.collected = set()
 
     def ismacro(self, name):
