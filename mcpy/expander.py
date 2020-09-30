@@ -57,8 +57,8 @@ class MacroExpander(BaseMacroExpander):
             macroname = candidate.id
             tree = withstmt.body
             kw = {'optional_vars': with_item.optional_vars}
-            new_tree = _fix_coverage_reporting(new_tree, withstmt)
             new_tree = self.expand('block', withstmt, macroname, tree, fill_root_location=False, kw=kw)
+            new_tree = _add_coverage_dummy_node(new_tree, withstmt)
         else:
             new_tree = self.generic_visit(withstmt)
 
@@ -96,7 +96,7 @@ class MacroExpander(BaseMacroExpander):
                 if new_tree is None:
                     break
             for macro in reversed(macros):
-                new_tree = _fix_coverage_reporting(new_tree, macro)
+                new_tree = _add_coverage_dummy_node(new_tree, macro)
         else:
             new_tree = self.generic_visit(decorated)
 
@@ -231,15 +231,23 @@ class MacroCollector(NodeVisitor):
         self.generic_visit(name)
 
 
-def _fix_coverage_reporting(tree, target):
-    '''
-    Fix Coverage.py test coverage reporting for block and decorator macros.
+def _add_coverage_dummy_node(tree, target):
+    '''Force the `target` AST node to be reported as covered by coverage tools.
+
+    This is intended to support tools such as `Coverage.py`, so they can report
+    the coverage of block and decorator macro invocations correctly.
+
+    This should be called for each block and decorator macro invocation that
+    actually had its macro function called, to support the obvious notion of
+    coverage. (For example, in a decorator chain, one decorator macro may
+    prevent further ones from running, if it deletes the whole AST node.)
 
     The line invoking the macro is compiled away, so we insert a dummy node,
     copying source location information from the AST node `target`.
 
     `tree` must appear in a position where `ast.NodeTransformer.visit` is
-    allowed to return a list of nodes.
+    allowed to return a list of nodes. The return value is always a `list`
+    of AST nodes.
     '''
     if tree is None:
         tree = []
