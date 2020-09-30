@@ -249,6 +249,9 @@ def _add_coverage_dummy_node(tree, target):
     allowed to return a list of nodes. The return value is always a `list`
     of AST nodes.
     '''
+    # `target` itself might be macro-generated. In that case don't bother.
+    if not hasattr(target, 'lineno') and not hasattr(target, 'col_offset'):
+        return tree
     if tree is None:
         tree = []
     elif isinstance(tree, AST):
