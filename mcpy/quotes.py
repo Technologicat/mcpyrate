@@ -95,7 +95,7 @@ def astify(x, expander=None):  # like MacroPy's `ast_repr`
 
     `expander` is a `BaseMacroExpander` instance, used for detecting macro names
     inside `CaptureLater` markers. If no `expander` is provided, macros cannot be
-    hygienically unquoted.
+    hygienically captured.
 
     Raises `TypeError` when the lifting fails.
     """
