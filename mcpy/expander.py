@@ -7,10 +7,11 @@ This layer provides the actual macro expander, defining:
  - syntax for establishing macro bindings: `from module import macros, ...`.
 '''
 
-__all__ = ['expand_macros', 'find_macros', 'MacroExpander']
+__all__ = ['expand_macros', 'find_macros', 'MacroExpander', 'MacroCollector']
 
 import sys
-from ast import Name, Import, ImportFrom, alias, AST, Expr, Constant, copy_location
+from ast import (Name, Import, ImportFrom, alias, AST, Expr, Constant,
+                 copy_location, iter_fields, NodeVisitor)
 from .core import BaseMacroExpander, global_postprocess
 
 class MacroExpander(BaseMacroExpander):
@@ -153,6 +154,68 @@ class MacroExpander(BaseMacroExpander):
             new_tree = self.generic_visit(name)
 
         return new_tree
+
+
+class MacroCollector(NodeVisitor):
+    '''Scan `tree` for macro invocations.
+
+    Collect a set where each item is `(macroname, syntax)`.
+
+    Usage::
+
+        mc = MacroCollector(expander)
+        mc.visit(tree)
+        print(mc.collected)
+
+    For implementing debug utilities. The `collected` set being empty is
+    especially useful as a stop condition for an automatically one-stepping
+    expander.
+
+    This is a sister of the actual `MacroExpander` and closely mirrors how it
+    detects macro invocations that are currently in bindings.
+    '''
+    def __init__(self, expander):
+        '''expander: a `MacroExpander` instance to query macro bindings from.'''
+        self.expander = expander
+        self.collected = set()
+
+    def ismacro(self, name):
+        return self.expander.ismacro(name)
+
+    def visit_Subscript(self, subscript):
+        candidate = subscript.value
+        if isinstance(candidate, Name) and self.ismacro(candidate.id):
+            self.collected.add((candidate.id, 'expr'))
+        # We can't just `self.generic_visit(subscript)` because that'll incorrectly
+        # detect the name part as an identifier macro. So recurse only where safe.
+        self.visit(subscript.slice.value)
+
+    def visit_With(self, withstmt):
+        with_item = withstmt.items[0]
+        candidate = with_item.context_expr
+        if isinstance(candidate, Name) and self.ismacro(candidate.id):
+            self.collected.add((candidate.id, 'block'))
+        self.visit(withstmt.body)
+
+    def visit_Decorated(self, decorated):
+        macros, decorators = self.expander._detect_decorator_macros(decorated.decorator_list)
+        for macro in macros:
+            self.collected.add((macro.id, 'decorator'))
+        for decorator in decorators:
+            self.visit(decorator)
+        for field, value in iter_fields(decorated):
+            if field == "decorator_list":
+                continue
+            if isinstance(value, list):
+                for node in value:
+                    self.visit(node)
+            elif isinstance(value, AST):
+                self.visit(value)
+
+    def visit_Name(self, name):
+        if self.ismacro(name.id):
+            self.collected.add((name.id, 'name'))
+        self.generic_visit(name)
 
 
 def _fix_coverage_reporting(tree, target):
