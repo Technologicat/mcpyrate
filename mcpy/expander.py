@@ -210,7 +210,13 @@ class MacroCollector(NodeVisitor):
             self.collected.add((candidate.id, 'block'))
         self.visit(withstmt.body)
 
-    def visit_Decorated(self, decorated):
+    def visit_ClassDef(self, classdef):
+        self._visit_Decorated(classdef)
+
+    def visit_FunctionDef(self, functiondef):
+        self._visit_Decorated(functiondef)
+
+    def _visit_Decorated(self, decorated):
         macros, decorators = self.expander._detect_decorator_macros(decorated.decorator_list)
         for macro in macros:
             self.collected.add((macro.id, 'decorator'))
