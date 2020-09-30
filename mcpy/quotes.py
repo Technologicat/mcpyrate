@@ -99,7 +99,7 @@ def astify(x, expander=None):  # like MacroPy's `ast_repr`
 
     Raises `TypeError` when the lifting fails.
     """
-    def doit(x):  # second layer just to auto-pass `expander` by closure.
+    def recurse(x):  # second layer just to auto-pass `expander` by closure.
         T = type(x)
 
         # Drop the ASTLiteral wrapper; it only tells us to pass through this subtree as-is.
@@ -108,7 +108,7 @@ def astify(x, expander=None):  # like MacroPy's `ast_repr`
 
         # This is the magic part of q[h[]].
         elif T is CaptureLater:
-            if expander and type(x.body) is ast.Name and expander.ismacro(x.body.id):
+            if expander and type(x.body) is ast.Name and expander.ismacroname(x.body.id):
                 # Hygienically capture a macro name. We do this immediately,
                 # during the expansion of `q`. This allows macros in scope at
                 # the use site of `q` to be hygienically propagated out to the
@@ -118,7 +118,7 @@ def astify(x, expander=None):  # like MacroPy's `ast_repr`
                 macroname = x.body.id
                 function = expander.bindings[macroname]
                 uniquename = _capture_into(_hygienic_bindings, function, macroname)
-                return doit(ast.Name(id=uniquename))
+                return recurse(ast.Name(id=uniquename))
             # Hygienically capture a garden variety run-time value.
             # At the use site of q[], this captures the value, and rewrites itself
             # into a lookup. At the use site of the macro that used q[], that
@@ -132,14 +132,14 @@ def astify(x, expander=None):  # like MacroPy's `ast_repr`
             return ast.Constant(value=x)
 
         elif T is list:
-            return ast.List(elts=list(doit(elt) for elt in x))
+            return ast.List(elts=list(recurse(elt) for elt in x))
         elif T is tuple:
-            return ast.Tuple(elts=list(doit(elt) for elt in x))
+            return ast.Tuple(elts=list(recurse(elt) for elt in x))
         elif T is dict:
-            return ast.Dict(keys=list(doit(k) for k in x.keys()),
-                            values=list(doit(v) for v in x.values()))
+            return ast.Dict(keys=list(recurse(k) for k in x.keys()),
+                            values=list(recurse(v) for v in x.values()))
         elif T is set:
-            return ast.Set(elts=list(doit(elt) for elt in x))
+            return ast.Set(elts=list(recurse(elt) for elt in x))
 
         elif isinstance(x, ast.AST):
             # The magic is in the Call. Take apart the input AST, and construct a
@@ -147,7 +147,7 @@ def astify(x, expander=None):  # like MacroPy's `ast_repr`
             #
             # We refer to the stdlib `ast` module as `mcpy.quotes.ast` to avoid
             # name conflicts at the use site of `q[]`.
-            fields = [ast.keyword(a, doit(b)) for a, b in ast.iter_fields(x)]
+            fields = [ast.keyword(a, recurse(b)) for a, b in ast.iter_fields(x)]
             return ast.Call(ast.Attribute(value=_mcpy_quotes_attr('ast'),
                                           attr=x.__class__.__name__,
                                           ctx=ast.Load()),
@@ -155,7 +155,7 @@ def astify(x, expander=None):  # like MacroPy's `ast_repr`
                             fields)
 
         raise TypeError(f"Don't know how to astify {repr(x)}")
-    return doit(x)
+    return recurse(x)
 
 def unastify(tree):
     """Inverse of `astify`.
@@ -342,9 +342,13 @@ def s(tree, *, syntax, **kw):
                                [ast.keyword("elts", tree)]))
 
 def h(tree, *, syntax, expander, **kw):
-    """[syntax, expr] unquote. Splice any value, from the macro definition site, into a quasiquote.
+    """[syntax, expr] hygienic-unquote. Splice any value, from the macro definition site, into a quasiquote.
 
-    Supports also values that have no meaningful `repr`.
+    Supports also values that have no meaningful `repr`. The value is captured
+    at the use site of the surrounding `q`.
+
+    Supports also macros. To hygienically splice a macro invocation, `h[]` only
+    the macro name.
     """
     if syntax == "name":
         return tree
