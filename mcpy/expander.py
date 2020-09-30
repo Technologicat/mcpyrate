@@ -177,12 +177,13 @@ class MacroCollector(NodeVisitor):
         mc.visit(tree)
         print(mc.collected)
 
-    For implementing debug utilities. The `collected` set being empty is
-    especially useful as a stop condition for an automatically one-stepping
-    expander.
+    Use case is implementing debug utilities. The `collected` set being empty
+    is especially useful as a stop condition for an automatically one-stepping
+    expander (see `mcpy.debug.step_expansion`).
 
-    This is a sister of the actual `MacroExpander` and closely mirrors how it
-    detects macro invocations that are currently in bindings.
+    This is a sister class of the actual `MacroExpander`, mirroring its macro
+    invocation syntax detection. If implementing a new macro expander, also a
+    macro collector should be implemented.
     '''
     def __init__(self, expander):
         self.expander = expander
