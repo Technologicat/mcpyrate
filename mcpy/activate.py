@@ -1,9 +1,8 @@
 # -*- coding: utf-8; -*-
 '''Install mcpy hooks to preprocess source files.
 
-Actually, the library monkey-patches SourceFileLoader to compile the code
-in a different way, providing the macro-expansion for the AST before compiling
-into real code.
+Actually, we monkey-patch SourceFileLoader to compile the code in a
+different way, macroexpanding the AST before compiling into bytecode.
 '''
 
 from .importhooks import source_to_xcode, nop
