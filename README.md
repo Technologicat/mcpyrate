@@ -29,6 +29,10 @@ from mymacros import macros, echo
 echo[6 * 7]
 ```
 
+### REPL
+
+For interactive macro-enabled sessions, we provide an mcpy-enabled equivalent for `code.InteractiveConsole`, as well as an IPython extension. See the [REPL system documentation](repl.md).
+
 ### Syntax
 
 `mcpy` macros can be used in four forms, the first three following `macropy` syntax:
