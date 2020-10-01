@@ -94,7 +94,7 @@ class InteractiveMacroTransformer(ast.NodeTransformer):
             raise InputRejected(*err.args)
 
 
-# avoid complaining about typoed macro names when their stubs are loaded
+# avoid complaining about typoed macro names when the macro functions are loaded
 @register_cell_magic
 def ignore_importerror(line, cell):
     try:
@@ -128,14 +128,14 @@ class IMcpyExtension:
         self.macro_transformer = InteractiveMacroTransformer(extension_instance=self)
         self.shell.ast_transformers.append(self.macro_transformer)  # TODO: last or first?
 
-        ipy.events.register('post_run_cell', self._refresh_stubs)
+        ipy.events.register('post_run_cell', self._refresh_macro_functions)
 
         # initialize mcpy in the session
         self.shell.run_cell("import mcpy.activate", store_history=False, silent=True)
 
     def __del__(self):
         ipy = self.shell.get_ipython()
-        ipy.events.unregister('post_run_cell', self._refresh_stubs)
+        ipy.events.unregister('post_run_cell', self._refresh_macro_functions)
         self.shell.ast_transformers.remove(self.macro_transformer)
         self.shell.input_transformers_post.remove(self._get_source_code)
 
@@ -148,8 +148,8 @@ class IMcpyExtension:
         self.src = lines
         return lines
 
-    def _refresh_stubs(self, info):
-        """Refresh macro stub imports.
+    def _refresh_macro_functions(self, info):
+        """Refresh macro function imports.
 
         Called after running a cell, so that IPython help "some_macro?" works
         for the currently available macros, allowing the user to easily view

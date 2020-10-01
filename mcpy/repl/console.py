@@ -152,11 +152,11 @@ class MacroConsole(code.InteractiveConsole):
             return False  # erroneous input
 
         self.runcode(code)
-        self._refresh_stubs()
+        self._refresh_macro_functions()
         return False  # Successfully compiled. `runcode` takes care of any runtime failures.
 
-    def _refresh_stubs(self):
-        """Refresh macro stub imports.
+    def _refresh_macro_functions(self):
+        """Refresh macro function imports.
 
         Called after successfully compiling and running an input, so that
         `some_macro.__doc__` points to the right docstring.

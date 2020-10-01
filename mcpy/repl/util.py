@@ -13,14 +13,6 @@ def doc(obj):
     Additionally, if the information is available, print the filename
     and the starting line number of the definition of `obj` in that file.
     This is printed before the actual docstring.
-
-    This works around the problem that in a REPL session using
-    `imacropy.console` or `imacropy.iconsole`, the builtin `help()`
-    fails to see the docstring of the stub, and sees only the generic
-    docstring of `WrappedMacro`.
-
-    And that looking directly at `some_macro.__doc__` prints the string
-    value as-is, without formatting it.
     """
     if not hasattr(obj, "__doc__") or not obj.__doc__:
         print("<no docstring>")
