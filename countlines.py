@@ -45,7 +45,8 @@ def analyze(items, blanks=False, docstrings=False, comments=False):
 def main():
     items = (("top level", ["."]),
              ("demo", ["demo"]),
-             ("expander", ["mcpy"]))
+             ("expander", ["mcpy"]),
+             ("REPL", ["mcpy", "repl"]))
     print("Raw (with blanks, docstrings and comments)")
     analyze(items, blanks=True, docstrings=True, comments=True)
     print("\nFiltered (non-blank code lines only)")
