@@ -12,17 +12,21 @@ To autoload it at IPython startup, put this into your ``ipython_config.py``::
 To find your config file, ``ipython profile locate``.
 
 The line magic `%macros` shows macros currently imported to the session.
+The cell magic `%%dump_ast` pretty-prints the AST of a cell.
 """
 
 import ast
 from collections import OrderedDict
 from functools import partial
 
+from IPython.core import magic_arguments
 from IPython.core.error import InputRejected
-from IPython.core.magic import register_cell_magic, register_line_magic
+from IPython.core.magic import (register_cell_magic, register_line_magic,
+                                Magics, magics_class, cell_magic)
 
 from mcpy import __version__ as mcpy_version
 from mcpy.expander import find_macros, expand_macros
+from mcpy.astpp import ast_aware_repr
 
 from .utilities import _reload_macro_modules
 
@@ -42,6 +46,7 @@ def load_ipython_extension(ipython):
     global _instance
     if not _instance:
         _instance = IMcpyExtension(shell=ipython)
+        ipython.register_magics(AstMagics)
 
 def unload_ipython_extension(ipython):
     global _instance
@@ -88,6 +93,21 @@ def macros(line):
         themacros.append((asname, f"{function.__module__}.{function.__qualname__}"))
     for asname, fullname in themacros:
         print(f"{asname}: {fullname}")
+
+@magics_class
+class AstMagics(Magics):  # from astpp.py
+    @magic_arguments.magic_arguments()
+    @magic_arguments.argument(
+        '-m', '--mode', default='exec',
+        help="The mode in which to parse the code. Can be exec (default), "
+             "eval or single."
+    )
+    @cell_magic
+    def dump_ast(self, line, cell):
+        """Parse the code in the cell, and pretty-print the AST."""
+        args = magic_arguments.parse_argstring(self.dump_ast, line)
+        tree = ast.parse(cell, mode=args.mode)
+        print(ast_aware_repr(tree))
 
 
 class IMcpyExtension:

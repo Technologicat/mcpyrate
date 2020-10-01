@@ -1,28 +1,11 @@
 # -*- coding: utf-8; -*-
 
-__all__ = ['ast_aware_repr', 'flatten_suite', 'gensym',
+__all__ = ['flatten_suite', 'gensym',
            'Bunch', 'NestingLevelTracker']
 
-import ast
 from contextlib import contextmanager
 from collections.abc import Mapping, MutableMapping, Container, Iterable, Sized
 import uuid
-
-def ast_aware_repr(thing):
-    """Like repr(), but supports ASTs.
-
-    Similar to MacroPy's `real_repr`. The method `ast.AST.__repr__` itself
-    can't be monkey-patched, because `ast.AST` is a built-in/extension type.
-    """
-    if isinstance(thing, ast.AST):
-        fields = [ast_aware_repr(b) for a, b in ast.iter_fields(thing)]
-        args = ', '.join(fields)
-        return f"{thing.__class__.__name__}({args})"
-    elif isinstance(thing, list):  # statement suite
-        elts = ', '.join(ast_aware_repr(elt) for elt in thing)
-        return f"[{elts}]"
-    return repr(thing)
-
 
 def flatten_suite(lst):
     """Flatten a statement suite (by one level).
