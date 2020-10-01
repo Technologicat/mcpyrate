@@ -38,7 +38,7 @@ This fork adds a lot of features over `mcpy` 2.0.0:
   - AST markers (pseudo-nodes) for communication in a set of co-operating macros (and with the expander).
   - `gensym` to create a fresh, unused lexical identifier.
   - `unparse` to convert an AST to the corresponding source code.
-  - `ast_aware_repr` to look at an AST representation directly.
+  - `dump` to look at an AST representation directly.
 
 
 ## Install & uninstall
@@ -277,7 +277,7 @@ Because the code is backconverted from the AST representation, the result may di
 
 Use the named parameter `expander` to access the macro expander. You can call `expander.visit_recursively(tree)` with an AST `tree` to expand all macros in that AST, until no macros remain. This is useful for making inner macro invocations expand first.
 
-To expand only one layer of inner macro invocations, call `expander.visit_once(tree)`. This can be useful during debugging of a macro implementation. You can then convert the result into a printable form using `mcpy.unparse` or `mcpy.ast_aware_repr`.
+To expand only one layer of inner macro invocations, call `expander.visit_once(tree)`. This can be useful during debugging of a macro implementation. You can then convert the result into a printable form using `mcpy.unparse` or `mcpy.dump`.
 
 To use the current setting for recursive mode, use `expander.visit(tree)`. The default mode is recursive.
 

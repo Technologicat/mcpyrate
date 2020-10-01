@@ -1,15 +1,17 @@
-"""Pretty-print an AST.
+"""Pretty-print an AST into a string, with pythonic indentation.
 
 Based on Alex Leone's `astpp.py`, with changes to formatting.
     http://alexleone.blogspot.co.uk/2010/01/python-ast-pretty-printer.html
 """
 
-__all__ = ["ast_aware_repr"]
+__all__ = ["dump"]
 
 from ast import AST, iter_fields
 
-def ast_aware_repr(tree, *, include_attributes=False, multiline=True):
+def dump(tree, *, include_attributes=False, multiline=True):
     """Return a formatted dump of `tree`, as a string.
+
+    `tree` can be an AST node or a statement suite (`list` of AST nodes).
 
     Attributes such as line numbers and column offsets are not dumped
     by default. If this is wanted, use `include_attributes=True`.
@@ -18,6 +20,10 @@ def ast_aware_repr(tree, *, include_attributes=False, multiline=True):
     appear as Python source code, use `multiline=True`.
 
     To put everything on one line, use `multiline=False`.
+
+    Similar to MacroPy's `real_repr`, but with indentation. The method
+    `ast.AST.__repr__` itself can't be monkey-patched, because `ast.AST`
+    is a built-in/extension type.
     """
     def recurse(tree, previndent=0):
         def separator():

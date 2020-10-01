@@ -26,7 +26,7 @@ from IPython.core.magic import (register_cell_magic, register_line_magic,
 
 from mcpy import __version__ as mcpy_version
 from mcpy.expander import find_macros, expand_macros
-from mcpy.astpp import ast_aware_repr
+from mcpy.astpp import dump
 
 from .utilities import _reload_macro_modules
 
@@ -108,7 +108,7 @@ class AstMagics(Magics):  # from astpp.py
         """Parse the code in the cell, and pretty-print the AST."""
         args = magic_arguments.parse_argstring(self.dump_ast, line)
         tree = ast.parse(cell, mode=args.mode)
-        print(ast_aware_repr(tree))
+        print(dump(tree))
 
 
 class IMcpyExtension:
