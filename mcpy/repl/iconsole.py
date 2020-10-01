@@ -48,6 +48,7 @@ def load_ipython_extension(ipython):
         _instance = IMcpyExtension(shell=ipython)
         ipython.register_magics(AstMagics)
 
+# TODO: unregister magics at unload time?
 def unload_ipython_extension(ipython):
     global _instance
     _instance = None
