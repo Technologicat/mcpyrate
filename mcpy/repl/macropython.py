@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""Bootstrapper for Python programs powered by mcpy."""
+"""Universal bootstrapper for macro-enabled Python programs powered by mcpy."""
 
 from importlib import import_module
 from importlib.util import resolve_name
@@ -82,7 +82,8 @@ def import_module_as_main(name, script_mode):
     if spec.loader:
         spec.loader.name = "__main__"  # fool importlib._bootstrap.check_name_wrapper
 
-    # TODO: support old-style loaders that have load_module (no create_module, exec_module)?
+    # We don't support old-style loaders that have `load_module`
+    # instead of `create_module` and `exec_module`.
     module = module_from_spec(spec)
     try_mainpy = False
     if script_mode:  # e.g. "macropython somemod/__init__.py"
