@@ -3,7 +3,7 @@
 
 import ast
 from sys import stderr
-from .expander import MacroCollector
+from .expander import MacroCollector, namemacro
 from .unparser import unparse
 
 # TODO: indent the output, to support nested `step_expansion` invocations properly.
@@ -29,6 +29,7 @@ def step_expansion(tree, *, syntax, expander, **kw):
     print(f"****Tree 0x{tag:x} macroexpansion complete after {step} step{plural}.", file=stderr)
     return tree
 
+@namemacro
 def show_bindings(tree, *, syntax, expander, **kw):
     """[syntax, name] Show all bindings of the macro expander.
 

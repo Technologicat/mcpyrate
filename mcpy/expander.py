@@ -12,7 +12,9 @@ This layer provides the actual macro expander, defining:
    - `from module import macros, ...`.
 '''
 
-__all__ = ['expand_macros', 'find_macros', 'MacroExpander', 'MacroCollector']
+__all__ = ['expand_macros', 'find_macros',
+           'MacroExpander', 'MacroCollector',
+           'namemacro', 'isnamemacro']
 
 import sys
 from ast import (Name, Import, ImportFrom, alias, AST, Expr, Constant,
@@ -143,7 +145,7 @@ class MacroExpander(BaseMacroExpander):
         tree`. This way any invalid, stray mentions of the magic variable will
         be promoted to compile-time errors.
         '''
-        if self.ismacroname(name.id):
+        if self.ismacroname(name.id) and isnamemacro(self.bindings[name.id]):
             macroname = name.id
             def ismodified(tree):
                 return not (type(tree) is Name and tree.id == macroname)
@@ -232,7 +234,7 @@ class MacroCollector(NodeVisitor):
                 self.visit(value)
 
     def visit_Name(self, name):
-        if self.ismacroname(name.id):
+        if self.ismacroname(name.id) and isnamemacro(self.expander.bindings[name.id]):
             self.collected.add((name.id, 'name'))
         self.generic_visit(name)
 
@@ -335,3 +337,19 @@ def _get_macros(macroimport):
     module = sys.modules[modulename]
     return {name.asname or name.name: getattr(module, name.name)
              for name in macroimport.names[1:]}
+
+
+def namemacro(function):
+    '''Decorator. Declare a macro function as an identifier macro.
+
+    Since identifier macros are a rarely needed feature, only macros that are
+    declared as such will be called as identifier macros.
+
+    This must be the outermost decorator.
+    '''
+    function._isnamemacro = True
+    return function
+
+def isnamemacro(function):
+    '''Return whether the macro function `function` has been declared as an identifier macro.'''
+    return hasattr(function, '_isnamemacro')
