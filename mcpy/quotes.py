@@ -3,7 +3,7 @@
 
 __all__ = ['capture', 'lookup', 'astify', 'unastify',
            'q', 'u', 'n', 'a', 's', 'h',
-           'expandq', 'expand1q',
+           'expand1q', 'expandq',
            'expand1', 'expand']
 
 import ast
