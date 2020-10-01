@@ -373,6 +373,8 @@ def expand1q(tree, *, syntax, **kw):
     '''
     if syntax == "name":
         return tree
+    if syntax not in ("expr", "block"):
+        raise SyntaxError("expand1q is an expr and block macro only")
     tree = q(tree, syntax=syntax, **kw)
     return expand1(tree, syntax=syntax, **kw)
 
@@ -386,6 +388,8 @@ def expandq(tree, *, syntax, **kw):
     '''
     if syntax == "name":
         return tree
+    if syntax not in ("expr", "block"):
+        raise SyntaxError("expandq is an expr and block macro only")
     tree = q(tree, syntax=syntax, **kw)
     return expand(tree, syntax=syntax, **kw)
 
@@ -407,6 +411,8 @@ def expand1(tree, *, syntax, expander, **kw):
     '''
     if syntax == "name":
         return tree
+    if syntax not in ("expr", "block"):
+        raise SyntaxError("expand1 is an expr and block macro only")
     # We first invert the quasiquote operation, then use the garden variety
     # `expander` on the result, and then re-quote the expanded AST.
     #
@@ -434,6 +440,8 @@ def expand(tree, *, syntax, expander, **kw):
     '''
     if syntax == "name":
         return tree
+    if syntax not in ("expr", "block"):
+        raise SyntaxError("expand is an expr and block macro only")
     tree = expander.visit_once(tree)  # make the quotes inside this invocation expand first; -> Done(body=...)
     # Always use recursive mode, because `expand[...]` may appear inside
     # another macro invocation that uses `visit_once` (which sets the expander
