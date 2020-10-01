@@ -132,18 +132,15 @@ class MacroExpander(BaseMacroExpander):
 
         Replace the `Name` node with the result of the macro.
 
+        Macro functions that should be called as an identifier macro must be
+        declared. Use the `@mcpy.namemacro` decorator, place it outermost.
+
         The main use case of identifier macros is to define magic variables
         that are only meaningful inside the invocation of some other macro.
         An classic example is the anaphoric if's `it`.
 
-        Use an `mcpy.utilities.NestingLevelTracker` to keep track of whether
-        your identifier macro is being expanded inside an invocation of your
-        other macro (which must expand inner macros explicitly for the nesting
-        level check to be able to detect that). Then, in your identifier macro,
-        if it's trying to expand in an invalid context, raise `SyntaxError`
-        with an appropriate explanation. When in a valid context, just `return
-        tree`. This way any invalid, stray mentions of the magic variable will
-        be promoted to compile-time errors.
+        Another use case is where you just need to paste some boilerplate
+        code without any parameters.
         '''
         if self.ismacroname(name.id) and isnamemacro(self.bindings[name.id]):
             macroname = name.id
@@ -156,8 +153,16 @@ class MacroExpander(BaseMacroExpander):
             # (Most macros are not interested in acting as identifier macros.)
             with self._recursive_mode(False):
                 new_tree = self.expand('name', name, macroname, name, fill_root_location=True)
-            if self.recursive and new_tree is not None and ismodified(new_tree):
-                new_tree = self.visit(new_tree)
+            if self.recursive and new_tree is not None:
+                if ismodified(new_tree):
+                    new_tree = self.visit(new_tree)
+                else:
+                    # Support the case where a magic variable expands in a valid surrounding context and
+                    # does `return tree`; the expander needs to know the magic variable has applied its
+                    # context check, so it won't be done again (which would otherwise happen after the
+                    # surrounding context macro has returned, making the magic variable think it's
+                    # appearing in an invalid context).
+                    new_tree = Done(new_tree)
         else:
             new_tree = self.generic_visit(name)
 
