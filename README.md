@@ -1,6 +1,33 @@
 # mcpy
 
-A small and compact Python 3 library to enable syntactic macros at import time, strongly inspired by [macropy](https://github.com/lihaoyi/macropy).
+Third-generation macro expander for Python, after the pioneering [macropy](https://github.com/lihaoyi/macropy), and the compact and pythonic [original mcpy](https://github.com/delapuente/mcpy).
+
+Supports Python 3.6, 3.7, 3.8, and PyPy3.
+
+## Highlights
+
+This fork adds a lot of features over `mcpy` 2.0.0, such as:
+
+- Universal bootstrapper `macropython`, so your main program can use macros.
+- Built-in REPL à la `code.InteractiveConsole`. Can be invoked from the shell as `macropython -i`.
+- IPython extension. Use `mcpy` macros in an IPython session.
+- Advanced quasiquoting:
+  - Hygienically interpolate not only run-time values, but macro names, too.
+  - Delayed expansion inside quasiquoted code.
+    - User-controllable, see macros `expand1` and `expand` in `mcpy.quotes`.
+  - Convert a quasiquoted AST back into a direct AST.
+- Compile-time macro expansion errors, with use site traceback.
+- Debug output with a step-by-step expansion breakdown (see macro `mcpy.debug.step_expansion`).
+- Expand-once, for debugging.
+- Identifier (name) macros.
+  - For example, create magic variables that may only appear inside specific macro invocations, erroring out at compile time if they appear elsewhere.
+- AST markers (pseudo-nodes) for communication in a set of co-operating macros (and with the expander).
+- Conveniences inspired by MacroPy:
+  - Automatically fix missing `ctx` attributes in the AST.
+  - Walker with a state stack.
+  - `gensym`.
+
+The design philosophy follows the original `mcpy`: keep things as explicit and compact as reasonably possible. However, the codebase is larger due to the extra features. We also admit a small amount of extra complexity, if it improves the programmer [UX](https://en.wikipedia.org/wiki/User_experience).
 
 ## Install
 
