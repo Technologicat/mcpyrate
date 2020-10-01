@@ -11,33 +11,7 @@ To autoload it at IPython startup, put this into your ``ipython_config.py``::
 
 To find your config file, ``ipython profile locate``.
 
-Make sure `c.TerminalInteractiveShell.autocall = 0`. Expr macro invocations
-will not work if autocall is enabled, because in `mcpy` macros are functions
-(and the REPL imports those functions so you can easily view their docstrings).
-
-Notes:
-
-  - The line magic `%macros` shows macros currently imported to the session.
-
-  - Each time a ``from module import macros, ...`` is executed in the REPL,
-    just before invoking the macro expander, the system reloads ``module``,
-    to always import the latest macro definitions.
-
-    Hence, semi-live updates to macro definitions are possible: hack on your
-    macros, re-import the macros, and try out the new version in the REPL.
-    No need to restart the REPL session in between.
-
-    But note that only the macros you explicitly import again will be refreshed
-    in the session.
-
-  - Each time after importing macros, the macro functions are automatically
-    imported as regular Python objects. Note only the REPL does this; normally,
-    in `mcpy` macros are not imported as run-time objects.
-
-    The intention is to allow viewing macro docstrings and source code easily
-    in the REPL session, using ``some_macro?``, ``some_macro??``.
-
-    This does not affect using the macros in the intended way, as macros.
+The line magic `%macros` shows macros currently imported to the session.
 """
 
 import ast

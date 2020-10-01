@@ -1,38 +1,12 @@
 # -*- coding: utf-8 -*-
 """mcpy-enabled `code.InteractiveConsole`.
 
-Notes:
+Special commands:
 
-  - The command `macros?` shows macros currently imported to the session.
+  - `obj?` shows obj's docstring, `obj??` shows its source code.
+  - `macros?` shows macros currently imported to the session.
 
-  - Similarly to IPython, `obj?` shows obj's docstring, and `obj??` shows its
-    source code.
-
-    We define two utility functions for this: `doc` and `sourcecode`.
-    ``obj?`` is shorthand for ``doc(obj)``, and ``obj??`` is shorthand
-    for ``sourcecode(obj)``.
-
-  - Each time a ``from module import macros, ...`` is executed in the REPL,
-    just before invoking the macro expander, the system reloads ``module``,
-    to always import the latest macro definitions.
-
-    Hence, semi-live updates to macro definitions are possible: hack on your
-    macros, re-import the macros, and try out the new version in the REPL.
-    No need to restart the REPL session in between.
-
-    But note that only the macros you explicitly import again will be refreshed
-    in the session.
-
-  - Each time after importing macros, the macro functions are automatically
-    imported as regular Python objects. Note only the REPL does this; normally,
-    in `mcpy` macros are not imported as run-time objects.
-
-    The intention is to allow viewing macro docstrings and source code easily
-    in the REPL session, using ``some_macro?``, ``some_macro??``.
-
-    This does not affect using the macros in the intended way, as macros.
-
-From `imacropy.console.MacroConsole` by Juha Jeronen,
+Based on `imacropy.console.MacroConsole` by Juha Jeronen,
 which was based on `macropy.core.MacroConsole` by Li Haoyi,
 Justin Holmgren, Alberto Berti and all the other contributors,
 2013-2019. Used under the MIT license.

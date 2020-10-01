@@ -34,6 +34,14 @@ Hence, semi-live updates to macro definitions are possible: hack on your macros,
 
 But note that only the macros you explicitly import again will be refreshed in the session.
 
+Each time after importing macros, the macro functions are automatically imported as regular Python objects. Note only the REPL does this; normally, in `mcpy` macros are not imported as run-time objects.
+
+The intention is to allow viewing macro docstrings and source code easily in the REPL session, using ``some_macro?``, ``some_macro??``.
+
+This does not affect using the macros in the intended way, as macros.
+
+Make sure `c.TerminalInteractiveShell.autocall = 0`. Expression macro invocations will not work in the REPL if autocall is enabled, because in `mcpy` macros are functions, and the REPL imports those functions so you can easily view their docstrings.
+
 
 ### Loading the extension
 
@@ -50,17 +58,7 @@ Currently **no startup banner is printed**, because extension loading occurs aft
 
 This is a derivative of, and drop-in replacement for, ``code.InteractiveConsole``, which allows you to **embed a REPL that supports macros**. This offers the same semantics as the IPython extension.
 
-Main features of `mcpy.repl.console.MacroConsole`:
-
- - IPython-like `obj?` and `obj??` syntax to view the docstring and source code of `obj`.
- - The command `macros?` shows macros currently imported to the session.
- - Catches and reports import errors when importing macros.
- - Allows importing the same macros again in the same session, to refresh their definitions.
-   - When you `from module import macros, ...`, this console automatically first reloads `module`, so that a macro import always sees the latest definitions.
- - Makes viewing macro docstrings easy.
-   - When you import macros, beside loading them into the macro expander, the console automatically imports the macro functions as regular runtime objects. They're functions, so just look at their `__doc__`.
-
-Example:
+For example:
 
 ```python
 from mcpy.repl.console import MacroConsole
@@ -77,18 +75,24 @@ q[42]  # --> <ast.Num object at 0x7f4c97230e80>
 
 Just like in `code.InteractiveConsole`, exiting the REPL (Ctrl+D) returns from the `interact()` call.
 
-Macro docstrings and source code can be viewed like in IPython:
+Similarly to IPython, `obj?` shows obj's docstring, and `obj??` shows its source code. We define two utility functions for this: `doc` and `sourcecode`. ``obj?`` is shorthand for ``mcpy.repl.util.doc(obj)``, and ``obj??`` is shorthand for ``mcpy.repl.util.sourcecode(obj)``. If the information is available, these operations also print the filename and the starting line number of the definition of the queried object in that file.
 
-```python
-q?
-q??
-```
+The command `macros?` shows macros currently imported to the session. This shadows the `obj?` docstring lookup syntax if you happen to define anything called `macros` (`mcpy` itself doesn't), but that's likely not needed. That can still be invoked manually, using `mcpy.repl.util.doc(macros)`.
 
-If the information is available, these operations also print the filename and the starting line number of the definition of the queried object in that file.
+Each time a ``from module import macros, ...`` is executed in the REPL, just before invoking the macro expander, the system reloads ``module``, to always import the latest macro definitions.
 
-The ``obj?`` syntax is shorthand for ``mcpy.repl.util.doc(obj)``, and ``obj??`` is shorthand for ``mcpy.repl.util.sourcecode(obj)``.
+Hence, semi-live updates to macro definitions are possible: hack on your macros, re-import the macros, and try out the new version in the REPL. No need to restart the REPL session in between.
 
-The literal command `macros?` shows macros currently imported to the session (or says that no macros are imported, if so). This shadows the `obj?` docstring lookup syntax if you happen to define anything called `macros` (`mcpy` itself doesn't), but that's likely not needed. That can still be invoked manually, using `mcpy.repl.util.doc(macros)`.
+But note that only the macros you explicitly import again will be refreshed in the session.
+
+Each time after importing macros, the macro functions are automatically imported
+as regular Python objects. Note only the REPL does this; normally, in `mcpy`
+macros are not imported as run-time objects.
+
+The intention is to allow viewing macro docstrings and source code easily in the
+REPL session, using ``some_macro?``, ``some_macro??``.
+
+This does not affect using the macros in the intended way, as macros.
 
 
 ## Bootstrapper
