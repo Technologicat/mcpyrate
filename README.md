@@ -1,6 +1,6 @@
 # mcpy
 
-Third-generation macro expander for Python, after the pioneering [macropy](https://github.com/lihaoyi/macropy), and the compact and pythonic [original mcpy](https://github.com/delapuente/mcpy).
+Third-generation macro expander for Python, after the pioneering [macropy](https://github.com/lihaoyi/macropy), and the compact, pythonic [original mcpy](https://github.com/delapuente/mcpy).
 
 Supports Python 3.6, 3.7, 3.8, and PyPy3.
 
