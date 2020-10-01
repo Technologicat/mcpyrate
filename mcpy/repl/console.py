@@ -24,7 +24,7 @@ from collections import OrderedDict
 from mcpy import __version__ as mcpy_version
 from mcpy.expander import find_macros, expand_macros
 
-from .util import _reload_macro_modules
+from .utilities import _reload_macro_modules
 
 import mcpy.activate  # noqa: F401, boot up mcpy.
 
@@ -38,7 +38,7 @@ class MacroConsole(code.InteractiveConsole):
         self._bindings_changed = False
 
         # ? and ?? help syntax
-        self._internal_execute("import mcpy.repl.util")
+        self._internal_execute("import mcpy.repl.utilities")
 
     def _internal_execute(self, source):
         """Execute given source in the console session.
@@ -89,9 +89,9 @@ class MacroConsole(code.InteractiveConsole):
             self._list_macros()
             return False  # complete input
         elif source.endswith("??"):
-            return self.runsource(f'mcpy.repl.util.sourcecode({source[:-2]})')
+            return self.runsource(f'mcpy.repl.utilities.sourcecode({source[:-2]})')
         elif source.endswith("?"):
-            return self.runsource(f"mcpy.repl.util.doc({source[:-1]})")
+            return self.runsource(f"mcpy.repl.utilities.doc({source[:-1]})")
 
         try:
             code = self.compile(source, filename, symbol)
