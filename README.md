@@ -31,6 +31,7 @@ This fork adds a lot of features over `mcpy` 2.0.0:
     - Useful for second-order macros that need to process a quasiquoted code section at macro expansion time, before the quasiquoted tree has a chance to run. (As usual, when it runs, it converts itself into a direct AST.)
 - **Identifier (a.k.a. name) macros**
   - Can be used for creating magic variables that may only appear inside specific macro invocations, erroring out at macro expansion time if they appear anywhere else.
+  - Opt-in. Declare by using the `@mcpy.namemacro` decorator on your macro function. Place it outermost.
 - **Conveniences**:
   - The expander automatically fixes missing `ctx` attributes in the AST, so you don't need to care about those in your macros.
   - Walker with a state stack, à la MacroPy, to easily temporarily override the state for a given subtree.
@@ -217,14 +218,52 @@ See [`mcpy.core.BaseMacroExpander`](mcpy/core.py) and [`mcpy.expander.MacroExpan
 
 A macro can be called in four different ways. The way a macro is called is recorded in the `syntax` named parameter (one of `'block'`, `'expr'`, `'decorator'`, or `'name'`), so you can distinguish the syntax used in the source code and provide different implementations for each one. In other words, the macro function acts as a dispatcher for all types of uses of that macro.
 
-Most macros are not interested in being called as identifier macros. It's mostly useful in cases where you don't need any input, or to create magic variables that are allowed to appear only in certain contexts.
+When valid macro invocation syntax for one of the other three types is detected, the name part is skipped, and it **does not** get called as an identifier macro. The identifier macro mechanism is invoked only for appearances of the name *in contexts that are not other types of macro invocations*.
 
-If you want to reject the use of your macro as an identifier macro, you have some options here:
+The other three work roughly the same as in MacroPy (except that in `mcpy`, a macro invocation **does not** take arguments using function call syntax), so we'll look at just the fourth one, identifier macros.
 
-  - If you want to allow re-using the macro name (i.e. whatever name it's bound to at the use site) as a run-time variable name, use the idiom `if syntax == 'name': return tree`. This tells the expander to treat it as a regular name.
-  - If you want to error out when your macro is called as a name, just `if syntax == 'name': raise SyntaxError` with a descriptive message.
+#### Identifier macros
 
-Note that when valid macro invocation syntax for one of the other three types is detected, the name part is skipped, and does not get called as an identifier macro. It is only appearances of the name *in contexts that are not other types of macro invocations* that the identifier macro mechanism is invoked.
+Identifier macros are a rarely used feature, but one that is indispensable for that rare use case. To avoid clutter in the dispatch logic of most macros, if a macro function wants to be called as an identifier macro, it must explicitly opt in. Declare by using the `@mcpy.namemacro` decorator on your macro function. Place it outermost.
+
+A basic use case of identifier macros is where you just need to paste some boilerplate code without any parameters.
+
+But the main use case why this feature exists is to create magic variables that are allowed to appear only in certain contexts. Pattern:
+
+```python
+from mcpy import namemacro
+from mcpy.utilities import NestingLevelTracker
+
+_level = NestingLevelTracker()
+
+# a valid context for `it`
+def mymacro(tree, syntax, expander, **kw):
+    if syntax != "expr":
+        raise SyntaxError("`mymacro` is an expr macro only")
+    with _level.changed_by(+1):
+        tree = expander.visit_recursively(tree)  # this expands any `it` inside
+        # Macro code goes here. You'll want it to define an actual
+        # run-time `it` for the invocation site to refer to.
+        # (But first check from `expander.bindings` what name
+        #  our `it` function is actually bound to!)
+    return tree
+
+@namemacro
+def it(tree, syntax, **kw):
+    if syntax != "name":
+        raise SyntaxError("`it` is a name macro only")
+    if _level.value < 1:
+        raise SyntaxError("`it` may only appear within a `mymacro[...]`")
+    return tree
+```
+
+This way any invalid, stray mentions of the magic variable `it` are promoted to a compile-time error.
+
+If you want to expand only `it` inside an invocation of `mymacro[...]` (thus checking that the mentions are valid), leaving other nested macro invocations untouched, that's also possible. See below how to temporarily run a second expander with different bindings (so you can omit everything but `it`).
+
+If you want to allow using the macro name (i.e. whatever name it's bound to at the use site) of your identifier macro as a run-time variable name, `return tree` without modifying it. This tells the expander - after checking with you that the use was legal - to treat it as a regular name.
+
+Of course, if that's not what you want, you can return any tree you want to replace the original with - after all, an identifier macro is just a macro.
 
 
 ### Get the source of an AST
@@ -242,12 +281,12 @@ To expand only one layer of inner macro invocations, call `expander.visit_once(t
 
 To use the current setting for recursive mode, use `expander.visit(tree)`. The default mode is recursive.
 
-If you need to temporarily run a second expander with different macro bindings, consult `expander.bindings` if needed, and then use `mcpy.expander.expand_macros(tree, modified_bindings, expander.filename)` to invoke a new expander with the modified bindings.
+If you need to temporarily run a second expander with different macro bindings, consult `expander.bindings` to grab what you need, and then use `mcpy.expander.expand_macros(tree, modified_bindings, expander.filename)` to invoke a new expander with the modified bindings.
 
 
 ### Macro expansion error reporting
 
-Any exception raised during macro expansion is reported immediately, and the program exits.
+Any exception raised during macro expansion is reported immediately at compile time, and the program exits.
 
 The error report includes two source locations: the macro use site (which was being expanded, not running yet), and the macro code that raised the exception (that was running and was terminated due to the exception).
 
