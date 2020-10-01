@@ -61,7 +61,8 @@ class Walker(NodeTransformer, metaclass=ABCMeta):
 
         This method must recurse where needed. Use `self.generic_visit(tree)`
         to visit all children of `tree`, or `self.visit(tree.something)` to
-        selectively visit only some children.
+        selectively visit only some children. Visiting a statement suite with
+        `self.visit` is also ok.
 
         Return value as in `ast.NodeTransformer`. If no changes, `return tree`.
         """
