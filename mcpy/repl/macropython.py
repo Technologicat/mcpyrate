@@ -2,6 +2,8 @@
 # -*- coding: utf-8 -*-
 """Universal bootstrapper for macro-enabled Python programs powered by mcpy."""
 
+# TODO: Currently tested in CPython 3.6, and PyPy3 7.3.0 (Python 3.6). Test in CPython 3.7+.
+
 from importlib import import_module
 from importlib.util import resolve_name
 import os
