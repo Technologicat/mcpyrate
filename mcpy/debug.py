@@ -10,7 +10,7 @@ from .unparser import unparse
 def step_expansion(tree, *, syntax, expander, **kw):
     """[syntax, expr/block] Macroexpand `tree`, showing source code at each step of the expansion."""
     if syntax not in ("expr", "block"):
-        raise SyntaxError("step_expansion is an expr/block macro only")
+        raise SyntaxError("step_expansion is an expr and block macro only")
     tag = id(tree)
     print(f"****Tree 0x{tag:x} before macroexpansion:", file=stderr)
     print(unparse(tree), file=stderr)
