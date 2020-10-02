@@ -17,7 +17,7 @@ __all__ = ['namemacro', 'isnamemacro',
            'expand_macros', 'find_macros']
 
 import importlib
-from ast import (Name, Import, ImportFrom, alias, AST, Expr, Constant,
+from ast import (Name, Call, Import, ImportFrom, alias, AST, Expr, Constant,
                  copy_location, iter_fields, NodeVisitor)
 from .core import BaseMacroExpander, global_postprocess, Done
 from .importer import resolve_package
@@ -38,6 +38,17 @@ def isnamemacro(function):
     '''Return whether the macro function `function` has been declared as an identifier macro.'''
     return hasattr(function, '_isnamemacro')
 
+def destructure(candidate):
+    '''Destructure a macro invocation candidate into `(macroname, args, keywords)`.
+
+    This unifies the handling of `Name` and `Call` nodes in macro invocations.
+    '''
+    if type(candidate) is Name:
+        return candidate.id, None, None
+    elif type(candidate) is Call and type(candidate.func) is Name:
+        return candidate.func.id, candidate.args, candidate.keywords
+    return None, None, None  # not a macro invocation
+
 class MacroExpander(BaseMacroExpander):
     '''The actual macro expander.'''
 
@@ -46,15 +57,21 @@ class MacroExpander(BaseMacroExpander):
 
         Detected syntax::
 
-            macroname['index expression is the input tree for the macro']
+            macroname[...]
+            macroname(arg0, ..., kw0=v0, ...)[...]
 
         Replace the `SubScript` node with the result of the macro.
+
+        Positional arguments are sent to the macro as `args`, named arguments
+        as `keywords`. Content as in a `Call` node.
+            https://greentreesnakes.readthedocs.io/en/latest/nodes.html#Call
         '''
         candidate = subscript.value
-        if isinstance(candidate, Name) and self.isbound(candidate.id):
-            macroname = candidate.id
+        macroname, args, keywords = destructure(candidate)
+        if macroname and self.isbound(macroname):
+            kw = {'args': args, 'keywords': keywords}
             tree = subscript.slice.value
-            new_tree = self.expand('expr', subscript, macroname, tree, fill_root_location=True)
+            new_tree = self.expand('expr', subscript, macroname, tree, fill_root_location=True, kw=kw)
         else:
             new_tree = self.generic_visit(subscript)
 
@@ -66,16 +83,30 @@ class MacroExpander(BaseMacroExpander):
         Detected syntax::
 
             with macroname:
-                "with's body is the input tree for the macro"
+                ...
+            with macroname as result:
+                ...
+            with macroname(arg0, ..., kw0=v0, ...):
+                ...
+            with macroname(arg0, ..., kw0=v0, ...) as result:
+                ...
 
         Replace the `With` node with the result of the macro.
+
+        Positional arguments are sent to the macro as `args`, named arguments
+        as `keywords`. Content as in a `Call` node.
+            https://greentreesnakes.readthedocs.io/en/latest/nodes.html#Call
+
+        The `result` part is sent to the macro as `optional_vars`; it's a
+        `Name`, `Tuple` or `List` node.
+            https://greentreesnakes.readthedocs.io/en/latest/nodes.html#withitem
         '''
         with_item = withstmt.items[0]
         candidate = with_item.context_expr
-        if isinstance(candidate, Name) and self.isbound(candidate.id):
-            macroname = candidate.id
+        macroname, args, keywords = destructure(candidate)
+        if macroname and self.isbound(macroname):
             tree = withstmt.body
-            kw = {'optional_vars': with_item.optional_vars}
+            kw = {'optional_vars': with_item.optional_vars, 'args': args, 'keywords': keywords}
             new_tree = self.expand('block', withstmt, macroname, tree, fill_root_location=False, kw=kw)
             new_tree = _add_coverage_dummy_node(new_tree, withstmt)
         else:
@@ -96,23 +127,37 @@ class MacroExpander(BaseMacroExpander):
 
             @macroname
             def f():
-                "The whole function is the input tree for the macro"
+                ...
+
+            @macroname(arg0, ..., kw0=v0, ...)
+            def f():
+                ...
 
         Or::
 
             @macroname
             class C():
-                "The whole class is the input tree for the macro"
+                ...
+
+            @macroname(arg0, ..., kw0=v0, ...)
+            class C:
+                ...
 
         Replace the whole decorated node with the result of the macro.
+
+        Positional arguments are sent to the macro as `args`, named arguments
+        as `keywords`. Content as in a `Call` node.
+            https://greentreesnakes.readthedocs.io/en/latest/nodes.html#Call
         '''
+        # TODO: let inner decorator macros see outer decorator macro invocations
         macros, others = self._detect_decorator_macros(decorated.decorator_list)
         decorated.decorator_list = others
         if macros:
             macros_executed = []
             for macro in reversed(macros):
-                macroname = macro.id
-                new_tree = self.expand('decorator', decorated, macroname, decorated, fill_root_location=False)
+                macroname, args, keywords = destructure(macro)
+                kw = {'args': args, 'keywords': keywords}
+                new_tree = self.expand('decorator', decorated, macroname, decorated, fill_root_location=False, kw=kw)
                 macros_executed.append(macro)
                 if new_tree is None:
                     break
@@ -132,11 +177,12 @@ class MacroExpander(BaseMacroExpander):
         of the two subsets.
         '''
         macros, others = [], []
-        for d in decorator_list:
-            if isinstance(d, Name) and self.isbound(d.id):
-                macros.append(d)
+        for decorator in decorator_list:
+            macroname, args, keywords = destructure(decorator)
+            if macroname and self.isbound(macroname):
+                macros.append(decorator)
             else:
-                others.append(d)
+                others.append(decorator)
 
         return macros, others
 
@@ -147,8 +193,12 @@ class MacroExpander(BaseMacroExpander):
 
             macroname
 
-        The `Name` node itself is the input tree for the macro.
+        Note no `...` in the example; the `Name` node itself is the input tree
+        for the macro.
+
         Replace the `Name` node with the result of the macro.
+
+        Identifier macros do not support arguments.
 
         Macro functions that want to get called as an identifier macro must
         be declared. Use the `@mcpy.namemacro` decorator, place it outermost.
