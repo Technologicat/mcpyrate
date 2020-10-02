@@ -12,7 +12,7 @@ from contextlib import contextmanager
 from collections import ChainMap
 from .ctxfixer import fix_missing_ctx
 from .markers import ASTMarker
-from .unparser import unparse
+from .unparser import unparse_with_fallbacks
 from .utilities import flatten_suite
 
 # Hygienically captured macro functions.
@@ -147,7 +147,7 @@ class BaseMacroExpander(NodeTransformer):
             'syntax': syntax,
             'expander': self})
 
-        approx_sourcecode_before_expansion = unparse(target)
+        approx_sourcecode_before_expansion = unparse_with_fallbacks(target)
         try:
             expansion = _apply_macro(macro, tree, kw)
         except Exception as err:

@@ -1,17 +1,22 @@
 # -*- coding: utf-8; -*-
 """Back-convert a Python AST into source code. Original formatting is disregarded."""
 
-__all__ = ['unparse']
+__all__ = ['UnparserError', 'unparse', 'unparse_with_fallbacks']
 
 import sys
 import ast
 import io
 
+from .astpp import dump  # fallback
 from .markers import ASTMarker
 
 # Large float and imaginary literals get turned into infinities in the AST.
 # We unparse those infinities to INFSTR.
 INFSTR = "1e" + repr(sys.float_info.max_10_exp + 1)
+
+class UnparserError(SyntaxError):
+    """Failed to unparse the given AST."""
+
 
 def interleave(inter, f, seq):
     """Call f on each item in seq, calling inter() in between."""
@@ -24,7 +29,6 @@ def interleave(inter, f, seq):
         for x in seq:
             inter()
             f(x)
-
 
 class Unparser:
     """Convert an AST into source code.
@@ -67,8 +71,11 @@ class Unparser:
         if isinstance(tree, ASTMarker):  # mcpy and macro communication internal
             self.astmarker(tree)
             return
-        meth = getattr(self, "_" + tree.__class__.__name__)
-        meth(tree)
+        methodname = "_" + tree.__class__.__name__
+        if not hasattr(self, methodname):
+            raise UnparserError(f"Don't know how to unparse AST node type {tree.__class__.__name__}")
+        method = getattr(self, methodname)
+        method(tree)
 
     # --------------------------------------------------------------------------------
     # Unparsing methods
@@ -724,8 +731,44 @@ class Unparser:
 
 
 def unparse(tree):
-    """Convert the AST `tree` into source code. Return the code as a string."""
-    with io.StringIO() as output:
-        Unparser(tree, file=output)
-        code = output.getvalue().strip()
-    return code
+    """Convert the AST `tree` into source code. Return the code as a string.
+
+    Upon invalid input, raises `UnparserError`.
+    """
+    try:
+        with io.StringIO() as output:
+            Unparser(tree, file=output)
+            code = output.getvalue().strip()
+        return code
+    except UnparserError as err:  # fall back to an AST dump
+        try:
+            astdump = dump(tree, multiline=True)
+            sep = " " if "\n" not in astdump else "\n"
+            msg = f"unparse failed, likely invalid AST; here's an AST dump instead:{sep}{astdump}"
+            raise UnparserError(msg) from err
+        except TypeError:  # fall back to repr
+            representation = repr(tree)
+            sep = " " if "\n" not in representation else "\n"
+            msg = f"unparse failed, fallback AST dump failed, likely not an AST; here's the type and repr instead:{sep}{type(tree)}{sep}{representation}"
+            raise UnparserError(msg) from err
+
+def unparse_with_fallbacks(tree):
+    """Like `unparse`, but upon error, don't raise; return the error message.
+
+    Usually you'll want the exception to be raised. This is mainly useful to
+    compactly express "just give me something to work with" (e.g. for including
+    source code into an error message) without having to care about exceptions
+    at the receiving end.
+    """
+    try:
+        text = unparse(tree)
+    except UnparserError as err:
+        text = err.args[0]
+    except Exception as err:
+        # This can only happen if there is a bug in the unparser, but we don't
+        # want to lose the macro use site filename and line number if this
+        # occurs during macro expansion, because having that information makes
+        # it much easier to create a minimal example for filing a bug report.
+        # TODO: maybe use `traceback.format_exception` here?
+        text = f"Internal error in unparser: {type(err)}: {str(err)}"
+    return text
