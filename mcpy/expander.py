@@ -296,7 +296,7 @@ def expand_macros(tree, bindings, filename):
     return expansion
 
 
-def find_macros(tree, filename):
+def find_macros(tree, filename, reload=False):
     '''
     Look for `from ... import macros, ...` statements in the module body, and
     return a dict with names and implementations for found macros, or an empty
@@ -308,11 +308,14 @@ def find_macros(tree, filename):
     This is meant to be called with `tree` the AST of a module that uses macros.
 
     `filename` is the full path to the `.py` being macroexpanded, for error reporting.
+
+    `reload=True` can be used to force a module reload for the macro definition modules.
+    This is useful in interactive use.
     '''
     bindings = {}
     for index, statement in enumerate(tree.body):
         if _is_macro_import(statement):
-            module_fullname, more_bindings = _get_macros(statement, filename)
+            module_fullname, more_bindings = _get_macros(statement, filename, reload=reload)
             bindings.update(more_bindings)
             # Remove all names to prevent the macros being accidentally used as regular run-time objects.
             # Always use an absolute import so that the unhygienic expose API guarantee works.
@@ -337,7 +340,7 @@ def _is_macro_import(statement):
 
     return is_macro_import
 
-def _get_macros(macroimport, filename):
+def _get_macros(macroimport, filename, reload=False):
     '''Get module name, macro names and macro functions from the macro import statement.
 
     As a side effect, import the macro definition module.
@@ -345,13 +348,15 @@ def _get_macros(macroimport, filename):
     `filename` is the full path to the `.py` being macroexpanded,
     used for resolving relative imports.
 
+    `reload=True` can be used to force a module reload for the macro definition module.
+    This is useful in interactive use.
+
     Return value is `(module_fullname, {macro_name: macro_function, ...})`.
     '''
     lineno = macroimport.lineno if hasattr(macroimport, "lineno") else None
     if macroimport.module is None:
         raise SyntaxError(f"{filename}:{lineno}: missing module name in macro-import")
 
-    # Handle relative imports.
     package = None
     if macroimport.level:
         try:
@@ -360,9 +365,12 @@ def _get_macros(macroimport, filename):
             raise SyntaxError(f"{filename}:{lineno}: relative import outside any package")
         except ImportError:
             raise ImportError(f"{filename}:{lineno}: could not determine containing package to resolve relative import")
+
     module_fullname = importlib.util.resolve_name('.' * macroimport.level + macroimport.module, package)
-    importlib.import_module(module_fullname)
-    module = sys.modules[module_fullname]
+    module = importlib.import_module(module_fullname)
+    if reload:
+        module = importlib.reload(module)
+
     return module_fullname, {name.asname or name.name: getattr(module, name.name)
                              for name in macroimport.names[1:]}
 

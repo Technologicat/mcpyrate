@@ -3,8 +3,6 @@
 
 __all__ = ["doc", "sourcecode"]
 
-import ast
-import importlib
 import inspect
 
 def doc(obj):
@@ -40,30 +38,3 @@ def sourcecode(obj):
             print(line.rstrip("\n"))
     except (TypeError, OSError):
         print("<no source code available>")
-
-# TODO: see if we can reuse `mcpy.expander.find_macros` here
-# TODO: (or modify it slightly to accommodate both use cases).
-def _reload_macro_modules(tree, package=None):
-    """Walk an AST, importing and reloading macro definition modules.
-
-    A macro definition module is a module from which `tree` imports macro definitions,
-    i.e. the `module` in `from module import macros, ...`.
-
-    Reloading the relevant macro definition modules ensures that the REPL
-    always has access to the latest macro definitions, even if they are
-    modified on disk during the REPL session.
-
-    `package` is passed to `importlib.util.resolve_name` to resolve relative imports.
-    """
-    macro_modules = []
-    for stmt in tree.body:
-        if (isinstance(stmt, ast.ImportFrom) and stmt.module is not None and
-                stmt.names[0].name == 'macros' and stmt.names[0].asname is None):
-            fullname = importlib.util.resolve_name('.' * stmt.level + stmt.module, package)
-            macro_modules.append(fullname)
-    for fullname in macro_modules:
-        try:
-            mod = importlib.import_module(fullname)
-            mod = importlib.reload(mod)
-        except ModuleNotFoundError:
-            pass
