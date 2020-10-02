@@ -12,17 +12,31 @@ This layer provides the actual macro expander, defining:
    - `from module import macros, ...`.
 '''
 
-__all__ = ['expand_macros', 'find_macros',
+__all__ = ['namemacro', 'isnamemacro',
            'MacroExpander', 'MacroCollector',
-           'namemacro', 'isnamemacro']
+           'expand_macros', 'find_macros']
 
 import importlib
-import pathlib
-import sys
-import os
 from ast import (Name, Import, ImportFrom, alias, AST, Expr, Constant,
                  copy_location, iter_fields, NodeVisitor)
 from .core import BaseMacroExpander, global_postprocess, Done
+from .importhooks import resolve_package
+from .unparser import unparse_with_fallbacks
+
+def namemacro(function):
+    '''Decorator. Declare a macro function as an identifier macro.
+
+    Since identifier macros are a rarely needed feature, only macros that are
+    declared as such will be called as identifier macros.
+
+    This must be the outermost decorator.
+    '''
+    function._isnamemacro = True
+    return function
+
+def isnamemacro(function):
+    '''Return whether the macro function `function` has been declared as an identifier macro.'''
+    return hasattr(function, '_isnamemacro')
 
 class MacroExpander(BaseMacroExpander):
     '''The actual macro expander.'''
@@ -32,7 +46,7 @@ class MacroExpander(BaseMacroExpander):
 
         Detected syntax::
 
-            macroname['index expression is the target of the macro']
+            macroname['index expression is the input tree for the macro']
 
         Replace the `SubScript` node with the result of the macro.
         '''
@@ -52,7 +66,7 @@ class MacroExpander(BaseMacroExpander):
         Detected syntax::
 
             with macroname:
-                "with's body is the target of the macro"
+                "with's body is the input tree for the macro"
 
         Replace the `With` node with the result of the macro.
         '''
@@ -82,13 +96,13 @@ class MacroExpander(BaseMacroExpander):
 
             @macroname
             def f():
-                "The whole function is the target of the macro"
+                "The whole function is the input tree for the macro"
 
         Or::
 
             @macroname
             class C():
-                "The whole class is the target of the macro"
+                "The whole class is the input tree for the macro"
 
         Replace the whole decorated node with the result of the macro.
         '''
@@ -265,48 +279,57 @@ def _add_coverage_dummy_node(tree, target):
     return tree
 
 
-def expand_macros(tree, bindings, filename):
-    '''
-    Return an expanded version of `tree` with macros applied.
-    Perform top-level postprocessing when done.
+def expand_macros(tree, bindings, *, filename):
+    '''Expand `tree` with macro bindings `bindings`. Top-level entrypoint.
 
-    This is meant to be called with `tree` the AST of a module that uses macros.
+    This is primarily meant to be called with `tree` the AST of a module that
+    uses macros, but can be called with any `tree` (even inside a macro, if you
+    need an independent second instance of the expander with different bindings).
 
-    `bindings` is a dictionary of the macro name/function pairs.
+    `bindings`: dict of macro name/function pairs.
 
-    `filename` is the full path to the `.py` being macroexpanded, for error reporting.
+    `filename`: str, full path to the `.py` being macroexpanded, for error reporting.
+                In interactive use, it can be an arbitrary label.
     '''
     expansion = MacroExpander(bindings, filename).visit(tree)
     expansion = global_postprocess(expansion)
     return expansion
 
 
-def find_macros(tree, filename, reload=False):
-    '''
-    Look for `from ... import macros, ...` statements in the module body, and
-    return a dict with names and implementations for found macros, or an empty
-    dict if no macros are used.
+def find_macros(tree, *, filename, reload=False):
+    '''Establish macro bindings from `tree`. Top-level entrypoint.
 
-    As a side effect, transform each macro import statement into `import ...`,
-    where `...` is the module the macros are being imported from.
+    Look at each macro-import statement (`from ... import macros, ...`)
+    at the top level of `tree.body`. Collect its macro bindings.
 
-    This is meant to be called with `tree` the AST of a module that uses macros.
+    Transform the macro-import into `import ...`, where `...` is the absolute
+    module name the macros are being imported from.
 
-    `filename` is the full path to the `.py` being macroexpanded, for error reporting.
+    This is primarily meant to be called with `tree` the AST of a module that
+    uses macros, but can be called with any `tree` that has a `body` attribute.
 
-    `reload=True` can be used to force a module reload for the macro definition modules.
-    This is useful in interactive use.
+    `filename`: str, full path to the `.py` being macroexpanded, for resolving
+                relative macro-imports and for error reporting. In interactive
+                use, it can be an arbitrary label.
+
+    `reload`:   bool, can be used to force a module reload for the macro definition
+                modules `tree` uses. Useful for implementing macro support in a REPL,
+                to make the REPL session refresh the macros when you import them again.
+
+                Otherwise, avoid reloading here, to make sure all uses of the same
+                macros (across different use site modules) point to the same function
+                object.
+
+    Return value is a dict `{macroname: function, ...}` with all collected bindings.
     '''
     bindings = {}
     for index, statement in enumerate(tree.body):
         if _is_macro_import(statement):
-            module_fullname, more_bindings = _get_macros(statement, filename, reload=reload)
+            module_absname, more_bindings = _get_macros(statement, filename=filename, reload=reload)
             bindings.update(more_bindings)
             # Remove all names to prevent the macros being accidentally used as regular run-time objects.
-            # Always use an absolute import so that the unhygienic expose API guarantee works.
-            # (E.g. even if `from .quotes import macros, q`, the module will be exposed as `mcpy.quotes`,
-            #  not just `quotes`.)
-            tree.body[index] = copy_location(Import(names=[alias(name=module_fullname, asname=None)]),
+            # Always convert to an absolute import so that the unhygienic expose API guarantee works.
+            tree.body[index] = copy_location(Import(names=[alias(name=module_absname, asname=None)]),
                                              statement)
 
     return bindings
@@ -325,65 +348,45 @@ def _is_macro_import(statement):
 
     return is_macro_import
 
-def _get_macros(macroimport, filename, reload=False):
-    '''Get module name, macro names and macro functions from the macro import statement.
+def _get_macros(macroimport, *, filename, reload=False):
+    '''Get absolute module name, macro names and macro functions from a macro-import.
 
     As a side effect, import the macro definition module.
 
-    `filename` is the full path to the `.py` being macroexpanded,
-    used for resolving relative imports.
+    `filename`: str, full path to the `.py` being macroexpanded, for resolving
+                relative macro-imports and for error reporting. In interactive
+                use, it can be an arbitrary label.
 
-    `reload=True` can be used to force a module reload for the macro definition module.
-    This is useful in interactive use.
+    `reload`:   bool, can be used to force a module reload for the macro definition
+                module. Useful for implementing macro support in a REPL, to make
+                the REPL session refresh the macros when you import them again.
 
-    Return value is `(module_fullname, {macro_name: macro_function, ...})`.
+                Otherwise, avoid reloading here, to make sure all uses of the same
+                macros (across different use site modules) point to the same function
+                object.
+
+    Return value is `(module_absname, {macroname: function, ...})`.
+
+    If a relative macro-import is attempted outside any package, raises `ImportError`.
     '''
     lineno = macroimport.lineno if hasattr(macroimport, "lineno") else None
     if macroimport.module is None:
         raise SyntaxError(f"{filename}:{lineno}: missing module name in macro-import")
 
-    package = None
-    if macroimport.level:
-        try:
-            package = _resolve_package(filename)
-        except ValueError:
-            raise SyntaxError(f"{filename}:{lineno}: relative import outside any package")
-        except ImportError:
-            raise ImportError(f"{filename}:{lineno}: could not determine containing package to resolve relative import")
+    try:  # resolve relative macro-import, if we're actually reading a .py file
+        package_absname = None
+        if macroimport.level and filename.endswith(".py"):
+            package_absname = resolve_package(filename)
+    except (ValueError, ImportError) as err:
+        # fallbacks may trigger if the macro-import statement itself is macro-generated.
+        approx_sourcecode = unparse_with_fallbacks(macroimport)
+        sep = " " if "\n" not in approx_sourcecode else "\n"
+        raise ImportError(f"while resolving relative macro-import at {filename}:{lineno}:{sep}{approx_sourcecode}") from err
 
-    module_fullname = importlib.util.resolve_name('.' * macroimport.level + macroimport.module, package)
-    module = importlib.import_module(module_fullname)
+    module_absname = importlib.util.resolve_name('.' * macroimport.level + macroimport.module, package_absname)
+    module = importlib.import_module(module_absname)
     if reload:
         module = importlib.reload(module)
 
-    return module_fullname, {name.asname or name.name: getattr(module, name.name)
-                             for name in macroimport.names[1:]}
-
-def _resolve_package(filename):  # TODO: for now, _guess_package, really. Check the docs again.
-    """Resolve absolute Python package name for .py source file `filename`."""
-    pyfiledir = pathlib.Path(filename).expanduser().resolve().parent
-    for rootdir in sys.path:
-        rootdir = pathlib.Path(rootdir).expanduser().resolve()
-        if str(pyfiledir).startswith(str(rootdir)):
-            package_relative_path = str(pyfiledir)[len(str(rootdir)):]
-            if not package_relative_path:  # at the rootdir - not inside a package
-                raise ValueError(f"{filename} not in package, is at root level of {str(rootdir)}")
-            package_relative_path = package_relative_path[1:]  # drop the initial path sep
-            package_dotted_name = package_relative_path.replace(os.path.sep, '.')
-            return package_dotted_name
-    raise ImportError(f"{filename} not under any directory in `sys.path`")
-
-def namemacro(function):
-    '''Decorator. Declare a macro function as an identifier macro.
-
-    Since identifier macros are a rarely needed feature, only macros that are
-    declared as such will be called as identifier macros.
-
-    This must be the outermost decorator.
-    '''
-    function._isnamemacro = True
-    return function
-
-def isnamemacro(function):
-    '''Return whether the macro function `function` has been declared as an identifier macro.'''
-    return hasattr(function, '_isnamemacro')
+    return module_absname, {name.asname or name.name: getattr(module, name.name)
+                            for name in macroimport.names[1:]}

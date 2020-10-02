@@ -59,11 +59,11 @@ class InteractiveMacroTransformer(ast.NodeTransformer):
 
     def visit(self, tree):
         try:
-            bindings = find_macros(tree, "<interactive input>", reload=True)  # macro imports (this will import the modules)
+            bindings = find_macros(tree, filename="<interactive input>", reload=True)  # macro imports (this will import the modules)
             if bindings:
                 self.ext.bindings_changed = True
                 self.bindings.update(bindings)
-            newtree = expand_macros(tree, self.bindings, "<interactive input>")
+            newtree = expand_macros(tree, self.bindings, filename="<interactive input>")
             self.ext.src = _placeholder
             return newtree
         except Exception as err:

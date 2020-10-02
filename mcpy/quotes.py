@@ -260,7 +260,7 @@ def _expand_quasiquotes(tree, expander):
     # for possible as-imports. This second expander won't even see other macros,
     # thus leaving them alone.
     bindings = {k: v for k, v in expander.bindings.items() if v in (q, u, n, a, s, h)}
-    return expand_macros(tree, bindings, expander.filename)
+    return expand_macros(tree, bindings, filename=expander.filename)
 
 def q(tree, *, syntax, expander, **kw):
     """[syntax, expr/block] quasiquote. Lift code into its AST representation."""
