@@ -51,7 +51,7 @@ class MacroExpander(BaseMacroExpander):
         Replace the `SubScript` node with the result of the macro.
         '''
         rootdir = subscript.value
-        if isinstance(rootdir, Name) and self.ismacroname(rootdir.id):
+        if isinstance(rootdir, Name) and self.isbound(rootdir.id):
             macroname = rootdir.id
             tree = subscript.slice.value
             new_tree = self.expand('expr', subscript, macroname, tree, fill_root_location=True)
@@ -72,7 +72,7 @@ class MacroExpander(BaseMacroExpander):
         '''
         with_item = withstmt.items[0]
         rootdir = with_item.context_expr
-        if isinstance(rootdir, Name) and self.ismacroname(rootdir.id):
+        if isinstance(rootdir, Name) and self.isbound(rootdir.id):
             macroname = rootdir.id
             tree = withstmt.body
             kw = {'optional_vars': with_item.optional_vars}
@@ -133,7 +133,7 @@ class MacroExpander(BaseMacroExpander):
         '''
         macros, others = [], []
         for d in decorator_list:
-            if isinstance(d, Name) and self.ismacroname(d.id):
+            if isinstance(d, Name) and self.isbound(d.id):
                 macros.append(d)
             else:
                 others.append(d)
@@ -160,7 +160,7 @@ class MacroExpander(BaseMacroExpander):
         Another use case is where you just need to paste some boilerplate
         code without any parameters.
         '''
-        if self.ismacroname(name.id) and isnamemacro(self.bindings[name.id]):
+        if self.isbound(name.id) and isnamemacro(self.bindings[name.id]):
             macroname = name.id
             def ismodified(tree):
                 return not (type(tree) is Name and tree.id == macroname)
@@ -211,12 +211,12 @@ class MacroCollector(NodeVisitor):
     def clear(self):
         self.collected = set()
 
-    def ismacroname(self, name):
-        return self.expander.ismacroname(name)
+    def isbound(self, name):
+        return self.expander.isbound(name)
 
     def visit_Subscript(self, subscript):
         rootdir = subscript.value
-        if isinstance(rootdir, Name) and self.ismacroname(rootdir.id):
+        if isinstance(rootdir, Name) and self.isbound(rootdir.id):
             self.collected.add((rootdir.id, 'expr'))
         # We can't just `self.generic_visit(subscript)`, because that'll incorrectly detect
         # the name part of the invocation as an identifier macro. So recurse only where safe.
@@ -225,7 +225,7 @@ class MacroCollector(NodeVisitor):
     def visit_With(self, withstmt):
         with_item = withstmt.items[0]
         rootdir = with_item.context_expr
-        if isinstance(rootdir, Name) and self.ismacroname(rootdir.id):
+        if isinstance(rootdir, Name) and self.isbound(rootdir.id):
             self.collected.add((rootdir.id, 'block'))
         self.visit(withstmt.body)
 
@@ -251,7 +251,7 @@ class MacroCollector(NodeVisitor):
                 self.visit(value)
 
     def visit_Name(self, name):
-        if self.ismacroname(name.id) and isnamemacro(self.expander.bindings[name.id]):
+        if self.isbound(name.id) and isnamemacro(self.expander.bindings[name.id]):
             self.collected.add((name.id, 'name'))
         self.generic_visit(name)
 

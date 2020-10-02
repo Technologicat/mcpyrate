@@ -108,7 +108,7 @@ def astify(x, expander=None):  # like MacroPy's `ast_repr`
 
         # This is the magic part of q[h[]].
         elif T is CaptureLater:
-            if expander and type(x.body) is ast.Name and expander.ismacroname(x.body.id):
+            if expander and type(x.body) is ast.Name and expander.isbound(x.body.id):
                 # Hygienically capture a macro name. We do this immediately,
                 # during the expansion of `q`. This allows macros in scope at
                 # the use site of `q` to be hygienically propagated out to the

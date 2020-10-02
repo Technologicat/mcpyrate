@@ -190,7 +190,7 @@ class BaseMacroExpander(NodeTransformer):
 
         return expansion
 
-    def ismacroname(self, name):
+    def isbound(self, name):
         '''Return whether the string `name` has been bound to a macro in this expander.'''
         return name in self.bindings or name in _hygienic_bindings
 
