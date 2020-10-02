@@ -14,7 +14,7 @@ def source_to_xcode(self, data, path, *, _optimize=-1):
 
     Intercepts the source to bytecode transformation.'''
     tree = ast.parse(data)
-    module_macro_bindings = find_macros(tree)
+    module_macro_bindings = find_macros(tree, filename=path)
     expansion = expand_macros(tree, bindings=module_macro_bindings, filename=path)
     remaining_markers = get_markers(expansion)
     if remaining_markers:

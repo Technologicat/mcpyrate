@@ -16,7 +16,10 @@ __all__ = ['expand_macros', 'find_macros',
            'MacroExpander', 'MacroCollector',
            'namemacro', 'isnamemacro']
 
+import importlib
+import pathlib
 import sys
+import os
 from ast import (Name, Import, ImportFrom, alias, AST, Expr, Constant,
                  copy_location, iter_fields, NodeVisitor)
 from .core import BaseMacroExpander, global_postprocess, Done
@@ -33,9 +36,9 @@ class MacroExpander(BaseMacroExpander):
 
         Replace the `SubScript` node with the result of the macro.
         '''
-        candidate = subscript.value
-        if isinstance(candidate, Name) and self.ismacroname(candidate.id):
-            macroname = candidate.id
+        rootdir = subscript.value
+        if isinstance(rootdir, Name) and self.ismacroname(rootdir.id):
+            macroname = rootdir.id
             tree = subscript.slice.value
             new_tree = self.expand('expr', subscript, macroname, tree, fill_root_location=True)
         else:
@@ -54,9 +57,9 @@ class MacroExpander(BaseMacroExpander):
         Replace the `With` node with the result of the macro.
         '''
         with_item = withstmt.items[0]
-        candidate = with_item.context_expr
-        if isinstance(candidate, Name) and self.ismacroname(candidate.id):
-            macroname = candidate.id
+        rootdir = with_item.context_expr
+        if isinstance(rootdir, Name) and self.ismacroname(rootdir.id):
+            macroname = rootdir.id
             tree = withstmt.body
             kw = {'optional_vars': with_item.optional_vars}
             new_tree = self.expand('block', withstmt, macroname, tree, fill_root_location=False, kw=kw)
@@ -203,18 +206,18 @@ class MacroCollector(NodeVisitor):
         return self.expander.ismacroname(name)
 
     def visit_Subscript(self, subscript):
-        candidate = subscript.value
-        if isinstance(candidate, Name) and self.ismacroname(candidate.id):
-            self.collected.add((candidate.id, 'expr'))
+        rootdir = subscript.value
+        if isinstance(rootdir, Name) and self.ismacroname(rootdir.id):
+            self.collected.add((rootdir.id, 'expr'))
         # We can't just `self.generic_visit(subscript)`, because that'll incorrectly detect
         # the name part of the invocation as an identifier macro. So recurse only where safe.
         self.visit(subscript.slice.value)
 
     def visit_With(self, withstmt):
         with_item = withstmt.items[0]
-        candidate = with_item.context_expr
-        if isinstance(candidate, Name) and self.ismacroname(candidate.id):
-            self.collected.add((candidate.id, 'block'))
+        rootdir = with_item.context_expr
+        if isinstance(rootdir, Name) and self.ismacroname(rootdir.id):
+            self.collected.add((rootdir.id, 'block'))
         self.visit(withstmt.body)
 
     def visit_ClassDef(self, classdef):
@@ -293,7 +296,7 @@ def expand_macros(tree, bindings, filename):
     return expansion
 
 
-def find_macros(tree):
+def find_macros(tree, filename):
     '''
     Look for `from ... import macros, ...` statements in the module body, and
     return a dict with names and implementations for found macros, or an empty
@@ -303,17 +306,25 @@ def find_macros(tree):
     where `...` is the module the macros are being imported from.
 
     This is meant to be called with `tree` the AST of a module that uses macros.
+
+    `filename` is the full path to the `.py` being macroexpanded, for error reporting.
     '''
     bindings = {}
     for index, statement in enumerate(tree.body):
         if _is_macro_import(statement):
-            bindings.update(_get_macros(statement))
+            bindings.update(_get_macros(statement, filename))
             # Remove all names to prevent the macros being accidentally used as regular run-time objects.
             module = statement.module
-            tree.body[index] = copy_location(
-                Import(names=[alias(name=module, asname=None)]),
-                statement
-            )
+            if statement.level:  # from .module import macros, ...  ->  from . import module
+                # TODO: This won't work for unhygienic expose: e.g. "from .quotes import macros, q"
+                # TODO: will import `quotes`, not `mcpy.quotes`.
+                tree.body[index] = copy_location(ImportFrom(module=None,
+                                                            names=[alias(name=module, asname=None)],
+                                                            level=statement.level),
+                                                 statement)
+            else:  # from some.module import macros, ...  ->  import some.module
+                tree.body[index] = copy_location(Import(names=[alias(name=module, asname=None)]),
+                                                 statement)
 
     return bindings
 
@@ -331,18 +342,48 @@ def _is_macro_import(statement):
 
     return is_macro_import
 
-def _get_macros(macroimport):
-    '''
-    Return a dict with names and macros from the macro import statement.
+def _get_macros(macroimport, filename):
+    '''Get module name, macro names and macro functions from the macro import statement.
 
     As a side effect, import the macro definition module.
-    '''
-    modulename = macroimport.module
-    __import__(modulename)
-    module = sys.modules[modulename]
-    return {name.asname or name.name: getattr(module, name.name)
-             for name in macroimport.names[1:]}
 
+    `filename` is the full path to the `.py` being macroexpanded,
+    used for resolving relative imports.
+
+    Return value is `(module_fullname, {macro_name: macro_function, ...})`.
+    '''
+    lineno = macroimport.lineno if hasattr(macroimport, "lineno") else None
+    if macroimport.module is None:
+        raise SyntaxError(f"{filename}:{lineno}: missing module name in macro-import")
+
+    # Handle relative imports.
+    package = None
+    if macroimport.level:
+        try:
+            package = _resolve_package(filename)
+        except ValueError:
+            raise SyntaxError(f"{filename}:{lineno}: relative import outside any package")
+        except ImportError:
+            raise ImportError(f"{filename}:{lineno}: could not determine containing package to resolve relative import")
+    fullname = importlib.util.resolve_name('.' * macroimport.level + macroimport.module, package)
+    importlib.import_module(fullname)
+    module = sys.modules[fullname]
+    return {name.asname or name.name: getattr(module, name.name)
+            for name in macroimport.names[1:]}
+
+def _resolve_package(filename):  # TODO: for now, _guess_package, really. Check the docs again.
+    """Resolve absolute Python package name for .py source file `filename`."""
+    pyfiledir = pathlib.Path(filename).expanduser().resolve().parent
+    for rootdir in sys.path:
+        rootdir = pathlib.Path(rootdir).expanduser().resolve()
+        if str(pyfiledir).startswith(str(rootdir)):
+            package_relative_path = str(pyfiledir)[len(str(rootdir)):]
+            if not package_relative_path:  # at the rootdir - not inside a package
+                raise ValueError(f"{filename} not in package, is at root level of {str(rootdir)}")
+            package_relative_path = package_relative_path[1:]  # drop the initial path sep
+            package_dotted_name = package_relative_path.replace(os.path.sep, '.')
+            return package_dotted_name
+    raise ImportError(f"{filename} not under any directory in `sys.path`")
 
 def namemacro(function):
     '''Decorator. Declare a macro function as an identifier macro.

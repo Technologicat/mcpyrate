@@ -62,7 +62,7 @@ class InteractiveMacroTransformer(ast.NodeTransformer):
     def visit(self, tree):
         try:
             _reload_macro_modules(tree)
-            bindings = find_macros(tree)  # macro imports (this will import the modules)
+            bindings = find_macros(tree, "<interactive input>")  # macro imports (this will import the modules)
             if bindings:
                 self.ext.bindings_changed = True
                 self.bindings.update(bindings)
