@@ -133,13 +133,14 @@ class MacroExpander(BaseMacroExpander):
 
             macroname
 
+        The `Name` node itself is the input tree for the macro.
         Replace the `Name` node with the result of the macro.
 
-        Macro functions that should be called as an identifier macro must be
-        declared. Use the `@mcpy.namemacro` decorator, place it outermost.
+        Macro functions that want to get called as an identifier macro must
+        be declared. Use the `@mcpy.namemacro` decorator, place it outermost.
 
         The main use case of identifier macros is to define magic variables
-        that are only meaningful inside the invocation of some other macro.
+        that are valid only inside the invocation of some other macro.
         An classic example is the anaphoric if's `it`.
 
         Another use case is where you just need to paste some boilerplate
@@ -149,22 +150,19 @@ class MacroExpander(BaseMacroExpander):
             macroname = name.id
             def ismodified(tree):
                 return not (type(tree) is Name and tree.id == macroname)
-            # Identifier macros are special in that for them, there's no part of the tree
-            # that is guaranteed to be compiled away in the expansion.
-            #
-            # So prevent an infinite loop in case the macro no-ops, returning `tree` as-is.
-            # (Most macros are not interested in acting as identifier macros.)
+            # For identifier macros, no part of the tree is guaranteed to be compiled away.
+            # So prevent an infinite loop if the macro no-ops, returning `tree` as-is.
+            # (That's the public API for "I did what I needed to, now go ahead and use this
+            #  as a regular run-time identifier").
             with self._recursive_mode(False):
                 new_tree = self.expand('name', name, macroname, name, fill_root_location=True)
             if self.recursive and new_tree is not None:
                 if ismodified(new_tree):
                     new_tree = self.visit(new_tree)
                 else:
-                    # Support the case where a magic variable expands in a valid surrounding context and
-                    # does `return tree`; the expander needs to know the magic variable has applied its
-                    # context check, so it won't be done again (which would otherwise happen after the
-                    # surrounding context macro has returned, making the magic variable think it's
-                    # appearing in an invalid context).
+                    # When a magic variable expands in a valid surrounding context and does
+                    # `return tree`, the expander needs to know it has applied its context check,
+                    # so it shouldn't be expanded again (when expanding remaining macros in the result).
                     new_tree = Done(new_tree)
         else:
             new_tree = self.generic_visit(name)
@@ -173,11 +171,9 @@ class MacroExpander(BaseMacroExpander):
 
 
 class MacroCollector(NodeVisitor):
-    '''Scan `tree` for macro invocations, with respect to a given expander.
+    '''Scan `tree` for macro invocations, with respect to given `expander`.
 
-    Collect a set where each item is `(macroname, syntax)`.
-
-    Constructor parameters:
+    Collect a set of `(macroname, syntax)`. Constructor parameters:
 
         - `expander`: a `MacroExpander` instance to query macro bindings from.
 
@@ -186,14 +182,13 @@ class MacroCollector(NodeVisitor):
         mc = MacroCollector(expander)
         mc.visit(tree)
         print(mc.collected)
-
-    Use case is implementing debug utilities. The `collected` set being empty
-    is especially useful as a stop condition for an automatically one-stepping
-    expander (see `mcpy.debug.step_expansion`).
+        # ...do something to tree...
+        mc.clear()
+        mc.visit(tree)
+        print(mc.collected)
 
     This is a sister class of the actual `MacroExpander`, mirroring its macro
-    invocation syntax detection. If implementing a new macro expander, also a
-    macro collector should be implemented.
+    invocation syntax detection.
     '''
     def __init__(self, expander):
         self.expander = expander
@@ -248,22 +243,12 @@ class MacroCollector(NodeVisitor):
 
 
 def _add_coverage_dummy_node(tree, target):
-    '''Force the `target` AST node to be reported as covered by coverage tools.
+    '''Force `target` node to be reported as covered by coverage tools.
 
-    This is intended to support tools such as `Coverage.py`, so they can report
-    the coverage of block and decorator macro invocations correctly.
-
-    This should be called for each block and decorator macro invocation that
-    actually had its macro function called, to support the obvious notion of
-    coverage. (For example, in a decorator chain, one decorator macro may
-    prevent further ones from running, if it deletes the whole AST node.)
-
-    The line invoking the macro is compiled away, so we insert a dummy node,
-    copying source location information from the AST node `target`.
+    Fixes coverage reporting for block and decorator macro invocations.
 
     `tree` must appear in a position where `ast.NodeTransformer.visit` is
-    allowed to return a list of nodes. The return value is always a `list`
-    of AST nodes.
+    allowed to return a list of nodes. The return value is a `list` of nodes.
     '''
     # `target` itself might be macro-generated. In that case don't bother.
     if not hasattr(target, 'lineno') and not hasattr(target, 'col_offset'):
