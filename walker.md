@@ -28,7 +28,7 @@ For a realistic example, see [`mcpy.ctxfixer`](mcpy/ctxfixer.py).
 
 ## Attributes
 
- - `state: mcpy.utilities.Bunch`: stores named values as its attributes.
+ - `state: mcpy.bunch.Bunch`: stores named values as its attributes.
 
    Mutable. The whole `state` can also be replaced by simply rebinding it
    (`self.state = ...`).

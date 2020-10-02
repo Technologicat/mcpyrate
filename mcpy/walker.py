@@ -4,7 +4,8 @@ __all__ = ["Walker"]
 
 from abc import ABCMeta, abstractmethod
 from ast import NodeTransformer
-from .utilities import Bunch, flatten_suite
+from .bunch import Bunch
+from .utilities import flatten_suite
 
 class Walker(NodeTransformer, metaclass=ABCMeta):
     """AST walker base class, providing a state stack and a node collector."""
