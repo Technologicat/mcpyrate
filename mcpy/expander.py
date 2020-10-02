@@ -20,7 +20,7 @@ import importlib
 from ast import (Name, Import, ImportFrom, alias, AST, Expr, Constant,
                  copy_location, iter_fields, NodeVisitor)
 from .core import BaseMacroExpander, global_postprocess, Done
-from .importhooks import resolve_package
+from .importer import resolve_package
 from .unparser import unparse_with_fallbacks
 
 def namemacro(function):
