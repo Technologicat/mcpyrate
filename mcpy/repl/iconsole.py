@@ -92,8 +92,10 @@ def macros(line):
     for asname, fullname in themacros:
         print(f"{asname}: {fullname}")
 
+# AstMagics from astpp.py by Alex Leone
+# http://alexleone.blogspot.co.uk/2010/01/python-ast-pretty-printer.html
 @magics_class
-class AstMagics(Magics):  # from astpp.py
+class AstMagics(Magics):
     @magic_arguments.magic_arguments()
     @magic_arguments.argument(
         '-m', '--mode', default='exec',
