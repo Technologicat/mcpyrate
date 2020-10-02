@@ -365,11 +365,11 @@ def _get_macros(macroimport, filename):
             raise SyntaxError(f"{filename}:{lineno}: relative import outside any package")
         except ImportError:
             raise ImportError(f"{filename}:{lineno}: could not determine containing package to resolve relative import")
-    fullname = importlib.util.resolve_name('.' * macroimport.level + macroimport.module, package)
-    importlib.import_module(fullname)
-    module = sys.modules[fullname]
-    return {name.asname or name.name: getattr(module, name.name)
-            for name in macroimport.names[1:]}
+    module_fullname = importlib.util.resolve_name('.' * macroimport.level + macroimport.module, package)
+    importlib.import_module(module_fullname)
+    module = sys.modules[module_fullname]
+    return module_fullname, {name.asname or name.name: getattr(module, name.name)
+                             for name in macroimport.names[1:]}
 
 def _resolve_package(filename):  # TODO: for now, _guess_package, really. Check the docs again.
     """Resolve absolute Python package name for .py source file `filename`."""
