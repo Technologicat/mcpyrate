@@ -8,9 +8,8 @@ import inspect
 def doc(obj):
     """Print an object's docstring, non-interactively.
 
-    Additionally, if the information is available, print the filename
-    and the starting line number of the definition of `obj` in that file.
-    This is printed before the actual docstring.
+    If available, print also the filename and the starting line number
+    of the definition of `obj`.
     """
     if not hasattr(obj, "__doc__") or not obj.__doc__:
         print("<no docstring>")
@@ -26,9 +25,8 @@ def doc(obj):
 def sourcecode(obj):
     """Print an object's source code, non-interactively.
 
-    Additionally, if the information is available, print the filename
-    and the starting line number of the definition of `obj` in that file.
-    This is printed before the actual source code.
+    If available, print also the filename and the starting line number
+    of the definition of `obj`.
     """
     try:
         filename = inspect.getsourcefile(obj)
