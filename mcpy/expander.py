@@ -312,19 +312,14 @@ def find_macros(tree, filename):
     bindings = {}
     for index, statement in enumerate(tree.body):
         if _is_macro_import(statement):
-            bindings.update(_get_macros(statement, filename))
+            module_fullname, more_bindings = _get_macros(statement, filename)
+            bindings.update(more_bindings)
             # Remove all names to prevent the macros being accidentally used as regular run-time objects.
-            module = statement.module
-            if statement.level:  # from .module import macros, ...  ->  from . import module
-                # TODO: This won't work for unhygienic expose: e.g. "from .quotes import macros, q"
-                # TODO: will import `quotes`, not `mcpy.quotes`.
-                tree.body[index] = copy_location(ImportFrom(module=None,
-                                                            names=[alias(name=module, asname=None)],
-                                                            level=statement.level),
-                                                 statement)
-            else:  # from some.module import macros, ...  ->  import some.module
-                tree.body[index] = copy_location(Import(names=[alias(name=module, asname=None)]),
-                                                 statement)
+            # Always use an absolute import so that the unhygienic expose API guarantee works.
+            # (E.g. even if `from .quotes import macros, q`, the module will be exposed as `mcpy.quotes`,
+            #  not just `quotes`.)
+            tree.body[index] = copy_location(Import(names=[alias(name=module_fullname, asname=None)]),
+                                             statement)
 
     return bindings
 
