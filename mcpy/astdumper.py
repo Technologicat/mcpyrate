@@ -1,6 +1,6 @@
-"""Pretty-print an AST into a string, with pythonic indentation.
+"""Dump an AST into a string, with pythonic indentation.
 
-Based on Alex Leone's `astpp.py`, with changes to formatting.
+Based on Alex Leone's `astpp.py`, with changes to indentation logic.
     http://alexleone.blogspot.co.uk/2010/01/python-ast-pretty-printer.html
 """
 

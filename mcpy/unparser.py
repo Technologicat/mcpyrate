@@ -7,7 +7,7 @@ import sys
 import ast
 import io
 
-from .astpp import dump  # fallback
+from .astdumper import dump  # fallback
 from .markers import ASTMarker
 
 # Large float and imaginary literals get turned into infinities in the AST.

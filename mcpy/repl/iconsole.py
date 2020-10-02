@@ -26,7 +26,7 @@ from IPython.core.magic import (register_cell_magic, register_line_magic,
 
 from mcpy import __version__ as mcpy_version
 from mcpy.expander import find_macros, expand_macros
-from mcpy.astpp import dump
+from mcpy.astdumper import dump
 
 _placeholder = "<interactive input>"
 _instance = None
