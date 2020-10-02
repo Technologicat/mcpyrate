@@ -50,9 +50,9 @@ class MacroExpander(BaseMacroExpander):
 
         Replace the `SubScript` node with the result of the macro.
         '''
-        rootdir = subscript.value
-        if isinstance(rootdir, Name) and self.isbound(rootdir.id):
-            macroname = rootdir.id
+        candidate = subscript.value
+        if isinstance(candidate, Name) and self.isbound(candidate.id):
+            macroname = candidate.id
             tree = subscript.slice.value
             new_tree = self.expand('expr', subscript, macroname, tree, fill_root_location=True)
         else:
@@ -71,9 +71,9 @@ class MacroExpander(BaseMacroExpander):
         Replace the `With` node with the result of the macro.
         '''
         with_item = withstmt.items[0]
-        rootdir = with_item.context_expr
-        if isinstance(rootdir, Name) and self.isbound(rootdir.id):
-            macroname = rootdir.id
+        candidate = with_item.context_expr
+        if isinstance(candidate, Name) and self.isbound(candidate.id):
+            macroname = candidate.id
             tree = withstmt.body
             kw = {'optional_vars': with_item.optional_vars}
             new_tree = self.expand('block', withstmt, macroname, tree, fill_root_location=False, kw=kw)
@@ -215,18 +215,18 @@ class MacroCollector(NodeVisitor):
         return self.expander.isbound(name)
 
     def visit_Subscript(self, subscript):
-        rootdir = subscript.value
-        if isinstance(rootdir, Name) and self.isbound(rootdir.id):
-            self.collected.add((rootdir.id, 'expr'))
+        candidate = subscript.value
+        if isinstance(candidate, Name) and self.isbound(candidate.id):
+            self.collected.add((candidate.id, 'expr'))
         # We can't just `self.generic_visit(subscript)`, because that'll incorrectly detect
         # the name part of the invocation as an identifier macro. So recurse only where safe.
         self.visit(subscript.slice.value)
 
     def visit_With(self, withstmt):
         with_item = withstmt.items[0]
-        rootdir = with_item.context_expr
-        if isinstance(rootdir, Name) and self.isbound(rootdir.id):
-            self.collected.add((rootdir.id, 'block'))
+        candidate = with_item.context_expr
+        if isinstance(candidate, Name) and self.isbound(candidate.id):
+            self.collected.add((candidate.id, 'block'))
         self.visit(withstmt.body)
 
     def visit_ClassDef(self, classdef):
