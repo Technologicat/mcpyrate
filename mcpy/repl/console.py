@@ -5,14 +5,14 @@ Special commands:
 
   - `obj?` shows obj's docstring, `obj??` shows its source code.
   - `macros?` shows macros currently imported to the session.
-
-Based on `imacropy.console.MacroConsole` by Juha Jeronen,
-which was based on `macropy.core.MacroConsole` by Li Haoyi,
-Justin Holmgren, Alberto Berti and all the other contributors,
-2013-2019. Used under the MIT license.
-    https://github.com/azazel75/macropy
-    https://github.com/Technologicat/imacropy
 """
+
+# Based on `imacropy.console.MacroConsole` by Juha Jeronen,
+# which was based on `macropy.core.MacroConsole` by Li Haoyi,
+# Justin Holmgren, Alberto Berti and all the other contributors,
+# 2013-2019. Used under the MIT license.
+#    https://github.com/azazel75/macropy
+#    https://github.com/Technologicat/imacropy
 
 __all__ = ["MacroConsole"]
 
