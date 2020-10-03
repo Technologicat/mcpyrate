@@ -160,6 +160,8 @@ class MacroExpander(BaseMacroExpander):
 
         Any macro invocations in the macro arguments are expanded after this
         macro invocation itself.
+
+        The body is expanded after the whole decorator list has been processed.
         '''
         macros, others = self._detect_decorator_macros(decorated.decorator_list)
         if not macros:
