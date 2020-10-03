@@ -162,11 +162,16 @@ class BaseMacroExpander(NodeTransformerListMixin, NodeTransformer):
                 err = err.__cause__
             raise MacroExpansionError(msg) from err
 
+        # Convert possible iterable result to `list`, then typecheck macro output.
         try:
-            # convert possible iterable result to `list`, then typecheck output.
             if expansion is not None and not isinstance(expansion, AST):
                 expansion = list(expansion)
-            if not (isinstance(expansion, (AST, list)) or expansion is None):
+            if isinstance(expansion, AST) or expansion is None:
+                pass  # ok
+            elif isinstance(expansion, list):
+                if not all(isinstance(elt, AST) for elt in expansion):
+                    raise MacroExpansionError
+            else:
                 raise MacroExpansionError
         except Exception:
             msg = usesite_location()
