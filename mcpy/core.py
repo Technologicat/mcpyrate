@@ -13,7 +13,7 @@ from collections import ChainMap
 from .ctxfixer import fix_missing_ctx
 from .markers import ASTMarker
 from .unparser import unparse_with_fallbacks
-from .utilities import flatten_suite
+from .utilities import flatten_suite, NodeTransformerListMixin
 
 # Hygienically captured macro functions.
 # Global registry (across all modules being expanded) with unique keys, filled in by `mcpy.quotes`.
@@ -32,7 +32,7 @@ class Done(MacroExpanderMarker):
     from further expansion.
     '''
 
-class BaseMacroExpander(NodeTransformer):
+class BaseMacroExpander(NodeTransformerListMixin, NodeTransformer):
     '''Expander core. Base class for macro expanders.
 
     After identifying valid macro syntax, each `visit` method of the actual
@@ -54,18 +54,15 @@ class BaseMacroExpander(NodeTransformer):
     def visit(self, tree):
         '''Expand macros in `tree`, using current setting for recursive mode.
 
-        Treat `visit(stmt_suite)` as a loop for individual elements.
-
         No-op if no macro bindings, or if `tree` is marked as `Done`.
+
+        Treat `visit(stmt_suite)` as a loop for individual elements.
 
         This is the standard visitor method; it continues an ongoing visit.
         '''
         if not self.bindings or type(tree) is Done:
             return tree
-        supervisit = super().visit
-        if isinstance(tree, list):
-            return flatten_suite(supervisit(elt) for elt in tree)
-        return supervisit(tree)
+        return super().visit(tree)
 
     def visit_recursively(self, tree):
         '''Entrypoint. Expand macros in `tree`, in recursive mode.
