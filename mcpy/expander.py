@@ -23,6 +23,7 @@ from ast import (Name, Call, Import, ImportFrom, alias, AST, Expr, Constant,
 from .core import BaseMacroExpander, global_postprocess, Done
 from .importer import resolve_package
 from .unparser import unparse_with_fallbacks
+from .utilities import flatten_suite
 
 def namemacro(function):
     '''Decorator. Declare a macro function as an identifier macro.
@@ -146,26 +147,58 @@ class MacroExpander(BaseMacroExpander):
 
         Replace the whole decorated node with the result of the macro.
 
+        If the macro returns a list of nodes, the first item must be the
+        decorated node, so it can be sent to any outer decorator macros.
+        Other nodes after it are allowed, but not before. This is the
+        same way MacroPy handles decorator macros.
+
+        A decorator macro may edit the remaining decorator invocations if it
+        wants to. The decorator list is read anew after each decorator macro
+        invocation. At each step, the innermost decorator macro is popped
+        from the list and expanded. Further macro expansion waits until the
+        whole decorator list has been processed.
+
+        If any decorator macro in the chain returns `None`, the whole decorated
+        node is removed, as well as any extra nodes returned by earlier decorators.
+
         Positional arguments are sent to the macro as `args`, named arguments
         as `keywords`. Content as in a `Call` node.
             https://greentreesnakes.readthedocs.io/en/latest/nodes.html#Call
         '''
-        # TODO: let inner decorator macros see outer decorator macro invocations
-        macros, others = self._detect_decorator_macros(decorated.decorator_list)
-        decorated.decorator_list = others
-        if macros:
-            macros_executed = []
-            for macro in reversed(macros):
-                macroname, args, keywords = destructure(macro)
+        if not decorated.decorator_list:
+            return self.generic_visit(decorated)
+        macros_executed = []
+        postscript = []
+        while True:
+            for decorator in reversed(decorated.decorator_list):
+                macroname, args, keywords = destructure(decorator)
+                if macroname and self.isbound(macroname):
+                    break
+            else:
+                break  # no more macros
+            decorated.decorator_list.remove(decorator)
+            with self._recursive_mode(False):  # don't trigger other decorator macros yet
                 kw = {'args': args, 'keywords': keywords}
                 new_tree = self.expand('decorator', decorated, macroname, decorated, fill_root_location=False, kw=kw)
-                macros_executed.append(macro)
-                if new_tree is None:
-                    break
-            for macro in macros_executed:
-                new_tree = _add_coverage_dummy_node(new_tree, macro)
-        else:
-            new_tree = self.generic_visit(decorated)
+            macros_executed.append(decorator)
+
+            if not new_tree:  # None or empty list
+                decorated = None
+                postscript = []
+                break
+            elif isinstance(new_tree, list):
+                decorated = new_tree[0]
+                postscript.extend(new_tree[1:])
+            elif isinstance(new_tree, AST):
+                decorated = new_tree
+
+        postscript = [self.visit(elt) for elt in postscript]
+        if decorated is not None:
+            decorated = self.generic_visit(decorated)
+        if decorated is not None:
+            new_tree = flatten_suite([decorated] + postscript)
+        for decorator in macros_executed:
+            new_tree = _add_coverage_dummy_node(new_tree, decorator)
 
         return new_tree
 
