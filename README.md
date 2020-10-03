@@ -145,7 +145,9 @@ replacing `...` with the macros you want to use. Importing all via `*` won't wor
 import module
 ```
 
-This guarantee is part of the public API. So if the expanded form of your macro needs to refer to `thing` that exists in (whether is defined in, or has been imported to) the global, top-level scope of the module that defines the macro, you can just refer to `module.thing` in your expanded code. This is the `mcpy` equivalent of MacroPy's `unhygienic_expose` mechanism.
+The transformed import is always absolute, even if the original macro-import was relative.
+
+This is part of the public API. If the expanded form of your macro needs to refer to `thing` that exists in (whether is defined in, or has been imported to) the global, top-level scope of the module that defines the macro, you can just refer to `module.thing` in your expanded code. This is the `mcpy` equivalent of MacroPy's `unhygienic_expose` mechanism.
 
 If your expansion needs to refer to some other value from the macro definition site (including local and nonlocal variables, and imported macros), see [the quasiquote system](quasiquotes.md), specifically the `h[]` (hygienic-unquote) operator.
 
