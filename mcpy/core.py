@@ -148,19 +148,35 @@ class BaseMacroExpander(NodeTransformer):
             'expander': self})
 
         approx_sourcecode_before_expansion = unparse_with_fallbacks(target)
+        def usesite_location():
+            lineno = target.lineno if hasattr(target, 'lineno') else None
+            sep = " " if "\n" not in approx_sourcecode_before_expansion else "\n"
+            return f'at {self.filename}:{lineno}:{sep}{approx_sourcecode_before_expansion}'
+
         try:
             expansion = _apply_macro(macro, tree, kw)
         except Exception as err:
-            lineno = target.lineno if hasattr(target, 'lineno') else None
-            sep = " " if "\n" not in approx_sourcecode_before_expansion else "\n"
-            msg = f'at {self.filename}:{lineno}:{sep}{approx_sourcecode_before_expansion}'
-            if isinstance(err, MacroExpansionError):  # telescope nested use site reports
+            msg = usesite_location()
+            if isinstance(err, MacroExpansionError) and err.__cause__:  # telescope nested use site reports
                 oldmsg = err.args[0]
                 if oldmsg[0] == "\n":
                     oldmsg = oldmsg[1:]
                 msg = f'\n{msg}\n{oldmsg}'
                 err = err.__cause__
             raise MacroExpansionError(msg) from err
+
+        try:
+            # convert possible iterable result to `list`, then typecheck output.
+            if expansion is not None and not isinstance(expansion, AST):
+                expansion = list(expansion)
+            if not (isinstance(expansion, (AST, list)) or expansion is None):
+                raise MacroExpansionError
+        except Exception:
+            msg = usesite_location()
+            sep = " " if "\n" not in msg else "\n"
+            reason = f"expected macro to return AST, iterable or None; got {type(expansion)} with value {repr(expansion)}"
+            msg = f"{msg}:{sep}{reason}"
+            raise MacroExpansionError(msg)
 
         return self._visit_expansion(expansion, target, fill_root_location)
 
