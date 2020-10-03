@@ -175,9 +175,8 @@ class BaseMacroExpander(NodeTransformerListMixin, NodeTransformer):
                 raise MacroExpansionError
         except Exception:
             msg = usesite_location()
-            sep = " " if "\n" not in msg else "\n"
             reason = f"expected macro to return AST, iterable or None; got {type(expansion)} with value {repr(expansion)}"
-            msg = f"{msg}:{sep}{reason}"
+            msg = f"{msg}\n{reason}"
             raise MacroExpansionError(msg)
 
         return self._visit_expansion(expansion, target, fill_root_location)
