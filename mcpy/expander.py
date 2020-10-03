@@ -451,7 +451,7 @@ def _get_macros(macroimport, *, filename, reload=False):
         if macroimport.level and filename.endswith(".py"):
             package_absname = resolve_package(filename)
     except (ValueError, ImportError) as err:
-        # fallbacks may trigger if the macro-import statement itself is macro-generated.
+        # fallbacks may trigger if the macro-import statement itself is programmatically generated.
         approx_sourcecode = unparse_with_fallbacks(macroimport)
         sep = " " if "\n" not in approx_sourcecode else "\n"
         raise ImportError(f"while resolving relative macro-import at {filename}:{lineno}:{sep}{approx_sourcecode}") from err
