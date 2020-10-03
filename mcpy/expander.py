@@ -17,6 +17,7 @@ __all__ = ['namemacro', 'isnamemacro',
            'expand_macros', 'find_macros']
 
 import importlib
+import importlib.util  # PyPy3 stdlib needs to import this separately to access it
 from ast import (Name, Call, Import, ImportFrom, alias, AST, Expr, Constant,
                  copy_location, iter_fields, NodeVisitor)
 from .core import BaseMacroExpander, global_postprocess, Done
