@@ -13,14 +13,16 @@ This layer provides the actual macro expander, defining:
 '''
 
 __all__ = ['namemacro', 'isnamemacro',
+           'parametricmacro', 'isparametricmacro',
            'MacroExpander', 'MacroCollector',
            'expand_macros', 'find_macros']
 
 import importlib
-import importlib.util  # PyPy3 stdlib needs to import this separately to access it
+import importlib.util  # in PyPy3, this must be imported explicitly
+from inspect import signature
 from ast import (Name, Call, Import, ImportFrom, alias, AST, Expr, Constant,
                  copy_location, iter_fields, NodeVisitor)
-from .core import BaseMacroExpander, global_postprocess, Done
+from .core import BaseMacroExpander, MacroExpansionError, global_postprocess, Done
 from .importer import resolve_package
 from .unparser import unparse_with_fallbacks
 from .utilities import NodeVisitorListMixin
@@ -40,6 +42,57 @@ def isnamemacro(function):
     '''Return whether the macro function `function` has been declared as an identifier macro.'''
     return hasattr(function, '_isnamemacro')
 
+def parametricmacro(signature_from):
+    '''Decorator. Declare that a macro takes arguments, and specify its call signature.
+
+    `signature_from` is a callable whose call signature (parameter list)
+    will be used as the call signature of the macro.
+
+    The user-supplied values for the arguments will be AST nodes, so if you
+    define any default values, those should be AST nodes, too::
+
+        from mcpy.quotes import macros, q
+
+        @parametricmacro(signature_from=(lambda a=q[42], *, k=q["v"]: None))
+        def mymacro(tree, args, syntax, **kw):
+            ...
+
+    The pattern is to use a `lambda` to create a callable inline; it'll never
+    be actually called, so its return value doesn't matter (`None` is good).
+
+    The arguments given to the macro invocation will be destructured, using the
+    reference call signature to establish bindings between parameter names and
+    the supplied arguments. The established bindings are sent as the `args`
+    named parameter to the macro function. It is a dictionary, where the keys
+    are the parameter names (as defined in `signature_from`), and the values
+    are the AST nodes that were supplied as arguments.
+
+    The macro does not need to care whether it receives arguments by position
+    or by name; the established bindings are all that matters.
+
+    Since it is rare for macros to need to have parameters, only macros that
+    are declared as such will accept invocations with arguments. Trying to give
+    arguments to a macro that is not declared as accepting arguments raises an
+    error at macro expansion time.
+
+    In most cases, instead of taking arguments, you can just require `tree`
+    to have a specific layout. For example, `let(a << 1, b << 2)[...]` could
+    instead be designed to be invoked as `let[(a << 1, b << 2) in ...]`. But
+    if `let` should also work as a decorator, then it'll need to take arguments.
+
+    This must be the outermost decorator.
+    '''
+    sig = signature(signature_from)
+    def set_macrocallsignature(function):
+        function._macrocallsignature = sig
+    return set_macrocallsignature
+
+def isparametricmacro(function):
+    '''Return whether the macro function `function` has been declared as parametric.'''
+    return hasattr(function, '_macrocallsignature')
+
+# --------------------------------------------------------------------------------
+
 def destructure(candidate):
     '''Destructure a macro invocation candidate into `(macroname, args, keywords)`.
 
@@ -54,6 +107,46 @@ def destructure(candidate):
 
 class MacroExpander(BaseMacroExpander):
     '''The actual macro expander.'''
+
+    def _bind_macro_arguments(self, target, macroname, args, keywords):
+        '''Bind arguments from a parametric macro `Call` to the macro's parameters.
+
+        `target`: the macro invocation node being expanded, for error reporting.
+        `macroname`: the name of the macro in `self.bindings`.
+        `args`: list of AST nodes, as in a `Call` node.
+        `keywords`: list of `keyword` AST nodes, as in a `Call` node.
+
+        Return value is `{'args': ...}`, where `...` is a `dict` where the keys are
+        raw strings of parameter names from the macro function's macro call signature
+        (see `@parametricmacro`), and the values are the argument AST nodes from the
+        macro invocation `Call` node.
+
+        As a convenience, can be invoked for a `Name` node to no-op, by setting both
+        `args` and `keywords` to `None`. In that case, return the empty dictionary.
+
+        This format can be easily injected to `kw` for `BaseMacroExpander.expand`,
+        by `kw.update(...)`, so it'll create at most an `args` entry.
+        '''
+        if args is None and keywords is None:  # no `Call`, just `Name`
+            return {}
+        function = self.bindings[macroname]
+        if not isparametricmacro(function):
+            approx_sourcecode_before_expansion = unparse_with_fallbacks(target)
+            def usesite_location():
+                lineno = target.lineno if hasattr(target, 'lineno') else None
+                sep = " " if "\n" not in approx_sourcecode_before_expansion else "\n"
+                return f'at {self.filename}:{lineno}:{sep}{approx_sourcecode_before_expansion}'
+            msg = usesite_location()
+            reason = f"{macroname} does not take arguments"
+            msg = f"{msg}\n{reason}"
+            raise MacroExpansionError(msg)
+        args = args or []
+        keywords = keywords or []
+        # TODO: handle Starred nodes (after we figure out what those should mean here)
+        kwargs = {kw.arg: kw.value for kw in keywords}
+        bound = function._macrocallsignature.bind(*args, **kwargs)
+        bound.apply_defaults()
+        return {'args': dict(bound.arguments)}
 
     def visit_Subscript(self, subscript):
         '''Detect an expression (expr) macro invocation.
@@ -75,7 +168,7 @@ class MacroExpander(BaseMacroExpander):
         candidate = subscript.value
         macroname, args, keywords = destructure(candidate)
         if macroname and self.isbound(macroname):
-            kw = {'args': args, 'keywords': keywords}
+            kw = self._bind_macro_arguments(subscript, macroname, args, keywords)
             tree = subscript.slice.value
             new_tree = self.expand('expr', subscript, macroname, tree, fill_root_location=True, kw=kw)
         else:
@@ -114,8 +207,9 @@ class MacroExpander(BaseMacroExpander):
         candidate = with_item.context_expr
         macroname, args, keywords = destructure(candidate)
         if macroname and self.isbound(macroname):
+            kw = {'optional_vars': with_item.optional_vars}
+            kw.update(self._bind_macro_arguments(withstmt, macroname, args, keywords))
             tree = withstmt.body
-            kw = {'optional_vars': with_item.optional_vars, 'args': args, 'keywords': keywords}
             new_tree = self.expand('block', withstmt, macroname, tree, fill_root_location=False, kw=kw)
             new_tree = _add_coverage_dummy_node(new_tree, withstmt, macroname)
         else:
@@ -170,7 +264,7 @@ class MacroExpander(BaseMacroExpander):
         macroname, args, keywords = destructure(innermost_macro)
         decorated.decorator_list.remove(innermost_macro)
         with self._recursive_mode(False):  # don't trigger other decorator macros yet
-            kw = {'args': args, 'keywords': keywords}
+            kw = self._bind_macro_arguments(decorated, macroname, args, keywords)
             new_tree = self.expand('decorator', decorated, macroname, decorated, fill_root_location=True, kw=kw)
         new_tree = _add_coverage_dummy_node(new_tree, innermost_macro, macroname)
         return self.visit(new_tree)
@@ -351,6 +445,7 @@ def _add_coverage_dummy_node(tree, macronode, macroname):
     tree.insert(0, Done(dummy))  # mark as Done so any expansions further out won't mess this up.
     return tree
 
+# --------------------------------------------------------------------------------
 
 def expand_macros(tree, bindings, *, filename):
     '''Expand `tree` with macro bindings `bindings`. Top-level entrypoint.
