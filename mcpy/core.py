@@ -120,19 +120,17 @@ class BaseMacroExpander(NodeTransformerListMixin, NodeTransformer):
         even look at it, but just pass it on.
 
         `fill_root_location` sets whether to fill the source location info at
-        the top level of the expansion from the AST node `target`. Whether that
-        should be done depends on the type of macro invocation.
-
-        For example, in the default `mcpy.expander.MacroExpander`, block and
-        decorator macro invocations have the top level of the expanded code
-        come from below the macro invocation line in the unexpaded source (so they
-        use `fill_root_location=False`), whereas for expression and identifier
-        macros, it comes from the same line (so they use `fill_root_location=True`).
+        the top level of the expansion from the AST node `target`.
 
         When calling the macro function, we pass the following named arguments:
 
-          - `syntax`: our `syntax` argument, as-is.
-          - `expander`: the expander instance.
+          - `syntax`:     Our `syntax` argument, as-is.
+          - `expander`:   The expander instance.
+          - `invocation`: The `target` AST node as-is, for introspection if you
+                          need to see not only the destructured `tree` and `args`,
+                          but the macro invocation itself, without any processing.
+                          Very rarely needed; if you need it, you'll know.
+                          **CAUTION**: does not make a copy.
 
         To send additional named arguments from the actual expander to the
         macro function, place them in a dictionary and pass that dictionary
@@ -142,7 +140,8 @@ class BaseMacroExpander(NodeTransformerListMixin, NodeTransformer):
         kw = kw or {}
         kw.update({
             'syntax': syntax,
-            'expander': self})
+            'expander': self,
+            'invocation': target})
 
         approx_sourcecode_before_expansion = unparse_with_fallbacks(target)
         def usesite_location():
