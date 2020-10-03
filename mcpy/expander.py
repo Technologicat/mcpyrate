@@ -23,7 +23,7 @@ from ast import (Name, Call, Import, ImportFrom, alias, AST, Expr, Constant,
 from .core import BaseMacroExpander, global_postprocess, Done
 from .importer import resolve_package
 from .unparser import unparse_with_fallbacks
-from .utilities import flatten_suite
+from .utilities import NodeVisitorListMixin
 
 def namemacro(function):
     '''Decorator. Declare a macro function as an identifier macro.
@@ -51,6 +51,7 @@ def destructure(candidate):
         return candidate.func.id, candidate.args, candidate.keywords
     return None, None, None  # not a macro invocation
 
+
 class MacroExpander(BaseMacroExpander):
     '''The actual macro expander.'''
 
@@ -67,6 +68,9 @@ class MacroExpander(BaseMacroExpander):
         Positional arguments are sent to the macro as `args`, named arguments
         as `keywords`. Content as in a `Call` node.
             https://greentreesnakes.readthedocs.io/en/latest/nodes.html#Call
+
+        Any macro invocations in the macro arguments are expanded after this
+        macro invocation itself.
         '''
         candidate = subscript.value
         macroname, args, keywords = destructure(candidate)
@@ -99,6 +103,9 @@ class MacroExpander(BaseMacroExpander):
         as `keywords`. Content as in a `Call` node.
             https://greentreesnakes.readthedocs.io/en/latest/nodes.html#Call
 
+        Any macro invocations in the macro arguments are expanded after this
+        macro invocation itself.
+
         The `result` part is sent to the macro as `optional_vars`; it's a
         `Name`, `Tuple` or `List` node.
             https://greentreesnakes.readthedocs.io/en/latest/nodes.html#withitem
@@ -110,7 +117,7 @@ class MacroExpander(BaseMacroExpander):
             tree = withstmt.body
             kw = {'optional_vars': with_item.optional_vars, 'args': args, 'keywords': keywords}
             new_tree = self.expand('block', withstmt, macroname, tree, fill_root_location=False, kw=kw)
-            new_tree = _add_coverage_dummy_node(new_tree, withstmt)
+            new_tree = _add_coverage_dummy_node(new_tree, withstmt, macroname)
         else:
             new_tree = self.generic_visit(withstmt)
 
@@ -147,60 +154,24 @@ class MacroExpander(BaseMacroExpander):
 
         Replace the whole decorated node with the result of the macro.
 
-        If the macro returns a list of nodes, the first item must be the
-        decorated node, so it can be sent to any outer decorator macros.
-        Other nodes after it are allowed, but not before. This is the
-        same way MacroPy handles decorator macros.
-
-        A decorator macro may edit the remaining decorator invocations if it
-        wants to. The decorator list is read anew after each decorator macro
-        invocation. At each step, the innermost decorator macro is popped
-        from the list and expanded. Further macro expansion waits until the
-        whole decorator list has been processed.
-
-        If any decorator macro in the chain returns `None`, the whole decorated
-        node is removed, as well as any extra nodes returned by earlier decorators.
-
         Positional arguments are sent to the macro as `args`, named arguments
         as `keywords`. Content as in a `Call` node.
             https://greentreesnakes.readthedocs.io/en/latest/nodes.html#Call
+
+        Any macro invocations in the macro arguments are expanded after this
+        macro invocation itself.
         '''
-        if not decorated.decorator_list:
+        macros, others = self._detect_decorator_macros(decorated.decorator_list)
+        if not macros:
             return self.generic_visit(decorated)
-        macros_executed = []
-        postscript = []
-        while True:
-            for decorator in reversed(decorated.decorator_list):
-                macroname, args, keywords = destructure(decorator)
-                if macroname and self.isbound(macroname):
-                    break
-            else:
-                break  # no more macros
-            decorated.decorator_list.remove(decorator)
-            with self._recursive_mode(False):  # don't trigger other decorator macros yet
-                kw = {'args': args, 'keywords': keywords}
-                new_tree = self.expand('decorator', decorated, macroname, decorated, fill_root_location=False, kw=kw)
-            macros_executed.append(decorator)
-
-            if not new_tree:  # None or empty list
-                decorated = None
-                postscript = []
-                break
-            elif isinstance(new_tree, list):
-                decorated = new_tree[0]
-                postscript.extend(new_tree[1:])
-            elif isinstance(new_tree, AST):
-                decorated = new_tree
-
-        postscript = [self.visit(elt) for elt in postscript]
-        if decorated is not None:
-            decorated = self.generic_visit(decorated)
-        if decorated is not None:
-            new_tree = flatten_suite([decorated] + postscript)
-        for decorator in macros_executed:
-            new_tree = _add_coverage_dummy_node(new_tree, decorator)
-
-        return new_tree
+        innermost_macro = macros[-1]
+        macroname, args, keywords = destructure(innermost_macro)
+        decorated.decorator_list.remove(innermost_macro)
+        with self._recursive_mode(False):  # don't trigger other decorator macros yet
+            kw = {'args': args, 'keywords': keywords}
+            new_tree = self.expand('decorator', decorated, macroname, decorated, fill_root_location=True, kw=kw)
+        new_tree = _add_coverage_dummy_node(new_tree, innermost_macro, macroname)
+        return self.visit(new_tree)
 
     def _detect_decorator_macros(self, decorator_list):
         '''Identify macros in a `decorator_list`.
@@ -263,12 +234,12 @@ class MacroExpander(BaseMacroExpander):
                     # so it shouldn't be expanded again (when expanding remaining macros in the result).
                     new_tree = Done(new_tree)
         else:
-            new_tree = self.generic_visit(name)
+            new_tree = name
 
         return new_tree
 
 
-class MacroCollector(NodeVisitor):
+class MacroCollector(NodeVisitorListMixin, NodeVisitor):
     '''Scan `tree` for macro invocations, with respect to given `expander`.
 
     Collect a set of `(macroname, syntax)`. Constructor parameters:
@@ -300,18 +271,28 @@ class MacroCollector(NodeVisitor):
 
     def visit_Subscript(self, subscript):
         candidate = subscript.value
-        if isinstance(candidate, Name) and self.isbound(candidate.id):
-            self.collected.add((candidate.id, 'expr'))
-        # We can't just `self.generic_visit(subscript)`, because that'll incorrectly detect
-        # the name part of the invocation as an identifier macro. So recurse only where safe.
-        self.visit(subscript.slice.value)
+        macroname, args, keywords = destructure(candidate)
+        if macroname and self.isbound(macroname):
+            self.collected.add((macroname, 'expr'))
+            self.visit(args)
+            self.visit(keywords)
+            # We can't just `self.generic_visit(tree)`, because that'll incorrectly detect
+            # the name part of the invocation as an identifier macro. So recurse only where safe.
+            self.visit(subscript.slice.value)
+        else:
+            self.generic_visit(subscript)
 
     def visit_With(self, withstmt):
         with_item = withstmt.items[0]
         candidate = with_item.context_expr
-        if isinstance(candidate, Name) and self.isbound(candidate.id):
-            self.collected.add((candidate.id, 'block'))
-        self.visit(withstmt.body)
+        macroname, args, keywords = destructure(candidate)
+        if macroname and self.isbound(macroname):
+            self.collected.add((macroname, 'block'))
+            self.visit(args)
+            self.visit(keywords)
+            self.visit(withstmt.body)
+        else:
+            self.generic_visit(withstmt)
 
     def visit_ClassDef(self, classdef):
         self._visit_Decorated(classdef)
@@ -321,35 +302,40 @@ class MacroCollector(NodeVisitor):
 
     def _visit_Decorated(self, decorated):
         macros, decorators = self.expander._detect_decorator_macros(decorated.decorator_list)
-        for macro in macros:
-            self.collected.add((macro.id, 'decorator'))
-        for decorator in decorators:
-            self.visit(decorator)
-        for field, value in iter_fields(decorated):
-            if field == "decorator_list":
-                continue
-            if isinstance(value, list):
-                for node in value:
-                    self.visit(node)
-            elif isinstance(value, AST):
-                self.visit(value)
+        if macros:
+            for macro in macros:
+                macroname, args, keywords = destructure(macro)
+                self.collected.add((macroname, 'decorator'))
+                self.visit(args)
+                self.visit(keywords)
+            for decorator in decorators:
+                self.visit(decorator)
+            for k, v in iter_fields(decorated):
+                if k == "decorator_list":
+                    continue
+                self.visit(v)
+        else:
+            self.generic_visit(decorated)
 
     def visit_Name(self, name):
-        if self.isbound(name.id) and isnamemacro(self.expander.bindings[name.id]):
-            self.collected.add((name.id, 'name'))
-        self.generic_visit(name)
+        macroname = name.id
+        if self.isbound(macroname) and isnamemacro(self.expander.bindings[macroname]):
+            self.collected.add((macroname, 'name'))
 
 
-def _add_coverage_dummy_node(tree, target):
-    '''Force `target` node to be reported as covered by coverage tools.
+def _add_coverage_dummy_node(tree, macronode, macroname):
+    '''Force `macronode` to be reported as covered by coverage tools.
 
-    Fixes coverage reporting for block and decorator macro invocations.
+    `tree` is the original output of the macro. `tree` must appear in a
+    position where `ast.NodeTransformer.visit` is allowed to return a
+    list of nodes.
 
-    `tree` must appear in a position where `ast.NodeTransformer.visit` is
-    allowed to return a list of nodes. The return value is a `list` of nodes.
+    `macronode` is the macro invocation node to copy source location info from.
+
+    `macroname` is included in the coverage dummy node, to ease debugging.
     '''
-    # `target` itself might be macro-generated. In that case don't bother.
-    if not hasattr(target, 'lineno') and not hasattr(target, 'col_offset'):
+    # `macronode` itself might be macro-generated. In that case don't bother.
+    if not hasattr(macronode, 'lineno') and not hasattr(macronode, 'col_offset'):
         return tree
     if tree is None:
         tree = []
@@ -357,8 +343,9 @@ def _add_coverage_dummy_node(tree, target):
         tree = [tree]
     # The dummy node must actually run to get coverage, an `ast.Pass` won't do.
     # We must set location info manually, because we run after `expand`.
-    non = copy_location(Constant(value=None), target)
-    dummy = copy_location(Expr(value=non), target)
+    x = copy_location(Constant(value=f"mcpy coverage: source line {macronode.lineno} invoked macro {macroname}"),
+                      macronode)
+    dummy = copy_location(Expr(value=x), macronode)
     tree.insert(0, Done(dummy))  # mark as Done so any expansions further out won't mess this up.
     return tree
 
