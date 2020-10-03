@@ -149,6 +149,7 @@ class BaseMacroExpander(NodeTransformerListMixin, NodeTransformer):
             sep = " " if "\n" not in approx_sourcecode_before_expansion else "\n"
             return f'at {self.filename}:{lineno}:{sep}{approx_sourcecode_before_expansion}'
 
+        # Expand the macro.
         try:
             expansion = _apply_macro(macro, tree, kw)
         except Exception as err:
