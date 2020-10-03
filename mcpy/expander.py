@@ -207,8 +207,8 @@ class MacroExpander(BaseMacroExpander):
         candidate = with_item.context_expr
         macroname, args, keywords = destructure(candidate)
         if macroname and self.isbound(macroname):
-            kw = {'optional_vars': with_item.optional_vars}
-            kw.update(self._bind_macro_arguments(withstmt, macroname, args, keywords))
+            kw = self._bind_macro_arguments(withstmt, macroname, args, keywords)
+            kw.update({'optional_vars': with_item.optional_vars})
             tree = withstmt.body
             new_tree = self.expand('block', withstmt, macroname, tree, fill_root_location=False, kw=kw)
             new_tree = _add_coverage_dummy_node(new_tree, withstmt, macroname)
