@@ -7,19 +7,13 @@ This layer provides the actual macro expander, defining:
        from ... import macros, ...
 
  - Macro invocation types:
-   - expr::
-         macroname[...]
-         macroname[arg0, ...][...]
+   - expr: `macroname[...]`, `macroname[arg0, ...][...]`
 
-   - block::
-         with macroname:
-         with macroname as result:
-         with macroname[arg0, ...]:
-         with macroname[arg0, ...] as result:
+   - block: `with macroname:`, `with macroname as result:`,
+            `with macroname[arg0, ...]:`, `with macroname[arg0, ...] as result:`
 
    - decorator::
-         @macroname
-         @macroname[arg0, ...]
+         `@macroname`, `@macroname[arg0, ...]`
 
    - name::
          macroname
@@ -46,25 +40,6 @@ def namemacro(function):
     as identifier macros only macros that are declared as such.
 
     This (or `@parametricmacro`, if used too) must be the outermost decorator.
-
-    **Notes**:
-
-    `name` macro invocations do not take macro arguments. So when a macro
-    function is invoked as an identifier macro, `args=[]`. The `tree` will
-    be the `Name` node itself.
-
-    Note it is valid for the same macro function to be invoked with one of the
-    other macro invocation types; in such contexts, it can take macro arguments
-    if declared (also) as `@parametricmacro`.
-
-    To tell the expander to go ahead and use the original name as a regular
-    run-time name, you can `return tree` without modifying it. This is
-    useful when the identifier macro is needed only for its side effects,
-    such as validating its use site.
-
-    The main use case of identifier macros is to define magic variables
-    that are valid only inside the invocation of some other macro.
-    An classic example is the anaphoric if's `it`.
     '''
     function._isnamemacro = True
     return function
@@ -80,52 +55,6 @@ def parametricmacro(function):
     macro argument syntax only for macros that are declared as parametric.
 
     This (or `@namemacro`, if used too) must be the outermost decorator.
-
-    **Parametric macro usage**:
-
-    Once a macro has been declared parametric, macro arguments are sent by
-    calling `macroname` with bracket syntax::
-
-         macroname[arg0, ...]
-
-    Such an expression can appear in place of a bare `macroname` in an `expr`,
-    `block` and `decorator` macro invocation. `name` macro invocations do not
-    take macro arguments.
-
-    To invoke a parametric macro with no arguments, just use bare `macroname`,
-    as if it was not parametric.
-
-    For simplicity, macro arguments are always positional.
-
-    The parametric macro function receives macro arguments as the `args` named
-    parameter. It is a raw `list` of the ASTs `arg0` and so on. If the macro
-    was invoked without macro arguments, `args` is an empty list. Any macro
-    invocations inside the macro arguments are expanded after the primary
-    macro invocation itself. To expand them first, use `expander.visit`
-    in your macro implementation, as usual.
-
-    **Notes**:
-
-    Often, instead of taking macro arguments, you can just require `tree` to
-    have a specific layout instead. E.g., `let[x << 1, y << 2][...]` could
-    alternatively be designed to be invoked as `let[[x << 1, y << 2] in ...]`.
-    But if the example `let` should work also as a decorator, then macro
-    arguments are the obvious, uniform syntax, because then you can also
-    `with let[x << 1, y << 2]:` and `@let[x << 1, y << 2]`.
-
-    Observe `macro[a][b]` may mean two different things:
-
-        - If `macro` is parametric, a macro invocation with `args=[a]`, `tree=b`.
-
-        - If `macro` is **not** parametric, first a macro invocation with `tree=a`,
-          followed by a subscript operation on the result.
-
-          Whether that subscript operation is applied at macro expansion time
-          or at run time, depends on whether `macro[a]` returns an AST for a
-          `result` for which `result[b]` can be interpreted as an invocation
-          of a macro that is bound in the use site's macro expander. (This is
-          exploited by the hygienic unquote operator `h`, when it is applied
-          to a macro name.)
     '''
     function._isparametricmacro = True
     return function
@@ -154,7 +83,7 @@ class MacroExpander(BaseMacroExpander):
     '''The actual macro expander.'''
 
     def ismacrocall(self, macroname, macroargs):
-        '''Shorthand for detecting a valid macro call to a macro bound in this expander.'''
+        '''Shorthand to detect a valid macro call to a macro bound in this expander.'''
         return (macroname and self.isbound(macroname) and
                 (not macroargs or isparametricmacro(self.bindings[macroname])))
 
@@ -176,7 +105,6 @@ class MacroExpander(BaseMacroExpander):
             new_tree = self.expand('expr', subscript, macroname, tree, fill_root_location=True, kw=kw)
         else:
             new_tree = self.generic_visit(subscript)
-
         return new_tree
 
     def visit_With(self, withstmt):
@@ -211,7 +139,6 @@ class MacroExpander(BaseMacroExpander):
             new_tree = _add_coverage_dummy_node(new_tree, withstmt, macroname)
         else:
             new_tree = self.generic_visit(withstmt)
-
         return new_tree
 
     def visit_ClassDef(self, classdef):
@@ -245,7 +172,7 @@ class MacroExpander(BaseMacroExpander):
         decorator list; it may also emit additional nodes (by returning a
         `list`), or even delete the decorated node or replace it altogether.
         Any remaining decorator macro invocations are attached to the original
-        decorated node, so if that is removed from the output, they will be skipped.
+        decorated node, so if that is removed, they will be skipped.
 
         The body is expanded after the whole decorator list has been processed.
         '''
@@ -270,7 +197,6 @@ class MacroExpander(BaseMacroExpander):
                 macros.append(decorator)
             else:
                 others.append(decorator)
-
         return macros, others
 
     def visit_Name(self, name):
@@ -288,10 +214,9 @@ class MacroExpander(BaseMacroExpander):
             macroname = name.id
             def ismodified(tree):
                 return not (type(tree) is Name and tree.id == macroname)
-            # For identifier macros, no part of the tree is guaranteed to be compiled away.
-            # So prevent an infinite loop if the macro no-ops, returning `tree` as-is.
-            # (That's the public API for "I did what I needed to, now go ahead and use this
-            #  as a regular run-time identifier").
+            # For name macros, no part of the tree is guaranteed to be compiled away.
+            # Prevent an infinite loop if the macro no-ops, returning `tree` as-is.
+            # (Public API for "I did what I needed to, now use this as a run-time name".)
             with self._recursive_mode(False):
                 kw = {'args': None}
                 new_tree = self.expand('name', name, macroname, name, fill_root_location=True, kw=kw)
@@ -299,13 +224,12 @@ class MacroExpander(BaseMacroExpander):
                 if ismodified(new_tree):
                     new_tree = self.visit(new_tree)
                 else:
-                    # When a magic variable expands in a valid surrounding context and does
-                    # `return tree`, the expander needs to know it has applied its context check,
-                    # so it shouldn't be expanded again (when expanding remaining macros in the result).
+                    # When a magic variable expands in a valid surrounding context and
+                    # does `return tree`, the expander needs to know it has done its
+                    # context check, so it shouldn't be expanded again.
                     new_tree = Done(new_tree)
         else:
             new_tree = name
-
         return new_tree
 
 
@@ -418,9 +342,9 @@ def _add_coverage_dummy_node(tree, macronode, macroname):
 def expand_macros(tree, bindings, *, filename):
     '''Expand `tree` with macro bindings `bindings`. Top-level entrypoint.
 
-    This is primarily meant to be called with `tree` the AST of a module that
-    uses macros, but works with any `tree` (even inside a macro, if you need
-    an independent second instance of the expander with different bindings).
+    Primarily meant to be called with `tree` the AST of a module that uses
+    macros, but works with any `tree` (even inside a macro, if you need an
+    independent second instance of the expander with different bindings).
 
     `bindings`: dict of macro name/function pairs.
 
@@ -436,10 +360,10 @@ def find_macros(tree, *, filename, reload=False):
     '''Establish macro bindings from `tree`. Top-level entrypoint.
 
     Collect bindings from each macro-import statement (`from ... import macros, ...`)
-    at the top level of `tree.body`. Transform the macro-import into `import ...`,
+    at the top level of `tree.body`. Transform each macro-import into `import ...`,
     where `...` is the absolute module name the macros are being imported from.
 
-    This is primarily meant to be called with `tree` the AST of a module that
+    Primarily meant to be called with `tree` the AST of a module that
     uses macros, but works with any `tree` that has a `body` attribute.
 
     `filename`: str, full path to the `.py` being macroexpanded, for resolving
@@ -456,8 +380,8 @@ def find_macros(tree, *, filename, reload=False):
         if ismacroimport(statement):
             module_absname, more_bindings = _get_macros(statement, filename=filename, reload=reload)
             bindings.update(more_bindings)
-            # Remove all names to prevent the macros being accidentally used as regular run-time objects.
-            # Always convert to an absolute import so that the unhygienic expose API guarantee works.
+            # Remove all names to prevent macros being used as regular run-time objects.
+            # Always use an absolute import, for the unhygienic expose API guarantee.
             tree.body[index] = copy_location(Import(names=[alias(name=module_absname, asname=None)]),
                                              statement)
     return bindings
@@ -487,12 +411,12 @@ def _get_macros(macroimport, *, filename, reload=False):
     if macroimport.module is None:
         raise SyntaxError(f"{filename}:{lineno}: missing module name in macro-import")
 
-    try:  # resolve relative macro-import, if we're actually reading a .py file
+    try:  # resolve relative macro-import, if actually reading a .py file
         package_absname = None
         if macroimport.level and filename.endswith(".py"):
             package_absname = resolve_package(filename)
     except (ValueError, ImportError) as err:
-        # fallbacks may trigger if the macro-import statement itself is programmatically generated.
+        # fallbacks may trigger if the macro-import is programmatically generated.
         approx_sourcecode = unparse_with_fallbacks(macroimport)
         sep = " " if "\n" not in approx_sourcecode else "\n"
         raise ImportError(f"while resolving relative macro-import at {filename}:{lineno}:{sep}{approx_sourcecode}") from err

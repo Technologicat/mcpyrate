@@ -253,6 +253,32 @@ invocations inside the macro arguments are expanded after the primary
 macro invocation itself. To expand them first, use `expander.visit`
 in your macro implementation, as usual.
 
+Observe `macroname[a][b]` may mean two different things:
+
+  - If `macroname` is parametric, a macro invocation with `args=[a]`, `tree=b`.
+
+  - If `macroname` is **not** parametric, first a macro invocation with `tree=a`,
+    followed by a subscript operation on the result.
+
+    Whether that subscript operation is applied at macro expansion time
+    or at run time, depends on whether `macroname[a]` returns an AST for
+    a `result`, for which `result[b]` can be interpreted as an invocation
+    of a macro that is bound in the use site's macro expander. (This is
+    exploited by the hygienic unquote operator `h`, when it is applied
+    to a macro name.)
+
+
+#### Arguments or no arguments?
+
+Often, instead of taking macro arguments, you can just require `tree` to have a
+specific layout instead.
+
+For example, a *let* macro invoked as `let[x << 1, y << 2][...]` could alternatively
+be designed to be invoked as `let[[x << 1, y << 2] in ...]`. But if the example
+`let` should work also as a decorator, then macro arguments are the obvious,
+uniform syntax, because then you can also `with let[x << 1, y << 2]:` and
+`@let[x << 1, y << 2]`.
+
 
 ### The named parameters
 
@@ -298,7 +324,24 @@ The other three work roughly the same as in MacroPy (except that in `mcpy`, macr
 
 *New in v3.0.0.*
 
-Identifier macros are a rarely used feature, but one that is indispensable for that rare use case. To avoid clutter in the dispatch logic of most macros, if a macro function wants to be called as an identifier macro, it must explicitly opt in. Declare by using the `@namemacro` decorator on your macro function. Place it outermost (along with `@parametricmacro`, if used too).
+Identifier macros are a rarely used feature, but one that is indispensable for
+that rare use case. To avoid clutter in the dispatch logic of most macros, if a
+macro function wants to be called as an identifier macro, it must explicitly opt
+in. Declare by using the `@namemacro` decorator on your macro function. Place it
+outermost (along with `@parametricmacro`, if used too).
+
+Identifier macro invocations do not take macro arguments. So when a macro
+function is invoked as an identifier macro, `args=[]`. The `tree` will be the
+`Name` node itself.
+
+Note it is valid for the same macro function to be invoked with one of the other
+macro invocation types; in such contexts, it can take macro arguments if
+declared (also) as `@parametricmacro`.
+
+To tell the expander to go ahead and use the original name as a regular run-time
+name, you can `return tree` without modifying it. This is useful when the
+identifier macro is needed only for its side effects, such as validating its
+use site.
 
 The main use case, why this feature exists, is to create magic variables that are allowed to appear only in certain contexts. Here's the pattern:
 
