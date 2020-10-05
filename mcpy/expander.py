@@ -457,7 +457,7 @@ def find_macros(tree, *, filename, reload=False):
 
 def is_macro_import(statement):
     '''
-    A "macro import" is a statement of the form::
+    A macro-import is a statement of the form::
 
         from ... import macros, ...
     '''

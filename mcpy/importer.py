@@ -73,7 +73,7 @@ def path_xstats(self, path):
         # TODO: This can be slow, the point of `.pyc` is to avoid the parse-and-compile cost.
         # TODO: We do save the macro-expansion cost, though, and that's likely much more expensive.
         #
-        # Maybe make our own pyc-like cache file storing the macro imports found,
+        # Maybe make our own pyc-like cache file storing the macro-imports found,
         # store it in the pyc directory, and invalidate it based on the mtime
         # of `path` (only)?
         with tokenize.open(path) as sourcefile:

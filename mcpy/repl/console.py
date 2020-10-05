@@ -101,7 +101,7 @@ class MacroConsole(code.InteractiveConsole):
         try:
             tree = ast.parse(source)
 
-            bindings = find_macros(tree, filename="<interactive input>", reload=True)  # macro imports (this will import the modules)
+            bindings = find_macros(tree, filename="<interactive input>", reload=True)  # macro-imports (this will import the modules)
             if bindings:
                 self._bindings_changed = True
                 self._bindings.update(bindings)
