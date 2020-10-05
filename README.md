@@ -32,6 +32,19 @@ This fork adds a lot of features over `mcpy` 2.0.0:
 - **Identifier (a.k.a. name) macros**
   - Can be used for creating magic variables that may only appear inside specific macro invocations, erroring out at macro expansion time if they appear anywhere else.
   - Opt-in. Declare by using the `@mcpy.namemacro` decorator on your macro function. Place it outermost.
+- **Bytecode caching**:
+  - `.pyc` bytecode caches are created and kept up-to-date. This saves the macro
+    expansion cost at startup for modules that have not changed.
+
+    Beside a `.py` source file itself, we look at any macro definition files
+    the source file imports macros from, recursively, in a `make`-like fashion.
+
+    The mtime is the latest of those of the source file and its macro-dependencies,
+    considered recursively, so that if any macro definition anywhere in the
+    macro-dependency tree of a source file is changed, Python will treat that
+    source file as "changed", thus re-expanding and recompiling it (hence,
+    updating the corresponding `.pyc`).
+  - **CAUTION**: [PEP 552 - Deterministic pycs](https://www.python.org/dev/peps/pep-0552/) is not supported; we support only the default *mtime* invalidation mode.
 - **Conveniences**:
   - The expander automatically fixes missing `ctx` attributes in the AST, so you don't need to care about those in your macros.
   - Walker with a state stack, à la MacroPy, to easily temporarily override the state for a given subtree.
@@ -202,19 +215,39 @@ Any missing source locations and `ctx` fields are fixed automatically in a postp
 
 If you get an error saying an AST node is missing the mandatory field `lineno`, the actual error is likely something else. This is due to an unfortunate lack of input validation in Python's compiler. The first thing to check is that your macro is really placing AST nodes where the compiler expects those, instead of accidentally using bare values.
 
-*Changed in v3.0.0.* The named parameter `to_source` has been removed; use the function `mcpy.unparse`.
-
-*Changed in v3.0.0.* The named parameter `expand_macros` has been replaced with `expander`, which grants access to the macro expander instance; use `expander.visit_recursively` or `expander.visit_once`, depending on whether you want expansion to continue until no macros remain. Use `expander.visit` to use current setting for recursive mode.
-
 See [`mcpy.core.BaseMacroExpander`](mcpy/core.py) and [`mcpy.expander.MacroExpander`](mcpy/expander.py) for the expander API; it's just a few methods and attributes.
+
+
+### The named parameters
+
+Full list as of v3.0.0, in alphabetical order:
+
+ - `args`: macro argument ASTs, if the invocation provided any. If not, `args = []`.
+   - Macro arguments are a rarely needed feature. The macro function only accepts macro arguments if declared `@parametricmacro`. For non-parametric macros (default), `args = []` always.
+ - `expander`: the macro expander instance.
+   - To expand macro invocations inside the current one, use `expander.visit_recursively` or `expander.visit_once`, depending on whether you want expansion to continue until no macros remain. Use `expander.visit` to use current setting for recursive mode.
+   - Also potentially useful are `expander.bindings` and `expander.filename`.
+ - `invocation`: the whole macro invocation node as-is, not only `tree`. For introspection.
+   - Very rarely needed; if you need it, you'll know.
+   - **CAUTION**: does not make a copy.
+ - `optional_vars`: only exists when `syntax='block'`. The *as-part* of the `with` statement. (So actually use it as `kw['optional_vars']`.)
+ - `syntax`: invocation type. One of `expr`, `block`, `decorator`, `name`.
+   - Identifier macros are a rarely needed feature. The `syntax` parameter can be `name` only if the macro function is declared `@namemacro`.
+
+*Changed in v3.0.0.* The named parameter `to_source` has been removed; use the top-level function `unparse` instead.
+
+*Changed in v3.0.0.* The named parameter `expand_macros` has been replaced with `expander`, which grants access to the macro expander instance.
+
 
 ### Quasiquotes
 
-*New in v3.0.0.* We provide [a quasiquote system](quasiquotes.md) (both classical and hygienic) to make macro code both much more readable and simpler to write. It's similar to MacroPy's, but details of usage differ.
+*New in v3.0.0.* We provide [a quasiquote system](quasiquotes.md) (both classical and hygienic) to make macro code both much more readable and simpler to write. It was inspired by MacroPy's, but details of usage differ.
+
 
 ### Walk an AST
 
 *New in v3.0.0.* To bridge the feature gap between [`ast.NodeTransformer`](https://docs.python.org/3/library/ast.html#ast.NodeTransformer) and MacroPy's `Walker`, we provide [`mcpy.walker.Walker`](walker.md), a zen-minimalistic AST walker base class based on `ast.NodeTransformer`, with a state stack and a node collector. If you need a walker that can temporarily change state while in a given subtree, maybe look here.
+
 
 ### Distinguish how the macro is called
 
@@ -222,15 +255,16 @@ A macro can be called in four different ways. The way a macro is called is recor
 
 When valid macro invocation syntax for one of the other three types is detected, the name part is skipped, and it **does not** get called as an identifier macro. The identifier macro mechanism is invoked only for appearances of the name *in contexts that are not other types of macro invocations*.
 
-The other three work roughly the same as in MacroPy (except that in `mcpy`, a macro invocation **does not** take arguments using function call syntax), so we'll look at just the fourth one, identifier macros.
+The other three work roughly the same as in MacroPy (except that in `mcpy`, macro arguments are passed using brackets, not parentheses, e.g. `macroname[arg0, ...][expr]`), so we'll look at just the fourth one, identifier macros.
+
 
 #### Identifier macros
 
-Identifier macros are a rarely used feature, but one that is indispensable for that rare use case. To avoid clutter in the dispatch logic of most macros, if a macro function wants to be called as an identifier macro, it must explicitly opt in. Declare by using the `@mcpy.namemacro` decorator on your macro function. Place it outermost.
+Identifier macros are a rarely used feature, but one that is indispensable for that rare use case. To avoid clutter in the dispatch logic of most macros, if a macro function wants to be called as an identifier macro, it must explicitly opt in. Declare by using the `@namemacro` decorator on your macro function. Place it outermost.
 
 A basic use case of identifier macros is where you just need to paste some boilerplate code without any parameters.
 
-But the main use case why this feature exists is to create magic variables that are allowed to appear only in certain contexts. Pattern:
+But the main use case why this feature exists is to create magic variables that are allowed to appear only in certain contexts. Here's the pattern:
 
 ```python
 from mcpy import namemacro
@@ -239,7 +273,7 @@ from mcpy.utilities import NestingLevelTracker
 _level = NestingLevelTracker()
 
 # a valid context for `it`
-def mymacro(tree, syntax, expander, **kw):
+def mymacro(tree, *, syntax, expander, **kw):
     if syntax != "expr":
         raise SyntaxError("`mymacro` is an expr macro only")
     with _level.changed_by(+1):
@@ -247,11 +281,11 @@ def mymacro(tree, syntax, expander, **kw):
         # Macro code goes here. You'll want it to define an actual
         # run-time `it` for the invocation site to refer to.
         # (But first check from `expander.bindings` what name
-        #  our `it` function is actually bound to!)
+        #  our `it` macro function is actually bound to!)
     return tree
 
 @namemacro
-def it(tree, syntax, **kw):
+def it(tree, *, syntax, **kw):
     if syntax != "name":
         raise SyntaxError("`it` is a name macro only")
     if _level.value < 1:
@@ -259,9 +293,9 @@ def it(tree, syntax, **kw):
     return tree
 ```
 
-This way any invalid, stray mentions of the magic variable `it` are promoted to a compile-time error.
+This way any invalid, stray mentions of the magic variable `it` trigger a macro-expansion-time error.
 
-If you want to expand only `it` inside an invocation of `mymacro[...]` (thus checking that the mentions are valid), leaving other nested macro invocations untouched, that's also possible. See below how to temporarily run a second expander with different bindings (so you can omit everything but `it`).
+If you want to expand only `it` inside an invocation of `mymacro[...]` (thus checking that the mentions are valid), leaving other nested macro invocations untouched, that's also possible. See below how to temporarily run a second expander with different bindings (from which you can omit everything but `it`).
 
 If you want to allow using the macro name (i.e. whatever name it's bound to at the use site) of your identifier macro as a run-time variable name, `return tree` without modifying it. This tells the expander - after checking with you that the use was legal - to treat it as a regular name.
 
@@ -270,7 +304,7 @@ Of course, if that's not what you want, you can return any tree you want to repl
 
 ### Get the source of an AST
 
-`mcpy.unparse` is a function that converts an AST back into Python code.
+`mcpy.unparse` is a function that converts an AST back into Python source code.
 
 Because the code is backconverted from the AST representation, the result may differ in minute details of surface syntax, such as parenthesization, whitespace, and which quote syntax is used for quoting string literals.
 
@@ -283,7 +317,7 @@ To expand only one layer of inner macro invocations, call `expander.visit_once(t
 
 To use the current setting for recursive mode, use `expander.visit(tree)`. The default mode is recursive.
 
-If you need to temporarily run a second expander with different macro bindings, consult `expander.bindings` to grab what you need, and then use `mcpy.expander.expand_macros(tree, modified_bindings, expander.filename)` to invoke a new expander with the modified bindings.
+If you need to temporarily run a second expander with different macro bindings, consult `expander.bindings` to grab the macro functions you need (and their current names), and then use `mcpy.expander.expand_macros(tree, modified_bindings, expander.filename)` to invoke a new expander with the modified bindings.
 
 
 ### Macro expansion error reporting
