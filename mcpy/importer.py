@@ -90,6 +90,9 @@ def path_xstats(self, path):
 
         mtimes = []
         for macroimport in macroimports:
+            if macroimport.module is None:
+                lineno = macroimport.lineno  # comes from file, always has one
+                raise SyntaxError(f"{path}{lineno}: missing module name in macro-import")
             absname = importlib.util.resolve_name('.' * macroimport.level + macroimport.module, package_absname)
             spec = importlib.util.find_spec(absname)
             origin = spec.origin
