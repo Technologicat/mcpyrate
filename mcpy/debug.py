@@ -37,7 +37,7 @@ def show_bindings(tree, *, syntax, expander, **kw):
     of the corresponding macro function.
 
     Any bindings that have an uuid as part of the name are hygienically
-    unquoted macros. These make a per-session global binding across all modules.
+    unquoted macros. These make a per-process global binding across all modules.
     """
     if syntax != "name":
         raise SyntaxError("show_bindings is an identifier macro only")
