@@ -7,6 +7,7 @@ __all__ = ['capture', 'lookup', 'astify', 'unastify',
            'expand1', 'expand']
 
 import ast
+import pickle
 from .core import _hygienic_bindings
 from .expander import expand_macros
 from .markers import ASTMarker, get_markers
@@ -32,8 +33,8 @@ class CaptureLater(QuasiquoteMarker):  # like MacroPy's `Captured`
 
 # --------------------------------------------------------------------------------
 
-# Hygienically captured run-time values.
-_hygienic_registry = {}
+# Hygienically captured run-time values... but to support `.pyc` caching, we can't use a per-process dictionary.
+# _hygienic_registry = {}
 
 def _mcpy_quotes_attr(attr):
     """Create an AST that, when compiled and run, looks up `mcpy.quotes.attr` in `Load` context."""
@@ -54,27 +55,68 @@ def _capture_into(mapping, value, basename):
         mapping[key] = value
     return key
 
-def capture(value, basename):
-    """Store value into the hygienic capture registry.
+def capture(value, name):
+    """Hygienically capture a run-time value.
 
-    `value`:    Any run-time value.
-    `basename`: Basename for gensymming a unique key for the value.
-                Does not need to be an identifier.
+    `value`: A run-time value. Must be picklable.
+    `name`:  A human-readable name.
 
-    The return value is an AST that, when compiled and run, looks up the
-    captured value. Each unique value (by `id`) is only stored once.
+    The return value is an AST that, when compiled and run, returns the
+    captured value (even in another Python process later).
 
-    Hygienically captured macros are treated using a different mechanism;
-    see `mcpy.core._hygienic_bindings`.
+    Hygienically captured macro invocations are treated using a different
+    mechanism; see `mcpy.core._hygienic_bindings`.
     """
-    key = _capture_into(_hygienic_registry, value, basename)
+    # If we didn't need to consider bytecode caching, we could just store the
+    # value in a registry that is populated at macro expansion time. Each
+    # unique value (by `id`) could be stored only once.
+    #
+    # key = _capture_into(_hygienic_registry, value, name)
+    # return ast.Call(_mcpy_quotes_attr("lookup"),
+    #                 [ast.Constant(value=key)],
+    #                 [])
+
+    # But we want to support bytecode caching. To avoid introducing hard-to-find
+    # bugs into user code, we must provide consistent semantics, regardless of
+    # whether updating of the bytecode cache is actually enabled or not (see
+    # `sys.dont_write_bytecode`).
+    #
+    # If the macro expansion result is to be re-used from a `.pyc`, we must
+    # serialize and store the captured value to disk, so that values from
+    # "macro expansion time last week" remain available when the `.pyc` is
+    # loaded in another Python process, much later.
+    #
+    # Modules are macro-expanded independently (no global finalization for the
+    # whole codebase), and a `.pyc` may indeed later get loaded into some other
+    # codebase that imports the same module, so we can't make a centralized
+    # registry, like we could without bytecode caching (for the current process).
+    #
+    # So really pretty much the only thing we can do reliably and simply is to
+    # store a fresh serialized copy of the value at the capture location in the
+    # source code, independently at each capture location.
+    #
+    # Putting these considerations together, we pickle the value, causing a copy
+    # and serialization.
+    #
+    frozen_value = pickle.dumps(value)
     return ast.Call(_mcpy_quotes_attr("lookup"),
-                    [ast.Constant(value=key)],
+                    [ast.Tuple(elts=[ast.Constant(value=name),  # for human-readability of expanded code
+                                     ast.Constant(value=frozen_value)])],
                     [])
 
+_lookup_cache = {}
 def lookup(key):
     """Look up a hygienically captured run-time value."""
-    return _hygienic_registry[key]
+    # if type(key) is str:  # captured in sys.dont_write_bytecode mode, in this process
+    #     return _hygienic_registry[key]
+    # else:  # frozen into macro-expanded code
+    #     name, frozen_value = key
+    #     return pickle.loads(frozen_value)
+    name, frozen_value = key
+    cachekey = (name, id(frozen_value))  # id() so each capture instance behaves independently
+    if cachekey not in _lookup_cache:
+        _lookup_cache[cachekey] = pickle.loads(frozen_value)
+    return _lookup_cache[cachekey]
 
 # --------------------------------------------------------------------------------
 
@@ -334,8 +376,19 @@ def h(tree, *, syntax, expander, **kw):
     Supports also values that have no meaningful `repr`. The value is captured
     at the use site of the surrounding `q`.
 
+    The value is frozen into the expanded source code as a pickled blob,
+    separately at each use site of `h[]`. Thus the value must be picklable,
+    and each capture will pickle it again.
+
+    This is done to ensure the value will remain available, when the
+    already-expanded code (due to `.pyc` caching) runs again in another
+    Python process. (In other words, values from "macro expansion time
+    last week" would not otherwise be available.)
+
     Supports also macros. To hygienically splice a macro invocation, `h[]` only
-    the macro name.
+    the macro name. Macro captures are not pickled; they simply extend the bindings
+    of the expander (with a uniqified macro name) that is expanding the use site of
+    the surrounding `q`.
     """
     if syntax != "expr":
         raise SyntaxError("h is an expr macro only")

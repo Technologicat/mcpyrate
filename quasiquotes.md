@@ -164,9 +164,13 @@ to really call the function you meant, and not some other function that just
 happened to have the same name at the use site.
 
 To mark a value you want to be unquoted hygienically, use the `h[]`
-(hygienic-unquote) operator inside a `q[]`. Each unique hygienic-unquoted value,
-in the sense of `id`, is stored exactly once, regardless of how many times it is
-`h[]`'d across the codebase.
+(hygienic-unquote) operator inside a `q[]`.
+
+In order for `mcpy` to support bytecode caching (`.pyc`), the value is pickled,
+separately for each invocation of `h[]`. When the value is looked up at run
+time, it is automatically unpickled the first time it is accessed in a given
+Python process. Further accesses, by the same invocation of `h[]`, then refer
+to the same object.
 
 Because `h[]` is essentially a bind operation, the result of `h[expr]` will
 forever point to the value `expr` had at capture time:
@@ -182,15 +186,9 @@ forever point to the value `expr` had at capture time:
     # yourcat -> AST that, when compiled and run,
     #            resolves to the value "scottishfold".
 
-So if you have an object or an array, you might want to `h[]` just the thing
-itself, and perform any attribute or subscript accesses on the result:
-
-    q[h[cat].wantsfood]
-    q[h[shoppinglist][0]]
-
-This way, any later modifications to the state of `cat`, or to the contents of
-`shoppinglist`, will be seen by the code that uses the hygienically unquoted
-value.
+If you want to `h[]` an object or an array, keep in mind that **the current
+value will be pickled** and that pickled copy becomes the thing the `h[]`
+refers to.
 
 
 #### Advanced uses of non-hygienic quasiquoting
@@ -204,9 +202,9 @@ techniques that are sometimes useful:
     That value is then intended to be referred to, by that name, at the macro
     use site. For example, the `it` in the classic *anaphoric if*.
 
-    This is sometimes so useful that also Lisps that have a macro system that
-    is hygienic by default (such as Scheme and Racket), provide a way to
-    selectively *break hygiene*.
+    This is occasionally so useful that also Lisps that have a macro system
+    that is hygienic by default (such as Scheme and Racket), provide a way
+    to selectively *break hygiene*.
 
     For example, in Racket it's possible to produce a `return` "keyword" using
     this approach, by binding the function's escape continuation to a variable
@@ -251,44 +249,6 @@ expressions that evaluate to constants, to built-in containers containing
 constants, or to trees of such containers, where all leaves are constants.
 
 
-## Memory usage of the hygienic capture system
-
-The hygienic capture occurs anew each time `q[]` expands (inside your macro
-definition). So for each `h[]` in a macro definition, a capture operation will
-execute for each *invocation* of the macro. It must work like this in order to
-always capture the right thing.
-
-However, only unique values, determined by their `id()`, are stored in the
-hygienic capture registry. Capturing the same value again just transforms
-into a lookup using the key for the already existing value.
-
-Currently, these captures are never deleted, so this potentially produces a
-memory leak; but a mild one that depends only on lexical properties of the
-codebase that uses macros.
-
-The memory required for the hygienic captures is proportional to the number of
-times `h[]` occurs in each macro definition, times the number of invocations of
-that macro in the target codebase, summed over all macros invoked by the target
-codebase. Furthermore, each item is only a string key, paired with an object
-reference, so that in itself doesn't take much memory.
-
-Another question is how much memory the object itself takes, since it'll never
-become unreachable. But the most common use case of hygienic unquoting is to
-safely refer to a top-level function imported at the macro definition site, so
-it's usually just a top-level function object. These aren't typically that
-large.
-
-Critically, the memory usage does not depend on how many times the final
-expanded code is called. The expanded code contains only lookups, no captures.
-
-So in a majority of realistic use cases, not deleting the captures is just fine.
-
-One exception is a long-lived REPL session involving many reloads of macro
-definitions (to test interactively in an agile way, while developing macros). In
-such a use case, if those macros use `q[h[]]`, the memory usage of the capture
-registry will grow at each reload (as the uses of `h[]` get expanded).
-
-
 ## For Common Lispers
 
 The `mcpy` equivalent of the Common Lisp macro-implementation pattern, where one
@@ -298,12 +258,9 @@ then unquotes the new name in the quasiquoted code, looks like this:
     hygx = q[h[x]]
     tree = q[...a[hygx]...]
 
-The implementation details differ a bit, but such a uniqifying bind is
-essentially what `h[]` does.
-
-It's allowed, but not necessary to write it like this; you can also `h[x]` the
-same thing multiple times, since only unique values result in a new entry in the
-capture registry.
+Note in `mcpy` the `h[]` operator pickles its input, to support storing
+macro-expanded code using hygienically unquoted values into a bytecode cache
+(`.pyc`).
 
 
 ## Python vs. Lisp
