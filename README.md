@@ -31,7 +31,12 @@ This fork adds a lot of features over `mcpy` 2.0.0:
     - Useful for second-order macros that need to process a quasiquoted code section at macro expansion time, before the quasiquoted tree has a chance to run. (As usual, when it runs, it converts itself into a direct AST.)
 - **Identifier (a.k.a. name) macros**
   - Can be used for creating magic variables that may only appear inside specific macro invocations, erroring out at macro expansion time if they appear anywhere else.
-  - Opt-in. Declare by using the `@mcpy.namemacro` decorator on your macro function. Place it outermost.
+  - Opt-in. Declare by using the `@namemacro` decorator on your macro function. Place it outermost (along with `@parametricmacro`, if used too).
+- **Macro arguments**. Inspired by MacroPy, but slightly different.
+  - Opt-in. Declare by using the `@parametricmacro` decorator on your macro function (along with `@namemacro`, if used too).
+  - Use bracket syntax to invoke, e.g. `macroname[arg0, ...][expr]`. To send no args, invoke like a non-parametric macro, `macroname[expr]`.
+  - For a parametric macro, `macroname[arg0, ...]` works in `expr`, `block` and `decorator` macro invocations in place of a bare `macroname`.
+  - The named parameter `args` is a raw `list` of the macro argument ASTs. It is the empty list if no args were sent, or if the macro function is not declared as parametric.
 - **Bytecode caching**:
   - `.pyc` bytecode caches are created and kept up-to-date. This saves the macro
     expansion cost at startup for modules that have not changed.
@@ -44,7 +49,7 @@ This fork adds a lot of features over `mcpy` 2.0.0:
     macro-dependency tree of a source file is changed, Python will treat that
     source file as "changed", thus re-expanding and recompiling it (hence,
     updating the corresponding `.pyc`).
-  - **CAUTION**: [PEP 552 - Deterministic pycs](https://www.python.org/dev/peps/pep-0552/) is not supported; we support only the default *mtime* invalidation mode.
+  - **CAUTION**: [PEP 552 - Deterministic pycs](https://www.python.org/dev/peps/pep-0552/) is not supported; we support only the default *mtime* invalidation mode, at least for now.
 - **Conveniences**:
   - The expander automatically fixes missing `ctx` attributes in the AST, so you don't need to care about those in your macros.
   - Walker with a state stack, à la MacroPy, to easily temporarily override the state for a given subtree.
@@ -218,6 +223,37 @@ If you get an error saying an AST node is missing the mandatory field `lineno`, 
 See [`mcpy.core.BaseMacroExpander`](mcpy/core.py) and [`mcpy.expander.MacroExpander`](mcpy/expander.py) for the expander API; it's just a few methods and attributes.
 
 
+### Macro arguments
+
+*New in v3.0.0.*
+
+Macro arguments are a rarely needed feature. Hence, the expander interprets
+macro argument syntax only for macros that are declared as parametric. Declare
+by using the `@parametricmacro` decorator on your macro function. Place it
+outermost (along with `@namemacro`, if used too).
+
+Once a macro has been declared parametric, macro arguments are sent by calling
+`macroname` with bracket syntax:
+
+     macroname[arg0, ...]
+
+Such an expression can appear in place of a bare `macroname` in an `expr`,
+`block` and `decorator` macro invocation. `name` macro invocations do not
+take macro arguments.
+
+To invoke a parametric macro with no arguments, just use bare `macroname`,
+as if it was not parametric.
+
+For simplicity, macro arguments are always positional.
+
+The parametric macro function receives macro arguments as the `args` named
+parameter. It is a raw `list` of the ASTs `arg0` and so on. If the macro
+was invoked without macro arguments, `args` is an empty list. Any macro
+invocations inside the macro arguments are expanded after the primary
+macro invocation itself. To expand them first, use `expander.visit`
+in your macro implementation, as usual.
+
+
 ### The named parameters
 
 Full list as of v3.0.0, in alphabetical order:
@@ -260,23 +296,23 @@ The other three work roughly the same as in MacroPy (except that in `mcpy`, macr
 
 #### Identifier macros
 
-Identifier macros are a rarely used feature, but one that is indispensable for that rare use case. To avoid clutter in the dispatch logic of most macros, if a macro function wants to be called as an identifier macro, it must explicitly opt in. Declare by using the `@namemacro` decorator on your macro function. Place it outermost.
+*New in v3.0.0.*
 
-A basic use case of identifier macros is where you just need to paste some boilerplate code without any parameters.
+Identifier macros are a rarely used feature, but one that is indispensable for that rare use case. To avoid clutter in the dispatch logic of most macros, if a macro function wants to be called as an identifier macro, it must explicitly opt in. Declare by using the `@namemacro` decorator on your macro function. Place it outermost (along with `@parametricmacro`, if used too).
 
-But the main use case why this feature exists is to create magic variables that are allowed to appear only in certain contexts. Here's the pattern:
+The main use case, why this feature exists, is to create magic variables that are allowed to appear only in certain contexts. Here's the pattern:
 
 ```python
 from mcpy import namemacro
 from mcpy.utilities import NestingLevelTracker
 
-_level = NestingLevelTracker()
+_mymacro_level = NestingLevelTracker()
 
 # a valid context for `it`
 def mymacro(tree, *, syntax, expander, **kw):
     if syntax != "expr":
         raise SyntaxError("`mymacro` is an expr macro only")
-    with _level.changed_by(+1):
+    with _mymacro_level.changed_by(+1):
         tree = expander.visit_recursively(tree)  # this expands any `it` inside
         # Macro code goes here. You'll want it to define an actual
         # run-time `it` for the invocation site to refer to.
@@ -288,18 +324,18 @@ def mymacro(tree, *, syntax, expander, **kw):
 def it(tree, *, syntax, **kw):
     if syntax != "name":
         raise SyntaxError("`it` is a name macro only")
-    if _level.value < 1:
+    if _mymacro_level.value < 1:
         raise SyntaxError("`it` may only appear within a `mymacro[...]`")
     return tree
 ```
 
-This way any invalid, stray mentions of the magic variable `it` trigger a macro-expansion-time error.
+This way any invalid, stray mentions of the magic variable `it` trigger an error at macro expansion time.
 
 If you want to expand only `it` inside an invocation of `mymacro[...]` (thus checking that the mentions are valid), leaving other nested macro invocations untouched, that's also possible. See below how to temporarily run a second expander with different bindings (from which you can omit everything but `it`).
 
 If you want to allow using the macro name (i.e. whatever name it's bound to at the use site) of your identifier macro as a run-time variable name, `return tree` without modifying it. This tells the expander - after checking with you that the use was legal - to treat it as a regular name.
 
-Of course, if that's not what you want, you can return any tree you want to replace the original with - after all, an identifier macro is just a macro.
+Of course, if that's not what you want, you can return any tree you want to replace the original with - after all, an identifier macro is just a macro, and an identifier is just a special kind of expression.
 
 
 ### Get the source of an AST
