@@ -15,7 +15,7 @@ This layer provides the actual macro expander, defining:
 __all__ = ['namemacro', 'isnamemacro',
            'parametricmacro', 'isparametricmacro',
            'MacroExpander', 'MacroCollector',
-           'expand_macros', 'find_macros']
+           'expand_macros', 'find_macros', 'is_macro_import']
 
 import importlib
 import importlib.util  # in PyPy3, this must be imported explicitly
@@ -445,7 +445,7 @@ def find_macros(tree, *, filename, reload=False):
     '''
     bindings = {}
     for index, statement in enumerate(tree.body):
-        if _is_macro_import(statement):
+        if is_macro_import(statement):
             module_absname, more_bindings = _get_macros(statement, filename=filename, reload=reload)
             bindings.update(more_bindings)
             # Remove all names to prevent the macros being accidentally used as regular run-time objects.
@@ -455,7 +455,7 @@ def find_macros(tree, *, filename, reload=False):
 
     return bindings
 
-def _is_macro_import(statement):
+def is_macro_import(statement):
     '''
     A "macro import" is a statement of the form::
 

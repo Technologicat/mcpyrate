@@ -78,7 +78,7 @@ def path_xstats(self, path):
         # of `path` (only)?
         with tokenize.open(path) as sourcefile:
             tree = ast.parse(sourcefile.read())
-        macroimports = [stmt for stmt in tree.body if expander._is_macro_import(stmt)]
+        macroimports = [stmt for stmt in tree.body if expander.is_macro_import(stmt)]
         has_relative_imports = any(macroimport.level for macroimport in macroimports)
 
         package_absname = None
