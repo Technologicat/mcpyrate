@@ -16,12 +16,12 @@ _step_expansion_level = NestingLevelTracker()
 def step_expansion(tree, *, args, syntax, expander, **kw):
     """[syntax, expr/block] Macroexpand `tree`, showing source code at each step of the expansion."""
     if syntax not in ("expr", "block"):
-        raise SyntaxError("step_expansion is an expr and block macro only")
+        raise SyntaxError("`step_expansion` is an expr and block macro only")
 
     formatter = unparse
     if args:
         if len(args) != 1:
-            raise SyntaxError("expected step_expansion['mode_str']")
+            raise SyntaxError("expected `step_expansion['mode_str']`")
         arg = args[0]
         if type(arg) is ast.Constant:
             mode = arg.value
@@ -67,7 +67,7 @@ def show_bindings(tree, *, syntax, expander, **kw):
     unquoted macros. These make a per-process global binding across all modules.
     """
     if syntax != "name":
-        raise SyntaxError("show_bindings is an identifier macro only")
+        raise SyntaxError("`show_bindings` is an identifier macro only")
     print(f"Macro expander bindings for module {expander.filename} (at expansion time):", file=stderr)
     for k, v in sorted(expander.bindings.items()):
         print(f"    {k}: {format_macrofunction(v)}", file=stderr)

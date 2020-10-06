@@ -315,7 +315,7 @@ def _expand_quasiquotes(tree, expander):
 def q(tree, *, syntax, expander, **kw):
     """[syntax, expr/block] quasiquote. Lift code into its AST representation."""
     if syntax not in ("expr", "block"):
-        raise SyntaxError("q is an expr and block macro only")
+        raise SyntaxError("`q` is an expr and block macro only")
     with _quotelevel.changed_by(+1):
         tree = _expand_quasiquotes(tree, expander)  # expand any inner quotes and unquotes first
         tree = astify(tree, expander=expander)  # Magic part of `q`. Supply `expander` for `h[macro]` detection.
@@ -336,9 +336,9 @@ def u(tree, *, syntax, expander, **kw):
     The value is lifted into an AST that re-constructs that value.
     """
     if syntax != "expr":
-        raise SyntaxError("u is an expr macro only")
+        raise SyntaxError("`u` is an expr macro only")
     if _quotelevel.value < 1:
-        raise SyntaxError("u[] encountered while quotelevel < 1")
+        raise SyntaxError("`u` encountered while quotelevel < 1")
     with _quotelevel.changed_by(-1):
         _unquote_expand(tree, expander)
         # We want to generate an AST that compiles to the *value* of `v`. But when
@@ -352,27 +352,27 @@ def n(tree, *, syntax, **kw):
     The resulting node's `ctx` is filled in automatically by the macro expander later.
     """
     if syntax != "expr":
-        raise SyntaxError("n is an expr macro only")
+        raise SyntaxError("`n` is an expr macro only")
     if _quotelevel.value < 1:
-        raise SyntaxError("n[] encountered while quotelevel < 1")
+        raise SyntaxError("`n` encountered while quotelevel < 1")
     with _quotelevel.changed_by(-1):
         return ASTLiteral(astify(ast.Name(id=ASTLiteral(tree))))
 
 def a(tree, *, syntax, **kw):
     """[syntax, expr] AST-unquote. Splice an AST into a quasiquote."""
     if syntax != "expr":
-        raise SyntaxError("a is an expr macro only")
+        raise SyntaxError("`a` is an expr macro only")
     if _quotelevel.value < 1:
-        raise SyntaxError("a[] encountered while quotelevel < 1")
+        raise SyntaxError("`a` encountered while quotelevel < 1")
     with _quotelevel.changed_by(-1):
         return ASTLiteral(tree)
 
 def s(tree, *, syntax, **kw):
     """[syntax, expr] list-unquote. Splice a `list` of ASTs, as an `ast.List`, into a quasiquote."""
     if syntax != "expr":
-        raise SyntaxError("s is an expr macro only")
+        raise SyntaxError("`s` is an expr macro only")
     if _quotelevel.value < 1:
-        raise SyntaxError("s[] encountered while quotelevel < 1")
+        raise SyntaxError("`s` encountered while quotelevel < 1")
     return ASTLiteral(ast.Call(ast.Attribute(value=_mcpy_quotes_attr('ast'),
                                              attr='List'),
                                [],
@@ -399,9 +399,9 @@ def h(tree, *, syntax, expander, **kw):
     the surrounding `q`.
     """
     if syntax != "expr":
-        raise SyntaxError("h is an expr macro only")
+        raise SyntaxError("`h` is an expr macro only")
     if _quotelevel.value < 1:
-        raise SyntaxError("h[] encountered while quotelevel < 1")
+        raise SyntaxError("`h` encountered while quotelevel < 1")
     with _quotelevel.changed_by(-1):
         name = unparse(tree)
         _unquote_expand(tree, expander)
@@ -418,7 +418,7 @@ def expand1q(tree, *, syntax, **kw):
     If your tree is already quasiquoted, use `expand1` instead.
     '''
     if syntax not in ("expr", "block"):
-        raise SyntaxError("expand1q is an expr and block macro only")
+        raise SyntaxError("`expand1q` is an expr and block macro only")
     tree = q(tree, syntax=syntax, **kw)
     return expand1(tree, syntax=syntax, **kw)
 
@@ -431,7 +431,7 @@ def expandq(tree, *, syntax, **kw):
     If your tree is already quasiquoted, use `expand` instead.
     '''
     if syntax not in ("expr", "block"):
-        raise SyntaxError("expandq is an expr and block macro only")
+        raise SyntaxError("`expandq` is an expr and block macro only")
     tree = q(tree, syntax=syntax, **kw)
     return expand(tree, syntax=syntax, **kw)
 
@@ -452,7 +452,7 @@ def expand1(tree, *, syntax, expander, **kw):
     `expand1[q[...]]`.
     '''
     if syntax not in ("expr", "block"):
-        raise SyntaxError("expand1 is an expr and block macro only")
+        raise SyntaxError("`expand1` is an expr and block macro only")
     # We first invert the quasiquote operation, then use the garden variety
     # `expander` on the result, and then re-quote the expanded AST.
     #
@@ -479,7 +479,7 @@ def expand(tree, *, syntax, expander, **kw):
     `expand[q[...]]`.
     '''
     if syntax not in ("expr", "block"):
-        raise SyntaxError("expand is an expr and block macro only")
+        raise SyntaxError("`expand` is an expr and block macro only")
     tree = expander.visit_once(tree)  # make the quotes inside this invocation expand first; -> Done(body=...)
     # Always use recursive mode, because `expand[...]` may appear inside
     # another macro invocation that uses `visit_once` (which sets the expander
