@@ -250,9 +250,6 @@ class MacroCollector(NodeVisitorListMixin, NodeVisitor):
     def clear(self):
         self.collected = set()
 
-    def isbound(self, name):
-        return self.expander.isbound(name)
-
     def visit_Subscript(self, subscript):
         candidate = subscript.value
         macroname, macroargs = destructure_candidate(candidate)
@@ -300,7 +297,7 @@ class MacroCollector(NodeVisitorListMixin, NodeVisitor):
 
     def visit_Name(self, name):
         macroname = name.id
-        if self.isbound(macroname) and isnamemacro(self.expander.bindings[macroname]):
+        if self.expander.isbound(macroname) and isnamemacro(self.expander.bindings[macroname]):
             self.collected.add((macroname, 'name'))
 
 
