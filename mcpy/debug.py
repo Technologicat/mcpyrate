@@ -3,17 +3,37 @@
 
 import ast
 from sys import stderr
-from .expander import MacroCollector, namemacro
+from .astdumper import dump
+from .expander import MacroCollector, namemacro, parametricmacro
 from .unparser import unparse
 
-# TODO: indent the output, to support nested `step_expansion` invocations properly.
-def step_expansion(tree, *, syntax, expander, **kw):
+# TODO: Indent the output, to support nested `step_expansion` invocations properly.
+# TODO: Use an `utilities.NestingLevelTracker`?
+@parametricmacro
+def step_expansion(tree, *, args, syntax, expander, **kw):
     """[syntax, expr/block] Macroexpand `tree`, showing source code at each step of the expansion."""
     if syntax not in ("expr", "block"):
         raise SyntaxError("step_expansion is an expr and block macro only")
+
+    formatter = unparse
+    if args:
+        if len(args) != 1:
+            raise SyntaxError("expected step_expansion['mode_str']")
+        arg = args[0]
+        if type(arg) is ast.Constant:
+            mode = arg.value
+        elif type(arg) is ast.Str:  # up to Python 3.7
+            mode = arg.s
+        else:
+            raise TypeError(f"expected mode str, got {repr(arg)} {unparse(arg)}")
+        if mode not in ("unparse", "dump"):
+            raise ValueError(f"expected mode either 'unparse' or 'dump', got {repr(mode)}")
+        if mode == "dump":
+            formatter = dump
+
     tag = id(tree)
     print(f"****Tree 0x{tag:x} before macroexpansion:", file=stderr)
-    print(unparse(tree), file=stderr)
+    print(formatter(tree), file=stderr)
     mc = MacroCollector(expander)
     mc.visit(tree)
     step = 0
@@ -22,7 +42,7 @@ def step_expansion(tree, *, syntax, expander, **kw):
         tree = expander.visit_once(tree)  # -> Done(body=...)
         tree = tree.body
         print(f"****Tree 0x{tag:x} after step {step}:", file=stderr)
-        print(unparse(tree), file=stderr)
+        print(formatter(tree), file=stderr)
         mc.clear()
         mc.visit(tree)
     plural = "s" if step != 1 else ""
