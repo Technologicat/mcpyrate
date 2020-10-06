@@ -1,7 +1,8 @@
 # -*- coding: utf-8; -*-
 '''Expander core; essentially, how to apply a macro invocation.'''
 
-__all__ = ['MacroExpansionError',
+__all__ = ['format_location',
+           'MacroExpansionError',
            'MacroExpanderMarker',
            'Done',
            'BaseMacroExpander',
@@ -18,6 +19,12 @@ from .utilities import flatten_suite, NodeTransformerListMixin
 # Hygienically captured macro functions.
 # Global registry (across all modules being expanded) with unique keys, filled in by `mcpy.quotes`.
 _hygienic_bindings = {}
+
+def format_location(filename, tree, sourcecode):
+    '''Format a source code location in a standard way, for error messages.'''
+    lineno = tree.lineno if hasattr(tree, 'lineno') else None
+    sep = " " if "\n" not in sourcecode else "\n"
+    return f'at {filename}:{lineno}:{sep}{sourcecode}'
 
 class MacroExpansionError(Exception):
     '''Error during macro expansion.'''
@@ -144,16 +151,13 @@ class BaseMacroExpander(NodeTransformerListMixin, NodeTransformer):
             'invocation': target})
 
         approx_sourcecode_before_expansion = unparse_with_fallbacks(target)
-        def usesite_location():
-            lineno = target.lineno if hasattr(target, 'lineno') else None
-            sep = " " if "\n" not in approx_sourcecode_before_expansion else "\n"
-            return f'at {self.filename}:{lineno}:{sep}{approx_sourcecode_before_expansion}'
+        loc = format_location(self.filename, target, approx_sourcecode_before_expansion)
 
         # Expand the macro.
         try:
             expansion = _apply_macro(macro, tree, kw)
         except Exception as err:
-            msg = usesite_location()
+            msg = loc
             if isinstance(err, MacroExpansionError) and err.__cause__:  # telescope nested use site reports
                 oldmsg = err.args[0]
                 if oldmsg[0] == "\n":
@@ -174,9 +178,8 @@ class BaseMacroExpander(NodeTransformerListMixin, NodeTransformer):
             else:
                 raise MacroExpansionError
         except Exception:
-            msg = usesite_location()
             reason = f"expected macro to return AST, iterable or None; got {type(expansion)} with value {repr(expansion)}"
-            msg = f"{msg}\n{reason}"
+            msg = f"{loc}\n{reason}"
             raise MacroExpansionError(msg)
 
         return self._visit_expansion(expansion, target, fill_root_location)

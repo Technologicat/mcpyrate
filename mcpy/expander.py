@@ -23,7 +23,7 @@ import importlib
 import importlib.util  # in PyPy3, this must be imported explicitly
 from ast import (Name, Subscript, Tuple, Import, ImportFrom, alias, AST, Expr, Constant,
                  copy_location, iter_fields, NodeVisitor)
-from .core import BaseMacroExpander, global_postprocess, Done
+from .core import BaseMacroExpander, global_postprocess, Done, format_location
 from .importer import resolve_package
 from .unparser import unparse_with_fallbacks
 from .utilities import NodeVisitorListMixin
@@ -398,21 +398,20 @@ def _get_macros(macroimport, *, filename, reload=False):
     Use the `reload` flag only when implementing a REPL, because it'll refresh modules,
     causing different uses of the same macros to point to different function objects.
     '''
-    lineno = macroimport.lineno if hasattr(macroimport, "lineno") else None
-    if macroimport.module is None:
-        raise SyntaxError(f"{filename}:{lineno}: missing module name in macro-import")
-
-    try:  # resolve relative macro-import, if actually reading a .py file
-        package_absname = None
-        if macroimport.level and filename.endswith(".py"):
+    package_absname = None
+    if macroimport.level and filename.endswith(".py"):
+        try:
             package_absname = resolve_package(filename)
-    except (ValueError, ImportError) as err:
+        except (ValueError, ImportError) as err:
+            raise ImportError(f"while resolving absolute package name of {filename}, which uses relative macro-imports") from err
+
+    if macroimport.module is None:
         # fallbacks may trigger if the macro-import is programmatically generated.
         approx_sourcecode = unparse_with_fallbacks(macroimport)
-        sep = " " if "\n" not in approx_sourcecode else "\n"
-        raise ImportError(f"while resolving relative macro-import at {filename}:{lineno}:{sep}{approx_sourcecode}") from err
-
+        loc = format_location(filename, macroimport, approx_sourcecode)
+        raise SyntaxError(f"missing module name in macro-import {loc}")
     module_absname = importlib.util.resolve_name('.' * macroimport.level + macroimport.module, package_absname)
+
     module = importlib.import_module(module_absname)
     if reload:
         module = importlib.reload(module)

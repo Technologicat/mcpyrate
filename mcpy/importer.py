@@ -11,9 +11,10 @@ import sys
 import os
 import importlib.util
 from importlib.machinery import FileFinder, SourceFileLoader
-from .core import MacroExpansionError
+from .core import MacroExpansionError, format_location
 from . import expander
 from .markers import get_markers
+from .unparser import unparse_with_fallbacks
 
 def resolve_package(filename):  # TODO: for now, `guess_package`, really. Check the docs again.
     """Resolve absolute Python package name for .py source file `filename`.
@@ -91,10 +92,12 @@ def path_xstats(self, path):
         mtimes = []
         for macroimport in macroimports:
             if macroimport.module is None:
-                lineno = macroimport.lineno  # comes from file, always has one
-                raise SyntaxError(f"{path}:{lineno}: missing module name in macro-import")
-            absname = importlib.util.resolve_name('.' * macroimport.level + macroimport.module, package_absname)
-            spec = importlib.util.find_spec(absname)
+                approx_sourcecode = unparse_with_fallbacks(macroimport)
+                loc = format_location(path, macroimport, approx_sourcecode)
+                raise SyntaxError(f"missing module name in macro-import {loc}")
+            module_absname = importlib.util.resolve_name('.' * macroimport.level + macroimport.module, package_absname)
+
+            spec = importlib.util.find_spec(module_absname)
             origin = spec.origin
             stats = path_xstats(self, origin)
             mtimes.append(stats['mtime'])
