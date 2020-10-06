@@ -16,6 +16,7 @@ def count_sloc(code, *, blanks, docstrings, comments):
     if not docstrings:
         # TODO: make sure it's a docstring (and not some other """...""" string)
         code = re.sub(r'""".*?"""', r'', code, flags=(re.MULTILINE + re.DOTALL))
+        code = re.sub(r"'''.*?'''", r'', code, flags=(re.MULTILINE + re.DOTALL))
     lines = code.split("\n")
     if not blanks:
         lines = [line for line in lines if line.strip()]
