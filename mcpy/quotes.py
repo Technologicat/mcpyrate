@@ -184,6 +184,12 @@ def astify(x, expander=None):  # like MacroPy's `ast_repr`
             return ast.Set(elts=list(recurse(elt) for elt in x))
 
         elif isinstance(x, ast.AST):
+            # TODO: Add support for astifying ASTMarkers?
+            # TODO: Otherwise the same as regular AST node, but need to refer to the
+            # TODO: module it is defined in, and we don't have everything in scope here.
+            if isinstance(x, ASTMarker):
+                raise TypeError(f"Cannot astify internal AST markers, got {unparse(x)}")
+
             # The magic is in the Call. Take apart the input AST, and construct a
             # new AST, that (when compiled and run) will re-generate the input AST.
             #
@@ -303,6 +309,8 @@ def _expand_quasiquotes(tree, expander):
     # thus leaving them alone.
     bindings = {k: v for k, v in expander.bindings.items() if v in (q, u, n, a, s, h)}
     return expand_macros(tree, bindings, filename=expander.filename)
+    # This would be nicer, but doesn't work here, because it may leave `Done` ASTMarkers.
+    # return MacroExpander(bindings, expander.filename).visit(tree)
 
 def q(tree, *, syntax, expander, **kw):
     """[syntax, expr/block] quasiquote. Lift code into its AST representation."""
