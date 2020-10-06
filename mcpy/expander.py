@@ -425,7 +425,7 @@ def _get_macros(macroimport, *, filename, reload=False):
         # fallbacks may trigger if the macro-import is programmatically generated.
         approx_sourcecode = unparse_with_fallbacks(macroimport)
         loc = format_location(filename, macroimport, approx_sourcecode)
-        raise SyntaxError(f"missing module name in macro-import {loc}")
+        raise SyntaxError(f"{loc}\nmissing module name in macro-import")
     module_absname = importlib.util.resolve_name('.' * macroimport.level + macroimport.module, package_absname)
 
     module = importlib.import_module(module_absname)
