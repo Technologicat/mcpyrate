@@ -78,7 +78,17 @@ class MacroExpander(BaseMacroExpander):
     '''The actual macro expander.'''
 
     def ismacrocall(self, macroname, macroargs):
-        '''Shorthand to detect a valid macro call to a macro bound in this expander.'''
+        '''Validate a macro call to a macro bound in this expander.
+
+        Use `destructure_candidate` to get `macroname` and `macroargs`.
+        A macro call is valid if both of the following hold:
+
+          - `macroname` is not `None`, and is bound to a macro function in this expander.
+          - `macroargs` is empty, or the binding for `macroname` is a `@parametricmacro`.
+
+        Name macros require `isnamemacro(self.bindings[macroname])`, and
+        ignore `macroargs`, but those are not handled by this function.
+        '''
         return (macroname and self.isbound(macroname) and
                 (not macroargs or isparametricmacro(self.bindings[macroname])))
 
