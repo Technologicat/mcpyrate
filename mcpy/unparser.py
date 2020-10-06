@@ -119,7 +119,6 @@ class Unparser:
             self.fill()
             self.write("$Module")
             self.enter()
-            self.fill()
             for stmt in t.body:
                 self.dispatch(stmt)
             self.leave()
