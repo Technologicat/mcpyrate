@@ -7,16 +7,11 @@ This layer provides the actual macro expander, defining:
        from ... import macros, ...
 
  - Macro invocation types:
-   - expr: `macroname[...]`, `macroname[arg0, ...][...]`
-
-   - block: `with macroname:`, `with macroname as result:`,
-            `with macroname[arg0, ...]:`, `with macroname[arg0, ...] as result:`
-
-   - decorator::
-         `@macroname`, `@macroname[arg0, ...]`
-
-   - name::
-         macroname
+   - expr:      `macroname[...]`, `macroname[arg0, ...][...]`
+   - block:     `with macroname:`, `with macroname as result:`,
+                `with macroname[arg0, ...]:`, `with macroname[arg0, ...] as result:`
+   - decorator: `@macroname`, `@macroname[arg0, ...]`
+   - name:      `macroname`
 '''
 
 __all__ = ['namemacro', 'isnamemacro',
@@ -206,8 +201,7 @@ class MacroExpander(BaseMacroExpander):
 
             macroname
 
-        Note no `...`; the `Name` node itself is the input tree for the macro.
-
+        The `Name` node itself is the input tree for the macro.
         Replace the `Name` node with the AST returned by the macro.
         '''
         if self.isbound(name.id) and isnamemacro(self.bindings[name.id]):
@@ -225,8 +219,8 @@ class MacroExpander(BaseMacroExpander):
                     new_tree = self.visit(new_tree)
                 else:
                     # When a magic variable expands in a valid surrounding context and
-                    # does `return tree`, the expander needs to know it has done its
-                    # context check, so it shouldn't be expanded again.
+                    # does `return tree`, the expander needs to know the context check
+                    # is done, so it won't be expanded again after the context exits.
                     new_tree = Done(new_tree)
         else:
             new_tree = name
@@ -236,11 +230,7 @@ class MacroExpander(BaseMacroExpander):
 class MacroCollector(NodeVisitorListMixin, NodeVisitor):
     '''Scan `tree` for macro invocations, with respect to given `expander`.
 
-    Collect a set of `(macroname, syntax)`. Constructor parameters:
-
-        - `expander`: a `MacroExpander` instance to query macro bindings from.
-
-    Usage::
+    Collect a set of `(macroname, syntax)`. Usage::
 
         mc = MacroCollector(expander)
         mc.visit(tree)
@@ -253,6 +243,7 @@ class MacroCollector(NodeVisitorListMixin, NodeVisitor):
     Sister class of the actual `MacroExpander`, mirroring its syntax detection.
     '''
     def __init__(self, expander):
+        '''`expander`: a `MacroExpander` instance to query macro bindings from.'''
         self.expander = expander
         self.clear()
 
