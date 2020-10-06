@@ -98,15 +98,17 @@ class Unparser:
             if isinstance(v, ast.AST):
                 self.dispatch(v)
             else:
-                self.fill(repr(v))
+                self.write(repr(v))
         self.fill(f"$ASTMarker<{tree.__class__.__name__}>")  # markers cannot be eval'd
         self.enter()
+        self.write(" ")
         if len(tree._fields) == 1 and tree._fields[0] == "body":
             write_field_value(tree.body)
         else:
             for k, v in ast.iter_fields(tree):
                 self.fill(k)
                 self.enter()
+                self.write(" ")
                 write_field_value(v)
                 self.leave()
         self.leave()
@@ -128,8 +130,7 @@ class Unparser:
     # stmt
     def _Expr(self, t):
         if self.debug:
-            self.fill()
-            self.write("$Expr")
+            self.fill("$Expr")
             self.enter()
             self.write(" ")
             self.dispatch(t.value)
