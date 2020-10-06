@@ -2,13 +2,15 @@
 """Macro debugging utilities."""
 
 import ast
+import textwrap
 from sys import stderr
 from .astdumper import dump
 from .expander import MacroCollector, namemacro, parametricmacro
 from .unparser import unparse
+from .utilities import NestingLevelTracker
 
-# TODO: Indent the output, to support nested `step_expansion` invocations properly.
-# TODO: Use an `utilities.NestingLevelTracker`?
+_step_expansion_level = NestingLevelTracker()
+
 @parametricmacro
 def step_expansion(tree, *, args, syntax, expander, **kw):
     """[syntax, expr/block] Macroexpand `tree`, showing source code at each step of the expansion."""
@@ -31,22 +33,26 @@ def step_expansion(tree, *, args, syntax, expander, **kw):
         if mode == "dump":
             formatter = dump
 
-    tag = id(tree)
-    print(f"****Tree 0x{tag:x} before macroexpansion:", file=stderr)
-    print(formatter(tree), file=stderr)
-    mc = MacroCollector(expander)
-    mc.visit(tree)
-    step = 0
-    while mc.collected:
-        step += 1
-        tree = expander.visit_once(tree)  # -> Done(body=...)
-        tree = tree.body
-        print(f"****Tree 0x{tag:x} after step {step}:", file=stderr)
-        print(formatter(tree), file=stderr)
-        mc.clear()
+    with _step_expansion_level.changed_by(+1):
+        indent = 2 * _step_expansion_level.value
+        stars = indent * '*'
+        moreindent = indent
+        tag = id(tree)
+        print(f"{stars}Tree 0x{tag:x} before macro expansion:", file=stderr)
+        print(textwrap.indent(formatter(tree), moreindent * ' '), file=stderr)
+        mc = MacroCollector(expander)
         mc.visit(tree)
-    plural = "s" if step != 1 else ""
-    print(f"****Tree 0x{tag:x} macroexpansion complete after {step} step{plural}.", file=stderr)
+        step = 0
+        while mc.collected:
+            step += 1
+            tree = expander.visit_once(tree)  # -> Done(body=...)
+            tree = tree.body
+            print(f"{stars}Tree 0x{tag:x} after step {step}:", file=stderr)
+            print(textwrap.indent(formatter(tree), moreindent * ' '), file=stderr)
+            mc.clear()
+            mc.visit(tree)
+        plural = "s" if step != 1 else ""
+        print(f"{stars}Tree 0x{tag:x} macro expansion complete after {step} step{plural}.", file=stderr)
     return tree
 
 @namemacro
