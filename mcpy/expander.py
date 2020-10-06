@@ -240,7 +240,7 @@ class MacroExpander(BaseMacroExpander):
 class MacroCollector(NodeVisitorListMixin, NodeVisitor):
     '''Scan `tree` for macro invocations, with respect to given `expander`.
 
-    Collect a set of `(macroname, syntax)`. Usage::
+    Collect a list of `(macroname, syntax)`. Usage::
 
         mc = MacroCollector(expander)
         mc.visit(tree)
@@ -258,13 +258,16 @@ class MacroCollector(NodeVisitorListMixin, NodeVisitor):
         self.clear()
 
     def clear(self):
-        self.collected = set()
+        self._seen = set()
+        self.collected = []
 
     def visit_Subscript(self, subscript):
         candidate = subscript.value
         macroname, macroargs = destructure_candidate(candidate)
         if self.expander.ismacrocall(macroname, macroargs):
-            self.collected.add((macroname, 'expr'))
+            key = (macroname, 'expr')
+            if key not in self._seen:
+                self.collected.append(key)
             self.visit(macroargs)
             # Don't `self.generic_visit(tree)`; that'll incorrectly detect
             # the name part as an identifier macro. Recurse only in the expr.
@@ -277,7 +280,9 @@ class MacroCollector(NodeVisitorListMixin, NodeVisitor):
         candidate = with_item.context_expr
         macroname, macroargs = destructure_candidate(candidate)
         if self.expander.ismacrocall(macroname, macroargs):
-            self.collected.add((macroname, 'block'))
+            key = (macroname, 'block')
+            if key not in self._seen:
+                self.collected.append(key)
             self.visit(macroargs)
             self.visit(withstmt.body)
         else:
@@ -294,7 +299,9 @@ class MacroCollector(NodeVisitorListMixin, NodeVisitor):
         if macros:
             for macro in macros:
                 macroname, macroargs = destructure_candidate(macro)
-                self.collected.add((macroname, 'decorator'))
+                key = (macroname, 'decorator')
+                if key not in self._seen:
+                    self.collected.append(key)
                 self.visit(macroargs)
             for decorator in others:
                 self.visit(decorator)
@@ -308,7 +315,9 @@ class MacroCollector(NodeVisitorListMixin, NodeVisitor):
     def visit_Name(self, name):
         macroname = name.id
         if self.expander.isbound(macroname) and isnamemacro(self.expander.bindings[macroname]):
-            self.collected.add((macroname, 'name'))
+            key = (macroname, 'name')
+            if key not in self._seen:
+                self.collected.append(key)
 
 
 def _add_coverage_dummy_node(tree, macronode, macroname):
