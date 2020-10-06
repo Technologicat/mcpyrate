@@ -1,6 +1,6 @@
 # -*- coding: utf-8; -*-
 
-__all__ = ["Walker"]
+__all__ = ["Walker", "SourceLocationInfoValidator"]
 
 from abc import ABCMeta, abstractmethod
 from ast import NodeTransformer
@@ -67,3 +67,20 @@ class Walker(NodeTransformer, metaclass=ABCMeta):
 
         Return value as in `ast.NodeTransformer`. If no changes, `return tree`.
         """
+
+
+class SourceLocationInfoValidator(Walker):
+    """Check that every node has `lineno` and `col_offset`.
+
+    We do this manually because it's a rather common occurrence when developing
+    macros to have them missing somewhere, and Python can't be arsed to tell us
+    *which* nodes are missing them.
+    """
+    required_fields = ['lineno', 'col_offset']
+
+    def transform(self, tree):
+        if tree not in self.state.ignore:
+            present = [hasattr(tree, x) for x in self.required_fields]
+            if not all(present):
+                self.collect((tree, [fieldname for fieldname, hasfield in zip(self.required_fields, present) if not hasfield]))
+        return tree

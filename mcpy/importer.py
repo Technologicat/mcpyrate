@@ -15,6 +15,7 @@ from .core import MacroExpansionError, format_location
 from . import expander
 from .markers import get_markers
 from .unparser import unparse_with_fallbacks
+from .walker import SourceLocationInfoValidator
 
 def resolve_package(filename):  # TODO: for now, `guess_package`, really. Check the docs again.
     """Resolve absolute Python package name for .py source file `filename`.
@@ -41,9 +42,22 @@ def source_to_xcode(self, data, path, *, _optimize=-1):
     tree = ast.parse(data)
     module_macro_bindings = expander.find_macros(tree, filename=path)
     expansion = expander.expand_macros(tree, bindings=module_macro_bindings, filename=path)
+
     remaining_markers = get_markers(expansion)
     if remaining_markers:
         raise MacroExpansionError("{path}: AST markers remaining after expansion: {remaining_markers}")
+
+    # The top-level module node doesn't need source location info,
+    # but in any other AST node it's mandatory.
+    validator = SourceLocationInfoValidator(ignore={expansion})
+    validator.visit(expansion)
+    if validator.collected:
+        msg = f"{path}: required AST fields missing for the following nodes:\n"
+        for tree, missing_fields in validator.collected:
+            # TODO: Improve error reporting. Can't just unparse, `tree` could be the whole module, and since it doesn't have a line number, we don't know where it came from.
+            msg += f"{tree}: {missing_fields}\n"
+        raise MacroExpansionError(msg)
+
     return compile(expansion, path, 'exec', dont_inherit=True, optimize=_optimize)
 
 # TODO: Support PEP552 (Deterministic pycs). Need to intercept source file hashing, too.
