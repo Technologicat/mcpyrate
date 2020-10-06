@@ -139,7 +139,7 @@ class MacroExpander(BaseMacroExpander):
         candidate = with_item.context_expr
         macroname, macroargs = destructure_candidate(candidate)
 
-        # warn about common mistake
+        # warn about likely mistake
         if (macroname and self.isbound(macroname) and
                 (macroargs and not isparametricmacro(self.bindings[macroname]))):
             msg = f"expr macro `{macroname}` invoked in `with` header; `{format_macrofunction(self.bindings[macroname])}` maybe missing `@parametricmacro` declaration?"
@@ -211,7 +211,7 @@ class MacroExpander(BaseMacroExpander):
         for decorator in decorator_list:
             macroname, macroargs = destructure_candidate(decorator)
 
-            # warn about common mistake
+            # warn about likely mistake
             if (macroname and self.isbound(macroname) and
                     (macroargs and not isparametricmacro(self.bindings[macroname]))):
                 msg = f"expr macro `{macroname}` invoked in decorator; `{format_macrofunction(self.bindings[macroname])}` maybe missing `@parametricmacro` declaration?"
