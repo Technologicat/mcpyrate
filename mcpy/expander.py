@@ -23,7 +23,9 @@ import importlib
 import importlib.util  # in PyPy3, this must be imported explicitly
 from ast import (Name, Subscript, Tuple, Import, ImportFrom, alias, AST, Expr, Constant,
                  copy_location, iter_fields, NodeVisitor)
-from .core import BaseMacroExpander, global_postprocess, Done, format_location
+from warnings import warn_explicit
+from .core import (BaseMacroExpander, global_postprocess, Done,
+                   format_location, format_macrofunction)
 from .importer import resolve_package
 from .unparser import unparse_with_fallbacks
 from .utilities import NodeVisitorListMixin
@@ -136,6 +138,15 @@ class MacroExpander(BaseMacroExpander):
         with_item = withstmt.items[0]
         candidate = with_item.context_expr
         macroname, macroargs = destructure_candidate(candidate)
+
+        # warn about common mistake
+        if (macroname and self.isbound(macroname) and
+                (macroargs and not isparametricmacro(self.bindings[macroname]))):
+            msg = f"expr macro `{macroname}` invoked in `with` header; `{format_macrofunction(self.bindings[macroname])}` maybe missing `@parametricmacro` declaration?"
+            lineno = withstmt.lineno if hasattr(withstmt, "lineno") else None
+            warn_explicit(msg, SyntaxWarning, filename=self.filename, lineno=lineno)
+
+        # expand
         if self.ismacrocall(macroname, macroargs):
             kw = {'args': macroargs}
             kw.update({'optional_vars': with_item.optional_vars})
@@ -144,6 +155,7 @@ class MacroExpander(BaseMacroExpander):
             new_tree = _add_coverage_dummy_node(new_tree, withstmt, macroname)
         else:
             new_tree = self.generic_visit(withstmt)
+
         return new_tree
 
     def visit_ClassDef(self, classdef):
@@ -198,10 +210,19 @@ class MacroExpander(BaseMacroExpander):
         macros, others = [], []
         for decorator in decorator_list:
             macroname, macroargs = destructure_candidate(decorator)
+
+            # warn about common mistake
+            if (macroname and self.isbound(macroname) and
+                    (macroargs and not isparametricmacro(self.bindings[macroname]))):
+                msg = f"expr macro `{macroname}` invoked in decorator; `{format_macrofunction(self.bindings[macroname])}` maybe missing `@parametricmacro` declaration?"
+                lineno = decorator.lineno if hasattr(decorator, "lineno") else 0
+                warn_explicit(msg, SyntaxWarning, filename=self.filename, lineno=lineno)
+
             if self.ismacrocall(macroname, macroargs):
                 macros.append(decorator)
             else:
                 others.append(decorator)
+
         return macros, others
 
     def visit_Name(self, name):
