@@ -235,6 +235,14 @@ class MacroExpander(BaseMacroExpander):
         The `Name` node itself is the input tree for the macro.
         Replace the `Name` node with the AST returned by the macro.
         '''
+        # Warn about likely mistake? No, e.g. `q[h[some_expr_macro][...]]` is valid,
+        # and actually one of the reasons we require declaring name macros. (The other
+        # reason is eliminating boilerplate in each macro's dispatch logic, since only
+        # a small minority of macros need to act as a name macro.)
+        # if self.isbound(name.id) and not isnamemacro(self.bindings[name.id]):
+        #     msg = f"non-name macro `{name.id}` invoked as name macro; `{format_macrofunction(self.bindings[name.id])}` maybe missing `@namemacro` declaration?"
+        #     lineno = name.lineno if hasattr(name, "lineno") else 0
+        #     warn_explicit(msg, SyntaxWarning, filename=self.filename, lineno=lineno)
         if self.isbound(name.id) and isnamemacro(self.bindings[name.id]):
             macroname = name.id
             def ismodified(tree):
