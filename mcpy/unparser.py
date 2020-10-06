@@ -95,7 +95,9 @@ class Unparser:
             else:
                 self.write(", ")
             self.write(f"{k}=")
-            if isinstance(v, ast.AST):
+            if isinstance(v, ast.Expr):  # no newline here, please
+                self.dispatch(v.value)
+            elif isinstance(v, ast.AST):
                 self.dispatch(v)
             else:
                 self.write(repr(v))
