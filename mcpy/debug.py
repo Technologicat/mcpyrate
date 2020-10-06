@@ -2,6 +2,7 @@
 """Macro debugging utilities."""
 
 import ast
+import functools
 import textwrap
 from sys import stderr
 from .astdumper import dump
@@ -14,11 +15,16 @@ _step_expansion_level = NestingLevelTracker()
 
 @parametricmacro
 def step_expansion(tree, *, args, syntax, expander, **kw):
-    """[syntax, expr/block] Macroexpand `tree`, showing source code at each step of the expansion."""
+    """[syntax, expr/block] Macroexpand `tree`, showing source code at each step of the expansion.
+
+    Since this is a debugging utility, the source code is shown in the debug
+    mode of `unparse`, which prints also invisible nodes such as `Module` and
+    `Expr`.
+    """
     if syntax not in ("expr", "block"):
         raise SyntaxError("`step_expansion` is an expr and block macro only")
 
-    formatter = unparse
+    formatter = functools.partial(unparse, debug=True)
     if args:
         if len(args) != 1:
             raise SyntaxError("expected `step_expansion['mode_str']`")

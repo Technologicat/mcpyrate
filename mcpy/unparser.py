@@ -37,8 +37,16 @@ class Unparser:
     for the abstract syntax. Original formatting is disregarded.
     """
 
-    def __init__(self, tree, file=sys.stdout):
-        """Print the source for `tree` to `file`."""
+    def __init__(self, tree, *, file=sys.stdout, debug=False):
+        """Print the source for `tree` to `file`.
+
+        `debug`: bool, print invisible nodes (`Module`, `Expr`).
+
+                 The output is then not valid Python, but may better show
+                 the problem when code produced by a macro mysteriously
+                 fails to compile (even though the unparse looks ok).
+        """
+        self.debug = debug
         self.f = file
         self._indent = 0
         self.dispatch(tree)
@@ -91,7 +99,7 @@ class Unparser:
                 self.dispatch(v)
             else:
                 self.fill(repr(v))
-        self.fill("$" + tree.__class__.__name__)  # markers cannot be eval'd
+        self.fill(f"$ASTMarker<{tree.__class__.__name__}>")  # markers cannot be eval'd
         self.enter()
         if len(tree._fields) == 1 and tree._fields[0] == "body":
             write_field_value(tree.body)
@@ -104,14 +112,31 @@ class Unparser:
         self.leave()
 
     def _Module(self, t):
-        for stmt in t.body:
-            self.dispatch(stmt)
         # TODO: Python 3.8 type_ignores. Since we don't store the source text, maybe ignore that?
+        if self.debug:
+            self.fill()
+            self.write("$Module")
+            self.enter()
+            self.fill()
+            for stmt in t.body:
+                self.dispatch(stmt)
+            self.leave()
+        else:
+            for stmt in t.body:
+                self.dispatch(stmt)
 
     # stmt
     def _Expr(self, t):
-        self.fill()
-        self.dispatch(t.value)
+        if self.debug:
+            self.fill()
+            self.write("$Expr")
+            self.enter()
+            self.write(" ")
+            self.dispatch(t.value)
+            self.leave()
+        else:
+            self.fill()
+            self.dispatch(t.value)
 
     def _Import(self, t):
         self.fill("import ")
@@ -732,14 +757,20 @@ class Unparser:
             self.dispatch(t.optional_vars)
 
 
-def unparse(tree):
+def unparse(tree, *, debug=False):
     """Convert the AST `tree` into source code. Return the code as a string.
+
+    `debug`: bool, print invisible nodes (`Module`, `Expr`).
+
+             The output is then not valid Python, but may better show
+             the problem when code produced by a macro mysteriously
+             fails to compile (even though the unparse looks ok).
 
     Upon invalid input, raises `UnparserError`.
     """
     try:
         with io.StringIO() as output:
-            Unparser(tree, file=output)
+            Unparser(tree, file=output, debug=debug)
             code = output.getvalue().strip()
         return code
     except UnparserError as err:  # fall back to an AST dump
@@ -754,7 +785,7 @@ def unparse(tree):
             msg = f"unparse failed, fallback AST dump failed, likely not an AST; here's the type and repr instead:{sep}{type(tree)}{sep}{representation}"
             raise UnparserError(msg) from err
 
-def unparse_with_fallbacks(tree):
+def unparse_with_fallbacks(tree, *, debug=False):
     """Like `unparse`, but upon error, don't raise; return the error message.
 
     Usually you'll want the exception to be raised. This is mainly useful to
@@ -763,7 +794,7 @@ def unparse_with_fallbacks(tree):
     at the receiving end.
     """
     try:
-        text = unparse(tree)
+        text = unparse(tree, debug=debug)
     except UnparserError as err:
         text = err.args[0]
     except Exception as err:
