@@ -14,6 +14,38 @@ This layer provides the actual macro expander, defining:
    - name:      `macroname`
 '''
 
+# We use bracket syntax for sending macro arguments, because parentheses evoke
+# the idea of full function-call syntax. This includes keyword arguments, and
+# the distinction between parameter slots (which are always named) and how the
+# actual arguments provided in a call are bound to those slots (whether by
+# position or by name; and don't forget *args and **kwargs, both at the
+# receiving and sending end).
+#
+# Nowadays it's possible to easily support all this properly via `inspect.signature`
+# and `inspect.Signature.bind`. But to get a call signature to bind to, the
+# macro function's own signature won't do - that's for when the function is
+# called by the macro expander, not for sending macro arguments (which form
+# a separate namespace).
+#
+# So we would need a reference callable to `@parametricmacro`, not to be
+# called, but only to have its call signature extracted. In practice, it would
+# be a `lambda ...: None`, with the confusing `lambda` and `None` mandatory,
+# when the only interesting part is in the `...`, the parameter declarations.
+#
+# This could then be used to establish a *second* call signature for the
+# parametric macro function, to receive the macro arguments in, say, a
+# dictionary always named `args` (binding parameter names to values provided
+# in the macro call; cf. our current list `args`, which just lists the values).
+# Confused yet? See commit 10691ce for a sketch.
+#
+# The system is much simpler to explain if we just use brackets, and have
+# positional args only.
+#
+# Even this choice of syntax unfortunately leads to an ambiguity as to what
+# `macro[...][...]` and even just `macro[...]` mean, but perhaps it's the
+# lesser evil. This is one reason why we require parametric macros to be
+# explicitly declared - avoid that ambiguity when not needed.
+
 __all__ = ['namemacro', 'isnamemacro',
            'parametricmacro', 'isparametricmacro',
            'MacroExpander', 'MacroCollector',
