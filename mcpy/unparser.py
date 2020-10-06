@@ -86,22 +86,22 @@ class Unparser:
     # currently doesn't.
 
     def astmarker(self, tree):
-        self.write("$" + tree.__class__.__name__)  # markers cannot be eval'd
-        self.write("(")
-        first = True
-        for k, v in ast.iter_fields(tree):
-            if first:
-                first = False
-            else:
-                self.write(", ")
-            self.write(f"{k}=")
-            if isinstance(v, ast.Expr):  # no newline here, please
-                self.dispatch(v.value)
-            elif isinstance(v, ast.AST):
+        def write_field_value(v):
+            if isinstance(v, ast.AST):
                 self.dispatch(v)
             else:
-                self.write(repr(v))
-        self.write(")")
+                self.fill(repr(v))
+        self.fill("$" + tree.__class__.__name__)  # markers cannot be eval'd
+        self.enter()
+        if len(tree._fields) == 1 and tree._fields[0] == "body":
+            write_field_value(tree.body)
+        else:
+            for k, v in ast.iter_fields(tree):
+                self.fill(k)
+                self.enter()
+                write_field_value(v)
+                self.leave()
+        self.leave()
 
     def _Module(self, t):
         for stmt in t.body:
