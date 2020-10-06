@@ -1,7 +1,7 @@
 # -*- coding: utf-8; -*-
 '''Expander core; essentially, how to apply a macro invocation.'''
 
-__all__ = ['format_location',
+__all__ = ['format_location', 'format_macrofunction',
            'MacroExpansionError',
            'MacroExpanderMarker',
            'Done',
@@ -21,10 +21,26 @@ from .utilities import flatten_suite, NodeTransformerListMixin
 _hygienic_bindings = {}
 
 def format_location(filename, tree, sourcecode):
-    '''Format a source code location in a standard way, for error messages.'''
+    '''Format a source code location in a standard way, for error messages.
+
+    `filename`: full path to `.py` file
+    `tree`: AST node to get source line number from
+    `sourcecode`: source code (typically, to get this, `unparse(tree)`
+                  before expanding it), or `None` to omit it.
+    '''
     lineno = tree.lineno if hasattr(tree, 'lineno') else None
-    sep = " " if "\n" not in sourcecode else "\n"
-    return f'at {filename}:{lineno}:{sep}{sourcecode}'
+    if sourcecode:
+        sep = " " if "\n" not in sourcecode else "\n"
+        source_with_sep = f"{sep}{sourcecode}"
+    else:
+        source_with_sep = ""
+    return f'{filename}:{lineno}:{source_with_sep}'
+
+def format_macrofunction(function):
+    '''Format the fully qualified name of a macro function, for error messages.'''
+    return f"{function.__module__}.{function.__qualname__}"
+
+# --------------------------------------------------------------------------------
 
 class MacroExpansionError(Exception):
     '''Error during macro expansion.'''
@@ -38,6 +54,8 @@ class Done(MacroExpanderMarker):
     Emitted by `BaseMacroExpander.visit_once`, to protect the once-expanded form
     from further expansion.
     '''
+
+# --------------------------------------------------------------------------------
 
 class BaseMacroExpander(NodeTransformerListMixin, NodeTransformer):
     '''Expander core. Base class for macro expanders.

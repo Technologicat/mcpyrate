@@ -5,6 +5,7 @@ import ast
 import textwrap
 from sys import stderr
 from .astdumper import dump
+from .core import format_macrofunction
 from .expander import MacroCollector, namemacro, parametricmacro
 from .unparser import unparse
 from .utilities import NestingLevelTracker
@@ -69,5 +70,5 @@ def show_bindings(tree, *, syntax, expander, **kw):
         raise SyntaxError("show_bindings is an identifier macro only")
     print(f"Macro expander bindings for module {expander.filename} (at expansion time):", file=stderr)
     for k, v in sorted(expander.bindings.items()):
-        print(f"    {k}: {v.__module__}.{v.__qualname__}", file=stderr)
+        print(f"    {k}: {format_macrofunction(v)}", file=stderr)
     return ast.Constant(value=None)  # can't just delete the node (return None) if it's in an Expr(value=...)
