@@ -111,20 +111,17 @@ def destructure_candidate(tree):
 class MacroExpander(BaseMacroExpander):
     '''The actual macro expander.'''
 
-    def ismacrocall(self, macroname, macroargs):
-        '''Validate a macro call to a macro bound in this expander.
+    def ismacrocall(self, macroname, macroargs, syntax):
+        '''Shorthand to check `destructure_candidate` output.
 
-        Use `destructure_candidate` to get `macroname` and `macroargs`.
-        A macro call is valid if both of the following hold:
-
-          - `macroname` is not `None`, and is bound to a macro function in this expander.
-          - `macroargs` is empty, or the binding for `macroname` is a `@parametricmacro`.
-
-        Name macros require `isnamemacro(self.bindings[macroname])`, and
-        ignore `macroargs`, but those are not handled by this function.
+        Return whether that output is a macro call to a macro (of invocation
+        type `syntax`) bound in this expander.
         '''
-        return (macroname and self.isbound(macroname) and
-                (not macroargs or isparametricmacro(self.bindings[macroname])))
+        if not (macroname and self.isbound(macroname)):
+            return False
+        if syntax == 'name':
+            return isnamemacro(self.bindings[macroname])
+        return not macroargs or isparametricmacro(self.bindings[macroname])
 
     def visit_Subscript(self, subscript):
         '''Detect an expression (expr) macro invocation.
@@ -139,7 +136,7 @@ class MacroExpander(BaseMacroExpander):
         '''
         candidate = subscript.value
         macroname, macroargs = destructure_candidate(candidate)
-        if self.ismacrocall(macroname, macroargs):
+        if self.ismacrocall(macroname, macroargs, 'expr'):
             kw = {'args': macroargs}
             tree = subscript.slice.value
             sourcecode = unparse_with_fallbacks(subscript)
@@ -248,19 +245,19 @@ class MacroExpander(BaseMacroExpander):
         new_tree = _add_coverage_dummy_node(new_tree, innermost_macro, macroname)
         return new_tree
 
-    def _detect_macro_items(self, items, mode):
+    def _detect_macro_items(self, items, syntax):
         '''Split a list `items` into `(macros, others)`.
 
-        `mode`: str, "block" or "decorator"
+        `syntax`: str, "block" or "decorator"
             "block": `items` is a `With.items`
             "decorator": `items` is a `decorator_list`
         '''
-        assert mode in ("block", "decorator")
-        context = "in `with` header" if mode == "block" else "as decorator"
+        assert syntax in ("block", "decorator")
+        context = "in `with` header" if syntax == "block" else "as decorator"
 
         macros, others = [], []
         for item in items:
-            if mode == "block":
+            if syntax == "block":
                 candidate = item.context_expr
             else:
                 candidate = item
@@ -273,7 +270,7 @@ class MacroExpander(BaseMacroExpander):
                 lineno = item.lineno if hasattr(item, "lineno") else 0
                 warn_explicit(msg, SyntaxWarning, filename=self.filename, lineno=lineno)
 
-            if self.ismacrocall(macroname, macroargs):
+            if self.ismacrocall(macroname, macroargs, syntax):
                 macros.append(item)
             else:
                 others.append(item)
@@ -301,7 +298,7 @@ class MacroExpander(BaseMacroExpander):
         #     msg = f"non-name macro `{name.id}` invoked as name macro; `{format_macrofunction(self.bindings[name.id])}` maybe missing `@namemacro` declaration?"
         #     lineno = name.lineno if hasattr(name, "lineno") else 0
         #     warn_explicit(msg, SyntaxWarning, filename=self.filename, lineno=lineno)
-        if self.isbound(name.id) and isnamemacro(self.bindings[name.id]):
+        if self.ismacrocall(name.id, None, 'name'):
             macroname = name.id
             def ismodified(tree):
                 return not (type(tree) is Name and tree.id == macroname)
@@ -352,7 +349,7 @@ class MacroCollector(NodeVisitorListMixin, NodeVisitor):
     def visit_Subscript(self, subscript):
         candidate = subscript.value
         macroname, macroargs = destructure_candidate(candidate)
-        if self.expander.ismacrocall(macroname, macroargs):
+        if self.expander.ismacrocall(macroname, macroargs, 'expr'):
             key = (macroname, 'expr')
             if key not in self._seen:
                 self.collected.append(key)
@@ -408,7 +405,7 @@ class MacroCollector(NodeVisitorListMixin, NodeVisitor):
 
     def visit_Name(self, name):
         macroname = name.id
-        if self.expander.isbound(macroname) and isnamemacro(self.expander.bindings[macroname]):
+        if self.expander.ismacrocall(macroname, None, 'name'):
             key = (macroname, 'name')
             if key not in self._seen:
                 self.collected.append(key)
