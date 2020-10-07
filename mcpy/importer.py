@@ -29,7 +29,7 @@ def resolve_package(filename):  # TODO: for now, `guess_package`, really. Check 
         absolute_filename = str(pathlib.Path(filename).expanduser().resolve())
         resolved = f" (resolved to {absolute_filename})" if absolute_filename != str(filename) else ""
         raise ImportError(f"{filename}{resolved} is not in a package, but at the root level of syspath {str(root_path)}")
-    package_dotted_name = str(relative_path).replace(os.path.sep, '.')
+    package_dotted_name = relative_path.replace(os.path.sep, '.')
     return package_dotted_name
 
 def relativize(filename):
@@ -43,7 +43,7 @@ def relativize(filename):
     """
     absolute_filename = str(pathlib.Path(filename).expanduser().resolve())
     root_path = match_syspath(absolute_filename)
-    relative_path = str(absolute_filename)[len(str(root_path)):]
+    relative_path = absolute_filename[len(str(root_path)):]
     if relative_path.startswith(os.path.sep):
         relative_path = relative_path[len(os.path.sep):]
     return root_path, relative_path
@@ -59,7 +59,7 @@ def match_syspath(filename):
     absolute_filename = str(pathlib.Path(filename).expanduser().resolve())
     for root_path in sys.path:
         root_path = pathlib.Path(root_path).expanduser().resolve()
-        if str(absolute_filename).startswith(str(root_path)):
+        if absolute_filename.startswith(str(root_path)):
             return root_path
     resolved = f" (resolved to {absolute_filename})" if absolute_filename != str(filename) else ""
     raise ValueError(f"{filename}{resolved} not under any directory in `sys.path`")
