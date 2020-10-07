@@ -69,7 +69,8 @@ def match_syspath(filename):
 def source_to_xcode(self, data, path, *, _optimize=-1):
     '''[mcpy] Expand macros, then compile.
 
-    Intercepts the source to bytecode transformation.'''
+    Intercepts the source to bytecode transformation.
+    '''
     tree = ast.parse(data)
     module_macro_bindings = expander.find_macros(tree, filename=path)
     expansion = expander.expand_macros(tree, bindings=module_macro_bindings, filename=path)
