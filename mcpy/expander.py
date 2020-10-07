@@ -309,14 +309,11 @@ class MacroExpander(BaseMacroExpander):
                 kw = {'args': None}
                 sourcecode = unparse_with_fallbacks(name)
                 new_tree = self.expand('name', name, macroname, name, sourcecode=sourcecode, fill_root_location=True, kw=kw)
-            if self.recursive and new_tree is not None:
-                if ismodified(new_tree):
-                    new_tree = self.visit(new_tree)
-                else:
-                    # When a magic variable expands in a valid surrounding context and
-                    # does `return tree`, the expander needs to know the context check
-                    # is done, so it won't be expanded again after the context exits.
+            if new_tree is not None:
+                if not ismodified(new_tree):
                     new_tree = Done(new_tree)
+                elif self.recursive:  # and modified
+                    new_tree = self.visit(new_tree)
         else:
             new_tree = name
         return new_tree
