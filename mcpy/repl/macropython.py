@@ -20,7 +20,10 @@ __version__ = "3.0.0"
 def import_module_as_main(name, script_mode):
     """Import a module, pretending it's __main__.
 
-    Upon success, replaces ``sys.modules["__main__"]`` with the module that
+    We support only new-style loaders that provide `exec_module`; old-style
+    loaders that provide `load_module` and `create_module` are not supported.
+
+    Upon success, replaces `sys.modules["__main__"]` with the module that
     was imported. Upon failure, propagates any exception raised.
 
     This is a customized approximation of the standard import semantics, based on:
@@ -31,21 +34,13 @@ def import_module_as_main(name, script_mode):
         https://docs.python.org/3/reference/import.html#module-path
         https://docs.python.org/3/reference/import.html#special-considerations-for-main
     """
-    # We perform only the user-specified import ourselves; that we must, in order to
-    # load it as "__main__". We delegate all the rest to the stdlib import machinery.
-    #
-    # We support only new-style loaders that have `exec_module`;
-    # old-style loaders with `load_module` and `create_module` are not supported.
-
     absolute_name = resolve_name(name, package=None)
 
-    # Normally we should return the module from sys.modules if already loaded,
-    # but the __main__ in sys.modules is this bootstrapper program, not the user
-    # __main__ we're loading. So pretend whatever we're loading isn't loaded yet.
+    # If already loaded, normally we should return the module from `sys.modules`,
+    # but `sys.modules["__main__"]` is for now this bootstrapper, not the user __main__.
     #
-    # Note Python treats __main__ and somemod as distinct modules, even when it's
-    # the same file, because __main__ triggers "if __name__ == '__main__':"
-    # checks whereas somemod doesn't.
+    # Note __main__ and somemod are distinct modules, even when the same file,
+    # because __main__ triggers `if __name__ == '__main__'` checks, but somemod doesn't.
     #
     # try:
     #     return sys.modules[absolute_name]
@@ -54,15 +49,10 @@ def import_module_as_main(name, script_mode):
 
     path = None
     if '.' in absolute_name:
-        # In script mode, our main() injects the directory containing the
-        # script to `sys.path` (just like `python some/path/to/script.py`
-        # does), so in that case we always perform a top-level import using
-        # just the final component of the name. So the name shouldn't have dots.
         if script_mode:
-            assert False
-        # Module mode. Import the module's parent package normally; this will
-        # initialize any parent packages up the chain. Set `path` for
-        # `find_spec` so it can find subpackages and modules.
+            raise ValueError("In script mode, please add the containing directory to `sys.path` and then top-level import the final component of the name.")
+        # Import the module's parent package normally to initialize parent packages.
+        # Get the appropriate `path` for `find_spec` to find subpackages and modules.
         parent_name, _, child_name = absolute_name.rpartition('.')
         parent_module = import_module(parent_name)
         path = parent_module.__spec__.submodule_search_locations
@@ -70,6 +60,7 @@ def import_module_as_main(name, script_mode):
     for finder in sys.meta_path:
         if not hasattr(finder, "find_spec"):  # pkg_resources.extern.VendorImporter has no find_spec
             continue
+        # https://docs.python.org/3/library/importlib.html#importlib.abc.MetaPathFinder.find_spec
         spec = finder.find_spec(absolute_name, path)
         if spec is not None:
             break
@@ -79,7 +70,7 @@ def import_module_as_main(name, script_mode):
 
     spec.name = "__main__"
     if spec.loader:
-        spec.loader.name = "__main__"  # fool importlib._bootstrap.check_name_wrapper
+        spec.loader.name = "__main__"
 
     module = module_from_spec(spec)
     try_mainpy = False
@@ -92,32 +83,31 @@ def import_module_as_main(name, script_mode):
         try_mainpy = True
 
     if spec.origin == "namespace":
+        # https://docs.python.org/3/reference/import.html#__path__
         module.__path__ = spec.submodule_search_locations
 
     if try_mainpy:
-        # e.g. "import somepackage" in the above case; it's not the one running
-        # as main, so import it normally.
+        # e.g. "import somepackage" in the above case; it's not __main__, so import it normally.
         assert not script_mode
         parent_module = import_module(absolute_name)
-    elif spec.loader is not None:  # namespace packages have loader=None
-        # There's already a __main__ in sys.modules (this bootstrapper), so
-        # the most logical thing to do is to switch it **after** a successful
-        # import, not before import as for usual imports (where the ordering
-        # prevents infinite recursion and multiple loading).
-        spec.loader.exec_module(module)
-        sys.modules["__main__"] = module
+    elif spec.loader:
+        sys.modules["__main__"] = module  # replace this bootstrapper with the new __main__
+        try:
+            spec.loader.exec_module(module)
+        except Exception:
+            sys.modules["__main__"] = sys.modules["__macropython__"]
+            raise
         # # __main__ has no parent module so we don't need to do this.
         # if path is not None:
         #     setattr(parent_module, child_name, module)
-    else:  # namespace package
+    else:  # namespace packages have loader=None
         try_mainpy = True
 
     # __init__.py (if any) has run; run __main__.py, like `python -m somepackage` does.
     if try_mainpy:
         has_mainpy = True
         try:
-            # __main__.py doesn't need to have its name set to "__main__",
-            # so we can just import it normally.
+            # __main__.py doesn't need to have its name set to "__main__", so import it normally.
             import_module(f"{absolute_name}.__main__")
         except ImportError as e:
             if "No module named" in e.msg:
@@ -230,4 +220,5 @@ def main():
         import_module_as_main(module_name, script_mode=True)
 
 if __name__ == '__main__':
+    sys.modules["__macropython__"] = sys.modules["__main__"]
     main()
