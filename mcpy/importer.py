@@ -85,8 +85,11 @@ def source_to_xcode(self, data, path, *, _optimize=-1):
     if validator.collected:
         msg = f"{path}: required source location missing for the following nodes:\n"
         for tree, missing_fields in validator.collected:
-            # TODO: Improve error reporting. Can't just unparse, `tree` could be almost the whole module, and since the node doesn't have a line number, we don't know where it came from. Show a couple first lines of the unparsed source for context?
-            msg += f"{tree}: {missing_fields}\n"
+            code_lines = unparse_with_fallbacks(tree).split("\n")
+            code = "\n".join(code_lines[:5])
+            if len(code_lines) > 5:
+                code += "\n..."
+            msg += f"{tree}: {missing_fields}, unparsed code:\n{code}\n"
         raise MacroExpansionError(msg)
 
     return compile(expansion, path, 'exec', dont_inherit=True, optimize=_optimize)
