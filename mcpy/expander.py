@@ -288,23 +288,15 @@ class MacroExpander(BaseMacroExpander):
         Replace the `Name` node with the AST returned by the macro.
 
         Otherwise the core controls whether to expand again in the
-        result, but we stop if the macro returns the original `tree`.
+        result, but we stop if the macro returns the original `tree`,
+        telling the expander to use the name as a regular run-time name.
         '''
-        # Warn about likely mistake? No, e.g. `q[h[some_expr_macro][...]]` is valid,
-        # and actually one of the reasons we require declaring name macros. (The other
-        # reason is eliminating boilerplate in each macro's dispatch logic, since only
-        # a small minority of macros need to act as a name macro.)
-        # if self.isbound(name.id) and not isnamemacro(self.bindings[name.id]):
-        #     msg = f"non-name macro `{name.id}` invoked as name macro; `{format_macrofunction(self.bindings[name.id])}` maybe missing `@namemacro` declaration?"
-        #     lineno = name.lineno if hasattr(name, "lineno") else 0
-        #     warn_explicit(msg, SyntaxWarning, filename=self.filename, lineno=lineno)
+        # We must silently ignore when a non-name macro is invoked as a name macro,
+        # because things like `q[h[some_expr_macro][...]]` are valid.
         if self.ismacrocall(name.id, None, 'name'):
             macroname = name.id
             def ismodified(tree):
                 return not (type(tree) is Name and tree.id == macroname)
-            # For name macros, no part of the tree is guaranteed to be compiled away.
-            # Prevent an infinite loop if the macro no-ops, returning `tree` as-is.
-            # (Public API for "I did what I needed to, now use this as a run-time name".)
             with self._recursive_mode(False):
                 kw = {'args': None}
                 sourcecode = unparse_with_fallbacks(name)
