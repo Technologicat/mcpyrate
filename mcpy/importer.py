@@ -1,7 +1,7 @@
 # -*- coding: utf-8; -*-
 '''Importer (finder/loader) customizations, to inject the macro expander.'''
 
-__all__ = ['resolve_package',
+__all__ = ['resolve_package', 'relativize', 'match_syspath',
            'source_to_xcode', 'path_xstats', 'invalidate_xcaches']
 
 import ast
@@ -23,17 +23,48 @@ def resolve_package(filename):  # TODO: for now, `guess_package`, really. Check 
     If `filename` is at the top level of the matching entry in `sys.path`, raises `ImportError`.
     If `filename` is not under any directory in `sys.path`, raises `ValueError`.
     """
-    pyfiledir = pathlib.Path(filename).expanduser().resolve().parent
-    for rootdir in sys.path:
-        rootdir = pathlib.Path(rootdir).expanduser().resolve()
-        if str(pyfiledir).startswith(str(rootdir)):
-            package_relative_path = str(pyfiledir)[len(str(rootdir)):]
-            if not package_relative_path:  # at the rootdir - not inside a package
-                raise ImportError(f"{filename} is not in a package, but at the root level of syspath {str(rootdir)}")
-            package_relative_path = package_relative_path[len(os.path.sep):]  # drop the initial path sep
-            package_dotted_name = package_relative_path.replace(os.path.sep, '.')
-            return package_dotted_name
-    raise ValueError(f"{filename} not under any directory in `sys.path`")
+    containing_directory = pathlib.Path(filename).expanduser().resolve().parent
+    root_path, relative_path = relativize(containing_directory)
+    if not relative_path:  # at the root_path - not inside a package
+        absolute_filename = str(pathlib.Path(filename).expanduser().resolve())
+        resolved = f" (resolved to {absolute_filename})" if absolute_filename != str(filename) else ""
+        raise ImportError(f"{filename}{resolved} is not in a package, but at the root level of syspath {str(root_path)}")
+    package_dotted_name = str(relative_path).replace(os.path.sep, '.')
+    return package_dotted_name
+
+def relativize(filename):
+    """Convert `filename` into a relative one under the matching `sys.path`.
+
+    Return value is `(root_path, relative_path)`, where `root_path` is the
+    return value of `match_syspath` (a `pathlib.Path`), and `relative_path`
+    is a string containing the relative path of `filename` under `root_path`.
+
+    `filename` can be a .py source file or a package directory.
+    """
+    absolute_filename = str(pathlib.Path(filename).expanduser().resolve())
+    root_path = match_syspath(absolute_filename)
+    relative_path = str(absolute_filename)[len(str(root_path)):]
+    if relative_path.startswith(os.path.sep):
+        relative_path = relative_path[len(os.path.sep):]
+    return root_path, relative_path
+
+def match_syspath(filename):
+    """Return the entry in `sys.path` the `filename` is found under.
+
+    Return value is a `pathlib.Path` for the matching `sys.path` directory,
+    resolved to an absolute directory.
+
+    If `filename` is not under any directory in `sys.path`, raises `ValueError`.
+    """
+    absolute_filename = str(pathlib.Path(filename).expanduser().resolve())
+    for root_path in sys.path:
+        root_path = pathlib.Path(root_path).expanduser().resolve()
+        if str(absolute_filename).startswith(str(root_path)):
+            return root_path
+    resolved = f" (resolved to {absolute_filename})" if absolute_filename != str(filename) else ""
+    raise ValueError(f"{filename}{resolved} not under any directory in `sys.path`")
+
+# --------------------------------------------------------------------------------
 
 def source_to_xcode(self, data, path, *, _optimize=-1):
     '''[mcpy] Expand macros, then compile.
@@ -52,9 +83,9 @@ def source_to_xcode(self, data, path, *, _optimize=-1):
     validator = SourceLocationInfoValidator(ignore={expansion})
     validator.visit(expansion)
     if validator.collected:
-        msg = f"{path}: required AST fields missing for the following nodes:\n"
+        msg = f"{path}: required source location missing for the following nodes:\n"
         for tree, missing_fields in validator.collected:
-            # TODO: Improve error reporting. Can't just unparse, `tree` could be the whole module, and since it doesn't have a line number, we don't know where it came from.
+            # TODO: Improve error reporting. Can't just unparse, `tree` could be almost the whole module, and since the node doesn't have a line number, we don't know where it came from. Show a couple first lines of the unparsed source for context?
             msg += f"{tree}: {missing_fields}\n"
         raise MacroExpansionError(msg)
 
