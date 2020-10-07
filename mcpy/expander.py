@@ -134,6 +134,9 @@ class MacroExpander(BaseMacroExpander):
         Replace the `Subscript` node with the AST returned by the macro.
         The core controls whether to expand again in the result.
         '''
+        # We must silently ignore when a non-parametric expr macro is invoked with macro args,
+        # because things like `(some_expr_macro[tree])[subscript_expression]` are valid. This
+        # is actually exploited by `h`, as in `q[h[target_macro][tree_for_target_macro]]`.
         candidate = subscript.value
         macroname, macroargs = destructure_candidate(candidate)
         if self.ismacrocall(macroname, macroargs, 'expr'):
