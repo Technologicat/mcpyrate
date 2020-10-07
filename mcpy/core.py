@@ -188,6 +188,7 @@ class BaseMacroExpander(NodeTransformerListMixin, NodeTransformer):
             raise MacroExpansionError(msg) from err
 
         # Convert possible iterable result to `list`, then typecheck macro output.
+        output_type_ok = True
         try:
             if expansion is not None and not isinstance(expansion, AST):
                 expansion = list(expansion)
@@ -199,6 +200,8 @@ class BaseMacroExpander(NodeTransformerListMixin, NodeTransformer):
             else:
                 raise MacroExpansionError
         except Exception:
+            output_type_ok = False
+        if not output_type_ok:
             reason = f"expected macro to return AST, iterable or None; got {type(expansion)} with value {repr(expansion)}"
             msg = f"{loc}\n{reason}"
             raise MacroExpansionError(msg)
