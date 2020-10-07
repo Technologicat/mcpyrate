@@ -53,6 +53,7 @@ This fork adds a lot of features over `mcpy` 2.0.0:
 - **Conveniences**:
   - Relative macro-imports (for code in packages), e.g. `from .other import macros, kittify`.
   - The expander automatically fixes missing `ctx` attributes in the AST, so you don't need to care about those in your macros.
+  - Several block macros can be invoked in the same `with` (equivalent to nesting them, with leftmost outermost).
   - Walker with a state stack, à la MacroPy, to easily temporarily override the state for a given subtree.
   - AST markers (pseudo-nodes) for communication in a set of co-operating macros (and with the expander).
   - `gensym` to create a fresh, unused lexical identifier.

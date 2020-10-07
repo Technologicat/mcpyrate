@@ -141,7 +141,8 @@ class MacroExpander(BaseMacroExpander):
         if self.ismacrocall(macroname, macroargs):
             kw = {'args': macroargs}
             tree = subscript.slice.value
-            new_tree = self.expand('expr', subscript, macroname, tree, fill_root_location=True, kw=kw)
+            sourcecode = unparse_with_fallbacks(subscript)
+            new_tree = self.expand('expr', subscript, macroname, tree, sourcecode=sourcecode, fill_root_location=True, kw=kw)
         else:
             new_tree = self.generic_visit(subscript)
         return new_tree
@@ -166,29 +167,38 @@ class MacroExpander(BaseMacroExpander):
         `Name`, `Tuple` or `List` node. What to do with it is up to the macro;
         the typical meaning is to assign something to the name(s).
             https://greentreesnakes.readthedocs.io/en/latest/nodes.html#withitem
+
+        Invoking several block macros in the same `with` is shorthand for nesting::
+
+            with macro1, macro2:
+                ...
+
+        is equivalent with::
+
+            with macro1:
+                with macro2:  # part of `tree` for `macro1`, in either notation
+                    ...
+
+        We pop the first block macro in the withitem list, expand it, and then
+        recurse on the result, in that order. A block macro may do anything it
+        wants to its input tree. Any remaining block macro invocations are
+        attached to the `With` node, so if that is removed, they will be skipped.
         '''
-        with_item = withstmt.items[0]
+        macros, others = self._detect_macro_items(withstmt.items, "block")
+        if not macros:
+            return self.generic_visit(withstmt)
+        with_item = macros[0]
         candidate = with_item.context_expr
         macroname, macroargs = destructure_candidate(candidate)
-
-        # warn about likely mistake
-        if (macroname and self.isbound(macroname) and
-                (macroargs and not isparametricmacro(self.bindings[macroname]))):
-            msg = f"expr macro `{macroname}` invoked in `with` header; `{format_macrofunction(self.bindings[macroname])}` maybe missing `@parametricmacro` declaration?"
-            lineno = withstmt.lineno if hasattr(withstmt, "lineno") else None
-            warn_explicit(msg, SyntaxWarning, filename=self.filename, lineno=lineno)
-
-        # expand
-        if self.ismacrocall(macroname, macroargs):
+        sourcecode = unparse_with_fallbacks(withstmt)
+        withstmt.items.remove(with_item)
+        with self._recursive_mode(False):  # don't trigger other block macros yet
             kw = {'args': macroargs}
             kw.update({'optional_vars': with_item.optional_vars})
-            tree = withstmt.body
-            new_tree = self.expand('block', withstmt, macroname, tree, fill_root_location=False, kw=kw)
-            new_tree = _add_coverage_dummy_node(new_tree, withstmt, macroname)
-        else:
-            new_tree = self.generic_visit(withstmt)
-
-        return new_tree
+            tree = withstmt.body if not withstmt.items else [withstmt]
+            new_tree = self.expand('block', withstmt, macroname, tree, sourcecode=sourcecode, fill_root_location=False, kw=kw)
+        new_tree = _add_coverage_dummy_node(new_tree, withstmt, macroname)
+        return self.visit(new_tree)
 
     def visit_ClassDef(self, classdef):
         return self._visit_Decorated(classdef)
@@ -225,35 +235,48 @@ class MacroExpander(BaseMacroExpander):
 
         The body is expanded after the whole decorator list has been processed.
         '''
-        macros, others = self._detect_decorator_macros(decorated.decorator_list)
+        macros, others = self._detect_macro_items(decorated.decorator_list, "decorator")
         if not macros:
             return self.generic_visit(decorated)
         innermost_macro = macros[-1]
         macroname, macroargs = destructure_candidate(innermost_macro)
+        sourcecode = unparse_with_fallbacks(decorated)
         decorated.decorator_list.remove(innermost_macro)
         with self._recursive_mode(False):  # don't trigger other decorator macros yet
             kw = {'args': macroargs}
-            new_tree = self.expand('decorator', decorated, macroname, decorated, fill_root_location=True, kw=kw)
+            new_tree = self.expand('decorator', decorated, macroname, decorated, sourcecode=sourcecode, fill_root_location=True, kw=kw)
         new_tree = _add_coverage_dummy_node(new_tree, innermost_macro, macroname)
         return self.visit(new_tree)
 
-    def _detect_decorator_macros(self, decorator_list):
-        '''Split a `decorator_list` into `(macros, others)`.'''
+    def _detect_macro_items(self, items, mode):
+        '''Split a list `items` into `(macros, others)`.
+
+        `mode`: str, "block" or "decorator"
+            "block": `items` is a `With.items`
+            "decorator": `items` is a `decorator_list`
+        '''
+        assert mode in ("block", "decorator")
+        context = "in `with` header" if mode == "block" else "as decorator"
+
         macros, others = [], []
-        for decorator in decorator_list:
-            macroname, macroargs = destructure_candidate(decorator)
+        for item in items:
+            if mode == "block":
+                candidate = item.context_expr
+            else:
+                candidate = item
+            macroname, macroargs = destructure_candidate(candidate)
 
             # warn about likely mistake
             if (macroname and self.isbound(macroname) and
                     (macroargs and not isparametricmacro(self.bindings[macroname]))):
-                msg = f"expr macro `{macroname}` invoked in decorator; `{format_macrofunction(self.bindings[macroname])}` maybe missing `@parametricmacro` declaration?"
-                lineno = decorator.lineno if hasattr(decorator, "lineno") else 0
+                msg = f"expr macro `{macroname}` invoked {context}; `{format_macrofunction(self.bindings[macroname])}` maybe missing `@parametricmacro` declaration?"
+                lineno = item.lineno if hasattr(item, "lineno") else 0
                 warn_explicit(msg, SyntaxWarning, filename=self.filename, lineno=lineno)
 
             if self.ismacrocall(macroname, macroargs):
-                macros.append(decorator)
+                macros.append(item)
             else:
-                others.append(decorator)
+                others.append(item)
 
         return macros, others
 
@@ -284,7 +307,8 @@ class MacroExpander(BaseMacroExpander):
             # (Public API for "I did what I needed to, now use this as a run-time name".)
             with self._recursive_mode(False):
                 kw = {'args': None}
-                new_tree = self.expand('name', name, macroname, name, fill_root_location=True, kw=kw)
+                sourcecode = unparse_with_fallbacks(name)
+                new_tree = self.expand('name', name, macroname, name, sourcecode=sourcecode, fill_root_location=True, kw=kw)
             if self.recursive and new_tree is not None:
                 if ismodified(new_tree):
                     new_tree = self.visit(new_tree)
@@ -356,7 +380,7 @@ class MacroCollector(NodeVisitorListMixin, NodeVisitor):
         self._visit_Decorated(functiondef)
 
     def _visit_Decorated(self, decorated):
-        macros, others = self.expander._detect_decorator_macros(decorated.decorator_list)
+        macros, others = self.expander._detect_macro_items(decorated.decorator_list)
         if macros:
             for macro in macros:
                 macroname, macroargs = destructure_candidate(macro)

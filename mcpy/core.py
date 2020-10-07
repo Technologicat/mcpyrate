@@ -13,7 +13,6 @@ from contextlib import contextmanager
 from collections import ChainMap
 from .ctxfixer import fix_missing_ctx
 from .markers import ASTMarker
-from .unparser import unparse_with_fallbacks
 from .utilities import flatten_suite, NodeTransformerListMixin
 
 # Hygienically captured macro functions.
@@ -127,7 +126,7 @@ class BaseMacroExpander(NodeTransformerListMixin, NodeTransformer):
                 self.recursive = wasrecursive
         return recursive_mode()
 
-    def expand(self, syntax, target, macroname, tree, fill_root_location, kw=None):
+    def expand(self, syntax, target, macroname, tree, sourcecode, fill_root_location, kw=None):
         '''Expand a macro invocation.
 
         This is a hook for actual macro expanders. Macro libraries typically
@@ -144,6 +143,10 @@ class BaseMacroExpander(NodeTransformerListMixin, NodeTransformer):
         expander. The value of `syntax` and its type can be anything; we don't
         even look at it, but just pass it on.
 
+        `sourcecode` is a source code dump (or unparsed backconversion from AST)
+        for error messages. It is a parameter, because the actual expander may
+        edit the `target` node (e.g. to pop a block macro) before we get control.
+
         `fill_root_location` sets whether to fill the source location info at
         the top level of the expansion from the AST node `target`.
 
@@ -155,7 +158,8 @@ class BaseMacroExpander(NodeTransformerListMixin, NodeTransformer):
                           need to see not only the destructured `tree` and `args`,
                           but the macro invocation itself, without any processing.
                           Very rarely needed; if you need it, you'll know.
-                          **CAUTION**: does not make a copy.
+                          **CAUTION**: does not make a copy. The actual expander
+                          may have already edited it (e.g. to pop a block macro).
 
         To send additional named arguments from the actual expander to the
         macro function, place them in a dictionary and pass that dictionary
@@ -168,14 +172,13 @@ class BaseMacroExpander(NodeTransformerListMixin, NodeTransformer):
             'expander': self,
             'invocation': target})
 
-        approx_sourcecode_before_expansion = unparse_with_fallbacks(target)
-        loc = format_location(self.filename, target, approx_sourcecode_before_expansion)
+        loc = format_location(self.filename, target, sourcecode)
 
         # Expand the macro.
         try:
             expansion = _apply_macro(macro, tree, kw)
         except Exception as err:
-            msg = loc
+            msg = f"{loc}\nwhile expanding {syntax} macro invocation for '{macroname}'"
             if isinstance(err, MacroExpansionError) and err.__cause__:  # telescope nested use site reports
                 oldmsg = err.args[0]
                 if oldmsg[0] == "\n":
