@@ -346,6 +346,11 @@ class MacroCollector(NodeVisitorListMixin, NodeVisitor):
         self._seen = set()
         self.collected = []
 
+    def visit(self, tree):
+        if isinstance(tree, Done):
+            return
+        return super().visit(tree)
+
     def visit_Subscript(self, subscript):
         candidate = subscript.value
         macroname, macroargs = destructure_candidate(candidate)
