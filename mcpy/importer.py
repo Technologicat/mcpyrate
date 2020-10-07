@@ -119,48 +119,46 @@ def path_xstats(self, path):
     if path in _xstats_cache:
         return _xstats_cache[path]
 
-    try:
-        # TODO: This can be slow, the point of `.pyc` is to avoid the parse-and-compile cost.
-        # TODO: We do save the macro-expansion cost, though, and that's likely much more expensive.
-        #
-        # Maybe make our own pyc-like cache file storing the macro-imports found,
-        # store it in the pyc directory, and invalidate it based on the mtime
-        # of `path` (only)?
-        with tokenize.open(path) as sourcefile:
-            tree = ast.parse(sourcefile.read())
-        macroimports = [stmt for stmt in tree.body if expander.ismacroimport(stmt)]
-        has_relative_imports = any(macroimport.level for macroimport in macroimports)
+    # TODO: This can be slow, the point of `.pyc` is to avoid the parse-and-compile cost.
+    # TODO: We do save the macro-expansion cost, though, and that's likely much more expensive.
+    #
+    # If that becomes an issue, maybe make our own cache file storing the
+    # macro-imports found in source file `path`, store it in the pyc
+    # directory, and invalidate it based on the mtime of `path` (only)?
+    with tokenize.open(path) as sourcefile:
+        tree = ast.parse(sourcefile.read())
+    macroimports = [stmt for stmt in tree.body if expander.ismacroimport(stmt)]
+    has_relative_imports = any(macroimport.level for macroimport in macroimports)
 
-        package_absname = None
-        if has_relative_imports:
-            try:
-                package_absname = resolve_package(path)
-            except (ValueError, ImportError) as err:
-                raise ImportError(f"while resolving absolute package name of {path}, which uses relative macro-imports") from err
+    # TODO: some duplication with code in mcpy.expander._get_macros, including the error messages.
+    package_absname = None
+    if has_relative_imports:
+        try:
+            package_absname = resolve_package(path)
+        except (ValueError, ImportError) as err:
+            raise ImportError(f"while resolving absolute package name of {path}, which uses relative macro-imports") from err
 
-        mtimes = []
-        for macroimport in macroimports:
-            if macroimport.module is None:
-                approx_sourcecode = unparse_with_fallbacks(macroimport)
-                loc = format_location(path, macroimport, approx_sourcecode)
-                raise SyntaxError(f"{loc}\nmissing module name in macro-import")
-            module_absname = importlib.util.resolve_name('.' * macroimport.level + macroimport.module, package_absname)
+    mtimes = []
+    for macroimport in macroimports:
+        if macroimport.module is None:
+            approx_sourcecode = unparse_with_fallbacks(macroimport)
+            loc = format_location(path, macroimport, approx_sourcecode)
+            raise SyntaxError(f"{loc}\nmissing module name in macro-import")
+        module_absname = importlib.util.resolve_name('.' * macroimport.level + macroimport.module, package_absname)
 
-            spec = importlib.util.find_spec(module_absname)
-            origin = spec.origin
-            stats = path_xstats(self, origin)
-            mtimes.append(stats['mtime'])
+        spec = importlib.util.find_spec(module_absname)
+        origin = spec.origin
+        stats = path_xstats(self, origin)
+        mtimes.append(stats['mtime'])
 
-        stat_result = os.stat(path)
-        mtime = stat_result.st_mtime_ns * 1e-9
-        # size = stat_result.st_size
-        mtimes.append(mtime)
+    stat_result = os.stat(path)
+    mtime = stat_result.st_mtime_ns * 1e-9
+    # size = stat_result.st_size
+    mtimes.append(mtime)
 
-        result = {'mtime': max(mtimes)}  # and sum(sizes)? OTOH, as of Python 3.8, only 'mtime' is mandatory.
-        _xstats_cache[path] = result
-        return result
-    except Exception as err:
-        raise ImportError(f"while computing modification time of {path}") from err
+    result = {'mtime': max(mtimes)}  # and sum(sizes)? OTOH, as of Python 3.8, only 'mtime' is mandatory.
+    _xstats_cache[path] = result
+    return result
 
 _invalidate_caches = FileFinder.invalidate_caches
 def invalidate_xcaches(self):
