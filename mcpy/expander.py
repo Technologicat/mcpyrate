@@ -135,6 +135,7 @@ class MacroExpander(BaseMacroExpander):
             macroname[arg0, ...][...]  # allowed if @parametricmacro
 
         Replace the `Subscript` node with the AST returned by the macro.
+        The core controls whether to expand again in the result.
         '''
         candidate = subscript.value
         macroname, macroargs = destructure_candidate(candidate)
@@ -179,10 +180,11 @@ class MacroExpander(BaseMacroExpander):
                 with macro2:  # part of `tree` for `macro1`, in either notation
                     ...
 
-        We pop the first block macro in the withitem list, expand it, and then
-        recurse on the result, in that order. A block macro may do anything it
-        wants to its input tree. Any remaining block macro invocations are
-        attached to the `With` node, so if that is removed, they will be skipped.
+        We pop the first block macro in the withitem list and expand it. The
+        core controls whether to expand again in the result. A block macro may
+        do anything it wants to its input tree. Any remaining block macro
+        invocations are attached to the `With` node, so if that is removed,
+        they will be skipped.
         '''
         macros, others = self._detect_macro_items(withstmt.items, "block")
         if not macros:
@@ -192,13 +194,12 @@ class MacroExpander(BaseMacroExpander):
         macroname, macroargs = destructure_candidate(candidate)
         sourcecode = unparse_with_fallbacks(withstmt)
         withstmt.items.remove(with_item)
-        with self._recursive_mode(False):  # don't trigger other block macros yet
-            kw = {'args': macroargs}
-            kw.update({'optional_vars': with_item.optional_vars})
-            tree = withstmt.body if not withstmt.items else [withstmt]
-            new_tree = self.expand('block', withstmt, macroname, tree, sourcecode=sourcecode, fill_root_location=False, kw=kw)
+        kw = {'args': macroargs}
+        kw.update({'optional_vars': with_item.optional_vars})
+        tree = withstmt.body if not withstmt.items else [withstmt]
+        new_tree = self.expand('block', withstmt, macroname, tree, sourcecode=sourcecode, fill_root_location=False, kw=kw)
         new_tree = _add_coverage_dummy_node(new_tree, withstmt, macroname)
-        return self.visit(new_tree)
+        return new_tree
 
     def visit_ClassDef(self, classdef):
         return self._visit_Decorated(classdef)
@@ -226,8 +227,8 @@ class MacroExpander(BaseMacroExpander):
 
         Replace the whole decorated node with the AST returned by the macro.
 
-        We pop the innermost decorator macro, expand it, and then recurse on
-        the result, in that order. A decorator macro is allowed to edit the
+        We pop the innermost decorator macro and expand it. The core controls
+        whether to expand again in the result. A decorator macro may edit the
         decorator list; it may also emit additional nodes (by returning a
         `list`), or even delete the decorated node or replace it altogether.
         Any remaining decorator macro invocations are attached to the original
@@ -242,11 +243,10 @@ class MacroExpander(BaseMacroExpander):
         macroname, macroargs = destructure_candidate(innermost_macro)
         sourcecode = unparse_with_fallbacks(decorated)
         decorated.decorator_list.remove(innermost_macro)
-        with self._recursive_mode(False):  # don't trigger other decorator macros yet
-            kw = {'args': macroargs}
-            new_tree = self.expand('decorator', decorated, macroname, decorated, sourcecode=sourcecode, fill_root_location=True, kw=kw)
+        kw = {'args': macroargs}
+        new_tree = self.expand('decorator', decorated, macroname, decorated, sourcecode=sourcecode, fill_root_location=True, kw=kw)
         new_tree = _add_coverage_dummy_node(new_tree, innermost_macro, macroname)
-        return self.visit(new_tree)
+        return new_tree
 
     def _detect_macro_items(self, items, mode):
         '''Split a list `items` into `(macros, others)`.
@@ -289,6 +289,9 @@ class MacroExpander(BaseMacroExpander):
 
         The `Name` node itself is the input tree for the macro.
         Replace the `Name` node with the AST returned by the macro.
+
+        Otherwise the core controls whether to expand again in the
+        result, but we stop if the macro returns the original `tree`.
         '''
         # Warn about likely mistake? No, e.g. `q[h[some_expr_macro][...]]` is valid,
         # and actually one of the reasons we require declaring name macros. (The other
