@@ -75,8 +75,10 @@ class SourceLocationInfoValidator(Walker):
     """Check that every node has `lineno` and `col_offset`.
 
     We do this manually because it's a rather common occurrence when developing
-    macros to have them missing somewhere, and Python can't be arsed to tell us
-    *which* nodes are missing them.
+    macros to have them missing somewhere, and Python won't tell us *which* nodes
+    are missing them.
+
+    When you `visit()`, `self.collected` becomes a list of `(tree, missing_field_names)`.
     """
     required_fields = ['lineno', 'col_offset']
 
