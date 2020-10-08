@@ -63,6 +63,7 @@ def step_expansion(tree, *, args, syntax, expander, **kw):
         print(f"{stars}Tree 0x{tag:x} macro expansion complete after {step} step{plural}.", file=stderr)
     return tree
 
+
 @namemacro
 def show_bindings(tree, *, syntax, expander, **kw):
     """[syntax, name] Show all bindings of the macro expander.

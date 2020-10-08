@@ -11,12 +11,14 @@ import sys
 import os
 import importlib.util
 from importlib.machinery import FileFinder, SourceFileLoader
-from . import expander
+
 from .core import MacroExpansionError
+from . import expander  # it's a higher-level thing and depends on us so import just the module.
 from .markers import get_markers
 from .unparser import unparse_with_fallbacks
 from .utilities import format_location
 from .walker import SourceLocationInfoValidator
+
 
 def resolve_package(filename):  # TODO: for now, `guess_package`, really. Check the docs again.
     """Resolve absolute Python package name for .py source file `filename`.
@@ -33,6 +35,7 @@ def resolve_package(filename):  # TODO: for now, `guess_package`, really. Check 
     package_dotted_name = relative_path.replace(os.path.sep, '.')
     return package_dotted_name
 
+
 def relativize(filename):
     """Convert `filename` into a relative one under the matching `sys.path`.
 
@@ -48,6 +51,7 @@ def relativize(filename):
     if relative_path.startswith(os.path.sep):
         relative_path = relative_path[len(os.path.sep):]
     return root_path, relative_path
+
 
 def match_syspath(filename):
     """Return the entry in `sys.path` the `filename` is found under.
@@ -95,6 +99,7 @@ def source_to_xcode(self, data, path, *, _optimize=-1):
         raise MacroExpansionError(msg)
 
     return compile(expansion, path, 'exec', dont_inherit=True, optimize=_optimize)
+
 
 # TODO: Support PEP552 (Deterministic pycs). Need to intercept source file hashing, too.
 # TODO: https://www.python.org/dev/peps/pep-0552/
@@ -160,6 +165,7 @@ def path_xstats(self, path):
     result = {'mtime': max(mtimes)}  # and sum(sizes)? OTOH, as of Python 3.8, only 'mtime' is mandatory.
     _xstats_cache[path] = result
     return result
+
 
 _invalidate_caches = FileFinder.invalidate_caches
 def invalidate_xcaches(self):

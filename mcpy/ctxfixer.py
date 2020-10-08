@@ -20,6 +20,7 @@ except ImportError:
         pass
     NamedExpr = _NoSuchNodeType
 
+
 class _CtxFixer(Walker):
     def __init__(self):
         super().__init__(ctxclass=Load)

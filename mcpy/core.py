@@ -214,9 +214,11 @@ class BaseMacroExpander(NodeTransformerListMixin, NodeTransformer):
         '''Return whether the string `name` has been bound to a macro in this expander.'''
         return name in self.bindings or name in _hygienic_bindings
 
+
 def _apply_macro(macro, tree, kw):
     '''Execute `macro` on `tree`, with the dictionary `kw` unpacked into macro's named arguments.'''
     return macro(tree, **kw)
+
 
 # Final postprocessing for the top-level walk can't be done at the end of the
 # entrypoints `visit_once` and `visit_recursively`, because it is valid for a

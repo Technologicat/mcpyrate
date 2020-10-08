@@ -206,6 +206,7 @@ def astify(x, expander=None):  # like MacroPy's `ast_repr`
         raise TypeError(f"Don't know how to astify {repr(x)}")
     return recurse(x)
 
+
 def unastify(tree):
     """Inverse of `astify`.
 
@@ -313,6 +314,7 @@ def _expand_quasiquotes(tree, expander):
     # This would be nicer, but doesn't work here, because it may leave `Done` ASTMarkers.
     # return MacroExpander(bindings, expander.filename).visit(tree)
 
+
 def q(tree, *, syntax, expander, **kw):
     """[syntax, expr/block] quasiquote. Lift code into its AST representation."""
     if syntax not in ("expr", "block"):
@@ -331,6 +333,7 @@ def q(tree, *, syntax, expander, **kw):
             tree = ast.Assign([target], tree)  # Here `tree` is a List.
         return tree
 
+
 def u(tree, *, syntax, expander, **kw):
     """[syntax, expr] unquote. Splice a simple value into a quasiquote.
 
@@ -347,6 +350,7 @@ def u(tree, *, syntax, expander, **kw):
         # `ast.Call` to delay, and in there, splice in `tree` as-is.
         return ASTLiteral(ast.Call(_mcpy_quotes_attr("astify"), [tree], []))
 
+
 def n(tree, *, syntax, **kw):
     """[syntax, expr] name-unquote. Splice a string, lifted into a lexical identifier, into a quasiquote.
 
@@ -359,6 +363,7 @@ def n(tree, *, syntax, **kw):
     with _quotelevel.changed_by(-1):
         return ASTLiteral(astify(ast.Name(id=ASTLiteral(tree))))
 
+
 def a(tree, *, syntax, **kw):
     """[syntax, expr] AST-unquote. Splice an AST into a quasiquote."""
     if syntax != "expr":
@@ -367,6 +372,7 @@ def a(tree, *, syntax, **kw):
         raise SyntaxError("`a` encountered while quotelevel < 1")
     with _quotelevel.changed_by(-1):
         return ASTLiteral(tree)
+
 
 def s(tree, *, syntax, **kw):
     """[syntax, expr] list-unquote. Splice a `list` of ASTs, as an `ast.List`, into a quasiquote."""
@@ -378,6 +384,7 @@ def s(tree, *, syntax, **kw):
                                              attr='List'),
                                [],
                                [ast.keyword("elts", tree)]))
+
 
 def h(tree, *, syntax, expander, **kw):
     """[syntax, expr] hygienic-unquote. Splice any value, from the macro definition site, into a quasiquote.
@@ -423,6 +430,7 @@ def expand1q(tree, *, syntax, **kw):
     tree = q(tree, syntax=syntax, **kw)
     return expand1(tree, syntax=syntax, **kw)
 
+
 def expandq(tree, *, syntax, **kw):
     '''[syntax, expr/block] quote-then-expand.
 
@@ -464,6 +472,7 @@ def expand1(tree, *, syntax, expander, **kw):
     tree = expander.visit_once(tree)  # -> Done(body=...)
     tree = expander.visit_once(unastify(tree.body))  # On wrong kind of input, `unastify` will `TypeError` for us.
     return q(tree, syntax=syntax, expander=expander, **kw)
+
 
 def expand(tree, *, syntax, expander, **kw):
     '''[syntax, expr/block] expand quasiquoted `tree` until no macros remain.

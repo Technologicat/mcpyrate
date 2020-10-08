@@ -11,6 +11,7 @@ import ast
 
 from .walker import Walker
 
+
 class ASTMarker(ast.AST):
     """Base class for AST markers.
 

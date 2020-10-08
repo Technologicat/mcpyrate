@@ -14,6 +14,7 @@ from .markers import ASTMarker
 # We unparse those infinities to INFSTR.
 INFSTR = "1e" + repr(sys.float_info.max_10_exp + 1)
 
+
 class UnparserError(SyntaxError):
     """Failed to unparse the given AST."""
 
@@ -29,6 +30,7 @@ def interleave(inter, f, seq):
         for x in seq:
             inter()
             f(x)
+
 
 class Unparser:
     """Convert an AST into source code.
@@ -784,6 +786,7 @@ def unparse(tree, *, debug=False):
             sep = " " if "\n" not in representation else "\n"
             msg = f"unparse failed, fallback AST dump failed, likely not an AST; here's the type and repr instead:{sep}{type(tree)}{sep}{representation}"
             raise UnparserError(msg) from err
+
 
 def unparse_with_fallbacks(tree, *, debug=False):
     """Like `unparse`, but upon error, don't raise; return the error message.
