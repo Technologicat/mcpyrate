@@ -49,18 +49,17 @@ This layer provides the actual macro expander, defining:
 __all__ = ['namemacro', 'isnamemacro',
            'parametricmacro', 'isparametricmacro',
            'MacroExpander', 'MacroCollector',
-           'expand_macros', 'find_macros', 'ismacroimport']
+           'expand_macros', 'find_macros']
 
-import importlib
-import importlib.util  # in PyPy3, this must be imported explicitly
-from ast import (Name, Subscript, Tuple, Import, ImportFrom, alias, AST, Expr, Constant,
+from ast import (Name, Subscript, Tuple, Import, alias, AST, Expr, Constant,
                  copy_location, iter_fields, NodeVisitor)
 from warnings import warn_explicit
-from .core import (BaseMacroExpander, global_postprocess, Done,
-                   format_location, format_macrofunction)
-from .importer import resolve_package
+
+from .core import BaseMacroExpander, global_postprocess, Done
+from .exutilities import ismacroimport, get_macros
 from .unparser import unparse_with_fallbacks
-from .utilities import NodeVisitorListMixin
+from .utilities import NodeVisitorListMixin, format_macrofunction
+
 
 def namemacro(function):
     '''Decorator. Declare a macro function as an identifier macro.
@@ -474,52 +473,10 @@ def find_macros(tree, *, filename, reload=False):
     bindings = {}
     for index, statement in enumerate(tree.body):
         if ismacroimport(statement):
-            module_absname, more_bindings = _get_macros(statement, filename=filename, reload=reload)
+            module_absname, more_bindings = get_macros(statement, filename=filename, reload=reload)
             bindings.update(more_bindings)
             # Remove all names to prevent macros being used as regular run-time objects.
             # Always use an absolute import, for the unhygienic expose API guarantee.
             tree.body[index] = copy_location(Import(names=[alias(name=module_absname, asname=None)]),
                                              statement)
     return bindings
-
-def ismacroimport(statement):
-    '''Return whether `statement` is a macro-import.
-
-    A macro-import is a statement of the form::
-
-        from ... import macros, ...
-    '''
-    if isinstance(statement, ImportFrom):
-        firstimport = statement.names[0]
-        if firstimport.name == 'macros' and firstimport.asname is None:
-            return True
-    return False
-
-def _get_macros(macroimport, *, filename, reload=False):
-    '''Get absolute module name, macro names and macro functions from a macro-import.
-
-    As a side effect, import the macro definition module.
-
-    Use the `reload` flag only when implementing a REPL, because it'll refresh modules,
-    causing different uses of the same macros to point to different function objects.
-    '''
-    package_absname = None
-    if macroimport.level and filename.endswith(".py"):
-        try:
-            package_absname = resolve_package(filename)
-        except (ValueError, ImportError) as err:
-            raise ImportError(f"while resolving absolute package name of {filename}, which uses relative macro-imports") from err
-
-    if macroimport.module is None:
-        # fallbacks may trigger if the macro-import is programmatically generated.
-        approx_sourcecode = unparse_with_fallbacks(macroimport)
-        loc = format_location(filename, macroimport, approx_sourcecode)
-        raise SyntaxError(f"{loc}\nmissing module name in macro-import")
-    module_absname = importlib.util.resolve_name('.' * macroimport.level + macroimport.module, package_absname)
-
-    module = importlib.import_module(module_absname)
-    if reload:
-        module = importlib.reload(module)
-
-    return module_absname, {name.asname or name.name: getattr(module, name.name)
-                            for name in macroimport.names[1:]}

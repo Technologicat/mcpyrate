@@ -14,6 +14,7 @@ from importlib.machinery import FileFinder, SourceFileLoader
 
 from .core import MacroExpansionError
 from . import expander  # it's a higher-level thing and depends on us so import just the module.
+from .exutilities import ismacroimport
 from .markers import get_markers
 from .unparser import unparse_with_fallbacks
 from .utilities import format_location
@@ -133,10 +134,10 @@ def path_xstats(self, path):
     # directory, and invalidate it based on the mtime of `path` (only)?
     with tokenize.open(path) as sourcefile:
         tree = ast.parse(sourcefile.read())
-    macroimports = [stmt for stmt in tree.body if expander.ismacroimport(stmt)]
+    macroimports = [stmt for stmt in tree.body if ismacroimport(stmt)]
     has_relative_imports = any(macroimport.level for macroimport in macroimports)
 
-    # TODO: some duplication with code in mcpy.expander._get_macros, including the error messages.
+    # TODO: some duplication with code in mcpy.exutilities.get_macros, including the error messages.
     package_absname = None
     if has_relative_imports:
         try:
