@@ -417,3 +417,11 @@ The use site source location is reported in a chained exception (`raise from`), 
 ```python
 import run
 ```
+
+## Understanding the code
+
+We follow the `mcpy` philosophy that macro expanders aren't rocket science. But the extra features do come with a cost in terms of codebase size.
+
+For an overview of the core design, look at the [original mcpy](https://github.com/delapuente/mcpy), version 2.0.0. Of the parts that come from it, its `visitors` is our [`core`](mcpy/core.py) (the `BaseMacroExpander`), its `core` is our [`expander`](mcpy/expander.py) (the actual `MacroExpander`), and its `import_hooks` is our [`importer`](mcpy/importer.py). Its `BaseMacroExpander.ismacro` method is our `BaseMacroExpander.isbound`, because it checks a name, not an AST structure. The rest should be clear.
+
+Then look at our [`importer`](mcpy/importer.py). After [`mcpy.activate`](mcpy/activate.py) has been imported, the importer becomes the top-level entry point.
