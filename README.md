@@ -6,6 +6,32 @@ The design philosophy follows the original `mcpy`: keep things as explicit and c
 
 Supports Python 3.6, 3.7, 3.8, and PyPy3.
 
+<!-- markdown-toc start - Don't edit this section. Run M-x markdown-toc-refresh-toc -->
+**Table of Contents**
+
+- [mcpy](#mcpy)
+    - [Highlights](#highlights)
+    - [Install & uninstall](#install--uninstall)
+    - [Using macros](#using-macros)
+        - [REPL](#repl)
+        - [Syntax](#syntax)
+        - [Importing macros](#importing-macros)
+    - [Writing macros](#writing-macros)
+        - [Macro arguments](#macro-arguments)
+            - [Arguments or no arguments?](#arguments-or-no-arguments)
+        - [The named parameters](#the-named-parameters)
+        - [Quasiquotes](#quasiquotes)
+        - [Walk an AST](#walk-an-ast)
+        - [Distinguish how the macro is called](#distinguish-how-the-macro-is-called)
+            - [Identifier macros](#identifier-macros)
+        - [Get the source of an AST](#get-the-source-of-an-ast)
+        - [Expand macros](#expand-macros)
+        - [Macro expansion error reporting](#macro-expansion-error-reporting)
+        - [Examples](#examples)
+    - [Understanding the code](#understanding-the-code)
+
+<!-- markdown-toc end -->
+
 ## Highlights
 
 This fork adds a lot of features over `mcpy` 2.0.0:
