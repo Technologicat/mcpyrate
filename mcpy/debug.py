@@ -7,10 +7,10 @@ from sys import stderr
 import textwrap
 
 from .astdumper import dump
-from .core import format_macrofunction
 from .expander import MacroCollector, namemacro, parametricmacro
 from .unparser import unparse
-from .utilities import NestingLevelTracker
+from .utilities import NestingLevelTracker, format_macrofunction
+
 
 _step_expansion_level = NestingLevelTracker()
 

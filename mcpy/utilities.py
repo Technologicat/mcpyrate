@@ -1,6 +1,7 @@
 # -*- coding: utf-8; -*-
 
 __all__ = ['flatten_suite', 'gensym',
+           'format_location', 'format_macrofunction',
            'NestingLevelTracker',
            'NodeVisitorListMixin', 'NodeTransformerListMixin']
 
@@ -42,6 +43,30 @@ def gensym(basename=None):
         sym = generate()  # pragma: no cover
     _previous_gensyms.add(sym)
     return sym
+
+
+
+
+def format_location(filename, tree, sourcecode):
+    '''Format a source code location in a standard way, for error messages.
+
+    `filename`: full path to `.py` file
+    `tree`: AST node to get source line number from
+    `sourcecode`: source code (typically, to get this, `unparse(tree)`
+                  before expanding it), or `None` to omit it.
+    '''
+    lineno = tree.lineno if hasattr(tree, 'lineno') else None
+    if sourcecode:
+        sep = " " if "\n" not in sourcecode else "\n"
+        source_with_sep = f"{sep}{sourcecode}"
+    else:
+        source_with_sep = ""
+    return f'{filename}:{lineno}:{source_with_sep}'
+
+
+def format_macrofunction(function):
+    '''Format the fully qualified name of a macro function, for error messages.'''
+    return f"{function.__module__}.{function.__qualname__}"
 
 
 class NestingLevelTracker:
