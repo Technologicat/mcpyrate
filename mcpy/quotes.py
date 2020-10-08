@@ -8,6 +8,7 @@ __all__ = ['capture', 'lookup', 'astify', 'unastify',
 
 import ast
 import pickle
+
 from .core import _hygienic_bindings
 from .expander import expand_macros
 from .markers import ASTMarker, get_markers

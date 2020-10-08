@@ -4,6 +4,7 @@ __all__ = ["Walker", "SourceLocationInfoValidator"]
 
 from abc import ABCMeta, abstractmethod
 from ast import NodeTransformer
+
 from .bunch import Bunch
 from .utilities import flatten_suite
 

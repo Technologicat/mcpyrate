@@ -3,8 +3,9 @@
 
 import ast
 import functools
-import textwrap
 from sys import stderr
+import textwrap
+
 from .astdumper import dump
 from .core import format_macrofunction
 from .expander import MacroCollector, namemacro, parametricmacro

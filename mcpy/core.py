@@ -11,6 +11,7 @@ __all__ = ['format_location', 'format_macrofunction',
 from ast import NodeTransformer, AST, copy_location, fix_missing_locations
 from contextlib import contextmanager
 from collections import ChainMap
+
 from .ctxfixer import fix_missing_ctx
 from .markers import ASTMarker
 from .utilities import flatten_suite, NodeTransformerListMixin

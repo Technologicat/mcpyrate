@@ -8,6 +8,7 @@ macros may use them to work together.
 __all__ = ["ASTMarker", "get_markers"]
 
 import ast
+
 from .walker import Walker
 
 class ASTMarker(ast.AST):

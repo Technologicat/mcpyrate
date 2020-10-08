@@ -3,9 +3,9 @@
 
 __all__ = ['UnparserError', 'unparse', 'unparse_with_fallbacks']
 
-import sys
 import ast
 import io
+import sys
 
 from .astdumper import dump  # fallback
 from .markers import ASTMarker
