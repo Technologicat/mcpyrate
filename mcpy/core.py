@@ -2,11 +2,8 @@
 '''Expander core; essentially, how to apply a macro invocation.'''
 
 __all__ = ['format_location', 'format_macrofunction',
-           'MacroExpansionError',
-           'MacroExpanderMarker',
-           'Done',
-           'BaseMacroExpander',
-           'global_postprocess']
+           'MacroExpansionError', 'MacroExpanderMarker', 'Done',
+           'BaseMacroExpander', 'global_postprocess']
 
 from ast import NodeTransformer, AST, copy_location, fix_missing_locations
 from contextlib import contextmanager
