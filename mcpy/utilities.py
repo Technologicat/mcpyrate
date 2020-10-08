@@ -1,27 +1,13 @@
 # -*- coding: utf-8; -*-
+'''General utilities. Can be useful for writing both macros as well as macro expanders.'''
 
-__all__ = ['flatten_suite', 'gensym',
+__all__ = ['gensym', 'flatten_suite',
            'format_location', 'format_macrofunction',
            'NestingLevelTracker',
            'NodeVisitorListMixin', 'NodeTransformerListMixin']
 
 from contextlib import contextmanager
 import uuid
-
-def flatten_suite(lst):
-    """Flatten a statement suite (by one level).
-
-    `lst` may contain both individual items and `list`s. Any item that
-    `is None` is omitted. If the final result is empty, then instead of
-    an empty list, return `None`.
-    """
-    out = []
-    for elt in lst:
-        if isinstance(elt, list):
-            out.extend(elt)
-        elif elt is not None:
-            out.append(elt)
-    return out if out else None
 
 
 _previous_gensyms = set()
@@ -45,6 +31,20 @@ def gensym(basename=None):
     return sym
 
 
+def flatten_suite(lst):
+    """Flatten a statement suite (by one level).
+
+    `lst` may contain both individual items and `list`s. Any item that
+    `is None` is omitted. If the final result is empty, then instead of
+    an empty list, return `None`.
+    """
+    out = []
+    for elt in lst:
+        if isinstance(elt, list):
+            out.extend(elt)
+        elif elt is not None:
+            out.append(elt)
+    return out if out else None
 
 
 def format_location(filename, tree, sourcecode):
