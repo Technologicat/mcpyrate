@@ -1,8 +1,7 @@
 # -*- coding: utf-8; -*-
 '''Expander core; essentially, how to apply a macro invocation.'''
 
-__all__ = ['format_location', 'format_macrofunction',
-           'MacroExpansionError', 'MacroExpanderMarker', 'Done',
+__all__ = ['MacroExpansionError', 'MacroExpanderMarker', 'Done',
            'BaseMacroExpander', 'global_postprocess']
 
 from ast import NodeTransformer, AST, copy_location, fix_missing_locations
@@ -11,7 +10,7 @@ from collections import ChainMap
 
 from .ctxfixer import fix_missing_ctx
 from .markers import ASTMarker
-from .utilities import flatten_suite, NodeTransformerListMixin, format_location, format_macrofunction
+from .utilities import flatten_suite, NodeTransformerListMixin, format_location
 
 # Hygienically captured macro functions.
 # Global registry (across all modules being expanded) with unique keys, filled in by `mcpy.quotes`.
