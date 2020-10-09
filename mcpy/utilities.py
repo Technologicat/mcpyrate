@@ -50,8 +50,8 @@ def flatten_suite(lst):
 def format_location(filename, tree, sourcecode):
     '''Format a source code location in a standard way, for error messages.
 
-    `filename`: full path to `.py` file
-    `tree`: AST node to get source line number from
+    `filename`: full path to `.py` file.
+    `tree`: AST node to get source line number from.
     `sourcecode`: source code (typically, to get this, `unparse(tree)`
                   before expanding it), or `None` to omit it.
     '''
@@ -74,6 +74,11 @@ class NestingLevelTracker:
 
     Useful for implementing macros that are syntactically only valid inside the
     invocation of another macro (i.e. when the level is `> 0`).
+
+    Note that in order for level tracking to work, the context (outer) macros
+    must expand inside-out (i.e. call `expander.visit` explicitly). If they
+    expand outside-in (default), the outer macro invocation will already have
+    exited when the inner macro invocation gets expanded.
     """
     def __init__(self, start=0):
         """start: int, initial level"""
