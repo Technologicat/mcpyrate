@@ -18,7 +18,6 @@ from . import exutilities
 from .markers import get_markers
 from .unparser import unparse_with_fallbacks
 from .utilities import format_location
-from .walker import SourceLocationInfoValidator
 
 
 def resolve_package(filename):  # TODO: for now, `guess_package`, really. Check the docs again.
@@ -84,20 +83,6 @@ def source_to_xcode(self, data, path, *, _optimize=-1):
     remaining_markers = get_markers(expansion)
     if remaining_markers:
         raise MacroExpansionError("{path}: AST markers remaining after expansion: {remaining_markers}")
-
-    # The top-level module node doesn't need source location info,
-    # but in any other AST node it's mandatory.
-    validator = SourceLocationInfoValidator(ignore={expansion})
-    validator.visit(expansion)
-    if validator.collected:
-        msg = f"{path}: required source location missing for the following nodes:\n"
-        for tree, missing_fields in validator.collected:
-            code_lines = unparse_with_fallbacks(tree).split("\n")
-            code = "\n".join(code_lines[:5])
-            if len(code_lines) > 5:
-                code += "\n..."
-            msg += f"{tree}: {missing_fields}, unparsed code:\n{code}\n"
-        raise MacroExpansionError(msg)
 
     return compile(expansion, path, 'exec', dont_inherit=True, optimize=_optimize)
 
