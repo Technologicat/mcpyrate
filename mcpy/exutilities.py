@@ -81,7 +81,7 @@ def ismacroimport(statement, magicname='macros'):
     return False
 
 
-def get_macros(macroimport, *, filename, reload=False):
+def get_macros(macroimport, *, filename, reload=False, allow_asname=True):
     '''Get absolute module name, macro names and macro functions from a macro-import.
 
     As a side effect, import the macro definition module.
@@ -90,6 +90,10 @@ def get_macros(macroimport, *, filename, reload=False):
 
     Use the `reload` flag only when implementing a REPL, because it'll refresh modules,
     causing different uses of the same macros to point to different function objects.
+
+    Use `allow_asname` to control whether your expander supports renaming macros
+    at the use site. Usually it's a good idea to support it; but e.g. renaming a
+    dialect makes no sense.
 
     This function is meant for implementing actual macro expanders.
     '''
@@ -113,6 +117,9 @@ def get_macros(macroimport, *, filename, reload=False):
 
     bindings = {}
     for name in macroimport.names[1:]:
+        if not allow_asname and name.asname is not None:
+            raise ImportError("This expander (see call stack) does not support as-naming macro-imports.")
+
         try:
             bindings[name.asname or name.name] = getattr(module, name.name)
         except AttributeError as err:
