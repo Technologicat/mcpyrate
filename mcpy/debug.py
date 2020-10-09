@@ -48,10 +48,10 @@ def step_expansion(tree, *, args, syntax, expander, **kw):
     with _step_expansion_level.changed_by(+1):
         indent = 2 * _step_expansion_level.value
         stars = indent * '*'
-        moreindent = indent
+        codeindent = indent
         tag = id(tree)
         print(f"{stars}Tree 0x{tag:x} before macro expansion:", file=stderr)
-        print(textwrap.indent(formatter(tree), moreindent * ' '), file=stderr)
+        print(textwrap.indent(formatter(tree), codeindent * ' '), file=stderr)
         mc = MacroCollector(expander)
         mc.visit(tree)
         step = 0
@@ -60,7 +60,7 @@ def step_expansion(tree, *, args, syntax, expander, **kw):
             tree = expander.visit_once(tree)  # -> Done(body=...)
             tree = tree.body
             print(f"{stars}Tree 0x{tag:x} after step {step}:", file=stderr)
-            print(textwrap.indent(formatter(tree), moreindent * ' '), file=stderr)
+            print(textwrap.indent(formatter(tree), codeindent * ' '), file=stderr)
             mc.clear()
             mc.visit(tree)
         plural = "s" if step != 1 else ""
