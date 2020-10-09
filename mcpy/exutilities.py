@@ -111,5 +111,13 @@ def get_macros(macroimport, *, filename, reload=False):
     if reload:
         module = importlib.reload(module)
 
-    return module_absname, {name.asname or name.name: getattr(module, name.name)
-                            for name in macroimport.names[1:]}
+    bindings = {}
+    for name in macroimport.names[1:]:
+        try:
+            bindings[name.asname or name.name] = getattr(module, name.name)
+        except AttributeError as err:
+            approx_sourcecode = unparse_with_fallbacks(macroimport)
+            loc = format_location(filename, macroimport, approx_sourcecode)
+            raise ImportError(f"{loc}\nNo such macro '{name.name}' in module {module_absname}") from err
+
+    return module_absname, bindings
