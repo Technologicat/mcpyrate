@@ -11,7 +11,7 @@ import textwrap
 
 from .astdumper import dump
 from .expander import MacroCollector, namemacro, parametricmacro
-from .unparser import unparse
+from .unparser import unparse_with_fallbacks
 from .utilities import NestingLevelTracker, format_macrofunction
 from .walker import Walker
 
@@ -29,7 +29,7 @@ def step_expansion(tree, *, args, syntax, expander, **kw):
     if syntax not in ("expr", "block"):
         raise SyntaxError("`step_expansion` is an expr and block macro only")
 
-    formatter = functools.partial(unparse, debug=True)
+    formatter = functools.partial(unparse_with_fallbacks, debug=True)
     if args:
         if len(args) != 1:
             raise SyntaxError("expected `step_expansion['mode_str']`")
@@ -39,7 +39,7 @@ def step_expansion(tree, *, args, syntax, expander, **kw):
         elif type(arg) is ast.Str:  # up to Python 3.7
             mode = arg.s
         else:
-            raise TypeError(f"expected mode str, got {repr(arg)} {unparse(arg)}")
+            raise TypeError(f"expected mode str, got {repr(arg)} {unparse_with_fallbacks(arg)}")
         if mode not in ("unparse", "dump"):
             raise ValueError(f"expected mode either 'unparse' or 'dump', got {repr(mode)}")
         if mode == "dump":
