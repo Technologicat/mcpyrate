@@ -1,75 +1,21 @@
 # -*- coding: utf-8; -*-
 '''Importer (finder/loader) customizations, to inject the macro expander.'''
 
-__all__ = ['resolve_package', 'relativize', 'match_syspath',
-           'source_to_xcode', 'path_xstats', 'invalidate_xcaches']
+__all__ = ['source_to_xcode', 'path_xstats', 'invalidate_xcaches']
 
 import ast
 import tokenize
-import pathlib
-import sys
 import os
 import importlib.util
 from importlib.machinery import FileFinder, SourceFileLoader
 
 from .core import MacroExpansionError
-from . import expander  # it's a higher-level thing and depends on us so import just the module.
-from . import exutilities
+from .expander import find_macros, expand_macros
+from .exutilities import resolve_package, ismacroimport
 from .markers import get_markers
 from .unparser import unparse_with_fallbacks
 from .utilities import format_location
 
-
-def resolve_package(filename):  # TODO: for now, `guess_package`, really. Check the docs again.
-    """Resolve absolute Python package name for .py source file `filename`.
-
-    If `filename` is at the top level of the matching entry in `sys.path`, raises `ImportError`.
-    If `filename` is not under any directory in `sys.path`, raises `ValueError`.
-    """
-    containing_directory = pathlib.Path(filename).expanduser().resolve().parent
-    root_path, relative_path = relativize(containing_directory)
-    if not relative_path:  # at the root_path - not inside a package
-        absolute_filename = str(pathlib.Path(filename).expanduser().resolve())
-        resolved = f" (resolved to {absolute_filename})" if absolute_filename != str(filename) else ""
-        raise ImportError(f"{filename}{resolved} is not in a package, but at the root level of syspath {str(root_path)}")
-    package_dotted_name = relative_path.replace(os.path.sep, '.')
-    return package_dotted_name
-
-
-def relativize(filename):
-    """Convert `filename` into a relative one under the matching `sys.path`.
-
-    Return value is `(root_path, relative_path)`, where `root_path` is the
-    return value of `match_syspath` (a `pathlib.Path`), and `relative_path`
-    is a string containing the relative path of `filename` under `root_path`.
-
-    `filename` can be a .py source file or a package directory.
-    """
-    absolute_filename = str(pathlib.Path(filename).expanduser().resolve())
-    root_path = match_syspath(absolute_filename)
-    relative_path = absolute_filename[len(str(root_path)):]
-    if relative_path.startswith(os.path.sep):
-        relative_path = relative_path[len(os.path.sep):]
-    return root_path, relative_path
-
-
-def match_syspath(filename):
-    """Return the entry in `sys.path` the `filename` is found under.
-
-    Return value is a `pathlib.Path` for the matching `sys.path` directory,
-    resolved to an absolute directory.
-
-    If `filename` is not under any directory in `sys.path`, raises `ValueError`.
-    """
-    absolute_filename = str(pathlib.Path(filename).expanduser().resolve())
-    for root_path in sys.path:
-        root_path = pathlib.Path(root_path).expanduser().resolve()
-        if absolute_filename.startswith(str(root_path)):
-            return root_path
-    resolved = f" (resolved to {absolute_filename})" if absolute_filename != str(filename) else ""
-    raise ValueError(f"{filename}{resolved} not under any directory in `sys.path`")
-
-# --------------------------------------------------------------------------------
 
 def source_to_xcode(self, data, path, *, _optimize=-1):
     '''[mcpy] Expand macros, then compile.
@@ -77,8 +23,8 @@ def source_to_xcode(self, data, path, *, _optimize=-1):
     Intercepts the source to bytecode transformation.
     '''
     tree = ast.parse(data)
-    module_macro_bindings = expander.find_macros(tree, filename=path)
-    expansion = expander.expand_macros(tree, bindings=module_macro_bindings, filename=path)
+    module_macro_bindings = find_macros(tree, filename=path)
+    expansion = expand_macros(tree, bindings=module_macro_bindings, filename=path)
 
     remaining_markers = get_markers(expansion)
     if remaining_markers:
@@ -119,7 +65,7 @@ def path_xstats(self, path):
     # directory, and invalidate it based on the mtime of `path` (only)?
     with tokenize.open(path) as sourcefile:
         tree = ast.parse(sourcefile.read())
-    macroimports = [stmt for stmt in tree.body if exutilities.ismacroimport(stmt)]
+    macroimports = [stmt for stmt in tree.body if ismacroimport(stmt)]
     has_relative_imports = any(macroimport.level for macroimport in macroimports)
 
     # TODO: some duplication with code in mcpy.exutilities.get_macros, including the error messages.

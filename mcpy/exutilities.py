@@ -1,16 +1,69 @@
 # -*- coding: utf-8; -*-
-'''Utilities related to writing macro expanders.'''
+'''Utilities related to writing macro expanders and similar meta-metaprogramming tasks.'''
 
-__all__ = ['ismacroimport', 'get_macros']
+__all__ = ['resolve_package', 'relativize', 'match_syspath',
+           'ismacroimport', 'get_macros']
 
 from ast import ImportFrom
 import importlib
-import importlib.util  # in PyPy3, this must be imported explicitly
+import importlib.util
+import os
+import pathlib
+import sys
 
-from .importer import resolve_package
 from .unparser import unparse_with_fallbacks
 from .utilities import format_location
 
+def resolve_package(filename):  # TODO: for now, `guess_package`, really. Check the docs again.
+    """Resolve absolute Python package name for .py source file `filename`.
+
+    If `filename` is at the top level of the matching entry in `sys.path`, raises `ImportError`.
+    If `filename` is not under any directory in `sys.path`, raises `ValueError`.
+    """
+    containing_directory = pathlib.Path(filename).expanduser().resolve().parent
+    root_path, relative_path = relativize(containing_directory)
+    if not relative_path:  # at the root_path - not inside a package
+        absolute_filename = str(pathlib.Path(filename).expanduser().resolve())
+        resolved = f" (resolved to {absolute_filename})" if absolute_filename != str(filename) else ""
+        raise ImportError(f"{filename}{resolved} is not in a package, but at the root level of syspath {str(root_path)}")
+    package_dotted_name = relative_path.replace(os.path.sep, '.')
+    return package_dotted_name
+
+
+def relativize(filename):
+    """Convert `filename` into a relative one under the matching `sys.path`.
+
+    Return value is `(root_path, relative_path)`, where `root_path` is the
+    return value of `match_syspath` (a `pathlib.Path`), and `relative_path`
+    is a string containing the relative path of `filename` under `root_path`.
+
+    `filename` can be a .py source file or a package directory.
+    """
+    absolute_filename = str(pathlib.Path(filename).expanduser().resolve())
+    root_path = match_syspath(absolute_filename)
+    relative_path = absolute_filename[len(str(root_path)):]
+    if relative_path.startswith(os.path.sep):
+        relative_path = relative_path[len(os.path.sep):]
+    return root_path, relative_path
+
+
+def match_syspath(filename):
+    """Return the entry in `sys.path` the `filename` is found under.
+
+    Return value is a `pathlib.Path` for the matching `sys.path` directory,
+    resolved to an absolute directory.
+
+    If `filename` is not under any directory in `sys.path`, raises `ValueError`.
+    """
+    absolute_filename = str(pathlib.Path(filename).expanduser().resolve())
+    for root_path in sys.path:
+        root_path = pathlib.Path(root_path).expanduser().resolve()
+        if absolute_filename.startswith(str(root_path)):
+            return root_path
+    resolved = f" (resolved to {absolute_filename})" if absolute_filename != str(filename) else ""
+    raise ValueError(f"{filename}{resolved} not under any directory in `sys.path`")
+
+# --------------------------------------------------------------------------------
 
 def ismacroimport(statement, magicname='macros'):
     '''Return whether `statement` is a macro-import.
