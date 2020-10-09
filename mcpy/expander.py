@@ -457,6 +457,7 @@ def find_macros(tree, *, filename, reload=False):
     Collect bindings from each macro-import statement (`from ... import macros, ...`)
     at the top level of `tree.body`. Transform each macro-import into `import ...`,
     where `...` is the absolute module name the macros are being imported from.
+    As a side effect, import the macro definition modules.
 
     Primarily meant to be called with `tree` the AST of a module that
     uses macros, but works with any `tree` that has a `body` attribute.
