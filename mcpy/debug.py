@@ -13,6 +13,7 @@ from .astdumper import dump
 from .expander import MacroCollector, namemacro, parametricmacro
 from .unparser import unparse
 from .utilities import NestingLevelTracker, format_macrofunction
+from .walker import Walker
 
 
 _step_expansion_level = NestingLevelTracker()
@@ -83,3 +84,62 @@ def show_bindings(tree, *, syntax, expander, **kw):
     for k, v in sorted(expander.bindings.items()):
         print(f"    {k}: {format_macrofunction(v)}", file=stderr)
     return ast.Constant(value=None)  # can't just delete the node (return None) if it's in an Expr(value=...)
+
+
+class SourceLocationInfoValidator(Walker):
+    """Check whether every node of a `tree` has `lineno` and `col_offset`.
+
+    Usage::
+
+        v = SourceLocationInfoValidator()
+        v.visit(tree)
+        print(v.collected)
+
+    It's a rather common occurrence when developing macros to have the source
+    location info missing somewhere, but when we `compile`, Python won't tell us
+    *which* nodes are missing them.
+
+    This can also be used to debug whether the problem is what Python claims it is.
+    Python's `compile` is notorious for yelling about a missing source location
+    when the actual problem is that is got a bare value in a position where an
+    AST node was expected.
+
+    The mcpy core *should* fill in missing source location info when it expands
+    a macro, so this utility will be needed only rarely.
+
+    After `visit(tree)`, `self.collected` becomes a `list` of items in the format
+    `(subtree, sourcecode, missing_field_names)`. Each `sourcecode` is truncated
+    if too long.
+    """
+    def __init__(self, ignore={}, n=5, check_fields=['lineno', 'col_offset']):
+        """Constructor.
+
+        Parameters:
+
+            `ignore={tree0, ...}` to ignore given subtrees (such as if you have
+            a top-level `Module` node; those don't need source location info).
+            Subtrees are detected by their `id`.
+
+            `n`: maximum number of source lines to show for each collected item.
+
+            `check_fields`: which fields are considered mandatory for every node
+            in `tree`. Defaults to checking source location info.
+        """
+        self.ignore = ignore
+        self.n = n
+        self.check_fields = check_fields
+        super().__init__()
+
+    def transform(self, tree):
+        if tree not in self.ignore:
+            present = [hasattr(tree, x) for x in self.check_fields]
+            if not all(present):
+                code_lines = unparse_with_fallbacks(tree).split("\n")
+                code = "\n".join(code_lines[:self.n])
+                if len(code_lines) > self.n:
+                    code += "\n..."
+
+                self.collect((tree,
+                              code,
+                              [fieldname for fieldname, p in zip(self.check_fields, present) if not p]))
+        return tree
