@@ -10,6 +10,7 @@ import importlib.util
 from importlib.machinery import FileFinder, SourceFileLoader
 
 from .core import MacroExpansionError
+from .dialects import expand_dialects
 from .expander import find_macros, expand_macros
 from .exutilities import resolve_package, ismacroimport
 from .markers import get_markers
@@ -22,7 +23,8 @@ def source_to_xcode(self, data, path, *, _optimize=-1):
 
     Intercepts the source to bytecode transformation.
     '''
-    tree = ast.parse(data)
+    tree = expand_dialects(data, filename=path)
+
     module_macro_bindings = find_macros(tree, filename=path)
     expansion = expand_macros(tree, bindings=module_macro_bindings, filename=path)
 
