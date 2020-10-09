@@ -1,6 +1,9 @@
 # -*- coding: utf-8; -*-
 """Macro debugging utilities."""
 
+__all__ = ["step_expansion", "show_bindings",
+           "SourceLocationInfoValidator"]
+
 import ast
 import functools
 from sys import stderr
