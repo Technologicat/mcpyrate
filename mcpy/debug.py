@@ -20,11 +20,33 @@ _step_expansion_level = NestingLevelTracker()
 
 @parametricmacro
 def step_expansion(tree, *, args, syntax, expander, **kw):
-    """[syntax, expr/block] Macroexpand `tree`, showing source code at each step of the expansion.
+    """[syntax, expr/block] Macroexpand `tree`, showing each step of the expansion.
 
-    Since this is a debugging utility, the source code is shown in the debug
+    Syntax::
+
+        step_expansion[...]
+        step_expansion[mode][...]
+        with step_expansion:
+            ...
+        with step_expansion[mode]:
+            ...
+
+    This calls `expander.visit_once` in a loop, discarding the `Done` markers,
+    and showing the AST at each step (by printing to `sys.stderr`).
+
+    A step is defined as when `expander.visit_once` returns control to the
+    expander core. If your macro does `expander.visit(subtree)`, that will
+    expand by one step; if it does `expander.visit_recursively(subtree)`,
+    then that subtree will be expanded, in a single step, until no macros remain.
+
+    Since this is a debugging utility, the source code is rendered in the debug
     mode of `unparse`, which prints also invisible nodes such as `Module` and
-    `Expr`.
+    `Expr` in a Python-like pseudocode notation.
+
+    The optional macro argument `mode`, if present, sets the renderer mode.
+    It must be one of the strings `"unparse"` (default) or `"dump"`.
+    If `"unparse"`, then at each step, the AST will be shown as source code.
+    If `"dump"`, then at each step, the AST will be shown as a raw AST dump.
     """
     if syntax not in ("expr", "block"):
         raise SyntaxError("`step_expansion` is an expr and block macro only")
@@ -72,11 +94,18 @@ def step_expansion(tree, *, args, syntax, expander, **kw):
 def show_bindings(tree, *, syntax, expander, **kw):
     """[syntax, name] Show all bindings of the macro expander.
 
-    For each binding, this lists the macro name, and the fully qualified name
-    of the corresponding macro function.
+    Syntax::
+
+        show_bindings
+
+    This can appear in any expression position, and at run-time evaluates to `None`.
+
+    At macro expansion time, for each macro binding, this prints to `sys.stderr`
+    the macro name, and the fully qualified name of the corresponding macro function.
 
     Any bindings that have an uuid as part of the name are hygienically
-    unquoted macros. These make a per-process global binding across all modules.
+    unquoted macros. Those make a per-process global binding across all modules
+    and all expander instances.
     """
     if syntax != "name":
         raise SyntaxError("`show_bindings` is an identifier macro only")
