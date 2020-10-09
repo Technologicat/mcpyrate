@@ -178,10 +178,10 @@ def expand_dialects(data, *, filename):
 
     The algorithm works as follows.
 
-    We take the first not-yet-seen dialect-import statement, apply its source
-    transformers left-to-right, and repeat (each time rescanning the text from
-    the beginning) until the source transformers of all dialect-imports have
-    been applied.
+    We take the first not-yet-seen dialect-import statement (by literal string
+    content), apply its source transformers left-to-right, and repeat (each
+    time rescanning the text from the beginning) until the source transformers
+    of all dialect-imports have been applied.
 
     Then, we take the first dialect-import statement at the top level of the
     module, transform it away (into a module import), and apply its AST
