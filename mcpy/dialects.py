@@ -112,8 +112,9 @@ class DialectExpander:
         So we can only rely on the literal text "from ... import dialects, ...",
         similarly to how Racket heavily constrains the format of its `#lang` line.
 
-        Return value is a dict `{dialectname: function, ...}` with all collected bindings
-        from that one dialect-import.
+        Return value is a dict `{dialectname: class, ...}` with all collected bindings
+        from that one dialect-import. Each binding is a dialect, so usually there is
+        just one.
         '''
         matches = _dialectimport.finditer(text)
         try:
@@ -143,8 +144,9 @@ class DialectExpander:
 
             from ... import dialects, ...
 
-        Return value is a dict `{dialectname: function, ...}` with all collected bindings
-        from that one dialect-import.
+        Return value is a dict `{dialectname: class, ...}` with all collected bindings
+        from that one dialect-import. Each binding is a dialect, so usually there is
+        just one.
         '''
         for index, statement in enumerate(tree.body):
             if ismacroimport(statement, magicname="dialects"):
