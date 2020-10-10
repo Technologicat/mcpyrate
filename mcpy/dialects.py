@@ -28,7 +28,7 @@ class Dialect:
         tokenizer for "Python-plus" with extended surface syntax, this is
         currently essentially a per-module hook to plug in a transpiler
         that compiles source code from some other programming language
-        into (macro-enabled) Python.
+        into macro-enabled Python.
 
         The dialect system autodetects the text encoding the same way Python itself
         does. That is, it reads the magic comment at the top of the source file
