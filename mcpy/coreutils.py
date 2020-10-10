@@ -12,7 +12,7 @@ import pathlib
 import sys
 
 from .unparser import unparse_with_fallbacks
-from .utilities import format_location
+from .utils import format_location
 
 def resolve_package(filename):  # TODO: for now, `guess_package`, really. Check the docs again.
     """Resolve absolute Python package name for .py source file `filename`.

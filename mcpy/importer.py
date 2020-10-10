@@ -15,7 +15,7 @@ from .expander import find_macros, expand_macros
 from .coreutils import resolve_package, ismacroimport
 from .markers import get_markers
 from .unparser import unparse_with_fallbacks
-from .utilities import format_location
+from .utils import format_location
 
 
 def source_to_xcode(self, data, path, *, _optimize=-1):

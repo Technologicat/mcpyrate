@@ -12,7 +12,7 @@ import textwrap
 from .astdumper import dump
 from .expander import MacroCollector, namemacro, parametricmacro
 from .unparser import unparse_with_fallbacks
-from .utilities import NestingLevelTracker, format_macrofunction
+from .utils import NestingLevelTracker, format_macrofunction
 from .walker import Walker
 
 

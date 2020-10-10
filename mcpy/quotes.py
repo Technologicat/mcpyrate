@@ -13,7 +13,7 @@ from .core import _hygienic_bindings
 from .expander import expand_macros
 from .markers import ASTMarker, get_markers
 from .unparser import unparse
-from .utilities import gensym, NestingLevelTracker
+from .utils import gensym, NestingLevelTracker
 
 # --------------------------------------------------------------------------------
 

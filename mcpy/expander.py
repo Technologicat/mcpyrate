@@ -58,7 +58,7 @@ from warnings import warn_explicit
 from .core import BaseMacroExpander, global_postprocess, Done
 from .coreutils import ismacroimport, get_macros
 from .unparser import unparse_with_fallbacks
-from .utilities import NodeVisitorListMixin, format_macrofunction
+from .utils import NodeVisitorListMixin, format_macrofunction
 
 
 def namemacro(function):

@@ -6,7 +6,7 @@ from abc import ABCMeta, abstractmethod
 from ast import NodeTransformer
 
 from .bunch import Bunch
-from .utilities import flatten_suite
+from .utils import flatten_suite
 
 
 class Walker(NodeTransformer, metaclass=ABCMeta):

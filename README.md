@@ -375,7 +375,7 @@ The main use case, why this feature exists, is to create magic variables that ar
 
 ```python
 from mcpy import namemacro
-from mcpy.utilities import NestingLevelTracker
+from mcpy.utils import NestingLevelTracker
 
 _mymacro_level = NestingLevelTracker()
 
