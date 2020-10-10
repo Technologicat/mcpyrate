@@ -12,7 +12,7 @@ from importlib.machinery import FileFinder, SourceFileLoader
 from .core import MacroExpansionError
 from .dialects import expand_dialects
 from .expander import find_macros, expand_macros
-from .exutilities import resolve_package, ismacroimport
+from .coreutils import resolve_package, ismacroimport
 from .markers import get_markers
 from .unparser import unparse_with_fallbacks
 from .utilities import format_location
@@ -70,7 +70,7 @@ def path_xstats(self, path):
     macroimports = [stmt for stmt in tree.body if ismacroimport(stmt)]
     has_relative_imports = any(macroimport.level for macroimport in macroimports)
 
-    # TODO: some duplication with code in mcpy.exutilities.get_macros, including the error messages.
+    # TODO: some duplication with code in mcpy.coreutils.get_macros, including the error messages.
     package_absname = None
     if has_relative_imports:
         try:

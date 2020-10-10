@@ -11,7 +11,7 @@ import os
 import sys
 import argparse
 
-from ..exutilities import relativize
+from ..coreutils import relativize
 
 from .. import activate  # noqa: F401
 

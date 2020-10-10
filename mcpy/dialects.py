@@ -14,7 +14,7 @@ from collections import deque
 import re
 import tokenize
 
-from .exutilities import ismacroimport, get_macros
+from .coreutils import ismacroimport, get_macros
 
 class Dialect:
     '''Base class for dialects.'''

@@ -56,7 +56,7 @@ from ast import (Name, Subscript, Tuple, Import, alias, AST, Expr, Constant,
 from warnings import warn_explicit
 
 from .core import BaseMacroExpander, global_postprocess, Done
-from .exutilities import ismacroimport, get_macros
+from .coreutils import ismacroimport, get_macros
 from .unparser import unparse_with_fallbacks
 from .utilities import NodeVisitorListMixin, format_macrofunction
 
