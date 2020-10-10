@@ -22,16 +22,74 @@ class Dialect:
     def transform_source(text):
         '''Override this to add a whole-module source transformer to your dialect.
 
-        Input is the full source text of the module, as a string. Output should be
-        the transformed source text, as a string.
+        If not overridden, the default is to return `text` as-is.
+
+        Rarely needed. Because we don't (yet) have a generic, extensible
+        tokenizer for "Python-plus" with extended surface syntax, this is
+        currently essentially a per-module hook to plug in a transpiler
+        that compiles source code from some other programming language
+        into (macro-enabled) Python.
+
+        The dialect system autodetects the text encoding the same way Python itself
+        does. That is, it reads the magic comment at the top of the source file
+        (such as `# -*- coding: utf-8; -*-`), and assumes `utf-8` if not present.
+        So your source transformer gets its input as `str` (**not** `bytes`).
+
+        So the input is the full source text of the module, as a string (`str`).
+
+        Output should be the transformed source text, as a string (`str`).
+
+        To put it all together, this allows implementing things like::
+
+            # -*- coding: utf-8; -*-
+            """See https://en.wikipedia.org/wiki/Brainfuck#Examples"""
+
+            from mylibrary import dialects, Brainfuck
+
+             ++++++++[>++++[>++>+++>+++>+<<<<-]>+>+>->>+[<]<-]>>.>---.+++++++..+++.>>.<-.<.+++.------.--------.>>+.>++.
+
+        Implementing the actual BF->Python transpiler is left as an exercise
+        to the reader.
         '''
         return text
 
     def transform_ast(tree):
         '''Override this to add a whole-module AST transformer to your dialect.
 
-        Input is the full AST of the module, but with the dialect-import for this
-        dialect already transformed away. Output should be the transformed AST.
+        If not overridden, the default is to return `tree` as-is.
+
+        This is useful to define custom dialects that use Python's surface syntax,
+        but differ in semantics.
+
+        Input is the full AST of the module (in standard Python AST format),
+        but with the dialect-import for this dialect already transformed away,
+        into an absolute module import for the module defining the dialect.
+        Output should be the transformed AST.
+
+        As an example, for now, until `unpythonic` is ported to `mcpy`, see the
+        example dialects in `pydialect`, which are implemented using this exact
+        strategy, but with the older MacroPy macro expander, the older `pydialect`
+        dialect system, and `unpythonic`.
+
+            https://github.com/Technologicat/pydialect/tree/master/lispython
+            https://github.com/Technologicat/pydialect/tree/master/pytkell
+            https://github.com/Technologicat/pydialect/tree/master/listhell
+
+        To give a flavor; once we get that ported, we'll have *Lispython*::
+
+            # -*- coding: utf-8; -*-
+            """Lispython example."""
+
+            from mylibrary import dialects, Lispython
+
+            def fact(n):
+                def f(k, acc):
+                    if k == 1:
+                        return acc
+                    f(k - 1, k*acc)
+                f(n, acc=1)
+            assert fact(4) == 24
+            fact(5000)  # automatic TCO injection, no crash
         '''
         return tree
 
