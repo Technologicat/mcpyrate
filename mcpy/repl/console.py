@@ -36,7 +36,7 @@ class MacroConsole(code.InteractiveConsole):
         self._bindings_changed = False
 
         # ? and ?? help syntax
-        self._internal_execute("import mcpy.repl.utilities")
+        self._internal_execute("import mcpy.repl.utils")
 
     def _internal_execute(self, source):
         """Execute given source in the console session.
@@ -87,9 +87,9 @@ class MacroConsole(code.InteractiveConsole):
             self._list_macros()
             return False  # complete input
         elif source.endswith("??"):
-            return self.runsource(f'mcpy.repl.utilities.sourcecode({source[:-2]})')
+            return self.runsource(f'mcpy.repl.utils.sourcecode({source[:-2]})')
         elif source.endswith("?"):
-            return self.runsource(f"mcpy.repl.utilities.doc({source[:-1]})")
+            return self.runsource(f"mcpy.repl.utils.doc({source[:-1]})")
 
         try:
             code = self.compile(source, filename, symbol)
