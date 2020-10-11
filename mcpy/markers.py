@@ -15,7 +15,7 @@ from .walker import Walker
 class ASTMarker(ast.AST):
     """Base class for AST markers.
 
-    Markers are AST-node-like entities meant for communication between
+    Markers are AST-node-like objects meant for communication between
     co-operating, related macros. They are also used by the macro expander
     to talk with itself during expansion.
 
@@ -27,7 +27,7 @@ class ASTMarker(ast.AST):
 
     To help fail-fast, if you define your own marker types, use `get_markers`
     to check (at an appropriate point) that the expanded AST has no instances
-    of your own markers remaining.
+    of your own markers remaining. (You'll want a base class for your own markers.)
 
     A typical usage example is in the quasiquote system, where the unquote
     operators (some of which expand to markers) may only appear inside a quoted
