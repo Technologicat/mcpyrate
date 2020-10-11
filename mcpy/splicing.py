@@ -102,8 +102,8 @@ def splice_dialect(body, template, tag="__paste_here__"):
     appear in the template), followed by any macro imports in the user code
     (in the order they appear in the user code).
 
-    This also handles the magic `__all__` (if any) from `body`, placing it at
-    the top.
+    This also handles the module docstring and the magic `__all__` (if any)
+    from `body`, placing them at the top.
 
     Parameters:
 
@@ -139,6 +139,13 @@ def splice_dialect(body, template, tag="__paste_here__"):
         ast.copy_location(stmt, body[0])
         ast.fix_missing_locations(stmt)
 
+    # TODO: remove ast.Str once we bump minimum language version to Python 3.8
+    if type(body[0]) is ast.Expr and type(body[0].value) in (ast.Constant, ast.Str):
+        docstring, *body = body
+        docstring = [docstring]
+    else:
+        docstring = []
+
     def extract_magic_all(tree):
         def ismagicall(tree):
             if not (type(tree) is ast.Assign and len(tree.targets) == 1):
@@ -171,4 +178,4 @@ def splice_dialect(body, template, tag="__paste_here__"):
     body, user_macro_imports = extract_macroimports(body)
 
     finalbody = splice_statements(body, template, tag)
-    return user_magic_all + template_macro_imports + user_macro_imports + finalbody
+    return docstring + user_magic_all + template_macro_imports + user_macro_imports + finalbody
