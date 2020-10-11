@@ -342,8 +342,6 @@ The system was inspired by MacroPy's, but the details differ; for example, macro
 
 *New in v3.0.0.* To bridge the feature gap between [`ast.NodeTransformer`](https://docs.python.org/3/library/ast.html#ast.NodeTransformer) and MacroPy's `Walker`, we provide [`mcpy.walker.Walker`](walker.md), a zen-minimalistic AST walker base class based on `ast.NodeTransformer`, with a state stack and a node collector. If you need a walker that can temporarily change state while in a given subtree, maybe look here.
 
-We also provide `mcpy.utils.NodeVisitorListMixin` and `mcpy.utils.NodeTransformerListMixin` to transparently dispatch `visit` for statement suites (`list` of AST nodes) and `None` (absent, skip it) in `ast.NodeVisitor` and `ast.NodeTransformer` derivatives.
-
 
 #### Identifier macros
 

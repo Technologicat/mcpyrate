@@ -58,7 +58,7 @@ from warnings import warn_explicit
 from .core import BaseMacroExpander, global_postprocess, Done
 from .coreutils import ismacroimport, get_macros
 from .unparser import unparse_with_fallbacks
-from .utils import NodeVisitorListMixin, format_macrofunction
+from .utils import format_macrofunction
 
 
 def namemacro(function):
@@ -313,7 +313,7 @@ class MacroExpander(BaseMacroExpander):
         return new_tree
 
 
-class MacroCollector(NodeVisitorListMixin, NodeVisitor):
+class MacroCollector(NodeVisitor):
     '''Scan `tree` for macro invocations, with respect to given `expander`.
 
     Collect a list of `(macroname, syntax)`. Usage::
@@ -339,6 +339,12 @@ class MacroCollector(NodeVisitorListMixin, NodeVisitor):
 
     def visit(self, tree):
         if isinstance(tree, Done):
+            return
+        if tree is None:
+            return
+        if isinstance(tree, list):
+            for elt in tree:
+                self.visit(elt)
             return
         return super().visit(tree)
 

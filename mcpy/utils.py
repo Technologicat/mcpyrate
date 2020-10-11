@@ -4,7 +4,6 @@
 __all__ = ['gensym', 'flatten_suite',
            'format_location', 'format_macrofunction',
            'NestingLevelTracker',
-           'NodeVisitorListMixin', 'NodeTransformerListMixin',
            'rename']
 
 import ast
@@ -112,34 +111,6 @@ class NestingLevelTracker:
     def changed_by(self, delta):
         """Context manager. Run a section of code with the level incremented by `delta`."""
         return self.set_to(self.value + delta)
-
-
-class NodeVisitorListMixin:
-    """Mixin for `ast.NodeVisitor`.
-
-    Make `visit()` automatically walk lists of AST nodes, and no-op on `None`.
-    """
-    def visit(self, tree):
-        if tree is None:
-            return
-        if isinstance(tree, list):
-            for elt in tree:
-                self.visit(elt)
-            return
-        super().visit(tree)
-
-
-class NodeTransformerListMixin:
-    """Mixin for `ast.NodeTransformer`.
-
-    Make `visit()` automatically walk lists of AST nodes, and no-op on `None`.
-    """
-    def visit(self, tree):
-        if tree is None:
-            return None
-        if isinstance(tree, list):
-            return flatten_suite(self.visit(elt) for elt in tree)
-        return super().visit(tree)
 
 
 def rename(from_, to, tree):
