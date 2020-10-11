@@ -102,6 +102,7 @@ def rename(from_, to, tree):
             return self.generic_visit(tree)
     return Renamer().visit(tree)
 
+# --------------------------------------------------------------------------------
 
 def format_location(filename, tree, sourcecode):
     '''Format a source code location in a standard way, for error messages.
@@ -124,6 +125,7 @@ def format_macrofunction(function):
     '''Format the fully qualified name of a macro function, for error messages.'''
     return f"{function.__module__}.{function.__qualname__}"
 
+# --------------------------------------------------------------------------------
 
 class NestingLevelTracker:
     """Track the nesting level in a set of co-operating, related macros.
