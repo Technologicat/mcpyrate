@@ -338,6 +338,14 @@ class MacroCollector(NodeVisitor):
         self.collected = []
 
     def visit(self, tree):
+        '''Scan `tree` for macro invocations.
+
+        No-op if `self.expander` has no macro bindings, or if `tree` is marked
+        as `Done`.
+
+        Treat `visit(stmt_suite)` as a loop for individual elements.
+        No-op if `tree is None`.
+        '''
         if not self.expander.bindings or isinstance(tree, Done):
             return
         if tree is None:
