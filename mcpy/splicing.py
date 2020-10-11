@@ -1,5 +1,5 @@
 # -*- coding: utf-8; -*-
-"""AST splicing utilities."""
+"""Utilities for splicing the actual code into a code template."""
 
 __all__ = ["splice_statements", "splice_dialect"]
 
@@ -43,7 +43,8 @@ def splice_statements(body, template, tag="__paste_here__"):
         `tag`: `str`
             The name of the paste-here indicator in `template`.
 
-    Returns `template` with `body` spliced in. Note `template` is **not** copied.
+    Returns `template` with `body` spliced in. Note `template` is **not** copied,
+    and will be mutated in-place.
 
     Example::
 
@@ -118,7 +119,11 @@ def splice_dialect(body, template, tag="__paste_here__"):
         `tag`: `str`
             The name of the paste-here indicator in `template`.
 
-    Returns `template` with `body` spliced in. Note `template` is **not** copied.
+    Returns `template` with `body` spliced in. Note `template` is **not** copied,
+    and will be mutated in-place.
+
+    Also `body` is mutated, to remove macro-imports, `__all__` and the module
+    docstring; these are pasted into the final result.
     """
     if isinstance(body, ast.AST):
         body = [body]
