@@ -50,7 +50,7 @@ def flatten_suite(lst):
     return out if out else None
 
 
-def rename(from_, to, tree):
+def rename(oldname, newname, tree):
     """Rename all occurrences of a name in `tree`.
 
     We look in all places in the AST that hold name-like things.
@@ -75,30 +75,30 @@ def rename(from_, to, tree):
         def transform(self, tree):
             T = type(tree)
             if T is ast.Name:
-                if tree.id == from_:
-                    tree.id = to
+                if tree.id == oldname:
+                    tree.id = newname
             # Look for "raw string" in GTS for a full list of the following.
             # https://greentreesnakes.readthedocs.io/en/latest/nodes.html
             elif T is ast.Attribute:
-                if tree.attr == from_:
-                    tree.attr = to
+                if tree.attr == oldname:
+                    tree.attr = newname
             elif T in (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef):
-                if tree.name == from_:
-                    tree.name = to
+                if tree.name == oldname:
+                    tree.name = newname
             elif T is ast.arg:  # function parameter
-                if tree.arg == from_:
-                    tree.arg = to
+                if tree.arg == oldname:
+                    tree.arg = newname
             elif T is ast.keyword:  # in function call, argument passed by name
-                if tree.arg == from_:
-                    tree.arg = to
+                if tree.arg == oldname:
+                    tree.arg = newname
             elif T is ast.alias:  # in ast.Import, ast.ImportFrom
-                if tree.name == from_:
-                    tree.name = to
-                if tree.asname == from_:
-                    tree.asname = to
+                if tree.name == oldname:
+                    tree.name = newname
+                if tree.asname == oldname:
+                    tree.asname = newname
             elif T is ast.ExceptHandler:
-                if tree.name == from_:
-                    tree.name = to
+                if tree.name == oldname:
+                    tree.name = newname
             return self.generic_visit(tree)
     return Renamer().visit(tree)
 
