@@ -35,7 +35,7 @@ class Dialect:
         (such as `# -*- coding: utf-8; -*-`), and assumes `utf-8` if not present.
         So your source transformer gets its input as `str` (**not** `bytes`).
 
-        So the input is the full source text of the module, as a string (`str`).
+        The input is the full source text of the module, as a string (`str`).
 
         Output should be the transformed source text, as a string (`str`).
 
@@ -59,7 +59,7 @@ class Dialect:
         If not overridden, the default is to return `tree` as-is.
 
         This is useful to define custom dialects that use Python's surface syntax,
-        but differ in semantics.
+        but with different semantics.
 
         Input is the full AST of the module (in standard Python AST format),
         but with the dialect-import for this dialect already transformed away,
@@ -71,11 +71,10 @@ class Dialect:
         strategy, but with the older MacroPy macro expander, the older `pydialect`
         dialect system, and `unpythonic`.
 
-            https://github.com/Technologicat/pydialect/tree/master/lispython
-            https://github.com/Technologicat/pydialect/tree/master/pytkell
-            https://github.com/Technologicat/pydialect/tree/master/listhell
+            https://github.com/Technologicat/pydialect
 
-        To give a flavor; once we get that ported, we'll have *Lispython*::
+        To give a flavor; once we get that ported, we'll have *Lispython*, which is
+        essentially Python with TCO, and implicit `return` in tail position::
 
             # -*- coding: utf-8; -*-
             """Lispython example."""
@@ -89,7 +88,7 @@ class Dialect:
                     f(k - 1, k*acc)
                 f(n, acc=1)
             assert fact(4) == 24
-            fact(5000)  # automatic TCO injection, no crash
+            fact(5000)  # no crash
         '''
         return tree
 
@@ -97,7 +96,7 @@ class Dialect:
 _dialectimport = re.compile(r"^from\s+([.0-9a-zA-z_]+)\s+import dialects,\s+([^(\\]+)$",
                             flags=re.MULTILINE)
 class DialectExpander:
-    '''The actual dialect expander.'''
+    '''The dialect expander.'''
 
     def __init__(self, filename):
         '''`filename`: full path to `.py` file being expanded, for module name resolution and error messages.'''
@@ -249,6 +248,9 @@ def expand_dialects(data, *, filename):
 
     Then we return `tree`; it may still have macros, but no more dialects.
 
+    Each dialect class is instantiated separately for the source and AST
+    transform phases.
+
     Note that a source transformer may edit the full source, including any
     dialect-imports. This will change which dialects get applied. If it removes
     its own dialect-import, that will cause it to skip its AST transformer.
@@ -257,6 +259,24 @@ def expand_dialects(data, *, filename):
     Similarly, an AST transformer may edit the full module AST, including any
     remaining dialect-imports. If it removes any, those AST transformers will
     be skipped. If it adds any, those will get processed as encountered.
+
+    **CAUTION**: Dialect-imports always apply to the whole module. They
+    essentially specify which language the module is written in. Hence,
+    it is heavily encouraged to put all dialect-imports near the top.
+
+    If the dialect looks mostly like Python, the recommended layout in the
+    spirit of PEP8 is::
+
+        # -*- coding: utf-8; -*-
+        """Example module using a dialect."""
+
+        __all__ = [...]
+
+        from ... import dialects, ...  # dialect-imports
+
+        from ... import macros, ...  # then macro-imports
+
+        # then regular imports and the rest of the code
     '''
     dexpander = DialectExpander(filename)
     return dexpander.expand(data)
