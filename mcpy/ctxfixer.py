@@ -28,8 +28,7 @@ class _CtxFixer(Walker):
     def transform(self, tree):
         self._fix_one(tree)
         self._setup_subtree_contexts(tree)
-        self.generic_visit(tree)
-        return tree
+        return self.generic_visit(tree)
 
     def _fix_one(self, tree):
         '''Fix one missing `ctx` attribute, using the currently active ctx class.'''

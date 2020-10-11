@@ -8,11 +8,10 @@
                     self.collect(tree.value)
                     tree.value = "meow!" if self.state.meows % 2 == 0 else "miaow!"
                     self.state.meows += 1
-                self.generic_visit(tree)  # recurse
-                return tree
-        k = Kittifier(meows=0)    # set the initial state here
-        mytree = k.visit(mytree)  # it's basically an ast.NodeTransformer
-        print(k.collected)        # collected values, in the order visited
+                return self.generic_visit(tree)  # recurse
+        w = Kittifier(meows=0)    # set the initial state here
+        mytree = w.visit(mytree)  # it's basically an ast.NodeTransformer
+        print(w.collected)        # collected values, in the order visited
         return mytree
 ```
 

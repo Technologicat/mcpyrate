@@ -171,4 +171,4 @@ class SourceLocationInfoValidator(Walker):
                 self.collect((tree,
                               code,
                               [fieldname for fieldname, p in zip(self.check_fields, present) if not p]))
-        return tree
+        return self.generic_visit(tree)

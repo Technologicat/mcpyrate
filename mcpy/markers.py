@@ -46,8 +46,7 @@ def get_markers(tree, cls=ASTMarker):
         def transform(self, tree):
             if isinstance(tree, cls):
                 self.collect(tree)
-            self.generic_visit(tree)
-            return tree
-    p = ASTMarkerCollector()
-    p.visit(tree)
-    return p.collected
+            return self.generic_visit(tree)
+    w = ASTMarkerCollector()
+    w.visit(tree)
+    return w.collected
