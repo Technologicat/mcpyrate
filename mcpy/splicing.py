@@ -1,7 +1,7 @@
 # -*- coding: utf-8; -*-
 """AST splicing utilities."""
 
-__all__ = ["splice_dialect"]
+__all__ = ["splice_statements", "splice_dialect"]
 
 import ast
 from copy import deepcopy
