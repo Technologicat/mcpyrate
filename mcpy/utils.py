@@ -1,10 +1,9 @@
 # -*- coding: utf-8; -*-
 '''General utilities. Can be useful for writing both macros as well as macro expanders.'''
 
-__all__ = ['gensym', 'flatten_suite',
+__all__ = ['gensym', 'flatten_suite', 'rename',
            'format_location', 'format_macrofunction',
-           'NestingLevelTracker',
-           'rename']
+           'NestingLevelTracker']
 
 import ast
 from contextlib import contextmanager
@@ -49,6 +48,59 @@ def flatten_suite(lst):
         elif elt is not None:
             out.append(elt)
     return out if out else None
+
+
+def rename(from_, to, tree):
+    """Rename all occurrences of a name in `tree`.
+
+    We look in all places in the AST that hold name-like things.
+
+    Currently: identifiers (names), attribute names, function and class names,
+    function parameters, arguments passed by name, name and asname in imports,
+    and the as-part of an exception handler.
+
+    Some constructs such as `For` and `With` use `Name` nodes for named things,
+    so those are transformed too.
+
+    With this you can do things like::
+
+        from mcpy.quotes import macros, q
+        from mcpy import gensym
+        from mcpy.utils import rename
+
+        tree = q[lambda _: ...]
+        tree = rename("_", gensym(), tree)
+    """
+    class Renamer(walker.Walker):
+        def transform(self, tree):
+            T = type(tree)
+            if T is ast.Name:
+                if tree.id == from_:
+                    tree.id = to
+            # Look for "raw string" in GTS for a full list of the following.
+            # https://greentreesnakes.readthedocs.io/en/latest/nodes.html
+            elif T is ast.Attribute:
+                if tree.attr == from_:
+                    tree.attr = to
+            elif T in (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef):
+                if tree.name == from_:
+                    tree.name = to
+            elif T is ast.arg:  # function parameter
+                if tree.arg == from_:
+                    tree.arg = to
+            elif T is ast.keyword:  # in function call, argument passed by name
+                if tree.arg == from_:
+                    tree.arg = to
+            elif T is ast.alias:  # in ast.Import, ast.ImportFrom
+                if tree.name == from_:
+                    tree.name = to
+                if tree.asname == from_:
+                    tree.asname = to
+            elif T is ast.ExceptHandler:
+                if tree.name == from_:
+                    tree.name = to
+            return self.generic_visit(tree)
+    return Renamer().visit(tree)
 
 
 def format_location(filename, tree, sourcecode):
@@ -111,56 +163,3 @@ class NestingLevelTracker:
     def changed_by(self, delta):
         """Context manager. Run a section of code with the level incremented by `delta`."""
         return self.set_to(self.value + delta)
-
-
-def rename(from_, to, tree):
-    """Rename all occurrences of a name in `tree`.
-
-    We look in all places in the AST that hold name-like things.
-
-    Currently: identifiers (names), attribute names, function and class names,
-    function parameters, arguments passed by name, name and asname in imports,
-    and the as-part of an exception handler.
-
-    Some constructs such as `For` and `With` use `Name` nodes for named things,
-    so those are transformed too.
-
-    With this you can do things like::
-
-        from mcpy.quotes import macros, q
-        from mcpy import gensym
-        from mcpy.utils import rename
-
-        tree = q[lambda _: ...]
-        tree = rename("_", gensym(), tree)
-    """
-    class Renamer(walker.Walker):
-        def transform(self, tree):
-            T = type(tree)
-            if T is ast.Name:
-                if tree.id == from_:
-                    tree.id = to
-            # Look for "raw string" in GTS for a full list of the following.
-            # https://greentreesnakes.readthedocs.io/en/latest/nodes.html
-            elif T is ast.Attribute:
-                if tree.attr == from_:
-                    tree.attr = to
-            elif T in (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef):
-                if tree.name == from_:
-                    tree.name = to
-            elif T is ast.arg:  # function parameter
-                if tree.arg == from_:
-                    tree.arg = to
-            elif T is ast.keyword:  # in function call, argument passed by name
-                if tree.arg == from_:
-                    tree.arg = to
-            elif T is ast.alias:  # in ast.Import, ast.ImportFrom
-                if tree.name == from_:
-                    tree.name = to
-                if tree.asname == from_:
-                    tree.asname = to
-            elif T is ast.ExceptHandler:
-                if tree.name == from_:
-                    tree.name = to
-            return self.generic_visit(tree)
-    return Renamer().visit(tree)
