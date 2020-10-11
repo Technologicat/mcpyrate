@@ -56,8 +56,8 @@ def rename(oldname, newname, tree):
     We look in all places in the AST that hold name-like things.
 
     Currently: identifiers (names), attribute names, function and class names,
-    function parameters, arguments passed by name, name and asname in imports,
-    and the as-part of an exception handler.
+    function parameter names, arguments passed by name, name and asname in imports,
+    and the as-part of an exception handler (binding a name to the exception object).
 
     Some constructs such as `For` and `With` use `Name` nodes for named things,
     so those are transformed too.
