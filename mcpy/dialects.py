@@ -170,7 +170,7 @@ class DialectExpander:
         prevtext = text
         while True:
             module_absname, bindings = self.find_dialectimport_source(text)
-            if not module_absname:
+            if not module_absname:  # no more dialects
                 break
             if not bindings:
                 continue
@@ -218,7 +218,7 @@ class DialectExpander:
             print("-" * 79, file=stderr)
         while True:
             module_absname, bindings = self.find_dialectimport_ast(tree)
-            if not module_absname:
+            if not module_absname:  # no more dialects
                 break
             if not bindings:
                 continue
