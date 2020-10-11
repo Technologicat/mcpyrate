@@ -66,6 +66,10 @@ class Dialect:
         into an absolute module import for the module defining the dialect.
         Output should be the transformed AST.
 
+        To easily splice `tree.body` into your template, see the utility
+        `mcpy.splicing.splice_dialect` (it automatically handles macro-imports,
+        the magic `__all__`, and the module docstring).
+
         As an example, for now, until `unpythonic` is ported to `mcpy`, see the
         example dialects in `pydialect`, which are implemented using this exact
         strategy, but with the older MacroPy macro expander, the older `pydialect`
