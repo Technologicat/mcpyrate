@@ -36,7 +36,8 @@ def flatten_suite(lst):
 
     `lst` may contain both individual items and `list`s. Any item that
     `is None` is omitted. If the final result is empty, then instead of
-    an empty list, return `None`.
+    an empty list, return `None`. (This matches the AST representation
+    of statement suites.)
     """
     out = []
     for elt in lst:
