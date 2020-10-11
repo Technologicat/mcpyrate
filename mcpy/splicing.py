@@ -63,6 +63,10 @@ def splice_statements(body, template, tag="__paste_here__"):
      it with the appropriate `# noqa`, or to make it happy, import the `n` macro from
      `mcpy.quotes` and use `n["__paste_here__"]` instead of a plain `__paste_here__`.)
     """
+    if isinstance(body, ast.AST):
+        body = [body]
+    if isinstance(template, ast.AST):
+        body = [template]
     if not body:
         raise ValueError("expected at least one statement in `body`")
     if not template:
@@ -116,6 +120,10 @@ def splice_dialect(body, template, tag="__paste_here__"):
 
     Returns `template` with `body` spliced in. Note `template` is **not** copied.
     """
+    if isinstance(body, ast.AST):
+        body = [body]
+    if isinstance(template, ast.AST):
+        body = [template]
     if not body:
         raise ValueError("expected at least one statement in `body`")
     if not template:
