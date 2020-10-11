@@ -45,12 +45,13 @@ This fork adds a lot of features over `mcpy` 2.0.0:
   - Statement coverage is correctly reported by tools such as [`Coverage.py`](https://github.com/nedbat/coveragepy/).
   - Macro expansion errors are reported **at macro expansion time**, with use site traceback.
   - Debug output with a step-by-step expansion breakdown. See macro `mcpy.debug.step_expansion`.
-  - Manual expand-once.
+  - Manual expand-once. See `expander.visit_once`; get the `expander` as a named argument of your macro.
 - **Dialects, i.e. whole-module source and AST transforms**.
   - Think [Racket's](https://racket-lang.org/) `#lang`, but for Python.
   - Define languages that use Python's surface syntax, but change the semantics; or plug in a per-module transpiler that (at import time) compiles source code from some other programming language into macro-enabled Python.
   - Sky's the limit, really. Until we get [`unpythonic`](https://github.com/Technologicat/unpythonic) ported to use `mcpy`, see [`pydialect`](https://github.com/Technologicat/pydialect) for old example dialects.
   - For documentation, see the docstrings of [`mcpy.dialects`](mcpy/dialects.py).
+  - For debugging, `from mcpy.debug import dialects, StepExpansion`.
 - **Advanced quasiquoting**:
   - Hygienically interpolate both regular values **and macro names**.
   - Delayed macro expansion inside quasiquoted code.
