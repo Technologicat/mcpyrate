@@ -237,7 +237,15 @@ No special imports are needed to write your own macros. Just consider a macro as
 def macro(tree, **kw): return tree
 ```
 
-Although you don't strictly have to import anything to write macros, there are some useful functions in the top-level namespace of `mcpy`. See `gensym`, `unparse`, `@namemacro`, and `@parametricmacro`. See also [`mcpy.utils`](mcpy/utils.py) for more macro-writing utilities that are too specific to warrant a spot in the top-level namespace; of these, at least `flatten_suite` and `rename` solve problems that come up relatively often. Finally, see [`mcpy.splicing.splice_statements`](mcpy/splicing.py) if your macro defines a code template, and you need to splice a list of statements into a specific place in it. (This is especially convenient when the template is written in the quasiquoted notation, since with `splice_statements` you don't have to think about how the template looks like as an AST.)
+Although you don't strictly have to import anything to write macros, there are some useful functions in the top-level namespace of `mcpy`. See `gensym`, `unparse`, `dump`, `@namemacro`, and `@parametricmacro`.
+
+Other modules of `mcpy` contain more utilities for writing macros:
+
+ - [`mcpy.quotes`](mcpy/quotes.py) provides [quasiquote syntax](quasiquotes.md) as macros, to easily build ASTs in your macros.
+ - [`mcpy.utils`](mcpy/utils.py) provides some macro-writing utilities that are too specific to warrant a spot in the top-level namespace; of these, at least `rename` and `flatten_suite` solve problems that come up relatively often.
+ - [`mcpy.walker`](mcpy/walker.py) provides an AST walker that can context-manage its state for different subtrees, while optionally collecting items across the whole walk. It's an `ast.NodeTransformer`, but with functionality equivalent to `macropy.core.walkers.Walker`.
+ - [`mcpy.splicing`](mcpy/splicing.py) helps splice a list of statements into a code template. This is especially convenient when the template is written in the quasiquoted notation; there's no need to think about how the template looks like as an AST in order to paste statements into it.
+ - [`mcpy.debug`](mcpy/debug.py) may be useful if something in your macro is not working.
 
 The `tree` parameter is the only positional parameter the macro function is called with. All other parameters are passed by name, so you can easily pick what you need (and let `**kw` gather the ones you don't).
 
