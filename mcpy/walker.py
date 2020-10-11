@@ -62,10 +62,13 @@ class Walker(NodeTransformer, metaclass=ABCMeta):
 
         There is only one `transform` method. To detect node type, use `type(tree)`.
 
-        This method must recurse where needed. Use `self.generic_visit(tree)`
-        to visit all children of `tree`, or `self.visit(tree.something)` to
-        selectively visit only some children. Visiting a statement suite with
-        `self.visit` is also ok.
+        This method must recurse explicitly where needed. Use:
 
-        Return value as in `ast.NodeTransformer`. If no changes, `return tree`.
+          - `tree = self.generic_visit(tree)` to visit all children of `tree`
+          - `tree.something = self.visit(tree.something)` to selectively visit
+            only some children. Visiting a statement suite with `self.visit`
+            is also ok.
+
+        Return value as in `ast.NodeTransformer`. If you don't want to make changes,
+        you must `return tree`. (If you return `None`, the subtree is removed.)
         """
