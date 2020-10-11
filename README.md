@@ -52,6 +52,7 @@ This fork adds a lot of features over `mcpy` 2.0.0:
   - Sky's the limit, really. Until we get [`unpythonic`](https://github.com/Technologicat/unpythonic) ported to use `mcpy`, see [`pydialect`](https://github.com/Technologicat/pydialect) for old example dialects.
   - For documentation, see the docstrings of [`mcpy.dialects`](mcpy/dialects.py).
   - For debugging, `from mcpy.debug import dialects, StepExpansion`.
+  - If you're writing a full-module AST transformer that splices the whole module into a template, you may be interested in `mcpy.splicing.splice_dialect`.
 - **Advanced quasiquoting**:
   - Hygienically interpolate both regular values **and macro names**.
   - Delayed macro expansion inside quasiquoted code.
@@ -236,7 +237,7 @@ No special imports are needed to write your own macros. Just consider a macro as
 def macro(tree, **kw): return tree
 ```
 
-Although you don't strictly have to import anything to write macros, there are some useful things in the top-level namespace of `mcpy`. See `gensym`, `unparse`, `@namemacro`, and `@parametricmacro`. See also `mcpy.utils` for more macro-writing utilities that are too specific to warrant a spot in the top-level namespace.
+Although you don't strictly have to import anything to write macros, there are some useful functions in the top-level namespace of `mcpy`. See `gensym`, `unparse`, `@namemacro`, and `@parametricmacro`. See also [`mcpy.utils`](mcpy/utils.py) for more macro-writing utilities that are too specific to warrant a spot in the top-level namespace; of these, at least `flatten_suite` and `rename` solve problems that come up relatively often. Finally, see [`mcpy.splicing.splice_statements`](mcpy/splicing.py) if your macro defines a code template, and you need to splice a list of statements into a specific place in it. (This is especially convenient when the template is written in the quasiquoted notation, since with `splice_statements` you don't have to think about how the template looks like as an AST.)
 
 The `tree` parameter is the only positional parameter the macro function is called with. All other parameters are passed by name, so you can easily pick what you need (and let `**kw` gather the ones you don't).
 
