@@ -338,7 +338,7 @@ class MacroCollector(NodeVisitor):
         self.collected = []
 
     def visit(self, tree):
-        if isinstance(tree, Done):
+        if not self.expander.bindings or isinstance(tree, Done):
             return
         if tree is None:
             return
