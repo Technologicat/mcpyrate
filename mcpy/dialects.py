@@ -1,10 +1,7 @@
 # -*- coding: utf-8; -*-
 '''Find and expand dialects, i.e. whole-module source and AST transformations.'''
 
-# TODO: add single-stepping for debugging, like in `MacroExpander`.
-#   - We could have one built-in "dialect" (expander feature, rather) that tells the expander
-#     to single-step the rest.
-# TODO: support dialects in repl? Need to first figure out what that would even mean...
+# TODO: support dialects in repl? Need to first figure out what that would even mean.
 
 __all__ = ["Dialect",
            "expand_dialects"]
@@ -12,17 +9,24 @@ __all__ = ["Dialect",
 import ast
 from collections import deque
 import re
+from sys import stderr
 import tokenize
 
 from .coreutils import ismacroimport, get_macros
+from .unparser import unparse_with_fallbacks
+
 
 class Dialect:
     '''Base class for dialects.'''
+    def __init__(self, expander):
+        '''`expander`: the `DialectExpander` instance. The expander provides this automatically.'''
+        self.expander = expander
 
-    def transform_source(text):
+    def transform_source(self, text):
         '''Override this to add a whole-module source transformer to your dialect.
 
-        If not overridden, the default is to return `text` as-is.
+        If not overridden, the default is to return `NotImplemented`, which
+        tells the expander this dialect does not provide a source transformer.
 
         Rarely needed. Because we don't (yet) have a generic, extensible
         tokenizer for "Python-plus" with extended surface syntax, this is
@@ -46,17 +50,26 @@ class Dialect:
 
             from mylibrary import dialects, Brainfuck
 
-             ++++++++[>++++[>++>+++>+++>+<<<<-]>+>+>->>+[<]<-]>>.>---.+++++++..+++.>>.<-.<.+++.------.--------.>>+.>++.
+            ++++++[>++++++++++++<-]>.
+            >++++++++++[>++++++++++<-]>+.
+            +++++++..+++.>++++[>+++++++++++<-]>.
+            <+++[>----<-]>.<<<<<+++[>+++++<-]>.
+            >>.+++.------.--------.>>+.
+
+        while having that source code in a file ending in `.py`, executable by
+        `macropython`.
 
         Implementing the actual BF->Python transpiler is left as an exercise
-        to the reader.
+        to the reader. Maybe compare how Matthew Butterick did this in Racket:
+            https://beautifulracket.com/bf/intro.html
         '''
-        return text
+        return NotImplemented
 
-    def transform_ast(tree):
+    def transform_ast(self, tree):
         '''Override this to add a whole-module AST transformer to your dialect.
 
-        If not overridden, the default is to return `tree` as-is.
+        If not overridden, the default is to return `NotImplemented`, which
+        tells the expander this dialect does not provide an AST transformer.
 
         This is useful to define custom dialects that use Python's surface syntax,
         but with different semantics.
@@ -94,10 +107,37 @@ class Dialect:
             assert fact(4) == 24
             fact(5000)  # no crash
         '''
-        return tree
+        return NotImplemented
 
 
-_dialectimport = re.compile(r"^from\s+([.0-9a-zA-z_]+)\s+import dialects,\s+([^(\\]+)$",
+_message_header = "**StepExpansion: "
+class StepExpansion(Dialect):  # actually part of public API of mcpy.debug, for discoverability
+    """[dialect] Show each step of expansion while dialect-expanding the module.
+
+    Usage::
+
+        from mcpy.debug import dialects, StepExpansion
+
+    When the dialect expander invokes the source transformer of this dialect,
+    it causes the expander to enter debug mode from that point on. It will show
+    the source code (or unparsed AST, as appropriate) after each transformation.
+    So, to see the whole chain, place the import for this dialect first.
+
+    This dialect has no other effects.
+    """
+    def transform_source(self, text):
+        self.expander.debugmode = True
+        print(f"{_message_header}{self.expander.filename} enabled DialectExpander debug mode while taking step {self.expander._step + 1}.", file=stderr)
+        # Pass through the input (instead of returning `NotImplemented`) to
+        # consider this as having taken a step, thus triggering the debug mode
+        # output printer. (If this was the first dialect applied, our output is
+        # actually the original input; but there's no way to know to show it
+        # before this dialect has run.)
+        return text
+
+# --------------------------------------------------------------------------------
+
+_dialectimport = re.compile(r"^from\s+([.0-9a-zA-z_]+)\s+import dialects,\s+([^(\\]+)\s*$",
                             flags=re.MULTILINE)
 class DialectExpander:
     '''The dialect expander.'''
@@ -105,23 +145,29 @@ class DialectExpander:
     def __init__(self, filename):
         '''`filename`: full path to `.py` file being expanded, for module name resolution and error messages.'''
         self.filename = filename
+        self.debugmode = False  # to enable, `from mcpy.debug import dialects, StepExpansion`
+        self._step = 0
         self._seen = set()
 
     def expand(self, data):
         '''Expand dialects in `data` (bytes) corresponding to `self.filename`. Top-level entrypoint.
 
         Dialects are expanded until no dialects remain.
+
+        Return value is an AST for the module.
         '''
         text = _decode_source_content(data)
         text = self.transform_source(text)
         try:
-            tree = ast.parse(data)
+            tree = ast.parse(data, filename=self.filename, mode="exec")
         except Exception as err:
-            raise ImportError(f"Failed to parse {self.filename} as Python after applying all dialect source transformations.") from err
+            raise ImportError(f"Failed to parse {self.filename} as Python after applying all dialect source transformers.") from err
         return self.transform_ast(tree)
 
     def transform_source(self, text):
         '''Apply all whole-module source transformers.'''
+        first = True
+        prevtext = text
         while True:
             module_absname, bindings = self.find_dialectimport_source(text)
             if not module_absname:
@@ -130,22 +176,46 @@ class DialectExpander:
                 continue
 
             for dialectname, cls in bindings.items():
-                if not isinstance(cls, Dialect):
+                if not (isinstance(cls, type) and issubclass(cls, Dialect)):
                     raise TypeError(f"{self.filename}: {module_absname}.{dialectname} is not a `Dialect`, got {repr(cls)}")
                 try:
-                    dialect = cls()
+                    dialect = cls(expander=self)
                 except Exception as err:
                     raise ImportError(f"Unexpected exception while instantiating dialect `{module_absname}.{dialectname}") from err
                 try:
-                    text = dialect.transform_source(text)
+                    result = dialect.transform_source(text)
+                    if result is NotImplemented:
+                        continue  # no step taken; proceed to next binding
+                    text = result
+                    self._step += 1
+                    if self.debugmode:
+                        if first or text != prevtext:
+                            print(f"{_message_header}{self.filename} after {module_absname}.{dialectname}.transform_source (step {self._step}):\n", file=stderr)
+                            for line in text.split("\n"):
+                                print(line, file=stderr)
+                            print("-" * 79, file=stderr)
+                            first = False
+                            prevtext = text
+                        else:
+                            print(f"{_message_header}{self.filename} not changed after {module_absname}.{dialectname}.transform_source (step {self._step})", file=stderr)
                 except Exception as err:
-                    raise ImportError(f"Unexpected exception in dialect transformer `{module_absname}.{dialectname}.transform_source") from err
+                    raise ImportError(f"Unexpected exception in dialect transformer `{module_absname}.{dialectname}.transform_source`") from err
                 if not text:
                     raise ImportError(f"Dialect transformer `{module_absname}.{dialectname}.transform_source` returned empty source text.")
+        if self.debugmode:
+            plural = "s" if self._step != 1 else ""
+            print(f"{_message_header}All dialect source transformers completed for {self.filename} ({self._step} step{plural} taken).", file=stderr)
+            print("-" * 79, file=stderr)
         return text
 
     def transform_ast(self, tree):
         '''Apply all whole-module AST transformers.'''
+        _message_header = "**StepExpansion: "
+        if self.debugmode:
+            plural = "s" if self._step != 1 else ""
+            print(f"{_message_header}{self.filename} before dialect AST transformers (after {self._step} step{plural} of source transformers):\n", file=stderr)
+            print(unparse_with_fallbacks(tree), file=stderr)
+            print("-" * 79, file=stderr)
         while True:
             module_absname, bindings = self.find_dialectimport_ast(tree)
             if not module_absname:
@@ -154,18 +224,30 @@ class DialectExpander:
                 continue
 
             for dialectname, cls in bindings.items():
-                if not isinstance(cls, Dialect):
+                if not (isinstance(cls, type) and issubclass(cls, Dialect)):
                     raise TypeError(f"{self.filename}: {module_absname}.{dialectname} is not a `Dialect`, got {repr(cls)}")
                 try:
-                    dialect = cls()
+                    dialect = cls(expander=self)
                 except Exception as err:
                     raise ImportError(f"Unexpected exception while instantiating dialect `{module_absname}.{dialectname}") from err
                 try:
-                    tree = dialect.transform_ast(tree)
+                    result = dialect.transform_ast(tree)
+                    if result is NotImplemented:
+                        continue  # no step taken; proceed to next binding
+                    tree = result
+                    self._step += 1
+                    if self.debugmode and cls is not StepExpansion:
+                        print(f"{_message_header}{self.filename} after {module_absname}.{dialectname}.transform_ast (step {self._step}):\n", file=stderr)
+                        print(unparse_with_fallbacks(tree), file=stderr)
+                        print("-" * 79, file=stderr)
                 except Exception as err:
-                    raise ImportError(f"Unexpected exception in dialect transformer `{module_absname}.{dialectname}.transform_ast") from err
+                    raise ImportError(f"Unexpected exception in dialect transformer `{module_absname}.{dialectname}.transform_ast`") from err
                 if not tree:
                     raise ImportError(f"Dialect transformer `{module_absname}.{dialectname}.transform_ast` returned an empty AST.")
+        if self.debugmode:
+            plural = "s" if self._step != 1 else ""
+            print(f"{_message_header}All dialect AST transformers completed for {self.filename} ({self._step} step{plural} taken in total, including both source and AST transformers).", file=stderr)
+            print("-" * 79, file=stderr)
         return tree
 
     def find_dialectimport_source(self, text):
@@ -198,14 +280,15 @@ class DialectExpander:
         try:
             while True:
                 match = next(matches)
-                statement, *groups = list(match)
+                statement = match.group(0).strip()
                 if statement not in self._seen:  # apply each unique dialect-import once
                     self._seen.add(statement)
                     break
         except StopIteration:
             return "", {}
 
-        dialectimport = ast.parse(statement)
+        dummy_module = ast.parse(statement, filename=self.filename, mode="exec")
+        dialectimport = dummy_module.body[0]
         module_absname, bindings = get_macros(dialectimport, filename=self.filename,
                                               reload=False, allow_asname=False)
         return module_absname, bindings

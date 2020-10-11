@@ -1,7 +1,8 @@
 # -*- coding: utf-8; -*-
 """Macro debugging utilities."""
 
-__all__ = ["step_expansion", "show_bindings",
+__all__ = ["step_expansion", "StepExpansion",
+           "show_bindings",
            "SourceLocationInfoValidator"]
 
 import ast
@@ -10,6 +11,7 @@ from sys import stderr
 import textwrap
 
 from .astdumper import dump
+from .dialects import StepExpansion  # re-export for discoverability, it's a debug feature
 from .expander import MacroCollector, namemacro, parametricmacro
 from .unparser import unparse_with_fallbacks
 from .utils import NestingLevelTracker, format_macrofunction
@@ -54,16 +56,16 @@ def step_expansion(tree, *, args, syntax, expander, **kw):
     formatter = functools.partial(unparse_with_fallbacks, debug=True)
     if args:
         if len(args) != 1:
-            raise SyntaxError("expected `step_expansion['mode_str']`")
+            raise SyntaxError("expected `step_expansion` or `step_expansion['mode_str']`")
         arg = args[0]
         if type(arg) is ast.Constant:
             mode = arg.value
         elif type(arg) is ast.Str:  # up to Python 3.7
             mode = arg.s
         else:
-            raise TypeError(f"expected mode str, got {repr(arg)} {unparse_with_fallbacks(arg)}")
+            raise TypeError(f"expected mode_str, got {repr(arg)} {unparse_with_fallbacks(arg)}")
         if mode not in ("unparse", "dump"):
-            raise ValueError(f"expected mode either 'unparse' or 'dump', got {repr(mode)}")
+            raise ValueError(f"expected mode_str either 'unparse' or 'dump', got {repr(mode)}")
         if mode == "dump":
             formatter = dump
 
@@ -116,7 +118,7 @@ def show_bindings(tree, *, syntax, expander, **kw):
 
 
 class SourceLocationInfoValidator(Walker):
-    """Check whether every node of a `tree` has `lineno` and `col_offset`.
+    """Collect nodes that are missing `lineno` and/or `col_offset`.
 
     Usage::
 
