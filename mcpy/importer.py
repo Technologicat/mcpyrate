@@ -19,7 +19,7 @@ from .utils import format_location
 
 
 def source_to_xcode(self, data, path, *, _optimize=-1):
-    '''[mcpy] Expand macros, then compile.
+    '''[mcpy] Expand dialects, then expand macros, then compile.
 
     Intercepts the source to bytecode transformation.
     '''
