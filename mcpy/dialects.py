@@ -110,7 +110,10 @@ class DialectExpander:
         '''
         text = _decode_source_content(data)
         text = self.transform_source(text)
-        tree = ast.parse(data)  # TODO: error out gracefully if this fails
+        try:
+            tree = ast.parse(data)
+        except Exception as err:
+            raise ImportError(f"Failed to parse {self.filename} as Python after applying all dialect source transformations.") from err
         return self.transform_ast(tree)
 
     def transform_source(self, text):
@@ -125,9 +128,16 @@ class DialectExpander:
             for dialectname, cls in bindings.items():
                 if not isinstance(cls, Dialect):
                     raise TypeError(f"{self.filename}: {module_absname}.{dialectname} is not a `Dialect`, got {repr(cls)}")
-                dialect = cls()
-                text = dialect.transform_source(text)
-                # TODO: error out if empty text or None returned
+                try:
+                    dialect = cls()
+                except Exception as err:
+                    raise ImportError(f"Unexpected exception while instantiating dialect `{module_absname}.{dialectname}") from err
+                try:
+                    text = dialect.transform_source(text)
+                except Exception as err:
+                    raise ImportError(f"Unexpected exception in dialect transformer `{module_absname}.{dialectname}.transform_source") from err
+                if not text:
+                    raise ImportError(f"Dialect transformer `{module_absname}.{dialectname}.transform_source` returned empty source text.")
         return text
 
     def transform_ast(self, tree):
@@ -142,9 +152,16 @@ class DialectExpander:
             for dialectname, cls in bindings.items():
                 if not isinstance(cls, Dialect):
                     raise TypeError(f"{self.filename}: {module_absname}.{dialectname} is not a `Dialect`, got {repr(cls)}")
-                dialect = cls()
-                tree = dialect.transform_ast(tree)
-                # TODO: error out if None returned
+                try:
+                    dialect = cls()
+                except Exception as err:
+                    raise ImportError(f"Unexpected exception while instantiating dialect `{module_absname}.{dialectname}") from err
+                try:
+                    tree = dialect.transform_ast(tree)
+                except Exception as err:
+                    raise ImportError(f"Unexpected exception in dialect transformer `{module_absname}.{dialectname}.transform_ast") from err
+                if not tree:
+                    raise ImportError(f"Dialect transformer `{module_absname}.{dialectname}.transform_ast` returned an empty AST.")
         return tree
 
     def find_dialectimport_source(self, text):
