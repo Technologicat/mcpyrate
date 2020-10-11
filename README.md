@@ -251,6 +251,12 @@ The `tree` parameter is the only positional parameter the macro function is call
 
 Beside returning an AST, you can return `None` to remove the `tree` you got in, or return a list of `AST` nodes (if in a position where that is syntactically admissible; so `block` and `decorator` macros only). The result of the macro expansion is recursively expanded until no new macro invocations are found.
 
+Any missing source locations and `ctx` fields are fixed automatically in a postprocessing step, so you don't need to care about those when writing your AST.
+
+If you get an error saying an AST node is missing the required field `lineno`, the actual error is likely something else. This is due to an unfortunate lack of input validation in Python's compiler. The first thing to check is that your macro is really placing AST nodes where the compiler expects those, instead of accidentally using bare values.
+
+Simple example:
+
 ```python
 from ast import *
 from mcpy import unparse
@@ -261,10 +267,6 @@ def log(expr, **kw):
                 args=[Str(s=label), expr], keywords=[],
                 starargs=None, kwargs=None)
 ```
-
-Any missing source locations and `ctx` fields are fixed automatically in a postprocessing step, so you don't need to care about those when writing your AST.
-
-If you get an error saying an AST node is missing the required field `lineno`, the actual error is likely something else. This is due to an unfortunate lack of input validation in Python's compiler. The first thing to check is that your macro is really placing AST nodes where the compiler expects those, instead of accidentally using bare values.
 
 
 ### Distinguish how the macro is called
