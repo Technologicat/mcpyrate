@@ -118,8 +118,7 @@ class Unparser:
     def _Module(self, t):
         # TODO: Python 3.8 type_ignores. Since we don't store the source text, maybe ignore that?
         if self.debug:
-            self.fill()
-            self.write("$Module")
+            self.fill("$Module")
             self.enter()
             for stmt in t.body:
                 self.dispatch(stmt)
