@@ -166,51 +166,27 @@ class DialectExpander:
 
     def transform_source(self, text):
         '''Apply all whole-module source transformers.'''
-        # We can't be in debug mode at this point, since it needs a dialect-import to enable.
-        while True:
-            module_absname, bindings = self.find_dialectimport_source(text)
-            if not module_absname:  # no more dialects
-                break
-            if not bindings:
-                continue
-
-            for dialectname, cls in bindings.items():
-                if not (isinstance(cls, type) and issubclass(cls, Dialect)):
-                    raise TypeError(f"{self.filename}: {module_absname}.{dialectname} is not a `Dialect`, got {repr(cls)}")
-                try:
-                    dialect = cls(expander=self)
-                except Exception as err:
-                    raise ImportError(f"Unexpected exception while instantiating dialect `{module_absname}.{dialectname}") from err
-                try:
-                    result = dialect.transform_source(text)
-                    if result is NotImplemented:
-                        continue  # no step taken; proceed to next binding
-                    text = result
-                    self._step += 1
-                    if self.debugmode:
-                        print(f"{_message_header}{self.filename} after {module_absname}.{dialectname}.transform_source (step {self._step}):\n", file=stderr)
-                        for line in text.split("\n"):
-                            print(line, file=stderr)
-                        print("-" * 79, file=stderr)
-                except Exception as err:
-                    raise ImportError(f"Unexpected exception in dialect transformer `{module_absname}.{dialectname}.transform_source`") from err
-                if not text:
-                    raise ImportError(f"Dialect transformer `{module_absname}.{dialectname}.transform_source` returned empty source text.")
-        if self.debugmode:
-            plural = "s" if self._step != 1 else ""
-            print(f"{_message_header}All dialect source transformers completed for {self.filename} ({self._step} step{plural} taken).", file=stderr)
-            print("-" * 79, file=stderr)
-        return text
+        return self._transform(text, kind="source",
+                               find_dialectimport=self.find_dialectimport_source,
+                               transform="transform_source",
+                               format_for_display=lambda text: text)
 
     def transform_ast(self, tree):
         '''Apply all whole-module AST transformers.'''
+        return self._transform(tree, kind="AST",
+                               find_dialectimport=self.find_dialectimport_ast,
+                               transform="transform_ast",
+                               format_for_display=unparse_with_fallbacks)
+
+    def _transform(self, content, *, kind, find_dialectimport, transform, format_for_display):
         if self.debugmode:
             plural = "s" if self._step != 1 else ""
-            print(f"{_message_header}{self.filename} before dialect AST transformers (after {self._step} step{plural} of source transformers):\n", file=stderr)
-            print(unparse_with_fallbacks(tree), file=stderr)
+            print(f"{_message_header}{self.filename} before dialect {kind} transformers ({self._step} step{plural} total):\n", file=stderr)
+            print(format_for_display(content), file=stderr)
             print("-" * 79, file=stderr)
+
         while True:
-            module_absname, bindings = self.find_dialectimport_ast(tree)
+            module_absname, bindings = find_dialectimport(content)
             if not module_absname:  # no more dialects
                 break
             if not bindings:
@@ -219,29 +195,41 @@ class DialectExpander:
             for dialectname, cls in bindings.items():
                 if not (isinstance(cls, type) and issubclass(cls, Dialect)):
                     raise TypeError(f"{self.filename}: {module_absname}.{dialectname} is not a `Dialect`, got {repr(cls)}")
+
                 try:
                     dialect = cls(expander=self)
                 except Exception as err:
-                    raise ImportError(f"Unexpected exception while instantiating dialect `{module_absname}.{dialectname}") from err
+                    raise ImportError(f"Unexpected exception while instantiating dialect `{module_absname}.{dialectname}`") from err
+
                 try:
-                    result = dialect.transform_ast(tree)
-                    if result is NotImplemented:
-                        continue  # no step taken; proceed to next binding
-                    tree = result
-                    self._step += 1
-                    if self.debugmode:
-                        print(f"{_message_header}{self.filename} after {module_absname}.{dialectname}.transform_ast (step {self._step}):\n", file=stderr)
-                        print(unparse_with_fallbacks(tree), file=stderr)
-                        print("-" * 79, file=stderr)
+                    transformer_method = getattr(dialect, transform)
+                except AttributeError as err:
+                    raise ImportError(f"Dialect `{module_absname}.{dialectname}` missing required transformer method `{transform}`") from err
+
+                try:
+                    result = transformer_method(content)
                 except Exception as err:
-                    raise ImportError(f"Unexpected exception in dialect transformer `{module_absname}.{dialectname}.transform_ast`") from err
-                if not tree:
-                    raise ImportError(f"Dialect transformer `{module_absname}.{dialectname}.transform_ast` returned an empty AST.")
+                    raise ImportError(f"Unexpected exception in dialect transformer `{module_absname}.{dialectname}.{transform}`") from err
+
+                if result is NotImplemented:
+                    continue  # no step taken; proceed to next binding
+
+                if not result:
+                    raise ImportError(f"Dialect transformer `{module_absname}.{dialectname}.{transform}` returned an empty result.")
+                content = result
+                self._step += 1
+
+                if self.debugmode:
+                    print(f"{_message_header}{self.filename} after {module_absname}.{dialectname}.{transform} (step {self._step}):\n", file=stderr)
+                    print(format_for_display(content), file=stderr)
+                    print("-" * 79, file=stderr)
+
         if self.debugmode:
             plural = "s" if self._step != 1 else ""
-            print(f"{_message_header}All dialect AST transformers completed for {self.filename} ({self._step} step{plural} taken in total, including both source and AST transformers).", file=stderr)
+            print(f"{_message_header}All dialect {kind} transformers completed for {self.filename} ({self._step} step{plural} total).", file=stderr)
             print("-" * 79, file=stderr)
-        return tree
+
+        return content
 
     def find_dialectimport_source(self, text):
         '''Find the first dialect-import statement by scanning source code `text`.
