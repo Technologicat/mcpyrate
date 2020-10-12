@@ -9,10 +9,10 @@ def read(*relpath, **kwargs):
         return fh.read()
 
 setup(
-    name="mcpy",
+    name="mcpyrate",
     version="3.0.0",
-    packages=["mcpy", "mcpy.repl"],
-    provides=["mcpy"],
+    packages=["mcpyrate", "mcpyrate.repl"],
+    provides=["mcpyrate"],
     keywords=["macros", "syntactic-macros", "macro-expander", "metaprogramming", "import", "importer"],
     python_requires=">=3.6",
     author="Juha Jeronen and Salvador de la Puente González",
