@@ -1,6 +1,6 @@
 # mcpyrate
 
-Third-generation macro expander for Python, after the pioneering [macropy](https://github.com/lihaoyi/macropy), and the compact, pythonic [mcpy](https://github.com/delapuente/mcpy).
+Third-generation macro expander for Python, after the pioneering [macropy](https://github.com/lihaoyi/macropy), and the compact, pythonic [mcpy](https://github.com/delapuente/mcpy). Builds on `mcpy`, with a similar explicit and compact approach, but with a lot of new features.
 
 Supports Python 3.6, 3.7, 3.8, and PyPy3.
 
@@ -15,12 +15,13 @@ Supports Python 3.6, 3.7, 3.8, and PyPy3.
         - [Syntax](#syntax)
         - [Importing macros](#importing-macros)
     - [Writing macros](#writing-macros)
+        - [Quasiquotes](#quasiquotes)
         - [Distinguish how the macro is called](#distinguish-how-the-macro-is-called)
         - [The named parameters](#the-named-parameters)
+            - [Differences to `mcpy`](#differences-to-mcpy)
         - [Macro arguments](#macro-arguments)
             - [Arguments or no arguments?](#arguments-or-no-arguments)
         - [Identifier macros](#identifier-macros)
-        - [Quasiquotes](#quasiquotes)
         - [Walk an AST](#walk-an-ast)
         - [Get the source of an AST](#get-the-source-of-an-ast)
         - [Expand macros](#expand-macros)
@@ -31,8 +32,6 @@ Supports Python 3.6, 3.7, 3.8, and PyPy3.
 <!-- markdown-toc end -->
 
 ## Highlights
-
-`mcpyrate` 3.0.0 is based on, but adds a lot of features, over `mcpy` 2.0.0:
 
 - **Agile development**:
   - Universal bootstrapper: `macropython`. **Import and use macros in your main program**.
@@ -60,14 +59,14 @@ Supports Python 3.6, 3.7, 3.8, and PyPy3.
     - Convert a quasiquoted AST back into a direct AST, typically for further processing before re-quoting it.
       - Not an unquote; we have those too, but the purpose of unquotes is to interpolate values into quoted code. The inverse quasiquote, instead, undoes the quasiquote operation itself, after any unquotes have already been applied.
     - Useful for second-order macros that need to process a quasiquoted code section at macro expansion time, before the quasiquoted tree has a chance to run. (As usual, when it runs, it converts itself into a direct AST.)
-- **Identifier (a.k.a. name) macros**
-  - Can be used for creating magic variables that may only appear inside specific macro invocations, erroring out at macro expansion time if they appear anywhere else.
-  - Opt-in. Declare by using the `@namemacro` decorator on your macro function. Place it outermost (along with `@parametricmacro`, if used too).
-- **Macro arguments**. Inspired by MacroPy, but slightly different.
+- **Macro arguments**. Inspired by MacroPy.
   - Opt-in. Declare by using the `@parametricmacro` decorator on your macro function (along with `@namemacro`, if used too).
   - Use bracket syntax to invoke, e.g. `macroname[arg0, ...][expr]`. To send no args, invoke like a non-parametric macro, `macroname[expr]`.
   - For a parametric macro, `macroname[arg0, ...]` works in `expr`, `block` and `decorator` macro invocations in place of a bare `macroname`.
   - The named parameter `args` is a raw `list` of the macro argument ASTs. It is the empty list if no args were sent, or if the macro function is not declared as parametric.
+- **Identifier (a.k.a. name) macros**
+  - Can be used for creating magic variables that may only appear inside specific macro invocations, erroring out at macro expansion time if they appear anywhere else.
+  - Opt-in. Declare by using the `@namemacro` decorator on your macro function. Place it outermost (along with `@parametricmacro`, if used too).
 - **Bytecode caching**:
   - `.pyc` bytecode caches are created and kept up-to-date. This saves the macro
     expansion cost at startup for modules that have not changed.
@@ -262,9 +261,28 @@ def log(expr, **kw):
     '''Replace log[expr] with print('expr: ', expr)'''
     label = unparse(expr) + ': '
     return Call(func=Name(id='print', ctx=Load()),
-                args=[Str(s=label), expr], keywords=[],
-                starargs=None, kwargs=None)
+                args=[Str(s=label), expr], keywords=[])
 ```
+
+
+### Quasiquotes
+
+We provide [a quasiquote system](quasiquotes.md) (both classical and hygienic) to make macro code both much more readable and simpler to write. Rewriting the above example:
+
+```python
+from ast import *
+from mcpyrate import unparse
+from mcpyrate.quotes import macros, q, u, a
+
+def log(expr, **kw):
+    '''Replace log[expr] with print('expr: ', expr)'''
+    label = unparse(expr) + ': '
+    return q[print(u[label], a[expr])]
+```
+
+Here `u[]` unquotes a simple value, and `a[]` unquotes an expression AST. If you're worried that `print` may refer to something else at the use site of `log[]`, you can hygienically unquote the function name with `h[]`: `q[h[print](u[label], a[expr])]`.
+
+The system was inspired by MacroPy's, but the details differ. For example, macro invocations can be unquoted hygienically, and by default, macros in quasiquoted code are not expanded when the quasiquote itself expands. We provide macros to perform expansion in quoted code, to give you control over when things expand.
 
 
 ### Distinguish how the macro is called
@@ -296,9 +314,15 @@ Full list as of v3.0.0, in alphabetical order:
  - `syntax`: invocation type. One of `expr`, `block`, `decorator`, `name`.
    - Identifier macros are a rarely needed feature. The `syntax` parameter can be `name` only if the macro function is declared `@namemacro`.
 
-*Changed in v3.0.0.* The named parameter `to_source` has been removed; use the top-level function `unparse` instead.
+#### Differences to `mcpy`
 
-*Changed in v3.0.0.* The named parameter `expand_macros` has been replaced with `expander`, which grants access to the macro expander instance.
+The named parameter `to_source` has been removed; use the top-level function `unparse` instead.
+
+The named parameter `expand_macros` has been replaced with `expander`, which grants access to the macro expander instance.
+
+The named parameters `args` and `invocation` have been added.
+
+The fourth `syntax` kind `name` has been added.
 
 
 ### Macro arguments
@@ -397,13 +421,6 @@ def it(tree, *, syntax, **kw):
 This way any invalid, stray mentions of the magic variable `it` trigger an error at macro expansion time.
 
 If you want to expand only `it` inside an invocation of `mymacro[...]` (thus checking that the mentions are valid), leaving other nested macro invocations untouched, that's also possible. See below how to temporarily run a second expander with different bindings (from which you can omit everything but `it`).
-
-
-### Quasiquotes
-
-We provide [a quasiquote system](quasiquotes.md) (both classical and hygienic) to make macro code both much more readable and simpler to write.
-
-The system was inspired by MacroPy's, but the details differ; for example, macro invocations can be unquoted hygienically, and by default, macros in quasiquoted code are not expanded when the quasiquote itself expands. We provide macros to perform expansion in quoted code, to give you control over when things expand.
 
 
 ### Walk an AST
