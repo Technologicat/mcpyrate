@@ -19,9 +19,9 @@ Supports Python 3.6, 3.7, 3.8, and PyPy3.
         - [The named parameters](#the-named-parameters)
         - [Macro arguments](#macro-arguments)
             - [Arguments or no arguments?](#arguments-or-no-arguments)
+        - [Identifier macros](#identifier-macros)
         - [Quasiquotes](#quasiquotes)
         - [Walk an AST](#walk-an-ast)
-            - [Identifier macros](#identifier-macros)
         - [Get the source of an AST](#get-the-source-of-an-ast)
         - [Expand macros](#expand-macros)
         - [Macro expansion error reporting](#macro-expansion-error-reporting)
@@ -339,19 +339,7 @@ Often, instead of taking macro arguments, you can just require `tree` to have a 
 For example, a *let* macro invoked as `let[x << 1, y << 2][...]` could alternatively be designed to be invoked as `let[[x << 1, y << 2] in ...]`. But if the example `let` should work also as a decorator, then macro arguments are the obvious, uniform syntax, because then you can also `with let[x << 1, y << 2]:` and `@let[x << 1, y << 2]`.
 
 
-### Quasiquotes
-
-We provide [a quasiquote system](quasiquotes.md) (both classical and hygienic) to make macro code both much more readable and simpler to write.
-
-The system was inspired by MacroPy's, but the details differ; for example, macro invocations can be unquoted hygienically, and by default, macros in quasiquoted code are not expanded when the quasiquote itself expands. We provide macros to perform expansion in quoted code, to give you control over when things expand.
-
-
-### Walk an AST
-
-To bridge the feature gap between [`ast.NodeTransformer`](https://docs.python.org/3/library/ast.html#ast.NodeTransformer) and MacroPy's `Walker`, we provide [`mcpyrate.walker.Walker`](walker.md), a zen-minimalistic AST walker base class based on `ast.NodeTransformer`, with a state stack and a node collector. If you need a walker that can temporarily change state while in a given subtree, maybe look here.
-
-
-#### Identifier macros
+### Identifier macros
 
 Identifier macros are a rarely used feature, but one that is indispensable for
 that rare use case. To avoid clutter in the dispatch logic of most macros, if a
@@ -409,6 +397,18 @@ def it(tree, *, syntax, **kw):
 This way any invalid, stray mentions of the magic variable `it` trigger an error at macro expansion time.
 
 If you want to expand only `it` inside an invocation of `mymacro[...]` (thus checking that the mentions are valid), leaving other nested macro invocations untouched, that's also possible. See below how to temporarily run a second expander with different bindings (from which you can omit everything but `it`).
+
+
+### Quasiquotes
+
+We provide [a quasiquote system](quasiquotes.md) (both classical and hygienic) to make macro code both much more readable and simpler to write.
+
+The system was inspired by MacroPy's, but the details differ; for example, macro invocations can be unquoted hygienically, and by default, macros in quasiquoted code are not expanded when the quasiquote itself expands. We provide macros to perform expansion in quoted code, to give you control over when things expand.
+
+
+### Walk an AST
+
+To bridge the feature gap between [`ast.NodeTransformer`](https://docs.python.org/3/library/ast.html#ast.NodeTransformer) and MacroPy's `Walker`, we provide [`mcpyrate.walker.Walker`](walker.md), a zen-minimalistic AST walker base class based on `ast.NodeTransformer`, with a state stack and a node collector. If you need a walker that can temporarily change state while in a given subtree, maybe look here.
 
 
 ### Get the source of an AST
