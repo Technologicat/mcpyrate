@@ -166,8 +166,7 @@ class DialectExpander:
 
     def transform_source(self, text):
         '''Apply all whole-module source transformers.'''
-        first = True
-        prevtext = text
+        # We can't be in debug mode at this point, since it needs a dialect-import to enable.
         while True:
             module_absname, bindings = self.find_dialectimport_source(text)
             if not module_absname:  # no more dialects
@@ -189,15 +188,10 @@ class DialectExpander:
                     text = result
                     self._step += 1
                     if self.debugmode:
-                        if first or text != prevtext:
-                            print(f"{_message_header}{self.filename} after {module_absname}.{dialectname}.transform_source (step {self._step}):\n", file=stderr)
-                            for line in text.split("\n"):
-                                print(line, file=stderr)
-                            print("-" * 79, file=stderr)
-                            first = False
-                            prevtext = text
-                        else:
-                            print(f"{_message_header}{self.filename} not changed after {module_absname}.{dialectname}.transform_source (step {self._step})", file=stderr)
+                        print(f"{_message_header}{self.filename} after {module_absname}.{dialectname}.transform_source (step {self._step}):\n", file=stderr)
+                        for line in text.split("\n"):
+                            print(line, file=stderr)
+                        print("-" * 79, file=stderr)
                 except Exception as err:
                     raise ImportError(f"Unexpected exception in dialect transformer `{module_absname}.{dialectname}.transform_source`") from err
                 if not text:
