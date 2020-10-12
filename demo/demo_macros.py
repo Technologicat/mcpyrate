@@ -34,8 +34,7 @@ def log(expr, **kw):
     '''
     label = unparse(expr) + ': '
     return Call(func=Name(id='print', ctx=Load()),
-                args=[Str(s=label), expr], keywords=[], starargs=None,
-                kwargs=None)
+                args=[Str(s=label), expr], keywords=[])
 
 def value(classdef, **kw):
     '''
@@ -55,7 +54,7 @@ def value(classdef, **kw):
     baked_class = _IntoValueTransformer(symbols).visit(classdef)
     replacement = Assign(targets=[Name(id=baked_class.name, ctx=Store())],
                          value=Call(func=Name(id=baked_class.name, ctx=Load()),
-                                    args=[], keywords=[], starargs=None, kwargs=None))
+                                    args=[], keywords=[]))
     return [baked_class, replacement]
 
 class _WrapLiterals(NodeTransformer):
