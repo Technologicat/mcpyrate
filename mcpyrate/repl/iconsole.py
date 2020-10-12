@@ -1,13 +1,13 @@
 # -*- coding: utf-8 -*-
-"""IPython extension for an mcpy-enabled REPL.
+"""IPython extension for an mcpyrate-enabled REPL.
 
 To enable::
 
-    %load_ext mcpy.repl.iconsole
+    %load_ext mcpyrate.repl.iconsole
 
 To autoload it at IPython startup, put this into your ``ipython_config.py``::
 
-    c.InteractiveShellApp.extensions = ["mcpy.repl.iconsole"]
+    c.InteractiveShellApp.extensions = ["mcpyrate.repl.iconsole"]
 
 To find your config file, ``ipython profile locate``.
 
@@ -24,9 +24,9 @@ from IPython.core.error import InputRejected
 from IPython.core.magic import (register_cell_magic, register_line_magic,
                                 Magics, magics_class, cell_magic)
 
-from mcpy import __version__ as mcpy_version
-from mcpy.expander import find_macros, expand_macros
-from mcpy.astdumper import dump
+from mcpyrate import __version__ as mcpyrate_version
+from mcpyrate.expander import find_macros, expand_macros
+from mcpyrate.astdumper import dump
 
 _placeholder = "<interactive input>"
 _instance = None
@@ -40,10 +40,10 @@ def load_ipython_extension(ipython):
     #
     # FIXME: For now, let's just put the info into banner2, and refrain from printing it.
     # https://stackoverflow.com/questions/31613804/how-can-i-call-ipython-start-ipython-with-my-own-banner
-    ipython.config.TerminalInteractiveShell.banner2 = "mcpy {} -- Syntactic macros for Python.".format(mcpy_version)
+    ipython.config.TerminalInteractiveShell.banner2 = "mcpyrate {} -- Syntactic macros for Python.".format(mcpyrate_version)
     global _instance
     if not _instance:
-        _instance = IMcpyExtension(shell=ipython)
+        _instance = IMcpyrateExtension(shell=ipython)
         ipython.register_magics(AstMagics)
 
 # TODO: unregister magics at unload time?
@@ -110,7 +110,7 @@ class AstMagics(Magics):
         print(dump(tree))
 
 
-class IMcpyExtension:
+class IMcpyrateExtension:
     def __init__(self, shell):
         self.src = _placeholder
         self.shell = shell
@@ -124,8 +124,8 @@ class IMcpyExtension:
 
         ipy.events.register('post_run_cell', self._refresh_macro_functions)
 
-        # initialize mcpy in the session
-        self.shell.run_cell("import mcpy.activate", store_history=False, silent=True)
+        # initialize mcpyrate in the session
+        self.shell.run_cell("import mcpyrate.activate", store_history=False, silent=True)
 
     def __del__(self):
         ipy = self.shell.get_ipython()

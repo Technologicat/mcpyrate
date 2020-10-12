@@ -37,12 +37,12 @@ class CaptureLater(QuasiquoteMarker):  # like MacroPy's `Captured`
 # Hygienically captured run-time values... but to support `.pyc` caching, we can't use a per-process dictionary.
 # _hygienic_registry = {}
 
-def _mcpy_quotes_attr(attr):
-    """Create an AST that, when compiled and run, looks up `mcpy.quotes.attr` in `Load` context."""
-    mcpy_quotes_module = ast.Attribute(value=ast.Name(id="mcpy", ctx=ast.Load()),
-                                       attr="quotes",
-                                       ctx=ast.Load())
-    return ast.Attribute(value=mcpy_quotes_module,
+def _mcpyrate_quotes_attr(attr):
+    """Create an AST that, when compiled and run, looks up `mcpyrate.quotes.attr` in `Load` context."""
+    mcpyrate_quotes_module = ast.Attribute(value=ast.Name(id="mcpyrate", ctx=ast.Load()),
+                                           attr="quotes",
+                                           ctx=ast.Load())
+    return ast.Attribute(value=mcpyrate_quotes_module,
                          attr=attr,
                          ctx=ast.Load())
 
@@ -66,14 +66,14 @@ def capture(value, name):
     captured value (even in another Python process later).
 
     Hygienically captured macro invocations are treated using a different
-    mechanism; see `mcpy.core._hygienic_bindings`.
+    mechanism; see `mcpyrate.core._hygienic_bindings`.
     """
     # If we didn't need to consider bytecode caching, we could just store the
     # value in a registry that is populated at macro expansion time. Each
     # unique value (by `id`) could be stored only once.
     #
     # key = _capture_into(_hygienic_registry, value, name)
-    # return ast.Call(_mcpy_quotes_attr("lookup"),
+    # return ast.Call(_mcpyrate_quotes_attr("lookup"),
     #                 [ast.Constant(value=key)],
     #                 [])
 
@@ -100,7 +100,7 @@ def capture(value, name):
     # and serialization.
     #
     frozen_value = pickle.dumps(value)
-    return ast.Call(_mcpy_quotes_attr("lookup"),
+    return ast.Call(_mcpyrate_quotes_attr("lookup"),
                     [ast.Tuple(elts=[ast.Constant(value=name),  # for human-readability of expanded code
                                      ast.Constant(value=frozen_value)])],
                     [])
@@ -166,7 +166,7 @@ def astify(x, expander=None):  # like MacroPy's `ast_repr`
             # At the use site of q[], this captures the value, and rewrites itself
             # into a lookup. At the use site of the macro that used q[], that
             # rewritten code looks up the captured value.
-            return ast.Call(_mcpy_quotes_attr('capture'),
+            return ast.Call(_mcpyrate_quotes_attr('capture'),
                             [x.body,
                              ast.Constant(value=x.name)],
                             [])
@@ -194,10 +194,10 @@ def astify(x, expander=None):  # like MacroPy's `ast_repr`
             # The magic is in the Call. Take apart the input AST, and construct a
             # new AST, that (when compiled and run) will re-generate the input AST.
             #
-            # We refer to the stdlib `ast` module as `mcpy.quotes.ast` to avoid
+            # We refer to the stdlib `ast` module as `mcpyrate.quotes.ast` to avoid
             # name conflicts at the use site of `q[]`.
             fields = [ast.keyword(a, recurse(b)) for a, b in ast.iter_fields(x)]
-            return ast.Call(ast.Attribute(value=_mcpy_quotes_attr('ast'),
+            return ast.Call(ast.Attribute(value=_mcpyrate_quotes_attr('ast'),
                                           attr=x.__class__.__name__,
                                           ctx=ast.Load()),
                             [],
@@ -224,8 +224,8 @@ def unastify(tree):
     # CAUTION: in `unastify`, we implement only what we minimally need.
     def attr_ast_to_dotted_name(tree):
         # Input is like:
-        #     (mcpy.quotes).thing
-        #     ((mcpy.quotes).ast).thing
+        #     (mcpyrate.quotes).thing
+        #     ((mcpyrate.quotes).ast).thing
         if type(tree) is not ast.Attribute:
             raise TypeError
         acc = []
@@ -242,7 +242,7 @@ def unastify(tree):
 
     our_module_globals = globals()
     def lookup_thing(dotted_name):
-        if not dotted_name.startswith("mcpy.quotes"):
+        if not dotted_name.startswith("mcpyrate.quotes"):
             raise NotImplementedError
         path = dotted_name.split(".")
         if len(path) < 3:
@@ -348,7 +348,7 @@ def u(tree, *, syntax, expander, **kw):
         # We want to generate an AST that compiles to the *value* of `v`. But when
         # this runs, it is too early. We must astify *at the use site*. So use an
         # `ast.Call` to delay, and in there, splice in `tree` as-is.
-        return ASTLiteral(ast.Call(_mcpy_quotes_attr("astify"), [tree], []))
+        return ASTLiteral(ast.Call(_mcpyrate_quotes_attr("astify"), [tree], []))
 
 
 def n(tree, *, syntax, **kw):
@@ -380,7 +380,7 @@ def s(tree, *, syntax, **kw):
         raise SyntaxError("`s` is an expr macro only")
     if _quotelevel.value < 1:
         raise SyntaxError("`s` encountered while quotelevel < 1")
-    return ASTLiteral(ast.Call(ast.Attribute(value=_mcpy_quotes_attr('ast'),
+    return ASTLiteral(ast.Call(ast.Attribute(value=_mcpyrate_quotes_attr('ast'),
                                              attr='List'),
                                [],
                                [ast.keyword("elts", tree)]))

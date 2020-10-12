@@ -2,7 +2,7 @@
 
 from ast import (Call, arg, Name, Attribute, Str, FunctionDef, Assign, Load, Store,
                  NodeTransformer, copy_location)
-from mcpy import unparse
+from mcpyrate import unparse
 
 def customliterals(statements, expander, **kw):
     '''

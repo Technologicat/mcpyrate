@@ -17,17 +17,17 @@
 
 To bridge the feature gap between
 [`ast.NodeTransformer`](https://docs.python.org/3/library/ast.html#ast.NodeTransformer)
-and MacroPy's `Walker`, we provide `mcpy.walker.Walker`, a zen-minimalistic AST
+and MacroPy's `Walker`, we provide `mcpyrate.walker.Walker`, a zen-minimalistic AST
 walker base class based on `ast.NodeTransformer`, with a state stack and a node collector.
 
 The selling points are `withstate`, `state`, `collect`, `collected`, which see below.
 
-For a realistic example, see [`mcpy.ctxfixer`](mcpy/ctxfixer.py).
+For a realistic example, see [`mcpyrate.ctxfixer`](mcpyrate/ctxfixer.py).
 
 
 ## Attributes
 
- - `state: mcpy.bunch.Bunch`: stores named values as its attributes.
+ - `state: mcpyrate.bunch.Bunch`: stores named values as its attributes.
 
    Mutable. The whole `state` can also be replaced by simply rebinding it
    (`self.state = ...`).

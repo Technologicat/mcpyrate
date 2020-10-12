@@ -3,7 +3,7 @@
 Build ASTs in your macros, using syntax that mostly looks like regular code.
 
 ```python
-    from mcpy.quotes import macros, q, a
+    from mcpyrate.quotes import macros, q, a
     
     def delay(tree, **kw):
         '''delay[expr] -> promise'''
@@ -55,7 +55,7 @@ The operators:
 
    `expr` must evaluate to a string.
 
-   With this, you can compute a name (e.g. by `mcpy.gensym`) and then use it as
+   With this, you can compute a name (e.g. by `mcpyrate.gensym`) and then use it as
    an identifier in quasiquoted code.
 
  - `a[tree]`, appearing inside a `q[]`, is the AST stored in the variable `tree`
@@ -114,7 +114,7 @@ also the [ast](https://docs.python.org/3/library/ast.html) documentation handy,
 but usually not much manually written AST-generating code is needed when
 quasiquotes automate most of it. This makes macro code much more readable.
 
-By default, quasiquoting in `mcpy` is classical, i.e. non-hygienic. If you're
+By default, quasiquoting in `mcpyrate` is classical, i.e. non-hygienic. If you're
 familiar with Common Lisp's `defmacro` (or if you've been reading
 [Seibel](http://www.gigamonkeys.com/book/) or
 [Graham](http://paulgraham.com/onlisp.html)), you'll feel almost right at home.
@@ -142,7 +142,7 @@ expansion), that's where *macro hygiene* comes in.
 Short for *generate symbol*, `gensym` provides fresh, unused identifiers.
 
 When your macro needs to generate code that establishes new bindings, see
-`mcpy.gensym()`, and use `n[]` (and old-fashioned AST edits where needed)
+`mcpyrate.gensym()`, and use `n[]` (and old-fashioned AST edits where needed)
 judiciously.
 
 
@@ -150,7 +150,7 @@ judiciously.
 
 *Macro hygiene* refers to preserving the meaning of an identifier, from the
 macro definition site, to the macro use site. This is a highly desirable
-feature, and `mcpy` supports it via an explicit opt-in construct, which
+feature, and `mcpyrate` supports it via an explicit opt-in construct, which
 we call *hygienic unquoting*.
 
 *Hygienic unquoting* captures *a value* at macro definition time, and
@@ -166,7 +166,7 @@ happened to have the same name at the use site.
 To mark a value you want to be unquoted hygienically, use the `h[]`
 (hygienic-unquote) operator inside a `q[]`.
 
-In order for `mcpy` to support bytecode caching (`.pyc`), the value is pickled,
+In order for `mcpyrate` to support bytecode caching (`.pyc`), the value is pickled,
 separately for each invocation of `h[]`. When the value is looked up at run
 time, it is automatically unpickled the first time it is accessed in a given
 Python process. Further accesses, by the same invocation of `h[]`, then refer
@@ -251,14 +251,14 @@ constants, or to trees of such containers, where all leaves are constants.
 
 ## For Common Lispers
 
-The `mcpy` equivalent of the Common Lisp macro-implementation pattern, where one
+The `mcpyrate` equivalent of the Common Lisp macro-implementation pattern, where one
 gensyms a new name, `let`-binds that to the current value of the old name, and
 then unquotes the new name in the quasiquoted code, looks like this:
 
     hygx = q[h[x]]
     tree = q[...a[hygx]...]
 
-Note in `mcpy` the `h[]` operator pickles its input, to support storing
+Note in `mcpyrate` the `h[]` operator pickles its input, to support storing
 macro-expanded code using hygienically unquoted values into a bytecode cache
 (`.pyc`).
 
@@ -278,14 +278,14 @@ Python has a surface syntax, instead of representing source code directly as a
 lightly dressed up AST, like Lisps do.
 
 
-## mcpy vs. MacroPy
+## mcpyrate vs. MacroPy
 
 Our implementation of the quasiquote system closely follows the impressive,
 pioneering work that originally appeared in MacroPy. That source code, itself
 quite short, is full of creative ingenuity, at places muddled by the first-gen
 nature of the system.
 
-Since `mcpy` is a second-gen system, we have actively attempted to make the best
+Since `mcpyrate` is a third-gen system, we have actively attempted to make the best
 of lessons learned, to make the implementation as short and simple as reasonably
 possible. We have liberally changed function and class names where this makes
 the code easier to understand.
@@ -295,10 +295,10 @@ avoid pickling/unpickling, and by using uuids in the lookup keys, we also avoid
 the whole-file lexical scan.
 
 We don't need to inject any additional imports. This makes the quasiquote system
-fully orthogonal to the rest of `mcpy`. Because `mcpy` transforms `from module
+fully orthogonal to the rest of `mcpyrate`. Because `mcpyrate` transforms `from module
 import macros, ...` (after collecting macro definitions) into `import module`,
 we can just refer to our internal stuff (including the stdlib `ast` module) as
-attributes of the module `mcpy.quotes`. We feel this is the "better way" that
+attributes of the module `mcpyrate.quotes`. We feel this is the "better way" that
 source code comments in MacroPy's `quotes.py` suggested must surely exist.
 
 We allow capturing the value of any expr, not just identifiers. However, we also

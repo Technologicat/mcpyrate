@@ -1,13 +1,13 @@
-# mcpy
+# mcpyrate
 
-Third-generation macro expander for Python, after the pioneering [macropy](https://github.com/lihaoyi/macropy), and the compact, pythonic [original mcpy](https://github.com/delapuente/mcpy).
+Third-generation macro expander for Python, after the pioneering [macropy](https://github.com/lihaoyi/macropy), and the compact, pythonic [mcpy](https://github.com/delapuente/mcpy).
 
 Supports Python 3.6, 3.7, 3.8, and PyPy3.
 
 <!-- markdown-toc start - Don't edit this section. Run M-x markdown-toc-refresh-toc -->
 **Table of Contents**
 
-- [mcpy](#mcpy)
+- [mcpyrate](#mcpyrate)
     - [Highlights](#highlights)
     - [Install & uninstall](#install--uninstall)
     - [Using macros](#using-macros)
@@ -32,31 +32,31 @@ Supports Python 3.6, 3.7, 3.8, and PyPy3.
 
 ## Highlights
 
-This fork adds a lot of features over `mcpy` 2.0.0:
+`mcpyrate` 3.0.0 is based on, but adds a lot of features, over `mcpy` 2.0.0:
 
 - **Agile development**:
   - Universal bootstrapper: `macropython`. **Import and use macros in your main program**.
   - Interactive console: `macropython -i`. **Import and use macros in a console session**.
-    - Embeddable à la `code.InteractiveConsole`. See `mcpy.repl.console.MacroConsole`.
-  - IPython extension `mcpy.repl.iconsole`. **Import and use macros in an IPython session**.
+    - Embeddable à la `code.InteractiveConsole`. See `mcpyrate.repl.console.MacroConsole`.
+  - IPython extension `mcpyrate.repl.iconsole`. **Import and use macros in an IPython session**.
 - **Testing and debugging**:
   - Statement coverage is correctly reported by tools such as [`Coverage.py`](https://github.com/nedbat/coveragepy/).
   - Macro expansion errors are reported **at macro expansion time**, with use site traceback.
-  - Debug output with a step-by-step expansion breakdown. See macro `mcpy.debug.step_expansion`.
+  - Debug output with a step-by-step expansion breakdown. See macro `mcpyrate.debug.step_expansion`.
   - Manual expand-once. See `expander.visit_once`; get the `expander` as a named argument of your macro.
 - **Dialects, i.e. whole-module source and AST transforms**.
   - Think [Racket's](https://racket-lang.org/) `#lang`, but for Python.
   - Define languages that use Python's surface syntax, but change the semantics; or plug in a per-module transpiler that (at import time) compiles source code from some other programming language into macro-enabled Python.
-  - Sky's the limit, really. Until we get [`unpythonic`](https://github.com/Technologicat/unpythonic) ported to use `mcpy`, see [`pydialect`](https://github.com/Technologicat/pydialect) for old example dialects.
-  - For documentation, see the docstrings of [`mcpy.dialects`](mcpy/dialects.py).
-  - For debugging, `from mcpy.debug import dialects, StepExpansion`.
-  - If you're writing a full-module AST transformer that splices the whole module into a template, you may be interested in `mcpy.splicing.splice_dialect`.
+  - Sky's the limit, really. Until we get [`unpythonic`](https://github.com/Technologicat/unpythonic) ported to use `mcpyrate`, see [`pydialect`](https://github.com/Technologicat/pydialect) for old example dialects.
+  - For documentation, see the docstrings of [`mcpyrate.dialects`](mcpyrate/dialects.py).
+  - For debugging, `from mcpyrate.debug import dialects, StepExpansion`.
+  - If you're writing a full-module AST transformer that splices the whole module into a template, you may be interested in `mcpyrate.splicing.splice_dialect`.
 - **Advanced quasiquoting**:
   - Hygienically interpolate both regular values **and macro names**.
   - Delayed macro expansion inside quasiquoted code.
-    - User-controllable, see macros `expand1` and `expand` in `mcpy.quotes`.
-    - Expand when you want, or just leave it to `mcpy` to expand automatically once your macro (that uses quasiquoting) returns.
-  - Inverse quasiquote operator. See function `mcpy.quotes.unastify`.
+    - User-controllable, see macros `expand1` and `expand` in `mcpyrate.quotes`.
+    - Expand when you want, or just leave it to `mcpyrate` to expand automatically once your macro (that uses quasiquoting) returns.
+  - Inverse quasiquote operator. See function `mcpyrate.quotes.unastify`.
     - Convert a quasiquoted AST back into a direct AST, typically for further processing before re-quoting it.
       - Not an unquote; we have those too, but the purpose of unquotes is to interpolate values into quoted code. The inverse quasiquote, instead, undoes the quasiquote operation itself, after any unquotes have already been applied.
     - Useful for second-order macros that need to process a quasiquoted code section at macro expansion time, before the quasiquoted tree has a chance to run. (As usual, when it runs, it converts itself into a direct AST.)
@@ -105,19 +105,19 @@ possibly with `--user`, if your OS is a *nix, and you feel lucky enough to use t
 To uninstall:
 
 ```bash
-pip uninstall mcpy
+pip uninstall mcpyrate
 ```
 
-but first, make sure you're not in a folder that has an `mcpy` subfolder - `pip` will think it got a folder name instead of a package name, and become confused.
+but first, make sure you're not in a folder that has an `mcpyrate` subfolder - `pip` will think it got a folder name instead of a package name, and become confused.
 
 
 ## Using macros
 
-Due to how `mcpy` works, `mcpy` must be explicitly enabled before importing any module that uses macros. Macros must be defined in a separate module. The following classical 3-file setup works fine:
+Just like earlier macro expanders for Python, `mcpyrate` must be explicitly enabled before importing any module that uses macros. Macros must be defined in a separate module. The following classical 3-file setup works fine:
 
 ```python
 # run.py
-import mcpy.activate
+import mcpyrate.activate
 import application
 
 # mymacros.py with your macro definitions
@@ -152,12 +152,12 @@ To run, `macropython -m application`. It will import `application`, making that 
 
 ### REPL
 
-For interactive macro-enabled sessions, we provide an mcpy-enabled equivalent for `code.InteractiveConsole`, as well as an IPython extension. See the [REPL system documentation](repl.md).
+For interactive macro-enabled sessions, we provide an macro-enabled equivalent for `code.InteractiveConsole`, as well as an IPython extension. See the [REPL system documentation](repl.md).
 
 
 ### Syntax
 
-`mcpy` macros can be used in four forms:
+`mcpyrate` macros can be used in four forms:
 
 ```python
 # block form
@@ -182,7 +182,7 @@ In each case, the expander will replace the invocation with the expanded content
 
 ### Importing macros
 
-In `mcpy`, macros are just functions. To use functions from `module` as macros, use a *macro-import statement*:
+Just like in `mcpy`, in `mcpyrate`, macros are just functions. To use functions from `module` as macros, use a *macro-import statement*:
 
 ```python
 from module import macros, ...
@@ -192,7 +192,7 @@ replacing `...` with the macros you want to use. Importing all via `*` won't wor
 
 All macro-import statements must appear at the top level of a module.
 
-`mcpy` prevents you from accidentally using macros as regular functions in your code by transforming the macro-import into:
+`mcpyrate` prevents you from accidentally using macros as regular functions in your code by transforming the macro-import into:
 
 ```python
 import module
@@ -200,7 +200,7 @@ import module
 
 The transformed import is always absolute, even if the original macro-import was relative.
 
-This is part of the public API. If the expanded form of your macro needs to refer to `thing` that exists in (whether is defined in, or has been imported to) the global, top-level scope of the module that defines the macro, you can just refer to `module.thing` in your expanded code. This is the `mcpy` equivalent of MacroPy's `unhygienic_expose` mechanism.
+This is part of the public API. If the expanded form of your macro needs to refer to `thing` that exists in (whether is defined in, or has been imported to) the global, top-level scope of the module that defines the macro, you can just refer to `module.thing` in your expanded code. This is the `mcpyrate` equivalent of MacroPy's `unhygienic_expose` mechanism.
 
 If your expansion needs to refer to some other value from the macro definition site (including local and nonlocal variables, and imported macros), see [the quasiquote system](quasiquotes.md), specifically the `h[]` (hygienic-unquote) operator.
 
@@ -235,15 +235,15 @@ No special imports are needed to write your own macros. Just consider a macro as
 def macro(tree, **kw): return tree
 ```
 
-Although you don't strictly have to import anything to write macros, there are some useful functions in the top-level namespace of `mcpy`. See `gensym`, `unparse`, `dump`, `@namemacro`, and `@parametricmacro`.
+Although you don't strictly have to import anything to write macros, there are some useful functions in the top-level namespace of `mcpyrate`. See `gensym`, `unparse`, `dump`, `@namemacro`, and `@parametricmacro`.
 
-Other modules of `mcpy` contain more utilities for writing macros:
+Other modules contain more utilities for writing macros:
 
- - [`mcpy.quotes`](mcpy/quotes.py) provides [quasiquote syntax](quasiquotes.md) as macros, to easily build ASTs in your macros.
- - [`mcpy.utils`](mcpy/utils.py) provides some macro-writing utilities that are too specific to warrant a spot in the top-level namespace; of these, at least `rename` and `flatten_suite` solve problems that come up relatively often.
- - [`mcpy.walker`](mcpy/walker.py) provides an AST walker that can context-manage its state for different subtrees, while optionally collecting items across the whole walk. It's an `ast.NodeTransformer`, but with functionality equivalent to `macropy.core.walkers.Walker`.
- - [`mcpy.splicing`](mcpy/splicing.py) helps splice a list of statements into a code template. This is especially convenient when the template is written in the quasiquoted notation; there's no need to think about how the template looks like as an AST in order to paste statements into it.
- - [`mcpy.debug`](mcpy/debug.py) may be useful if something in your macro is not working.
+ - [`mcpyrate.quotes`](mcpyrate/quotes.py) provides [quasiquote syntax](quasiquotes.md) as macros, to easily build ASTs in your macros.
+ - [`mcpyrate.utils`](mcpyrate/utils.py) provides some macro-writing utilities that are too specific to warrant a spot in the top-level namespace; of these, at least `rename` and `flatten_suite` solve problems that come up relatively often.
+ - [`mcpyrate.walker`](mcpyrate/walker.py) provides an AST walker that can context-manage its state for different subtrees, while optionally collecting items across the whole walk. It's an `ast.NodeTransformer`, but with functionality equivalent to `macropy.core.walkers.Walker`.
+ - [`mcpyrate.splicing`](mcpyrate/splicing.py) helps splice a list of statements into a code template. This is especially convenient when the template is written in the quasiquoted notation; there's no need to think about how the template looks like as an AST in order to paste statements into it.
+ - [`mcpyrate.debug`](mcpyrate/debug.py) may be useful if something in your macro is not working.
 
 The `tree` parameter is the only positional parameter the macro function is called with. All other parameters are passed by name, so you can easily pick what you need (and let `**kw` gather the ones you don't).
 
@@ -257,7 +257,7 @@ Simple example:
 
 ```python
 from ast import *
-from mcpy import unparse
+from mcpyrate import unparse
 def log(expr, **kw):
     '''Replace log[expr] with print('expr: ', expr)'''
     label = unparse(expr) + ': '
@@ -273,9 +273,9 @@ A macro can be called in four different ways. The way a macro is called is recor
 
 When valid macro invocation syntax for one of the other three types is detected, the name part is skipped, and it **does not** get called as an identifier macro. The identifier macro mechanism is invoked only for appearances of the name *in contexts that are not other types of macro invocations*.
 
-The other three work roughly the same as in MacroPy. An important difference is that in `mcpy`, macro arguments are passed using brackets, not parentheses, e.g. `macroname[arg0, ...][expr]`.
+The other three work roughly the same as in MacroPy. An important difference is that in `mcpyrate`, macro arguments are passed using brackets, not parentheses, e.g. `macroname[arg0, ...][expr]`.
 
-Also, in `mcpy` macros do not implicitly accept arguments. If you want your macro to accept them, declare it as a `@parametricmacro`. This explicitness makes it easier to implement macros that don't need arguments (the majority), since then you don't need to worry about `args`.
+Also, in `mcpyrate` macros do not implicitly accept arguments. If you want your macro to accept them, declare it as a `@parametricmacro`. This explicitness makes it easier to implement macros that don't need arguments (the majority), since then you don't need to worry about `args`.
 
 
 ### The named parameters
@@ -287,7 +287,7 @@ Full list as of v3.0.0, in alphabetical order:
  - `expander`: the macro expander instance.
    - To expand macro invocations inside the current one, use `expander.visit_recursively` or `expander.visit_once`, depending on whether you want expansion to continue until no macros remain. Use `expander.visit` to use current setting for recursive mode.
    - Also potentially useful are `expander.bindings` and `expander.filename`.
-   - See [`mcpy.core.BaseMacroExpander`](mcpy/core.py) and [`mcpy.expander.MacroExpander`](mcpy/expander.py) for the expander API; it's just a few methods and attributes.
+   - See [`mcpyrate.core.BaseMacroExpander`](mcpyrate/core.py) and [`mcpyrate.expander.MacroExpander`](mcpyrate/expander.py) for the expander API; it's just a few methods and attributes.
 - `invocation`: the whole macro invocation AST node as-is, not only `tree`. For introspection.
    - Very rarely needed; if you need it, you'll know.
    - **CAUTION**: does not make a copy.
@@ -302,8 +302,6 @@ Full list as of v3.0.0, in alphabetical order:
 
 
 ### Macro arguments
-
-*New in v3.0.0.*
 
 Macro arguments are a rarely needed feature. Hence, the expander interprets macro argument syntax only for macros that are declared as parametric. Declare by using the `@parametricmacro` decorator on your macro function. Place it outermost (along with `@namemacro`, if used too).
 
@@ -343,19 +341,17 @@ For example, a *let* macro invoked as `let[x << 1, y << 2][...]` could alternati
 
 ### Quasiquotes
 
-*New in v3.0.0.* We provide [a quasiquote system](quasiquotes.md) (both classical and hygienic) to make macro code both much more readable and simpler to write.
+We provide [a quasiquote system](quasiquotes.md) (both classical and hygienic) to make macro code both much more readable and simpler to write.
 
 The system was inspired by MacroPy's, but the details differ; for example, macro invocations can be unquoted hygienically, and by default, macros in quasiquoted code are not expanded when the quasiquote itself expands. We provide macros to perform expansion in quoted code, to give you control over when things expand.
 
 
 ### Walk an AST
 
-*New in v3.0.0.* To bridge the feature gap between [`ast.NodeTransformer`](https://docs.python.org/3/library/ast.html#ast.NodeTransformer) and MacroPy's `Walker`, we provide [`mcpy.walker.Walker`](walker.md), a zen-minimalistic AST walker base class based on `ast.NodeTransformer`, with a state stack and a node collector. If you need a walker that can temporarily change state while in a given subtree, maybe look here.
+To bridge the feature gap between [`ast.NodeTransformer`](https://docs.python.org/3/library/ast.html#ast.NodeTransformer) and MacroPy's `Walker`, we provide [`mcpyrate.walker.Walker`](walker.md), a zen-minimalistic AST walker base class based on `ast.NodeTransformer`, with a state stack and a node collector. If you need a walker that can temporarily change state while in a given subtree, maybe look here.
 
 
 #### Identifier macros
-
-*New in v3.0.0.*
 
 Identifier macros are a rarely used feature, but one that is indispensable for
 that rare use case. To avoid clutter in the dispatch logic of most macros, if a
@@ -384,8 +380,8 @@ The main use case, why this feature exists, is to create magic variables that
 are allowed to appear only in certain contexts. Here's the pattern:
 
 ```python
-from mcpy import namemacro
-from mcpy.utils import NestingLevelTracker
+from mcpyrate import namemacro
+from mcpyrate.utils import NestingLevelTracker
 
 _mymacro_level = NestingLevelTracker()
 
@@ -417,7 +413,7 @@ If you want to expand only `it` inside an invocation of `mymacro[...]` (thus che
 
 ### Get the source of an AST
 
-`mcpy.unparse` is a function that converts an AST back into Python source code.
+`mcpyrate.unparse` is a function that converts an AST back into Python source code.
 
 Because the code is backconverted from the AST representation, the result may differ in minute details of surface syntax, such as parenthesization, whitespace, and the exact source code representation of string literals.
 
@@ -426,11 +422,11 @@ Because the code is backconverted from the AST representation, the result may di
 
 Use the named parameter `expander` to access the macro expander. You can call `expander.visit_recursively(tree)` with an AST `tree` to expand all macros in that AST, until no macros remain. This is useful for making inner macro invocations expand first.
 
-To expand only one layer of inner macro invocations, call `expander.visit_once(tree)`. This can be useful during debugging of a macro implementation. You can then convert the result into a printable form using `mcpy.unparse` or `mcpy.dump`.
+To expand only one layer of inner macro invocations, call `expander.visit_once(tree)`. This can be useful during debugging of a macro implementation. You can then convert the result into a printable form using `mcpyrate.unparse` or `mcpyrate.dump`.
 
 To use the current setting for recursive mode, use `expander.visit(tree)`. The default mode is recursive.
 
-If you need to temporarily run a second expander with different macro bindings, consult `expander.bindings` to grab the macro functions you need (and their current names), and then use `mcpy.expander.expand_macros(tree, modified_bindings, expander.filename)` to invoke a new expander with the modified bindings.
+If you need to temporarily run a second expander with different macro bindings, consult `expander.bindings` to grab the macro functions you need (and their current names), and then use `mcpyrate.expander.expand_macros(tree, modified_bindings, expander.filename)` to invoke a new expander with the modified bindings.
 
 
 ### Macro expansion error reporting
@@ -444,7 +440,7 @@ The use site source location is reported in a chained exception (`raise from`), 
 
 ### Examples
 
-`mcpy` is a macro expander, not a library containing macros. However, we provide a `demo` folder, to see `mcpy` in action. Navigate to it and run a Python console, then import `run`:
+`mcpyrate` is a macro expander, not a library containing macros. However, we provide a `demo` folder, to see `mcpyrate` in action. Navigate to it and run a Python console, then import `run`:
 
 ```python
 import run
@@ -454,6 +450,6 @@ import run
 
 We follow the `mcpy` philosophy that macro expanders aren't rocket science. We keep things as explicit and compact as reasonably possible. But the extra features do come with a cost in terms of codebase size. We also tolerate a small amount of extra complexity, if it improves the programmer [UX](https://en.wikipedia.org/wiki/User_experience).
 
-For an overview of the core design, look at the [original mcpy](https://github.com/delapuente/mcpy), version 2.0.0. Of the parts that come from it, its `visitors` is our [`core`](mcpy/core.py) (the `BaseMacroExpander`), its `core` is our [`expander`](mcpy/expander.py) (the actual `MacroExpander`), and its `import_hooks` is our [`importer`](mcpy/importer.py). Its `BaseMacroExpander.ismacro` method is our `BaseMacroExpander.isbound`, because it checks a name, not an AST structure. The rest should be clear.
+For a clean overview of the core design, look at [mcpy](https://github.com/delapuente/mcpy), version 2.0.0. Of the parts that come from it, its `visitors` is our [`core`](mcpyrate/core.py) (the `BaseMacroExpander`), its `core` is our [`expander`](mcpyrate/expander.py) (the actual `MacroExpander`), and its `import_hooks` is our [`importer`](mcpyrate/importer.py). Its `BaseMacroExpander.ismacro` method is our `BaseMacroExpander.isbound`, because it checks a name, not an AST structure. The rest should be clear.
 
-Then see our [`importer`](mcpy/importer.py). After [`mcpy.activate`](mcpy/activate.py) has been imported, the importer becomes the top-level entry point whenever a module is imported.
+Then see our [`importer`](mcpyrate/importer.py). After [`mcpyrate.activate`](mcpyrate/activate.py) has been imported, the importer becomes the top-level entry point whenever a module is imported.

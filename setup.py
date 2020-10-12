@@ -17,7 +17,7 @@ setup(
     python_requires=">=3.6",
     author="Juha Jeronen and Salvador de la Puente González",
     author_email="salva@unoyunodiez.com",
-    url="https://github.com/Technologicat/mcpy",
+    url="https://github.com/Technologicat/mcpyrate",
     description="A 3rd-generation macro expander for Python",
     long_description=read("README.md"),
     long_description_content_type="text/markdown",
@@ -41,6 +41,6 @@ setup(
         "Topic :: Software Development :: Code Generators",
         "Topic :: Utilities"
     ],
-    entry_points={"console_scripts": ["macropython=mcpy.repl.macropython:main"]},
+    entry_points={"console_scripts": ["macropython=mcpyrate.repl.macropython:main"]},
     zip_safe=False  # macros are not zip safe, because the zip importer fails to find sources.
 )

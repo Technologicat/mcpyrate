@@ -13,7 +13,7 @@ from .walker import Walker
 def splice_statements(body, template, tag="__paste_here__"):
     """Splice `body` into `template`.
 
-    This is somewhat like `mcpy.quotes.a`, but must be called from outside the
+    This is somewhat like `mcpyrate.quotes.a`, but must be called from outside the
     quoted snippet, and splices statements (from a `list` of AST nodes) instead
     of a single expression AST node.
 
@@ -48,8 +48,8 @@ def splice_statements(body, template, tag="__paste_here__"):
 
     Example::
 
-        from mcpy.quotes import macros, q
-        from mcpy.splicing import splice_statements
+        from mcpyrate.quotes import macros, q
+        from mcpyrate.splicing import splice_statements
 
         body = [...]  # a list of statements
 
@@ -62,7 +62,7 @@ def splice_statements(body, template, tag="__paste_here__"):
 
     (Flake8 will complain about the undefined name `__paste_here__`. You can silence
      it with the appropriate `# noqa`, or to make it happy, import the `n` macro from
-     `mcpy.quotes` and use `n["__paste_here__"]` instead of a plain `__paste_here__`.)
+     `mcpyrate.quotes` and use `n["__paste_here__"]` instead of a plain `__paste_here__`.)
     """
     if isinstance(body, ast.AST):
         body = [body]
@@ -97,7 +97,7 @@ def splice_dialect(body, template, tag="__paste_here__"):
 
     On top of what `splice_statements` does, this function handles macro-imports
     specially, gathering them all at the top level of the final module body, so
-    that mcpy sees them when the module is sent to the macro expander.
+    that mcpyrate sees them when the module is sent to the macro expander.
 
     Any macro-imports in the template are placed first (in the order they
     appear in the template), followed by any macro imports in the user code

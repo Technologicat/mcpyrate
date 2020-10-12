@@ -19,7 +19,7 @@ from .utils import format_location
 
 
 def source_to_xcode(self, data, path, *, _optimize=-1):
-    '''[mcpy] Expand dialects, then expand macros, then compile.
+    '''[mcpyrate] Expand dialects, then expand macros, then compile.
 
     Intercepts the source to bytecode transformation.
     '''
@@ -40,7 +40,7 @@ def source_to_xcode(self, data, path, *, _optimize=-1):
 _path_stats = SourceFileLoader.path_stats
 _xstats_cache = {}
 def path_xstats(self, path):
-    '''[mcpy] Compute a `.py` source file's mtime, accounting for macro-imports.
+    '''[mcpyrate] Compute a `.py` source file's mtime, accounting for macro-imports.
 
     Beside the source file `path` itself, we look at any macro definition files
     the source file imports macros from, recursively, in a `make`-like fashion.
@@ -70,7 +70,7 @@ def path_xstats(self, path):
     macroimports = [stmt for stmt in tree.body if ismacroimport(stmt)]
     has_relative_imports = any(macroimport.level for macroimport in macroimports)
 
-    # TODO: some duplication with code in mcpy.coreutils.get_macros, including the error messages.
+    # TODO: some duplication with code in mcpyrate.coreutils.get_macros, including the error messages.
     package_absname = None
     if has_relative_imports:
         try:
@@ -103,7 +103,7 @@ def path_xstats(self, path):
 
 _invalidate_caches = FileFinder.invalidate_caches
 def invalidate_xcaches(self):
-    '''[mcpy] Clear the macro dependency tree cache.
+    '''[mcpyrate] Clear the macro dependency tree cache.
 
     Then delegate to the standard implementation of `FileFinder.invalidate_caches`.
     '''

@@ -13,7 +13,7 @@ from .markers import ASTMarker
 from .utils import flatten_suite, format_location
 
 # Hygienically captured macro functions.
-# Global registry (across all modules being expanded) with unique keys, filled in by `mcpy.quotes`.
+# Global registry (across all modules being expanded) with unique keys, filled in by `mcpyrate.quotes`.
 _hygienic_bindings = {}
 
 class MacroExpansionError(Exception):

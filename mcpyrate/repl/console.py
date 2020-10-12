@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""mcpy-enabled `code.InteractiveConsole`.
+"""mcpyrate-enabled `code.InteractiveConsole`.
 
 Special commands:
 
@@ -21,10 +21,10 @@ import code
 import textwrap
 from collections import OrderedDict
 
-from mcpy import __version__ as mcpy_version
-from mcpy.expander import find_macros, expand_macros
+from mcpyrate import __version__ as mcpyrate_version
+from mcpyrate.expander import find_macros, expand_macros
 
-import mcpy.activate  # noqa: F401, boot up mcpy.
+import mcpyrate.activate  # noqa: F401, boot up mcpyrate.
 
 class MacroConsole(code.InteractiveConsole):
     def __init__(self, locals=None, filename="<console>"):
@@ -36,7 +36,7 @@ class MacroConsole(code.InteractiveConsole):
         self._bindings_changed = False
 
         # ? and ?? help syntax
-        self._internal_execute("import mcpy.repl.utils")
+        self._internal_execute("import mcpyrate.repl.utils")
 
     def _internal_execute(self, source):
         """Execute given source in the console session.
@@ -72,13 +72,13 @@ class MacroConsole(code.InteractiveConsole):
 
         The only thing we customize here is that if `banner is None`, in which case
         `code.InteractiveConsole` will print its default banner, we print help for
-        our special commands and a line containing the `mcpy` version before that
+        our special commands and a line containing the `mcpyrate` version before that
         default banner.
         """
         if banner is None:
             self.write("Use obj? to view obj's docstring, and obj?? to view its source code.\n")
             self.write("Use macros? to see macros you have currently imported into the session.\n")
-            self.write(f"mcpy {mcpy_version} -- Syntactic macros for Python.\n")
+            self.write(f"mcpyrate {mcpyrate_version} -- Syntactic macros for Python.\n")
         return super().interact(banner, exitmsg)
 
     def runsource(self, source, filename="<interactive input>", symbol="single"):
@@ -87,9 +87,9 @@ class MacroConsole(code.InteractiveConsole):
             self._list_macros()
             return False  # complete input
         elif source.endswith("??"):
-            return self.runsource(f'mcpy.repl.utils.sourcecode({source[:-2]})')
+            return self.runsource(f'mcpyrate.repl.utils.sourcecode({source[:-2]})')
         elif source.endswith("?"):
-            return self.runsource(f"mcpy.repl.utils.doc({source[:-1]})")
+            return self.runsource(f"mcpyrate.repl.utils.doc({source[:-1]})")
 
         try:
             code = self.compile(source, filename, symbol)

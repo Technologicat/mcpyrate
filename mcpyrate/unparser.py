@@ -78,7 +78,7 @@ class Unparser:
             for t in tree:
                 self.dispatch(t)
             return
-        if isinstance(tree, ASTMarker):  # mcpy and macro communication internal
+        if isinstance(tree, ASTMarker):  # mcpyrate and macro communication internal
             self.astmarker(tree)
             return
         methodname = "_" + tree.__class__.__name__

@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-"""Universal bootstrapper for macro-enabled Python programs powered by mcpy."""
+"""Universal bootstrapper for macro-enabled Python programs powered by mcpyrate."""
 
 # TODO: Currently tested in CPython 3.6, and PyPy3 7.3.0 (Python 3.6). Test in 3.7+.
 
@@ -121,10 +121,10 @@ def import_module_as_main(name, script_mode):
 
 def main():
     """Handle command-line arguments and run the specified main program."""
-    parser = argparse.ArgumentParser(description="""Run a Python program or an interactive interpreter with mcpy enabled.""",
+    parser = argparse.ArgumentParser(description="""Run a Python program or an interactive interpreter with mcpyrate enabled.""",
                                      formatter_class=argparse.RawDescriptionHelpFormatter)
 
-    parser.add_argument('-v', '--version', action='version', version=('%(prog)s (mcpy ' + __version__ + ')'))
+    parser.add_argument('-v', '--version', action='version', version=('%(prog)s (mcpyrate ' + __version__ + ')'))
     parser.add_argument(dest='filename', nargs='?', default=None, type=str, metavar='file',
                         help='script to run')
     parser.add_argument('-m', '--module', dest='module', default=None, type=str, metavar='mod',
@@ -202,7 +202,7 @@ def main():
             sys.path.insert(0, containing_directory)
 
         # This approach finds the standard loader even for macro-enabled scripts.
-        # TODO: For mcpy, that could be ok, since we monkey-patch just that.
+        # TODO: For mcpyrate, that could be ok, since we monkey-patch just that.
         # TODO: But maybe better to leave the option to replace the whole loader later.
         # spec = spec_from_file_location("__main__", str(fullpath))
         # if not spec:

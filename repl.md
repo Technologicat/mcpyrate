@@ -1,10 +1,10 @@
-# REPL system for mcpy
+# REPL system for mcpyrate
 
 We provide:
 
-- [``mcpy.repl.iconsole``](#ipython-extension), IPython extension. **Use macros in the IPython REPL**.
+- [``mcpyrate.repl.iconsole``](#ipython-extension), IPython extension. **Use macros in the IPython REPL**.
 
-- [``mcpy.repl.console.MacroConsole``](#macroconsole), a macro-enabled equivalent of ``code.InteractiveConsole``. **Embed a REPL that supports macros**.
+- [``mcpyrate.repl.console.MacroConsole``](#macroconsole), a macro-enabled equivalent of ``code.InteractiveConsole``. **Embed a REPL that supports macros**.
 
 - [``macropython``](#bootstrapper), a generic bootstrapper for macro-enabled Python programs. **Use macros in your main program**.
 
@@ -18,7 +18,7 @@ The extension allows to **use macros in the IPython REPL**. (*Defining* macros i
 For example:
 
 ```ipython
-In [1]: from mcpy.quotes import q
+In [1]: from mcpyrate.quotes import q
 
 In [2]: q[42]
 Out[2]: <ast.Num object at 0x7f4c97230e80>
@@ -34,22 +34,22 @@ Hence, semi-live updates to macro definitions are possible: hack on your macros,
 
 But note that only the macros you explicitly import again will be refreshed in the session.
 
-Each time after importing macros, the macro functions are automatically imported as regular Python objects. Note only the REPL does this; normally, in `mcpy` macros are not imported as run-time objects.
+Each time after importing macros, the macro functions are automatically imported as regular Python objects. Note only the REPL does this; normally, in `mcpyrate` macros are not imported as run-time objects.
 
 The intention is to allow viewing macro docstrings and source code easily in the REPL session, using ``some_macro?``, ``some_macro??``.
 
 This does not affect using the macros in the intended way, as macros.
 
-Make sure `c.TerminalInteractiveShell.autocall = 0`. Expression macro invocations will not work in the REPL if autocall is enabled, because in `mcpy` macros are functions, and the REPL imports those functions so you can easily view their docstrings.
+Make sure `c.TerminalInteractiveShell.autocall = 0`. Expression macro invocations will not work in the REPL if autocall is enabled, because in `mcpyrate` macros are functions, and the REPL imports those functions so you can easily view their docstrings.
 
 
 ### Loading the extension
 
-To load the extension once, ``%load_ext mcpy.repl.iconsole``.
+To load the extension once, ``%load_ext mcpyrate.repl.iconsole``.
 
-To autoload it when IPython starts, add the string ``"mcpy.repl.iconsole"`` to the list ``c.InteractiveShellApp.extensions`` in your ``ipython_config.py``. To find the config file, ``ipython profile locate``.
+To autoload it when IPython starts, add the string ``"mcpyrate.repl.iconsole"`` to the list ``c.InteractiveShellApp.extensions`` in your ``ipython_config.py``. To find the config file, ``ipython profile locate``.
 
-When the extension loads, it imports ``mcpy`` into the REPL session. You can use this to debug whether it is loaded, if necessary.
+When the extension loads, it imports ``mcpyrate`` into the REPL session. You can use this to debug whether it is loaded, if necessary.
 
 Currently **no startup banner is printed**, because extension loading occurs after IPython has already printed its own banner. We cannot manually print a banner, because some tools (notably ``importmagic.el`` for Emacs, included in [Spacemacs](http://spacemacs.org/)) treat the situation as a fatal error in Python interpreter startup if anything is printed (and ``ipython3 --no-banner`` is rather convenient to have as the python-shell, to run IPython in Emacs's inferior-shell mode).
 
@@ -61,7 +61,7 @@ This is a derivative of, and drop-in replacement for, ``code.InteractiveConsole`
 For example:
 
 ```python
-from mcpy.repl.console import MacroConsole
+from mcpyrate.repl.console import MacroConsole
 m = MacroConsole()
 m.interact()
 ```
@@ -69,15 +69,15 @@ m.interact()
 Now we're inside a macro-enabled REPL:
 
 ```python
-from mcpy.quotes import macros, q
+from mcpyrate.quotes import macros, q
 q[42]  # --> <ast.Num object at 0x7f4c97230e80>
 ```
 
 Just like in `code.InteractiveConsole`, exiting the REPL (Ctrl+D) returns from the `interact()` call.
 
-Similarly to IPython, `obj?` shows obj's docstring, and `obj??` shows its source code. We define two utility functions for this: `doc` and `sourcecode`. ``obj?`` is shorthand for ``mcpy.repl.utils.doc(obj)``, and ``obj??`` is shorthand for ``mcpy.repl.utils.sourcecode(obj)``. If the information is available, these operations also print the filename and the starting line number of the definition of the queried object in that file.
+Similarly to IPython, `obj?` shows obj's docstring, and `obj??` shows its source code. We define two utility functions for this: `doc` and `sourcecode`. ``obj?`` is shorthand for ``mcpyrate.repl.utils.doc(obj)``, and ``obj??`` is shorthand for ``mcpyrate.repl.utils.sourcecode(obj)``. If the information is available, these operations also print the filename and the starting line number of the definition of the queried object in that file.
 
-The command `macros?` shows macros currently imported to the session. This shadows the `obj?` docstring lookup syntax if you happen to define anything called `macros` (`mcpy` itself doesn't), but that's likely not needed. That can still be invoked manually, using `mcpy.repl.utils.doc(macros)`.
+The command `macros?` shows macros currently imported to the session. This shadows the `obj?` docstring lookup syntax if you happen to define anything called `macros` (`mcpyrate` itself doesn't), but that's likely not needed. That can still be invoked manually, using `mcpyrate.repl.utils.doc(macros)`.
 
 Each time a ``from module import macros, ...`` is executed in the REPL, just before invoking the macro expander, the system reloads ``module``, to always import the latest macro definitions.
 
@@ -86,7 +86,7 @@ Hence, semi-live updates to macro definitions are possible: hack on your macros,
 But note that only the macros you explicitly import again will be refreshed in the session.
 
 Each time after importing macros, the macro functions are automatically imported
-as regular Python objects. Note only the REPL does this; normally, in `mcpy`
+as regular Python objects. Note only the REPL does this; normally, in `mcpyrate`
 macros are not imported as run-time objects.
 
 The intention is to allow viewing macro docstrings and source code easily in the
@@ -105,7 +105,7 @@ The bootstrapper has two roles:
 
 ### Interactive mode
 
-Interactive mode (command-line option `-i`) starts a **macro-enabled interactive Python interpreter**, using `mcpy.repl.console.MacroConsole`. The [readline](https://docs.python.org/3/library/readline.html) and [rlcompleter](https://docs.python.org/3/library/rlcompleter.html) modules are automatically activated and connected to the REPL session, so the command history and tab completion features work as expected, pretty much like in the standard interactive Python interpreter.
+Interactive mode (command-line option `-i`) starts a **macro-enabled interactive Python interpreter**, using `mcpyrate.repl.console.MacroConsole`. The [readline](https://docs.python.org/3/library/readline.html) and [rlcompleter](https://docs.python.org/3/library/rlcompleter.html) modules are automatically activated and connected to the REPL session, so the command history and tab completion features work as expected, pretty much like in the standard interactive Python interpreter.
 
 The point of this feature is to conveniently allow starting a macro-enabled REPL directly from the shell. In interactive mode, the filename and module command-line arguments are ignored.
 
@@ -121,7 +121,7 @@ In this mode, the bootstrapper imports the specified file or module, pretending 
 For example, ``example.py``:
 
 ```python
-from mcpy.quotes import macros, q
+from mcpyrate.quotes import macros, q
 
 def main():
     x = q[42]

@@ -440,7 +440,7 @@ def _add_coverage_dummy_node(tree, macronode, macroname):
         tree = [tree]
     # The dummy node must actually run to get coverage, an `ast.Pass` won't do.
     # We must set location info manually, because we run after `expand`.
-    x = copy_location(Constant(value=f"mcpy coverage: source line {macronode.lineno} invoked macro {macroname}"),
+    x = copy_location(Constant(value=f"mcpyrate coverage: source line {macronode.lineno} invoked macro {macroname}"),
                       macronode)
     dummy = copy_location(Expr(value=x), macronode)
     tree.insert(0, Done(dummy))  # mark as Done so any expansions further out won't mess this up.

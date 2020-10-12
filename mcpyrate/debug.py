@@ -135,7 +135,7 @@ class SourceLocationInfoValidator(Walker):
     when the actual problem is that is got a bare value in a position where an
     AST node was expected.
 
-    The mcpy core *should* fill in missing source location info when it expands
+    The macro expander *should* fill in missing source location info when it expands
     a macro, so this utility will be needed only rarely.
 
     After `visit(tree)`, `self.collected` becomes a `list` of items in the format

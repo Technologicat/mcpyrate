@@ -1,5 +1,5 @@
 # -*- coding: utf-8; -*-
-'''Install mcpy hooks to preprocess source files.
+'''Install mcpyrate hooks to preprocess source files.
 
 Actually, we monkey-patch ``SourceFileLoader` and `FileFinder`, to compile the
 code in a different way, macroexpanding the AST before compiling into bytecode.
@@ -11,7 +11,7 @@ and recompiled. This is considered recursively in a `make`-like fashion.
 We **DO NOT** support PEP 552 (Deterministic pycs); only mtime-based pycs will
 use our invalidation logic.
 
-By default, `mcpy` caches bytecode (creates `.pyc` files) if Python itself does.
+By default, `mcpyrate` caches bytecode (creates `.pyc` files) if Python itself does.
 As of Python 3.8, the default is *enabled*, using mtime-based mode.
 
 If you want to disable `.pyc` bytecode caching, use the standard Python

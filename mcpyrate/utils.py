@@ -64,9 +64,9 @@ def rename(oldname, newname, tree):
 
     With this you can do things like::
 
-        from mcpy.quotes import macros, q
-        from mcpy import gensym
-        from mcpy.utils import rename
+        from mcpyrate.quotes import macros, q
+        from mcpyrate import gensym
+        from mcpyrate.utils import rename
 
         tree = q[lambda _: ...]
         tree = rename("_", gensym(), tree)

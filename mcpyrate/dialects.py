@@ -80,10 +80,10 @@ class Dialect:
         Output should be the transformed AST.
 
         To easily splice `tree.body` into your template, see the utility
-        `mcpy.splicing.splice_dialect` (it automatically handles macro-imports,
+        `mcpyrate.splicing.splice_dialect` (it automatically handles macro-imports,
         the magic `__all__`, and the module docstring).
 
-        As an example, for now, until `unpythonic` is ported to `mcpy`, see the
+        As an example, for now, until `unpythonic` is ported to `mcpyrate`, see the
         example dialects in `pydialect`, which are implemented using this exact
         strategy, but with the older MacroPy macro expander, the older `pydialect`
         dialect system, and `unpythonic`.
@@ -111,12 +111,12 @@ class Dialect:
 
 
 _message_header = "**StepExpansion: "
-class StepExpansion(Dialect):  # actually part of public API of mcpy.debug, for discoverability
+class StepExpansion(Dialect):  # actually part of public API of mcpyrate.debug, for discoverability
     """[dialect] Show each step of expansion while dialect-expanding the module.
 
     Usage::
 
-        from mcpy.debug import dialects, StepExpansion
+        from mcpyrate.debug import dialects, StepExpansion
 
     When the dialect expander invokes the source transformer of this dialect,
     it causes the expander to enter debug mode from that point on. It will show
@@ -145,7 +145,7 @@ class DialectExpander:
     def __init__(self, filename):
         '''`filename`: full path to `.py` file being expanded, for module name resolution and error messages.'''
         self.filename = filename
-        self.debugmode = False  # to enable, `from mcpy.debug import dialects, StepExpansion`
+        self.debugmode = False  # to enable, `from mcpyrate.debug import dialects, StepExpansion`
         self._step = 0
         self._seen = set()
 
