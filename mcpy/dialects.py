@@ -236,7 +236,7 @@ class DialectExpander:
                         continue  # no step taken; proceed to next binding
                     tree = result
                     self._step += 1
-                    if self.debugmode and cls is not StepExpansion:
+                    if self.debugmode:
                         print(f"{_message_header}{self.filename} after {module_absname}.{dialectname}.transform_ast (step {self._step}):\n", file=stderr)
                         print(unparse_with_fallbacks(tree), file=stderr)
                         print("-" * 79, file=stderr)
