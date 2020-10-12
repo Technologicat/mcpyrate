@@ -210,7 +210,6 @@ class DialectExpander:
 
     def transform_ast(self, tree):
         '''Apply all whole-module AST transformers.'''
-        _message_header = "**StepExpansion: "
         if self.debugmode:
             plural = "s" if self._step != 1 else ""
             print(f"{_message_header}{self.filename} before dialect AST transformers (after {self._step} step{plural} of source transformers):\n", file=stderr)
