@@ -2,8 +2,6 @@
 
 Third-generation macro expander for Python, after the pioneering [macropy](https://github.com/lihaoyi/macropy), and the compact, pythonic [original mcpy](https://github.com/delapuente/mcpy).
 
-The design philosophy follows the original `mcpy`: keep things as explicit and compact as reasonably possible. However, the codebase is larger due to having more features. We also tolerate a small amount of extra complexity, if it improves the programmer [UX](https://en.wikipedia.org/wiki/User_experience).
-
 Supports Python 3.6, 3.7, 3.8, and PyPy3.
 
 <!-- markdown-toc start - Don't edit this section. Run M-x markdown-toc-refresh-toc -->
@@ -421,7 +419,7 @@ If you want to expand only `it` inside an invocation of `mymacro[...]` (thus che
 
 `mcpy.unparse` is a function that converts an AST back into Python source code.
 
-Because the code is backconverted from the AST representation, the result may differ in minute details of surface syntax, such as parenthesization, whitespace, and which quote syntax is used for quoting string literals.
+Because the code is backconverted from the AST representation, the result may differ in minute details of surface syntax, such as parenthesization, whitespace, and the exact source code representation of string literals.
 
 
 ### Expand macros
@@ -454,8 +452,8 @@ import run
 
 ## Understanding the code
 
-We follow the `mcpy` philosophy that macro expanders aren't rocket science. But the extra features do come with a cost in terms of codebase size.
+We follow the `mcpy` philosophy that macro expanders aren't rocket science. We keep things as explicit and compact as reasonably possible. But the extra features do come with a cost in terms of codebase size. We also tolerate a small amount of extra complexity, if it improves the programmer [UX](https://en.wikipedia.org/wiki/User_experience).
 
 For an overview of the core design, look at the [original mcpy](https://github.com/delapuente/mcpy), version 2.0.0. Of the parts that come from it, its `visitors` is our [`core`](mcpy/core.py) (the `BaseMacroExpander`), its `core` is our [`expander`](mcpy/expander.py) (the actual `MacroExpander`), and its `import_hooks` is our [`importer`](mcpy/importer.py). Its `BaseMacroExpander.ismacro` method is our `BaseMacroExpander.isbound`, because it checks a name, not an AST structure. The rest should be clear.
 
-Then look at our [`importer`](mcpy/importer.py). After [`mcpy.activate`](mcpy/activate.py) has been imported, the importer becomes the top-level entry point.
+Then see our [`importer`](mcpy/importer.py). After [`mcpy.activate`](mcpy/activate.py) has been imported, the importer becomes the top-level entry point whenever a module is imported.
