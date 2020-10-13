@@ -4,11 +4,11 @@
 __all__ = ['MacroExpansionError', 'MacroExpanderMarker', 'Done',
            'BaseMacroExpander', 'global_postprocess']
 
-from ast import NodeTransformer, AST, copy_location, fix_missing_locations
+from ast import NodeTransformer, AST
 from contextlib import contextmanager
 from collections import ChainMap
 
-from .ctxfixer import fix_missing_ctx
+from .ctxfixer import fix_missing_ctx, fix_missing_locations
 from .markers import ASTMarker
 from .utils import flatten_suite, format_location
 
@@ -106,7 +106,7 @@ class BaseMacroExpander(NodeTransformer):
                 self.recursive = wasrecursive
         return recursive_mode()
 
-    def expand(self, syntax, target, macroname, tree, sourcecode, fill_root_location, kw=None):
+    def expand(self, syntax, target, macroname, tree, sourcecode, kw=None):
         '''Expand a macro invocation.
 
         This is a hook for actual macro expanders. Macro libraries typically
@@ -126,9 +126,6 @@ class BaseMacroExpander(NodeTransformer):
         `sourcecode` is a source code dump (or unparsed backconversion from AST)
         for error messages. It is a parameter, because the actual expander may
         edit the `target` node (e.g. to pop a block macro) before we get control.
-
-        `fill_root_location` sets whether to fill the source location info at
-        the top level of the expansion from the AST node `target`.
 
         When calling the macro function, we pass the following named arguments:
 
@@ -186,9 +183,9 @@ class BaseMacroExpander(NodeTransformer):
             msg = f"{loc}\n{reason}"
             raise MacroExpansionError(msg)
 
-        return self._visit_expansion(expansion, target, fill_root_location)
+        return self._visit_expansion(expansion, target)
 
-    def _visit_expansion(self, expansion, target, fill_root_location):
+    def _visit_expansion(self, expansion, target):
         '''Perform local postprocessing.
 
         Add in missing source location info and `ctx`.
@@ -196,21 +193,12 @@ class BaseMacroExpander(NodeTransformer):
         Then, if in recursive mode, recurse into (`visit`) the once-expanded
         macro output. That will cause the actual expander to `expand` again
         if it detects any more macro invocations.
-
-        `fill_root_location` sets whether to fill the source location info at
-        the top level of the expansion from the AST node `target`. Whether that
-        should be done depends on the type of macro invocation.
         '''
         if expansion is not None:
-            is_node = isinstance(expansion, AST)
-            expansion = [expansion] if is_node else expansion
-            if fill_root_location:
-                expansion = map(lambda n: copy_location(n, target), expansion)
-            expansion = map(fix_missing_locations, expansion)
-            expansion = map(fix_missing_ctx, expansion)
+            expansion = fix_missing_locations(expansion, target)
+            expansion = fix_missing_ctx(expansion)
             if self.recursive:
-                expansion = map(self.visit, expansion)
-            expansion = list(expansion).pop() if is_node else list(expansion)
+                expansion = self.visit(expansion)
 
         return expansion
 

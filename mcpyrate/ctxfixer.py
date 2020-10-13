@@ -1,7 +1,7 @@
 # -*- coding: utf-8; -*-
-'''Fix any missing `ctx` attributes in an AST.'''
+'''Fix missing `ctx` attributes and source location info in an AST.'''
 
-__all__ = ['fix_missing_ctx']
+__all__ = ['fix_missing_ctx', 'fix_missing_locations']
 
 from ast import (Load, Store, Del,
                  Assign, AnnAssign, AugAssign,
@@ -9,7 +9,8 @@ from ast import (Load, Store, Del,
                  comprehension,
                  For, AsyncFor,
                  withitem,
-                 Delete)
+                 Delete,
+                 iter_child_nodes)
 
 from .walker import Walker
 
@@ -89,3 +90,41 @@ def fix_missing_ctx(tree):
     Modifies `tree` in-place. For convenience, returns the modified `tree`.
     '''
     return _CtxFixer().visit(tree)
+
+
+def fix_missing_locations(tree, reference_node):
+    '''Like `ast.fix_missing_locations`, but customized for a macro expander.
+
+    Differences:
+
+      - At the top level of `tree`, initialize `lineno` and `col_offset`
+        to those of `reference_node`.
+        - If `reference_node` has no location info, no-op.
+      - If `tree is None`, no-op.
+      - If `tree` is a `list` of AST nodes, loop over it.
+
+    Modifies `tree` in-place. For convenience, returns the modified `tree`.
+    '''
+    if not (hasattr(reference_node, "lineno") and hasattr(reference_node, "col_offset")):
+        return tree
+    def _fix(tree, lineno, col_offset):
+        if tree is None:
+            return
+        if isinstance(tree, list):
+            for elt in tree:
+                _fix(elt, lineno, col_offset)
+            return
+        if 'lineno' in tree._attributes:
+            if not hasattr(tree, 'lineno'):
+                tree.lineno = lineno
+            else:
+                lineno = tree.lineno
+        if 'col_offset' in tree._attributes:
+            if not hasattr(tree, 'col_offset'):
+                tree.col_offset = col_offset
+            else:
+                col_offset = tree.col_offset
+        for child in iter_child_nodes(tree):
+            _fix(child, lineno, col_offset)
+    _fix(tree, reference_node.lineno, reference_node.col_offset)
+    return tree

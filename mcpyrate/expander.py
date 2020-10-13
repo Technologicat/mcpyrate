@@ -142,7 +142,7 @@ class MacroExpander(BaseMacroExpander):
             kw = {'args': macroargs}
             tree = subscript.slice.value
             sourcecode = unparse_with_fallbacks(subscript)
-            new_tree = self.expand('expr', subscript, macroname, tree, sourcecode=sourcecode, fill_root_location=True, kw=kw)
+            new_tree = self.expand('expr', subscript, macroname, tree, sourcecode=sourcecode, kw=kw)
         else:
             new_tree = self.generic_visit(subscript)
         return new_tree
@@ -196,7 +196,7 @@ class MacroExpander(BaseMacroExpander):
         kw = {'args': macroargs}
         kw.update({'optional_vars': with_item.optional_vars})
         tree = withstmt.body if not withstmt.items else [withstmt]
-        new_tree = self.expand('block', withstmt, macroname, tree, sourcecode=sourcecode, fill_root_location=False, kw=kw)
+        new_tree = self.expand('block', withstmt, macroname, tree, sourcecode=sourcecode, kw=kw)
         new_tree = _add_coverage_dummy_node(new_tree, withstmt, macroname)
         return new_tree
 
@@ -243,7 +243,7 @@ class MacroExpander(BaseMacroExpander):
         sourcecode = unparse_with_fallbacks(decorated)
         decorated.decorator_list.remove(innermost_macro)
         kw = {'args': macroargs}
-        new_tree = self.expand('decorator', decorated, macroname, decorated, sourcecode=sourcecode, fill_root_location=True, kw=kw)
+        new_tree = self.expand('decorator', decorated, macroname, decorated, sourcecode=sourcecode, kw=kw)
         new_tree = _add_coverage_dummy_node(new_tree, innermost_macro, macroname)
         return new_tree
 
@@ -302,7 +302,7 @@ class MacroExpander(BaseMacroExpander):
             with self._recursive_mode(False):
                 kw = {'args': None}
                 sourcecode = unparse_with_fallbacks(name)
-                new_tree = self.expand('name', name, macroname, name, sourcecode=sourcecode, fill_root_location=True, kw=kw)
+                new_tree = self.expand('name', name, macroname, name, sourcecode=sourcecode, kw=kw)
             if new_tree is not None:
                 if not ismodified(new_tree):
                     new_tree = Done(new_tree)

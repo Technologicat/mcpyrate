@@ -197,11 +197,26 @@ def astify(x, expander=None):  # like MacroPy's `ast_repr`
             # We refer to the stdlib `ast` module as `mcpyrate.quotes.ast` to avoid
             # name conflicts at the use site of `q[]`.
             fields = [ast.keyword(a, recurse(b)) for a, b in ast.iter_fields(x)]
-            return ast.Call(ast.Attribute(value=_mcpyrate_quotes_attr('ast'),
+            node = ast.Call(ast.Attribute(value=_mcpyrate_quotes_attr('ast'),
                                           attr=x.__class__.__name__,
                                           ctx=ast.Load()),
                             [],
                             fields)
+            # Copy source location info for correct coverage reporting of a quoted block.
+            #
+            # The location info we fill in here is for the use site of `q`, which is
+            # typically inside a macro definition. Coverage for a quoted line of code
+            # means that the expansion of the quote contains input from that line.
+            # It says nothing about the run-time behavior of that code.
+            #
+            # Running the AST produced by the quote re-produces the input AST, which is
+            # indeed the whole point of quoting stuff. The AST is re-produced **without
+            # any source location info**. The fact that *this* location info is missing,
+            # on purpose, is the magic that allows the missing location fixer to fill
+            # the correct location info at the final use site, i.e. the use site of the
+            # macro that used `q`.
+            node = ast.copy_location(node, x)
+            return node
 
         raise TypeError(f"Don't know how to astify {repr(x)}")
     return recurse(x)
@@ -281,7 +296,9 @@ def unastify(tree):
         callee = lookup_thing(dotted_name)
         args = unastify(tree.args)
         kwargs = {k: v for k, v in unastify(tree.keywords)}
-        return callee(*args, **kwargs)
+        node = callee(*args, **kwargs)
+        node = ast.copy_location(node, tree)
+        return node
 
     raise TypeError(f"Don't know how to unastify {unparse(tree)}")
 
