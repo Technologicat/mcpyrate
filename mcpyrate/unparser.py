@@ -55,9 +55,19 @@ class Unparser:
         print("", file=self.f)
         self.f.flush()
 
-    def fill(self, text=""):
+    def fill(self, text="", *, lineno_node=None):
         "Indent a piece of text, according to the current indentation level."
-        self.f.write("\n" + "    " * self._indent + text)
+        self.write("\n")
+        if self.debug and isinstance(lineno_node, ast.AST):
+            lineno = lineno_node.lineno if hasattr(lineno_node, "lineno") else None
+            # In `mcpyrate.debug.step_expansion`, `textwrap.dedent` will strip
+            # leading space, so it's better to use something else to always
+            # have fixed width.
+            #
+            # Assume line numbers usually have at most 4 digits, but
+            # degrade gracefully for those crazy 5-digit source files.
+            self.write(f"L{lineno:5d} " if lineno else "L ---- ")
+        self.write("    " * self._indent + text)
 
     def write(self, text):
         "Append a piece of text to the current line."
@@ -101,7 +111,7 @@ class Unparser:
                 self.dispatch(v)
             else:
                 self.write(repr(v))
-        self.fill(f"$ASTMarker<{tree.__class__.__name__}>")  # markers cannot be eval'd
+        self.fill(f"$ASTMarker<{tree.__class__.__name__}>", lineno_node=tree)  # markers cannot be eval'd
         self.enter()
         self.write(" ")
         if len(tree._fields) == 1 and tree._fields[0] == "body":
@@ -118,7 +128,7 @@ class Unparser:
     def _Module(self, t):
         # TODO: Python 3.8 type_ignores. Since we don't store the source text, maybe ignore that?
         if self.debug:
-            self.fill("$Module")
+            self.fill("$Module", lineno_node=t)
             self.enter()
             for stmt in t.body:
                 self.dispatch(stmt)
@@ -130,7 +140,7 @@ class Unparser:
     # stmt
     def _Expr(self, t):
         if self.debug:
-            self.fill("$Expr")
+            self.fill("$Expr", lineno_node=t)
             self.enter()
             self.write(" ")
             self.dispatch(t.value)
@@ -140,11 +150,11 @@ class Unparser:
             self.dispatch(t.value)
 
     def _Import(self, t):
-        self.fill("import ")
+        self.fill("import ", lineno_node=t)
         interleave(lambda: self.write(", "), self.dispatch, t.names)
 
     def _ImportFrom(self, t):
-        self.fill("from ")
+        self.fill("from ", lineno_node=t)
         self.write("." * t.level)
         if t.module:
             self.write(t.module)
@@ -152,14 +162,14 @@ class Unparser:
         interleave(lambda: self.write(", "), self.dispatch, t.names)
 
     def _Assign(self, t):
-        self.fill()
+        self.fill(lineno_node=t)
         for target in t.targets:
             self.dispatch(target)
             self.write(" = ")
         self.dispatch(t.value)
 
     def _AnnAssign(self, t):
-        self.fill()
+        self.fill(lineno_node=t)
         if not t.simple:
             self.write("(")
         self.dispatch(t.target)
@@ -173,46 +183,46 @@ class Unparser:
         # TODO: Python 3.8 type_comment, ignore it?
 
     def _AugAssign(self, t):
-        self.fill()
+        self.fill(lineno_node=t)
         self.dispatch(t.target)
         self.write(" " + self.binop[t.op.__class__.__name__] + "= ")
         self.dispatch(t.value)
 
     def _Return(self, t):
-        self.fill("return")
+        self.fill("return", lineno_node=t)
         if t.value:
             self.write(" ")
             self.dispatch(t.value)
 
     def _Pass(self, t):
-        self.fill("pass")
+        self.fill("pass", lineno_node=t)
 
     def _Break(self, t):
-        self.fill("break")
+        self.fill("break", lineno_node=t)
 
     def _Continue(self, t):
-        self.fill("continue")
+        self.fill("continue", lineno_node=t)
 
     def _Delete(self, t):
-        self.fill("del ")
+        self.fill("del ", lineno_node=t)
         interleave(lambda: self.write(", "), self.dispatch, t.targets)
 
     def _Assert(self, t):
-        self.fill("assert ")
+        self.fill("assert ", lineno_node=t)
         self.dispatch(t.test)
         if t.msg:
             self.write(", ")
             self.dispatch(t.msg)
 
     def _Global(self, t):
-        self.fill("global ")
+        self.fill("global ", lineno_node=t)
         interleave(lambda: self.write(", "), self.write, t.names)
 
     def _Nonlocal(self, t):
-        self.fill("nonlocal ")
+        self.fill("nonlocal ", lineno_node=t)
         interleave(lambda: self.write(", "), self.write, t.names)
 
-    def _Await(self, t):
+    def _Await(self, t):  # expr
         self.write("(")
         self.write("await")
         if t.value:
@@ -220,7 +230,7 @@ class Unparser:
             self.dispatch(t.value)
         self.write(")")
 
-    def _Yield(self, t):
+    def _Yield(self, t):  # expr
         self.write("(")
         self.write("yield")
         if t.value:
@@ -228,7 +238,7 @@ class Unparser:
             self.dispatch(t.value)
         self.write(")")
 
-    def _YieldFrom(self, t):
+    def _YieldFrom(self, t):  # expr
         self.write("(")
         self.write("yield from")
         if t.value:
@@ -237,7 +247,7 @@ class Unparser:
         self.write(")")
 
     def _Raise(self, t):
-        self.fill("raise")
+        self.fill("raise", lineno_node=t)
         if not t.exc:
             assert not t.cause
             return
@@ -248,7 +258,7 @@ class Unparser:
             self.dispatch(t.cause)
 
     def _Try(self, t):
-        self.fill("try")
+        self.fill("try", lineno_node=t)
         self.enter()
         self.dispatch(t.body)
         self.leave()
@@ -266,7 +276,7 @@ class Unparser:
             self.leave()
 
     def _ExceptHandler(self, t):
-        self.fill("except")
+        self.fill("except", lineno_node=t)
         if t.type:
             self.write(" ")
             self.dispatch(t.type)
@@ -280,9 +290,9 @@ class Unparser:
     def _ClassDef(self, t):
         self.write("\n")
         for deco in t.decorator_list:
-            self.fill("@")
+            self.fill("@", lineno_node=deco)
             self.dispatch(deco)
-        self.fill("class " + t.name)
+        self.fill("class " + t.name, lineno_node=t)
         self.write("(")
         comma = False
         for e in t.bases:
@@ -312,10 +322,10 @@ class Unparser:
     def __FunctionDef_helper(self, t, fill_suffix):
         self.write("\n")
         for deco in t.decorator_list:
-            self.fill("@")
+            self.fill("@", lineno_node=deco)
             self.dispatch(deco)
         def_str = fill_suffix + " " + t.name + "("
-        self.fill(def_str)
+        self.fill(def_str, lineno_node=t)
         self.dispatch(t.args)
         self.write(")")
         if t.returns:
@@ -333,7 +343,7 @@ class Unparser:
         self.__For_helper("async for ", t)
 
     def __For_helper(self, fill, t):
-        self.fill(fill)
+        self.fill(fill, lineno_node=t)
         self.dispatch(t.target)
         self.write(" in ")
         self.dispatch(t.iter)
@@ -348,7 +358,7 @@ class Unparser:
         # TODO: Python 3.8 type_comment, ignore it?
 
     def _If(self, t):
-        self.fill("if ")
+        self.fill("if ", lineno_node=t)
         self.dispatch(t.test)
         self.enter()
         self.dispatch(t.body)
@@ -370,7 +380,7 @@ class Unparser:
             self.leave()
 
     def _While(self, t):
-        self.fill("while ")
+        self.fill("while ", lineno_node=t)
         self.dispatch(t.test)
         self.enter()
         self.dispatch(t.body)
@@ -382,7 +392,7 @@ class Unparser:
             self.leave()
 
     def _With(self, t):
-        self.fill("with ")
+        self.fill("with ", lineno_node=t)
         interleave(lambda: self.write(", "), self.dispatch, t.items)
         self.enter()
         self.dispatch(t.body)
@@ -390,7 +400,7 @@ class Unparser:
         # TODO: Python 3.8 type_comment, ignore it?
 
     def _AsyncWith(self, t):
-        self.fill("async with ")
+        self.fill("async with ", lineno_node=t)
         interleave(lambda: self.write(", "), self.dispatch, t.items)
         self.enter()
         self.dispatch(t.body)
