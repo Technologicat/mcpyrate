@@ -278,7 +278,7 @@ Python has a surface syntax, instead of representing source code directly as a
 lightly dressed up AST, like Lisps do.
 
 
-## mcpyrate vs. MacroPy
+## Differences to MacroPy
 
 Our implementation of the quasiquote system closely follows the impressive,
 pioneering work that originally appeared in MacroPy. That source code, itself
