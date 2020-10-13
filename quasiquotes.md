@@ -14,6 +14,25 @@ Build ASTs in your macros, using syntax that mostly looks like regular code.
         return promise()
 ```
 
+<!-- markdown-toc start - Don't edit this section. Run M-x markdown-toc-refresh-toc -->
+**Table of Contents**
+
+- [Quasiquotes](#quasiquotes)
+    - [Quick reference](#quick-reference)
+    - [Full reference](#full-reference)
+    - [Introduction to quasiquoting](#introduction-to-quasiquoting)
+        - [Avoiding name conflicts at the macro use site](#avoiding-name-conflicts-at-the-macro-use-site)
+            - [gensym](#gensym)
+            - [Macro hygiene](#macro-hygiene)
+            - [Advanced uses of non-hygienic quasiquoting](#advanced-uses-of-non-hygienic-quasiquoting)
+    - [Technical notes](#technical-notes)
+        - [Difference between `h[]` and `u[]`](#difference-between-h-and-u)
+    - [For Common Lispers](#for-common-lispers)
+    - [Python vs. Lisp](#python-vs-lisp)
+    - [Differences to MacroPy](#differences-to-macropy)
+
+<!-- markdown-toc end -->
+
 
 ## Quick reference
 
