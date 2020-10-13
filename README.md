@@ -1,6 +1,6 @@
 # mcpyrate
 
-Third-generation macro expander for Python, after the pioneering [macropy](https://github.com/lihaoyi/macropy), and the compact, pythonic [mcpy](https://github.com/delapuente/mcpy). Builds on `mcpy`, with a similar explicit and compact approach, but with a lot of new features.
+Advanced, third-generation macro expander for Python, after the pioneering [macropy](https://github.com/lihaoyi/macropy), and the compact, pythonic [mcpy](https://github.com/delapuente/mcpy). Builds on `mcpy`, with a similar explicit and compact approach, but with a lot of new features.
 
 Supports Python 3.6, 3.7, 3.8, and PyPy3.
 
@@ -27,6 +27,10 @@ Supports Python 3.6, 3.7, 3.8, and PyPy3.
         - [Expand macros](#expand-macros)
         - [Macro expansion error reporting](#macro-expansion-error-reporting)
         - [Examples](#examples)
+    - [Test coverage reporting FAQ](#test-coverage-reporting-faq)
+        - [Why do my block and decorator macros generate extra do-nothing `Expr` nodes?](#why-do-my-block-and-decorator-macros-generate-extra-do-nothing-expr-nodes)
+        - [Why doesn't `mcpyrate` copy the source location of a `with` macro invocation to each top-level item in the body?](#why-doesnt-mcpyrate-copy-the-source-location-of-a-with-macro-invocation-to-each-top-level-item-in-the-body)
+        - [`Coverage.py` says my quasiquoted code block is covered? It's quoted, not running, so why?](#coveragepy-says-my-quasiquoted-code-block-is-covered-its-quoted-not-running-so-why)
     - [Understanding the code](#understanding-the-code)
 
 <!-- markdown-toc end -->
@@ -82,7 +86,7 @@ Supports Python 3.6, 3.7, 3.8, and PyPy3.
   - **CAUTION**: [PEP 552 - Deterministic pycs](https://www.python.org/dev/peps/pep-0552/) is not supported; we support only the default *mtime* invalidation mode, at least for now.
 - **Conveniences**:
   - Relative macro-imports (for code in packages), e.g. `from .other import macros, kittify`.
-  - The expander automatically fixes missing `ctx` attributes in the AST, so you don't need to care about those in your macros.
+  - The expander automatically fixes missing `ctx` attributes (and source locations) in the AST, so you don't need to care about those in your macros.
   - Several block macros can be invoked in the same `with` (equivalent to nesting them, with leftmost outermost).
   - Walker with a state stack, à la MacroPy, to easily temporarily override the state for a given subtree.
   - AST markers (pseudo-nodes) for communication in a set of co-operating macros (and with the expander).
@@ -270,7 +274,6 @@ def log(expr, **kw):
 We provide [a quasiquote system](quasiquotes.md) (both classical and hygienic) to make macro code both much more readable and simpler to write. Rewriting the above example:
 
 ```python
-from ast import *
 from mcpyrate import unparse
 from mcpyrate.quotes import macros, q, u, a
 
@@ -282,7 +285,7 @@ def log(expr, **kw):
 
 Here `u[]` unquotes a simple value, and `a[]` unquotes an expression AST. If you're worried that `print` may refer to something else at the use site of `log[]`, you can hygienically unquote the function name with `h[]`: `q[h[print](u[label], a[expr])]`.
 
-The system was inspired by MacroPy's, but the details differ. For example, macro invocations can be unquoted hygienically, and by default, macros in quasiquoted code are not expanded when the quasiquote itself expands. We provide macros to perform expansion in quoted code, to give you control over when things expand.
+The system was inspired by MacroPy's, but the details differ. For example, in `mcpyrate`, macro invocations can be unquoted hygienically, and by default, macros in quasiquoted code are not expanded when the quasiquote itself expands. We provide macros to perform expansion in quoted code, to give you control over when it expands.
 
 
 ### Distinguish how the macro is called
@@ -437,13 +440,23 @@ Because the code is backconverted from the AST representation, the result may di
 
 ### Expand macros
 
-Use the named parameter `expander` to access the macro expander. You can call `expander.visit_recursively(tree)` with an AST `tree` to expand all macros in that AST, until no macros remain. This is useful for making inner macro invocations expand first.
+Use the named parameter `expander` to access the macro expander. This is useful for making inner macro invocations expand first.
 
-To expand only one layer of inner macro invocations, call `expander.visit_once(tree)`. This can be useful during debugging of a macro implementation. You can then convert the result into a printable form using `mcpyrate.unparse` or `mcpyrate.dump`.
+To expand macros in `tree`, use `expander.visit(tree)`. Any code in your macro that runs before the `visit` behaves outside-in, any code after it behaves inside-out. If there's no explicit `visit` in your macro definition, the default behavior is outside-in.
 
-To use the current setting for recursive mode, use `expander.visit(tree)`. The default mode is recursive.
+The `visit` method uses the expander's current setting for recursive mode, which is almost always The Right Thing to do. The default mode is recursive, i.e. expand again in the result until no macros remain.
 
-If you need to temporarily run a second expander with different macro bindings, consult `expander.bindings` to grab the macro functions you need (and their current names), and then use `mcpyrate.expander.expand_macros(tree, modified_bindings, expander.filename)` to invoke a new expander with the modified bindings.
+(Strictly speaking, the default outside-in behavior arises because the actual default, after a macro invocation has been expanded once (i.e. just after the macro function has returned), is to loop the expander on the output until no macro invocations remain. Even more strictly, we use a functional loop, with recursion instead of a `while`. Hence the name *recursive mode*.)
+
+If you want to expand until no macros remain (even when inside the dynamic extent of an expand-once - this is only recommended if you know why you want to do it), use `expander.visit_recursively(tree)` instead.
+
+If you want to expand only one layer of macro invocations, use `expander.visit_once(tree)`. This can be useful during debugging of a macro implementation. You can then convert the result into a printable form using `mcpyrate.unparse` or `mcpyrate.dump`.
+
+If you need to temporarily expand one layer, but let the expander continue expanding your AST later (when your macro returns), observe that `visit_once` will return a `Done` AST marker, which is the thing whose sole purpose is to prevent further macro expansion in that subtree. It is a wrapper with the actual AST stored in its `body` attribute. So if you need to ignore the `Done`, you can grab the actual AST from there, and discard the marker.
+
+If you need to temporarily run a second expander with different macro bindings, consult `expander.bindings` to grab the macro functions you need. Note the names can be anything due to as-imports, so **you must check the values** whether they are the function objects of those macros you would like to expand. Then, add the import `from mcpyrate.expander import expand_macros`, and in your macro, use `expand_macros(tree, modified_bindings, expander.filename)` to invoke a new expander with the modified bindings. The implementation of the quasiquote system has an example.
+
+Currently, there is no single call to expand only one layer of macros using a second expander. But if you need to do that, look at how `expand_macros` is implemented (it's just two lines), and adapt that.
 
 
 ### Macro expansion error reporting
@@ -463,10 +476,47 @@ The use site source location is reported in a chained exception (`raise from`), 
 import run
 ```
 
+
+## Test coverage reporting FAQ
+
+These questions may arise when experimenting with the `step_expansion` macro from [`mcpyrate.debug`](mcpyrate/debug.py).
+
+### Why do my block and decorator macros generate extra do-nothing `Expr` nodes?
+
+This allows coverage analysis tools such as `Coverage.py` to report correct coverage for macro-enabled code.
+
+We assign the line number from the macro invocation itself to any new AST nodes (that do not have a source location explicitly set manually) generated by a macro. This covers most use cases. But it's also legal for a block or decorator macro to just edit existing AST nodes, without adding any new ones.
+
+The macro invocation itself is compiled away by the macro expander, so to guarantee that the invocation shows as covered, it must (upon successful macro expansion) be replaced by some other AST node that actually runs at run-time, with source location information taken from the invocation node, for the coverage analyzer to pick up.
+
+For this, we use an `Expr` with a `Constant` string inside it, to aid human-readability of the expanded source code.
+
+
+### Why doesn't `mcpyrate` copy the source location of a `with` macro invocation to each top-level item in the body?
+
+This strategy was used by `mcpy`. The problem is, it overwrites the line numbers of any user code that exists at the top level of the `with` block, preventing the reporting of those lines as covered.
+
+We only fill in the source location info for a node if it doesn't yet have any.
+
+
+### `Coverage.py` says my quasiquoted code block is covered? It's quoted, not running, so why?
+
+When a `with q as quoted` block is expanded, it becomes an assignment to the variable `quoted` (or whatever name you gave it), setting the value of that variable to a `list` of the quoted representation of the code inside the block. Each statement that is lexically inside the block becomes an item in the list.
+
+Consider the *definition site* of your macro function that uses `q`. In a quasiquoted block, having coverage means that the output of `q` contains code from each line reported as covered. **It says nothing about the run-time behavior of that code.**
+
+Now consider the *use site* of your macro. It's not possible to see the run-time coverage of the code that originates from the quoted block (inside your macro), for two reasons:
+
+ 1. There are usually multiple use sites, because each invocation of your macro is a use site - that's the whole point of defining a macro.
+ 2. The quoted code does not belong to the final use site's source file, so given a view to its unexpanded source (which is what coverage tools report against), those lines simply aren't there.
+
+Note these are fundamental facts of macro-enabled code; it doesn't matter whether quasiquotes were used to construct the AST. Seeing the run-time coverage would require saving the expanded source code (at each level of expansion, possibly) to disk, and the coverage analyzer would have to know about the macro expansion process.
+
+
 ## Understanding the code
 
-We follow the `mcpy` philosophy that macro expanders aren't rocket science. We keep things as explicit and compact as reasonably possible. But the extra features do come with a cost in terms of codebase size. We also tolerate a small amount of extra complexity, if it improves the programmer [UX](https://en.wikipedia.org/wiki/User_experience).
+We follow the `mcpy` philosophy that macro expanders aren't rocket science. We keep things as explicit and compact as reasonably possible. However, the extra features do cost some codebase size, and we also tolerate a small amount of extra complexity, if it improves the programmer [UX](https://en.wikipedia.org/wiki/User_experience).
 
-For a clean overview of the core design, look at [mcpy](https://github.com/delapuente/mcpy), version 2.0.0. Of the parts that come from it, its `visitors` is our [`core`](mcpyrate/core.py) (the `BaseMacroExpander`), its `core` is our [`expander`](mcpyrate/expander.py) (the actual `MacroExpander`), and its `import_hooks` is our [`importer`](mcpyrate/importer.py). Its `BaseMacroExpander.ismacro` method is our `BaseMacroExpander.isbound`, because it checks a name, not an AST structure. The rest should be clear.
+For a clean overview of the core design, look at [mcpy](https://github.com/delapuente/mcpy), version 2.0.0. Of the parts that come from it, its `visitors` is our [`core`](mcpyrate/core.py) (the `BaseMacroExpander`), its `core` is our [`expander`](mcpyrate/expander.py) (the actual `MacroExpander`), and its `import_hooks` is our [`importer`](mcpyrate/importer.py). Its `BaseMacroExpander.ismacro` method is our `BaseMacroExpander.isbound`, because that method checks for a raw string name, not an AST structure. The rest should be clear.
 
 Then see our [`importer`](mcpyrate/importer.py). After [`mcpyrate.activate`](mcpyrate/activate.py) has been imported, the importer becomes the top-level entry point whenever a module is imported.
