@@ -67,7 +67,7 @@ def step_expansion(tree, *, args, syntax, expander, **kw):
         if mode not in ("unparse", "dump"):
             raise ValueError(f"expected mode_str either 'unparse' or 'dump', got {repr(mode)}")
         if mode == "dump":
-            formatter = dump
+            formatter = functools.partial(dump, include_attributes=True)
 
     with _step_expansion_level.changed_by(+1):
         indent = 2 * _step_expansion_level.value
