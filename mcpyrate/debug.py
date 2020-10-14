@@ -5,6 +5,8 @@ __all__ = ["step_expansion", "StepExpansion",
            "show_bindings",
            "SourceLocationInfoValidator"]
 
+from .quotes import macros, q  # noqa: F401
+
 import ast
 import functools
 from sys import stderr
@@ -114,7 +116,12 @@ def show_bindings(tree, *, syntax, expander, **kw):
     print(f"Macro expander bindings for module {expander.filename} (at expansion time):", file=stderr)
     for k, v in sorted(expander.bindings.items()):
         print(f"    {k}: {format_macrofunction(v)}", file=stderr)
-    return ast.Constant(value=None)  # can't just delete the node (return None) if it's in an Expr(value=...)
+    # Can't just delete the node (return None) if it's in an Expr(value=...).
+    #
+    # For correct coverage reporting, we can't return a `Constant`, because CPython
+    # optimizes away do-nothing constants. So trick the compiler into thinking
+    # this is important, by making the expansion result call a no-op function.
+    return q[(lambda: None)()]
 
 
 class SourceLocationInfoValidator(Walker):

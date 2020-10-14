@@ -51,7 +51,7 @@ __all__ = ['namemacro', 'isnamemacro',
            'MacroExpander', 'MacroCollector',
            'expand_macros', 'find_macros']
 
-from ast import (Name, Subscript, Tuple, Import, alias, AST, Expr, Constant,
+from ast import (Name, Subscript, Tuple, Import, alias, AST, Assign, Store, Constant,
                  copy_location, iter_fields, NodeVisitor)
 from warnings import warn_explicit
 
@@ -438,11 +438,14 @@ def _add_coverage_dummy_node(tree, macronode, macroname):
         tree = []
     elif isinstance(tree, AST):
         tree = [tree]
-    # The dummy node must actually run to get coverage, an `ast.Pass` won't do.
+    # The dummy node must actually run to get coverage, so an `ast.Pass` won't do.
+    # It must *do* something, or CPython optimizes it away, so an `ast.Expr` won't do.
     # We must set location info manually, because we run after `expand`.
-    x = copy_location(Constant(value=f"mcpyrate coverage: source line {macronode.lineno} invoked macro {macroname}"),
+    v = copy_location(Constant(value=f"source line {macronode.lineno} invoked macro {macroname}"),
                       macronode)
-    dummy = copy_location(Expr(value=x), macronode)
+    t = copy_location(Name(id="_mcpyrate_coverage", ctx=Store()),
+                      macronode)
+    dummy = copy_location(Assign(targets=[t], value=v), macronode)
     tree.insert(0, Done(dummy))  # mark as Done so any expansions further out won't mess this up.
     return tree
 
