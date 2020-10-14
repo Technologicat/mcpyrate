@@ -612,7 +612,7 @@ The use site source location is reported in a chained exception (`raise from`), 
 
 ### Differences to MacroPy
 
-In `mcpyrate`, the exception is reported immediately, at macro expansion time.
+In `mcpyrate`, any exception that occurs while expanding a macro is reported immediately, at macro expansion time.
 
 In `mcpyrate`, **any type of** exception raised at macro-expansion time will be reported and chained into a macro-expansion error.
 
