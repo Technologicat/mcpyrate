@@ -67,19 +67,22 @@ def path_xstats(self, path):
     # directory, and invalidate it based on the mtime of `path` (only)?
     with tokenize.open(path) as sourcefile:
         tree = ast.parse(sourcefile.read())
+
     macroimports = [stmt for stmt in tree.body if ismacroimport(stmt)]
-    has_relative_imports = any(macroimport.level for macroimport in macroimports)
+    dialectimports = [stmt for stmt in tree.body if ismacroimport(stmt, magicname="dialects")]
+    macro_and_dialect_imports = macroimports + dialectimports
+    has_relative_macroimports = any(macroimport.level for macroimport in macro_and_dialect_imports)
 
     # TODO: some duplication with code in mcpyrate.coreutils.get_macros, including the error messages.
     package_absname = None
-    if has_relative_imports:
+    if has_relative_macroimports:
         try:
             package_absname = resolve_package(path)
         except (ValueError, ImportError) as err:
             raise ImportError(f"while resolving absolute package name of {path}, which uses relative macro-imports") from err
 
     mtimes = []
-    for macroimport in macroimports:
+    for macroimport in macro_and_dialect_imports:
         if macroimport.module is None:
             approx_sourcecode = unparse_with_fallbacks(macroimport)
             loc = format_location(path, macroimport, approx_sourcecode)
