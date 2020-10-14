@@ -63,7 +63,7 @@ Supports Python 3.6, 3.7, 3.8, and PyPy3.
   - For documentation, see the docstrings of [`mcpyrate.dialects`](mcpyrate/dialects.py).
   - For debugging, `from mcpyrate.debug import dialects, StepExpansion`.
   - If you're writing a full-module AST transformer that splices the whole module into a template, you may be interested in `mcpyrate.splicing.splice_dialect`.
-- **Advanced quasiquoting**:
+- **Advanced quasiquoting**. Inspired by `macropy`.
   - Hygienically interpolate both regular values **and macro names**.
   - Delayed macro expansion inside quasiquoted code.
     - User-controllable, see macros `expand1` and `expand` in `mcpyrate.quotes`.
@@ -72,7 +72,7 @@ Supports Python 3.6, 3.7, 3.8, and PyPy3.
     - Convert a quasiquoted AST back into a direct AST, typically for further processing before re-quoting it.
       - Not an unquote; we have those too, but the purpose of unquotes is to interpolate values into quoted code. The inverse quasiquote, instead, undoes the quasiquote operation itself, after any unquotes have already been applied.
     - Useful for second-order macros that need to process a quasiquoted code section at macro expansion time, before the quasiquoted tree has a chance to run. (As usual, when it runs, it converts itself into a direct AST.)
-- **Macro arguments**. Inspired by MacroPy.
+- **Macro arguments**. Inspired by `macropy`.
   - Opt-in. Declare by using the `@parametricmacro` decorator on your macro function (along with `@namemacro`, if used too).
   - Use bracket syntax to invoke, e.g. `macroname[arg0, ...][expr]`. To send no args, invoke like a non-parametric macro, `macroname[expr]`.
   - For a parametric macro, `macroname[arg0, ...]` works in `expr`, `block` and `decorator` macro invocations in place of a bare `macroname`.
@@ -97,7 +97,7 @@ Supports Python 3.6, 3.7, 3.8, and PyPy3.
   - Relative macro-imports (for code in packages), e.g. `from .other import macros, kittify`.
   - The expander automatically fixes missing `ctx` attributes (and source locations) in the AST, so you don't need to care about those in your macros.
   - Several block macros can be invoked in the same `with` (equivalent to nesting them, with leftmost outermost).
-  - Walker with a state stack, à la MacroPy, to easily temporarily override the state for a given subtree.
+  - Walker with a state stack, à la `macropy`, to easily temporarily override the state for a given subtree.
   - AST markers (pseudo-nodes) for communication in a set of co-operating macros (and with the expander).
   - `gensym` to create a fresh, unused lexical identifier.
   - `unparse` to convert an AST to the corresponding source code.
@@ -216,7 +216,7 @@ import module
 
 Even if the original macro-import was relative, the transformed import is always resolved to an absolute one, based on `sys.path`, like Python itself does. If the import cannot be resolved, it is a macro-expansion-time error. (Not just because of this; the import must resolve successfully, so that the expander can find the macro functions.)
 
-This macro-import transformation is part of the public API. If the expanded form of your macro needs to refer to `thing` that exists in (whether is defined in, or has been imported to) the global, top-level scope of the module where the macro definition lives, you can just refer to `module.thing` in your expanded code. This is the `mcpyrate` equivalent of MacroPy's `unhygienic_expose` mechanism.
+This macro-import transformation is part of the public API. If the expanded form of your macro needs to refer to `thing` that exists in (whether is defined in, or has been imported to) the global, top-level scope of the module where the macro definition lives, you can just refer to `module.thing` in your expanded code. This is the `mcpyrate` equivalent of `macropy`'s `unhygienic_expose` mechanism.
 
 If your expansion needs to refer to some other value from the macro definition site (including local and nonlocal variables, and imported macros), see [the quasiquote system](quasiquotes.md), specifically the `h[]` (hygienic-unquote) operator.
 
@@ -325,13 +325,13 @@ def log(expr, **kw):
 
 Here `q[]` quasiquotes an expression, `u[]` unquotes a simple value, and `a[]` unquotes an expression AST. If you're worried that `print` may refer to something else at the use site of `log[]`, you can hygienically unquote the function name with `h[]`: `q[h[print](u[label], a[expr])]`.
 
-#### Differences to MacroPy
+#### Differences to `macropy`
 
 By default, in `mcpyrate`, macros in quasiquoted code are not expanded when the quasiquote itself expands. We provide macros to perform expansion in quoted code, to give you control.
 
-In `mcpyrate`, there is **just one *quote* operator**, `q[]`, although just like in MacroPy, there are several different *unquote* operators, depending on what you want to do.
+In `mcpyrate`, there is **just one *quote* operator**, `q[]`, although just like in `macropy`, there are several different *unquote* operators, depending on what you want to do.
 
-For [macro hygiene](https://en.wikipedia.org/wiki/Hygienic_macro), we provide a **hygienic unquote** operator, `h[]`. So instead of implicitly hygienifying all `Name` nodes inside a `hq[]` like MacroPy does, `mcpyrate` instead expects the user to use the regular `q[]`, and explicitly say which subexpressions to hygienify, by unquoting each of those separately with `h[]`.
+For [macro hygiene](https://en.wikipedia.org/wiki/Hygienic_macro), we provide a **hygienic unquote** operator, `h[]`. So instead of implicitly hygienifying all `Name` nodes inside a `hq[]` like `macropy` does, `mcpyrate` instead expects the user to use the regular `q[]`, and explicitly say which subexpressions to hygienify, by unquoting each of those separately with `h[]`.
 
 In `mcpyrate`, also macro names can be unquoted hygienically. Doing this registers a macro binding, with a uniqified name, into a global table for the current process. This allows the expanded code of your macro to hygienically invoke a macro imported to your macro definition site (and leave that invocation unexpanded, for the expander to handle later), without requiring the use site of your macro to import that macro.
 
@@ -345,7 +345,7 @@ Because the code is backconverted from the AST representation, the result may di
 
 ### Walk an AST
 
-To bridge the feature gap between [`ast.NodeTransformer`](https://docs.python.org/3/library/ast.html#ast.NodeTransformer) and MacroPy's `Walker`, we provide [`mcpyrate.walker.Walker`](walker.md), a zen-minimalistic AST walker base class based on `ast.NodeTransformer`, that can context-manage its state for different subtrees, while optionally collecting items across the whole walk.
+To bridge the feature gap between [`ast.NodeTransformer`](https://docs.python.org/3/library/ast.html#ast.NodeTransformer) and `macropy`'s `Walker`, we provide [`mcpyrate.walker.Walker`](walker.md), a zen-minimalistic AST walker base class based on `ast.NodeTransformer`, that can context-manage its state for different subtrees, while optionally collecting items across the whole walk.
 
 
 ### The named parameters
@@ -439,7 +439,7 @@ Macro arguments are a rarely needed feature. Often, instead of taking macro argu
 For example, a *let* macro invoked as `let[x << 1, y << 2][...]` could alternatively be designed to be invoked as `let[[x << 1, y << 2] in ...]`. But if this `let` example should work also as a decorator, then macro arguments are the obvious, uniform syntax, because then you can allow also `with let[x << 1, y << 2]:` and `@let[x << 1, y << 2]`.
 
 
-#### Differences to MacroPy
+#### Differences to `macropy`
 
 In `mcpyrate`, macro arguments are passed using brackets, e.g. `macroname[arg0, ...][expr]`. This syntax looks macro-like, as well as makes it explicit that macro arguments are positional-only.
 
@@ -610,7 +610,7 @@ The error report includes two source locations: the macro use site (which was be
 
 The use site source location is reported in a chained exception (`raise from`), so if the second stack trace is long, scroll back in your terminal to see the original exception that was raised by the macro (including a traceback of where it occurred in the macro code).
 
-### Differences to MacroPy
+### Differences to `macropy`
 
 In `mcpyrate`, any exception that occurs while expanding a macro is reported immediately, at macro expansion time.
 
