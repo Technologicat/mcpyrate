@@ -34,7 +34,7 @@ Supports Python 3.6, 3.7, 3.8, and PyPy3.
     - [Debugging](#debugging)
         - [I just ran my program again and no macro expansion is happening?](#i-just-ran-my-program-again-and-no-macro-expansion-is-happening)
         - [Error in `compile`, an AST node is missing the required field `lineno`?](#error-in-compile-an-ast-node-is-missing-the-required-field-lineno)
-        - [Why do my block and decorator macros generate extra do-nothing `Expr` nodes?](#why-do-my-block-and-decorator-macros-generate-extra-do-nothing-expr-nodes)
+        - [Why do my block and decorator macros generate extra do-nothing nodes?](#why-do-my-block-and-decorator-macros-generate-extra-do-nothing-nodes)
         - [`Coverage.py` says my quasiquoted code block is covered? It's quoted, not running, so why?](#coveragepy-says-my-quasiquoted-code-block-is-covered-its-quoted-not-running-so-why)
         - [My line numbers aren't monotonically increasing, why is that?](#my-line-numbers-arent-monotonically-increasing-why-is-that)
     - [Macro expansion error reporting](#macro-expansion-error-reporting)
