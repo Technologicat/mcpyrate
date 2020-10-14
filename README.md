@@ -136,8 +136,8 @@ import application
 
 # mymacros.py with your macro definitions
 def echo(expr, **kw):
-  print('Echo')
-  return expr
+    print('Echo')
+    return expr
 
 # application.py 
 from mymacros import macros, echo
@@ -151,8 +151,8 @@ In `mcpyrate`, the wrapper `run.py` is optional. The following 2-file setup work
 ```python
 # mymacros.py with your macro definitions
 def echo(expr, **kw):
-  print('Echo')
-  return expr
+    print('Echo')
+    return expr
 
 # application.py
 from mymacros import macros, echo
@@ -178,7 +178,7 @@ For interactive macro-enabled sessions, we provide an macro-enabled equivalent f
 ```python
 # block form
 with macro:
-  ...
+    ...
 
 # expression form
 macro[...]
@@ -388,7 +388,7 @@ Macro arguments are sent by calling `macroname` with bracket syntax:
 macroname[arg0, ...][...]
 
 with macroname[arg0, ...]:
-  ...
+    ...
 
 @macroname[arg0, ...]
 ...
@@ -402,9 +402,10 @@ To invoke a parametric macro with no arguments, just use it like a regular, non-
 macroname[...]
 
 with macroname:
-  ...
+    ...
 
 @macroname
+...
 ```
 
 Observe that the syntax `macroname[a][b]` may mean one of **two different things**:
