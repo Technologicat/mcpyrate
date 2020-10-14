@@ -65,7 +65,11 @@ class BaseMacroExpander(NodeTransformer):
         if tree is None:
             return None
         if isinstance(tree, list):
-            return flatten_suite(self.visit(elt) for elt in tree)
+            newtree = flatten_suite(self.visit(elt) for elt in tree)
+            if newtree:
+                tree[:] = newtree
+                return tree
+            return None
         return super().visit(tree)
 
     def visit_recursively(self, tree):
@@ -227,7 +231,11 @@ def global_postprocess(tree):
     class MacroExpanderMarkerDeleter(NodeTransformer):
         def visit(self, tree):
             if isinstance(tree, list):
-                return flatten_suite(self.visit(elt) for elt in tree)
+                newtree = flatten_suite(self.visit(elt) for elt in tree)
+                if newtree:
+                    tree[:] = newtree
+                    return tree
+                return None
             self.generic_visit(tree)
             if isinstance(tree, MacroExpanderMarker):
                 return tree.body
