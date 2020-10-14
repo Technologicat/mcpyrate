@@ -616,7 +616,7 @@ In `mcpyrate`, any exception that occurs while expanding a macro is reported imm
 
 In `mcpyrate`, **any type of** exception raised at macro-expansion time will be reported and chained into a macro-expansion error.
 
-We recommend raising a `SyntaxError` with a descriptive message if there's something wrong with how the macro was invoked (or with the AST layout of the `tree` it got); and `TypeError` or a `ValueError` (as appropriate) if there is a problem in the macro arguments meant for the macro itself. (As opposed to macro arguments such as in the `let` example, where it's just another place to send in an AST to be processed.)
+We recommend raising a `SyntaxError` with a descriptive message if there's something wrong with how the macro was invoked (or with the AST layout of the `tree` it got vs. what it was expecting); and `TypeError` or a `ValueError` (as appropriate) if there is a problem in the macro arguments meant for the macro itself. (As opposed to macro arguments such as in the `let` example, where it's just another place to send in an AST to be processed.)
 
 
 ## Examples
