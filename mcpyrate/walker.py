@@ -35,7 +35,16 @@ class Walker(NodeTransformer, metaclass=ABCMeta):
         It is identified by `id(tree)` at enter time. Bindings update a copy
         of `self.state`.
         """
-        self._subtree_overrides[id(tree)] = self.state.copy().update(**bindings)
+        newstate = self.state.copy()
+        newstate.update(**bindings)
+        # Due to how `ast.NodeTransformer.generic_visit` works, `visit` is
+        # never called for a statement suite. So if we get one, set newstate
+        # for all of its elements.
+        if isinstance(tree, list):
+            for elt in tree:
+                self._subtree_overrides[id(elt)] = newstate
+        else:
+            self._subtree_overrides[id(tree)] = newstate
 
     def collect(self, value):
         """Collect a value. The values are placed in the list `self.collected`."""
@@ -59,7 +68,6 @@ class Walker(NodeTransformer, metaclass=ABCMeta):
             if newstate:
                 self._stack.pop()
 
-    # TODO: Should we directly hand statement suites to `transform`, more general that way?
     @abstractmethod
     def transform(self, tree):
         """Examine and/or transform one node. **Abstract method, override this.**
