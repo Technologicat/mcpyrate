@@ -8,7 +8,7 @@ from ast import NodeTransformer, AST
 from contextlib import contextmanager
 from collections import ChainMap
 
-from .ctxfixer import fix_missing_ctx, fix_missing_locations
+from .astfixers import fix_missing_ctx, fix_missing_locations
 from .markers import ASTMarker
 from .utils import flatten_suite, format_location
 
