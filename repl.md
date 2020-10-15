@@ -2,18 +2,34 @@
 
 We provide:
 
-- [``mcpyrate.repl.iconsole``](#ipython-extension), IPython extension. **Use macros in the IPython REPL**.
+- [``mcpyrate.repl.iconsole``](#ipython-extension), IPython extension. **Import, define and use macros in the IPython REPL.**
 
-- [``mcpyrate.repl.console.MacroConsole``](#macroconsole), a macro-enabled equivalent of ``code.InteractiveConsole``. **Embed a REPL that supports macros**.
+- [``mcpyrate.repl.console.MacroConsole``](#macroconsole), a macro-enabled equivalent of ``code.InteractiveConsole``. **Import, define and use macros in a REPL. Embed a REPL.**
 
-- [``macropython``](#bootstrapper), a generic bootstrapper for macro-enabled Python programs. **Use macros in your main program**.
+- [``macropython``](#bootstrapper), a generic bootstrapper for macro-enabled Python programs. **Use macros in your main program.**
 
-These are based on [`imacropy`](https://github.com/Technologicat/imacropy).
+These are essentially more advanced versions of those in [`imacropy`](https://github.com/Technologicat/imacropy).
+
+
+<!-- markdown-toc start - Don't edit this section. Run M-x markdown-toc-refresh-toc -->
+**Table of Contents**
+
+- [REPL system for mcpyrate](#repl-system-for-mcpyrate)
+    - [IPython extension](#ipython-extension)
+        - [Loading the extension](#loading-the-extension)
+    - [MacroConsole](#macroconsole)
+    - [Bootstrapper](#bootstrapper)
+        - [Interactive mode](#interactive-mode)
+        - [Bootstrapping a script or a module](#bootstrapping-a-script-or-a-module)
+    - [FAQ](#faq)
+        - [`@macro` is convenient, why is it only available in the REPL?](#macro-is-convenient-why-is-it-only-available-in-the-repl)
+
+<!-- markdown-toc end -->
 
 
 ## IPython extension
 
-The extension allows to **use macros in the IPython REPL**. (*Defining* macros in the REPL is currently not supported.)
+The extension **macro-enables the IPython REPL**.
 
 For example:
 
@@ -26,7 +42,11 @@ Out[2]: <ast.Num object at 0x7f4c97230e80>
 
 Macro docstrings and source code can be viewed using ``?`` and ``??``, as usual.
 
-The line magic `%macros` shows macros currently imported to the session (or says that no macros are imported, if so).
+The line magic `%macros` shows the current macro bindings in the session.
+
+The cell magic `%%dump_ast` shows the AST representation of a whole input cell.
+
+The magic function `macro(f)` binds function `f` as a macro in the current REPL session, so you can interactively develop macros right there in the REPL. It works also as a decorator. The new macro will be available from the **next** REPL input onward.
 
 Each time a ``from module import macros, ...`` is executed in the REPL, just before invoking the macro expander, the system reloads ``module``, to always import the latest macro definitions.
 
@@ -77,7 +97,9 @@ Just like in `code.InteractiveConsole`, exiting the REPL (Ctrl+D) returns from t
 
 Similarly to IPython, `obj?` shows obj's docstring, and `obj??` shows its source code. We define two utility functions for this: `doc` and `sourcecode`. ``obj?`` is shorthand for ``mcpyrate.repl.utils.doc(obj)``, and ``obj??`` is shorthand for ``mcpyrate.repl.utils.sourcecode(obj)``. If the information is available, these operations also print the filename and the starting line number of the definition of the queried object in that file.
 
-The command `macros?` shows macros currently imported to the session. This shadows the `obj?` docstring lookup syntax if you happen to define anything called `macros` (`mcpyrate` itself doesn't), but that's likely not needed. That can still be invoked manually, using `mcpyrate.repl.utils.doc(macros)`.
+The command `macros?` shows the current macro bindings in the session. This shadows the `obj?` docstring lookup syntax if you happen to define anything called `macros` (`mcpyrate` itself doesn't), but that's likely not needed. That can still be invoked manually, using `mcpyrate.repl.utils.doc(macros)`.
+
+The magic function `macro(f)` binds function `f` as a macro in the current REPL session, so you can interactively develop macros right there in the REPL. It works also as a decorator. The new macro will be available from the **next** REPL input onward.
 
 Each time a ``from module import macros, ...`` is executed in the REPL, just before invoking the macro expander, the system reloads ``module``, to always import the latest macro definitions.
 
@@ -137,7 +159,9 @@ Start it as:
 macropython example.py
 ```
 
-A relative path is ok, as long as it is under the current directory. Relative paths including ``..`` are **not** supported. We also support the ``-m module_name`` variant:
+A relative path is ok, it *should* be interpreted the same way Python itself does.
+
+We also support the ``-m module_name`` variant:
 
 ```bash
 macropython -m example
@@ -152,3 +176,14 @@ python3 <your options here> $(which macropython) -m example
 ```
 
 This way the rest of the options go to the Python interpreter itself, and the ``-m example`` to the ``macropython`` bootstrapper.
+
+
+## FAQ
+
+### `@macro` is convenient, why is it only available in the REPL?
+
+Welcome to the through-the-looking-glass world of the REPL, where every time a complete input is entered is macro-expansion time.
+
+The `@macro` utility hooks into the REPL session's macro expander. The same trick does not work in a source file, because that `macro(f)` call is technically a run-time thing. When a module reaches run-time, the macro expander has already exited, and no more macro invocations remain.
+
+Allowing to invoke a macro in the same module where it is defined would require a more complex multi-pass import strategy, which `mcpyrate` doesn't currently have.
