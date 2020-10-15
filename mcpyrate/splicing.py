@@ -96,15 +96,18 @@ def splice_dialect(body, template, tag="__paste_here__"):
     """In a dialect AST transformer, splice module `body` into `template`.
 
     On top of what `splice_statements` does, this function handles macro-imports
-    specially, gathering them all at the top level of the final module body, so
-    that mcpyrate sees them when the module is sent to the macro expander.
+    and dialect-imports specially, gathering them all at the top level of the
+    final module body, so that mcpyrate sees them when the module is sent to
+    the macro expander.
 
-    Any macro-imports in the template are placed first (in the order they
-    appear in the template), followed by any macro imports in the user code
-    (in the order they appear in the user code).
+    Any dialect-imports in the template are placed first (in the order they
+    appear in the template), followed by any dialect-imports in the user code
+    (in the order they appear in the user code), followed by macro-imports in
+    the template, then macro-imports in the user code.
 
     This also handles the module docstring and the magic `__all__` (if any)
-    from `body`, placing them at the top.
+    from `body`. The docstring comes first, before dialect-imports. The magic
+    `__all__` is placed after dialect-imports, before macro-imports.
 
     Parameters:
 
@@ -169,18 +172,24 @@ def splice_dialect(body, template, tag="__paste_here__"):
         return tree, w.collected
     body, user_magic_all = extract_magic_all(body)
 
-    def extract_macroimports(tree):
+    def extract_macroimports(tree, *, magicname="macros"):
         class MacroImportExtractor(Walker):
             def transform(self, tree):
-                if ismacroimport(tree):
+                if ismacroimport(tree, magicname):
                     self.collect(tree)
                     return None
                 return self.generic_visit(tree)
         w = MacroImportExtractor()
         w.visit(tree)
         return tree, w.collected
+    template, template_dialect_imports = extract_macroimports(template, magicname="dialects")
     template, template_macro_imports = extract_macroimports(template)
+    body, user_dialect_imports = extract_macroimports(body, magicname="dialects")
     body, user_macro_imports = extract_macroimports(body)
 
     finalbody = splice_statements(body, template, tag)
-    return docstring + user_magic_all + template_macro_imports + user_macro_imports + finalbody
+    return (docstring +
+            template_dialect_imports + user_dialect_imports +
+            user_magic_all +
+            template_macro_imports + user_macro_imports +
+            finalbody)
