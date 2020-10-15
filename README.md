@@ -48,9 +48,9 @@ Supports Python 3.6, 3.7, 3.8, and PyPy3.
 
 - **Agile development**:
   - Universal bootstrapper: `macropython`. **Import and use macros in your main program**.
-  - Interactive console: `macropython -i`. **Import and use macros in a console session**.
+  - Interactive console: `macropython -i`. **Import, define and use macros in a console session**.
     - Embeddable à la `code.InteractiveConsole`. See `mcpyrate.repl.console.MacroConsole`.
-  - IPython extension `mcpyrate.repl.iconsole`. **Import and use macros in an IPython session**.
+  - IPython extension `mcpyrate.repl.iconsole`. **Import, define and use macros in an IPython session**.
 - **Testing and debugging**:
   - Statement coverage is correctly reported by tools such as [`Coverage.py`](https://github.com/nedbat/coveragepy/).
   - Macro expansion errors are reported **at macro expansion time**, with use site traceback.
