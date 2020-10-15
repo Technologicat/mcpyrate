@@ -327,7 +327,7 @@ Here `q[]` quasiquotes an expression, `u[]` unquotes a simple value, and `a[]` u
 
 #### Differences to `macropy`
 
-By default, in `mcpyrate`, macros in quasiquoted code are not expanded when the quasiquote itself expands. We provide macros to perform expansion in quoted code, to give you control.
+By default, in `mcpyrate`, macros in quasiquoted code are not expanded when the quasiquote itself expands. We provide macros to perform expansion in quoted code, to give you control. See `mcpyrate.quotes.expand` and `mcpyrate.quotes.expand1`.
 
 In `mcpyrate`, there is **just one *quote* operator**, `q[]`, although just like in `macropy`, there are several different *unquote* operators, depending on what you want to do.
 
