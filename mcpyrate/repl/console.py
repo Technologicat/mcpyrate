@@ -21,14 +21,14 @@ import ast
 import code
 import textwrap
 
-from mcpyrate import __version__ as mcpyrate_version
-from mcpyrate.debug import format_bindings
-from mcpyrate.expander import find_macros, MacroExpander, global_postprocess
-from mcpyrate.repl.utils import get_makemacro_sourcecode
+from .. import __version__ as mcpyrate_version
+from ..debug import format_bindings
+from ..expander import find_macros, MacroExpander, global_postprocess
+from .utils import get_makemacro_sourcecode
 
-# Boot up mcpyrate so any modules imported in the REPL get macro support.
+# Boot up `mcpyrate` so that the REPL can import modules that use macros.
 # Despite the meta-levels, there's just one global importer for the Python process.
-import mcpyrate.activate  # noqa: F401
+from .. import activate  # noqa: F401
 
 class MacroConsole(code.InteractiveConsole):
     def __init__(self, locals=None, filename="<interactive input>"):

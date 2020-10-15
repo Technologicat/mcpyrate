@@ -28,11 +28,15 @@ from IPython.core import magic_arguments
 from IPython.core.error import InputRejected
 from IPython.core.magic import Magics, magics_class, cell_magic, line_magic
 
-from mcpyrate import __version__ as mcpyrate_version
-from mcpyrate.astdumper import dump
-from mcpyrate.debug import format_bindings
-from mcpyrate.expander import find_macros, MacroExpander, global_postprocess
-from mcpyrate.repl.utils import get_makemacro_sourcecode
+from .. import __version__ as mcpyrate_version
+from ..astdumper import dump
+from ..debug import format_bindings
+from ..expander import find_macros, MacroExpander, global_postprocess
+from .utils import get_makemacro_sourcecode
+
+# Boot up `mcpyrate` so that the REPL can import modules that use macros.
+# Despite the meta-levels, there's just one global importer for the Python process.
+from .. import activate  # noqa: F401
 
 _placeholder = "<ipython-session>"
 _instance = None
@@ -158,9 +162,6 @@ class IMcpyrateExtension:
 
         ipy = self.shell.get_ipython()
         ipy.events.register('post_run_cell', self._refresh_macro_functions)
-
-        # Boot up mcpyrate so any modules imported in the REPL get macro support.
-        self.shell.run_cell("import mcpyrate.activate", store_history=False, silent=True)
 
     def __del__(self):
         ipy = self.shell.get_ipython()
