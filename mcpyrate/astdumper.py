@@ -34,7 +34,7 @@ def dump(tree, *, include_attributes=False, multiline=True):
             moreindent = len(f"{tree.__class__.__name__}(")
             fields = [(k, recurse(v, previndent + moreindent + len(f"{k}="))) for k, v in iter_fields(tree)]
             if include_attributes and tree._attributes:
-                fields.extend([(k, recurse(getattr(tree, k), previndent + moreindent + len(f"{k}=")))
+                fields.extend([(k, recurse(getattr(tree, k, None), previndent + moreindent + len(f"{k}=")))
                                for k in tree._attributes])
             return ''.join([
                 tree.__class__.__name__,
