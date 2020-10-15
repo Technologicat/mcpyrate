@@ -1,8 +1,8 @@
 # mcpyrate
 
-Advanced, third-generation macro expander for Python, after the pioneering [macropy](https://github.com/lihaoyi/macropy), and the compact, pythonic [mcpy](https://github.com/delapuente/mcpy). Builds on `mcpy`, with a similar explicit and compact approach, but with a lot of new features - including some excellent ideas from MacroPy. Finally, we provide integrated equivalents of [`imacropy`](https://github.com/Technologicat/imacropy) and [`pydialect`](https://github.com/Technologicat/pydialect).
+Advanced, third-generation macro expander for Python, after the pioneering [macropy](https://github.com/lihaoyi/macropy), and the compact, pythonic [mcpy](https://github.com/delapuente/mcpy). The emphasis is on correctness, feature-completeness for serious macro-enabled work, and simplicity, in that order.
 
-The emphasis is on correctness, feature-completeness for serious macro-enabled work, and simplicity, in that order.
+Builds on `mcpy`, with a similar explicit and compact approach, but with a lot of new features - including some excellent ideas from MacroPy. Finally, we provide integrated equivalents of [`imacropy`](https://github.com/Technologicat/imacropy) and [`pydialect`](https://github.com/Technologicat/pydialect).
 
 Supports Python 3.6, 3.7, 3.8, and PyPy3.
 
