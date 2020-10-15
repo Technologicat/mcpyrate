@@ -111,7 +111,13 @@ def get_macros(macroimport, *, filename, reload=False, allow_asname=True):
         raise SyntaxError(f"{loc}\nmissing module name in macro-import")
     module_absname = importlib.util.resolve_name('.' * macroimport.level + macroimport.module, package_absname)
 
-    module = importlib.import_module(module_absname)
+    try:
+        module = importlib.import_module(module_absname)
+    except ModuleNotFoundError as err:
+        approx_sourcecode = unparse_with_fallbacks(macroimport)
+        loc = format_location(filename, macroimport, approx_sourcecode)
+        raise ModuleNotFoundError(f"{loc}\nNo module named {module_absname}") from err
+
     if reload:
         module = importlib.reload(module)
 
@@ -125,6 +131,6 @@ def get_macros(macroimport, *, filename, reload=False, allow_asname=True):
         except AttributeError as err:
             approx_sourcecode = unparse_with_fallbacks(macroimport)
             loc = format_location(filename, macroimport, approx_sourcecode)
-            raise ImportError(f"{loc}\nNo such macro '{name.name}' in module {module_absname}") from err
+            raise ImportError(f"{loc}\ncannot import name '{name.name}' from module {module_absname}") from err
 
     return module_absname, bindings
