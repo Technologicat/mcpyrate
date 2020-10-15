@@ -12,9 +12,9 @@ from .astfixers import fix_missing_ctx, fix_missing_locations
 from .markers import ASTMarker
 from .utils import flatten_suite, format_location
 
-# Hygienically captured macro functions.
-# Global registry (across all modules being expanded) with unique keys, filled in by `mcpyrate.quotes`.
-_hygienic_bindings = {}
+# Global macro bindings shared across all expanders in the current process.
+# This is used by `mcpyrate.quotes` for hygienically captured macro functions.
+global_bindings = {}
 
 class MacroExpansionError(Exception):
     '''Error during macro expansion.'''
@@ -46,7 +46,7 @@ class BaseMacroExpander(NodeTransformer):
 
     def __init__(self, bindings, filename):
         self._bindings = bindings
-        self.bindings = ChainMap(self._bindings, _hygienic_bindings)
+        self.bindings = ChainMap(self._bindings, global_bindings)
         self.filename = filename
         self.recursive = True
 
@@ -206,10 +206,12 @@ class BaseMacroExpander(NodeTransformer):
 
         return expansion
 
-    def isbound(self, name):
-        '''Return whether the string `name` has been bound to a macro in this expander.'''
-        return name in self.bindings or name in _hygienic_bindings
-
+    def isbound(self, name, *, global_only=False):
+        '''Return the macro function the string `name` is bound to, or `False`.'''
+        bindings = self.bindings if not global_only else global_bindings
+        if name in bindings:
+            return bindings[name]
+        return False
 
 def _apply_macro(macro, tree, kw):
     '''Execute `macro` on `tree`, with the dictionary `kw` unpacked into macro's named arguments.'''

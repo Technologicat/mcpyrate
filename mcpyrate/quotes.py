@@ -9,7 +9,7 @@ __all__ = ['capture', 'lookup', 'astify', 'unastify',
 import ast
 import pickle
 
-from .core import _hygienic_bindings
+from .core import global_bindings
 from .expander import expand_macros
 from .markers import ASTMarker, get_markers
 from .unparser import unparse
@@ -66,7 +66,7 @@ def capture(value, name):
     captured value (even in another Python process later).
 
     Hygienically captured macro invocations are treated using a different
-    mechanism; see `mcpyrate.core._hygienic_bindings`.
+    mechanism; see `mcpyrate.core.global_bindings`.
     """
     # If we didn't need to consider bytecode caching, we could just store the
     # value in a registry that is populated at macro expansion time. Each
@@ -151,17 +151,18 @@ def astify(x, expander=None):  # like MacroPy's `ast_repr`
 
         # This is the magic part of q[h[]].
         elif T is CaptureLater:
-            if expander and type(x.body) is ast.Name and expander.isbound(x.body.id):
-                # Hygienically capture a macro name. We do this immediately,
-                # during the expansion of `q`. This allows macros in scope at
-                # the use site of `q` to be hygienically propagated out to the
-                # use site of the macro that used `q`. So you can write macros
-                # that `q[h[macroname][...]]` and `macroname` doesn't have to be
-                # macro-imported wherever that code gets spliced in.
-                macroname = x.body.id
-                function = expander.bindings[macroname]
-                uniquename = _capture_into(_hygienic_bindings, function, macroname)
-                return recurse(ast.Name(id=uniquename))
+            if expander and type(x.body) is ast.Name:
+                function = expander.isbound(x.body.id)
+                if function:
+                    # Hygienically capture a macro name. We do this immediately,
+                    # during the expansion of `q`. This allows macros in scope at
+                    # the use site of `q` to be hygienically propagated out to the
+                    # use site of the macro that used `q`. So you can write macros
+                    # that `q[h[macroname][...]]` and `macroname` doesn't have to be
+                    # macro-imported wherever that code gets spliced in.
+                    macroname = x.body.id
+                    uniquename = _capture_into(global_bindings, function, macroname)
+                    return recurse(ast.Name(id=uniquename))
             # Hygienically capture a garden variety run-time value.
             # At the use site of q[], this captures the value, and rewrites itself
             # into a lookup. At the use site of the macro that used q[], that
