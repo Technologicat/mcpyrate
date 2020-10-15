@@ -1,8 +1,6 @@
 # -*- coding: utf-8; -*-
 '''Find and expand dialects, i.e. whole-module source and AST transformations.'''
 
-# TODO: support dialects in repl? Need to first figure out what that would even mean.
-
 __all__ = ["Dialect",
            "expand_dialects"]
 
@@ -72,7 +70,7 @@ class Dialect:
         tells the expander this dialect does not provide an AST transformer.
 
         This is useful to define custom dialects that use Python's surface syntax,
-        but with different semantics.
+        but with different semantics. Another use case is to plug in an AST optimizer.
 
         Input is the full AST of the module (in standard Python AST format),
         but with the dialect-import for this dialect already transformed away,
@@ -81,7 +79,7 @@ class Dialect:
 
         To easily splice `tree.body` into your template, see the utility
         `mcpyrate.splicing.splice_dialect` (it automatically handles macro-imports,
-        the magic `__all__`, and the module docstring).
+        dialect-imports, the magic `__all__`, and the module docstring).
 
         As an example, for now, until `unpythonic` is ported to `mcpyrate`, see the
         example dialects in `pydialect`, which are implemented using this exact
