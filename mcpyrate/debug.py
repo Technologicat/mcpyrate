@@ -2,13 +2,12 @@
 """Macro debugging utilities."""
 
 __all__ = ["step_expansion", "StepExpansion",
-           "show_bindings",
+           "show_bindings", "format_bindings",
            "SourceLocationInfoValidator"]
-
-from .quotes import macros, q  # noqa: F401
 
 import ast
 import functools
+import io
 from sys import stderr
 import textwrap
 
@@ -113,15 +112,34 @@ def show_bindings(tree, *, syntax, expander, **kw):
     """
     if syntax != "name":
         raise SyntaxError("`show_bindings` is an identifier macro only")
-    print(f"Macro expander bindings for module {expander.filename} (at expansion time):", file=stderr)
-    for k, v in sorted(expander.bindings.items()):
-        print(f"    {k}: {format_macrofunction(v)}", file=stderr)
+    print(format_bindings(expander), file=stderr)
     # Can't just delete the node (return None) if it's in an Expr(value=...).
     #
     # For correct coverage reporting, we can't return a `Constant`, because CPython
     # optimizes away do-nothing constants. So trick the compiler into thinking
     # this is important, by making the expansion result call a no-op function.
-    return q[(lambda: None)()]
+    lam = ast.Lambda(args=ast.arguments(posonlyargs=[], args=[], vararg=None,
+                                        kwonlyargs=[], kw_defaults=[], kwarg=None,
+                                        defaults=[]),
+                     body=ast.Constant(value=None))
+    return ast.Call(func=lam, args=[], keywords=[])
+
+
+def format_bindings(expander):
+    """Return a human-readable report of the macro bindings currently seen by `expander`.
+
+    Global bindings (across all expanders) are also included.
+
+    If you want to access them programmatically, just access `expander.bindings` directly.
+    """
+    with io.StringIO() as output:
+        output.write(f"Macro bindings for {expander.filename}:\n")
+        if not expander.bindings:
+            output.write("    <no bindings>\n")
+        else:
+            for k, v in sorted(expander.bindings.items()):
+                output.write(f"    {k}: {format_macrofunction(v)}\n")
+        return output.getvalue()
 
 
 class SourceLocationInfoValidator(Walker):

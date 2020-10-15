@@ -123,6 +123,8 @@ def format_location(filename, tree, sourcecode):
 
 def format_macrofunction(function):
     '''Format the fully qualified name of a macro function, for error messages.'''
+    if not function.__module__:  # Macros defined in the REPL have `__module__=None`.
+        return function.__qualname__
     return f"{function.__module__}.{function.__qualname__}"
 
 # --------------------------------------------------------------------------------

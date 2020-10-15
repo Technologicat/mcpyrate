@@ -4,7 +4,8 @@
 Special commands:
 
   - `obj?` shows obj's docstring, `obj??` shows its source code.
-  - `macros?` shows macros currently imported to the session.
+  - `macros?` shows macro bindings.
+  - `macro(f)` binds a function as a macro. Works also as a decorator.
 """
 
 # Based on `imacropy.console.MacroConsole` by Juha Jeronen,
@@ -19,23 +20,31 @@ __all__ = ["MacroConsole"]
 import ast
 import code
 import textwrap
-from collections import OrderedDict
 
 from mcpyrate import __version__ as mcpyrate_version
-from mcpyrate.expander import find_macros, expand_macros
+from mcpyrate.debug import format_bindings
+from mcpyrate.expander import find_macros, MacroExpander, global_postprocess
+from mcpyrate.repl.utils import get_makemacro_sourcecode
 
-import mcpyrate.activate  # noqa: F401, boot up mcpyrate.
+# Boot up mcpyrate so any modules imported in the REPL get macro support.
+# Despite the meta-levels, there's just one global importer for the Python process.
+import mcpyrate.activate  # noqa: F401
 
 class MacroConsole(code.InteractiveConsole):
-    def __init__(self, locals=None, filename="<console>"):
+    def __init__(self, locals=None, filename="<interactive input>"):
         """Parameters like in `code.InteractiveConsole`."""
+        self.expander = MacroExpander(bindings={}, filename=filename)
+        self._macro_bindings_changed = False
+
+        if locals is None:
+            locals = {}
+        # Lucky that both meta-levels speak the same language, eh?
+        locals['__macro_expander__'] = self.expander
+
         super().__init__(locals, filename)
 
-        # macro support
-        self._bindings = OrderedDict()
-        self._bindings_changed = False
-
-        # ? and ?? help syntax
+        # Support for special REPL commands.
+        self._internal_execute(get_makemacro_sourcecode())
         self._internal_execute("import mcpyrate.repl.utils")
 
     def _internal_execute(self, source):
@@ -53,19 +62,8 @@ class MacroConsole(code.InteractiveConsole):
         source = textwrap.dedent(source)
         tree = ast.parse(source)
         tree = ast.Interactive(tree.body)
-        code = compile(tree, "<console_internal>", "single", self.compile.compiler.flags, 1)
+        code = compile(tree, "<console internal>", "single", self.compile.compiler.flags, 1)
         self.runcode(code)
-
-    def _list_macros(self):
-        """Print a human-readable list of macros currently imported into the session."""
-        if not self._bindings:
-            self.write("<no macros imported>\n")
-            return
-        themacros = []
-        for asname, function in self._bindings.items():
-            themacros.append((asname, f"{function.__module__}.{function.__qualname__}"))
-        for asname, fullname in themacros:
-            print(f"{asname}: {fullname}")
 
     def interact(self, banner=None, exitmsg=None):
         """See `code.InteractiveConsole.interact`.
@@ -76,15 +74,16 @@ class MacroConsole(code.InteractiveConsole):
         default banner.
         """
         if banner is None:
-            self.write("Use obj? to view obj's docstring, and obj?? to view its source code.\n")
-            self.write("Use macros? to see macros you have currently imported into the session.\n")
-            self.write(f"mcpyrate {mcpyrate_version} -- Syntactic macros for Python.\n")
+            self.write(f"mcpyrate {mcpyrate_version} -- Advanced macro expander for Python.\n")
+            self.write("- obj? to view obj's docstring, and obj?? to view its source code.\n")
+            self.write("- macros? to view macro bindings.\n")
+            self.write("- macro(f) to bind function f as a macro. Works also as a decorator.\n")
         return super().interact(banner, exitmsg)
 
     def runsource(self, source, filename="<interactive input>", symbol="single"):
-        # ? and ?? help syntax
+        # Special REPL commands.
         if source == "macros?":
-            self._list_macros()
+            self.write(format_bindings(self.expander))
             return False  # complete input
         elif source.endswith("??"):
             return self.runsource(f'mcpyrate.repl.utils.sourcecode({source[:-2]})')
@@ -99,13 +98,15 @@ class MacroConsole(code.InteractiveConsole):
             return True
 
         try:
+            # TODO: If we want to support dialects in the REPL, this is where to do it.
             tree = ast.parse(source)
 
-            bindings = find_macros(tree, filename="<interactive input>", reload=True)  # macro-imports (this will import the modules)
+            bindings = find_macros(tree, filename=self.expander.filename, reload=True)  # macro-imports (this will import the modules)
             if bindings:
-                self._bindings_changed = True
-                self._bindings.update(bindings)
-            tree = expand_macros(tree, self._bindings, filename="<interactive input>")
+                self._macro_bindings_changed = True
+                self.expander.bindings.update(bindings)
+            tree = self.expander.visit(tree)
+            tree = global_postprocess(tree)
 
             tree = ast.Interactive(tree.body)
             code = compile(tree, filename, symbol, self.compile.compiler.flags, 1)
@@ -132,10 +133,10 @@ class MacroConsole(code.InteractiveConsole):
         Called after successfully compiling and running an input, so that
         `some_macro.__doc__` points to the right docstring.
         """
-        if not self._bindings_changed:
+        if not self._macro_bindings_changed:
             return
-        self._bindings_changed = False
+        self._macro_bindings_changed = False
 
-        for asname, function in self._bindings.items():
+        for asname, function in self.expander.bindings.items():
             source = f"from {function.__module__} import {function.__qualname__} as {asname}"
             self._internal_execute(source)
