@@ -53,6 +53,7 @@ __all__ = ['namemacro', 'isnamemacro',
 
 from ast import (Name, Subscript, Tuple, Import, alias, AST, Assign, Store, Constant,
                  copy_location, iter_fields, NodeVisitor)
+from copy import copy
 from warnings import warn_explicit
 
 from .core import BaseMacroExpander, global_postprocess, Done
@@ -142,7 +143,8 @@ class MacroExpander(BaseMacroExpander):
             kw = {'args': macroargs}
             tree = subscript.slice.value
             sourcecode = unparse_with_fallbacks(subscript)
-            new_tree = self.expand('expr', subscript, macroname, tree, sourcecode=sourcecode, kw=kw)
+            new_tree = self.expand('expr', subscript,
+                                   macroname, tree, sourcecode=sourcecode, kw=kw)
         else:
             new_tree = self.generic_visit(subscript)
         return new_tree
@@ -191,12 +193,18 @@ class MacroExpander(BaseMacroExpander):
         with_item = macros[0]
         candidate = with_item.context_expr
         macroname, macroargs = destructure_candidate(candidate)
+
+        # let the source code and `invocation` see also the withitem we pop away
         sourcecode = unparse_with_fallbacks(withstmt)
+        original_withstmt = copy(withstmt)
+        original_withstmt.items = copy(withstmt.items)
+
         withstmt.items.remove(with_item)
         kw = {'args': macroargs}
         kw.update({'optional_vars': with_item.optional_vars})
         tree = withstmt.body if not withstmt.items else [withstmt]
-        new_tree = self.expand('block', withstmt, macroname, tree, sourcecode=sourcecode, kw=kw)
+        new_tree = self.expand('block', original_withstmt,
+                               macroname, tree, sourcecode=sourcecode, kw=kw)
         new_tree = _add_coverage_dummy_node(new_tree, withstmt, macroname)
         return new_tree
 
@@ -240,10 +248,16 @@ class MacroExpander(BaseMacroExpander):
             return self.generic_visit(decorated)
         innermost_macro = macros[-1]
         macroname, macroargs = destructure_candidate(innermost_macro)
+
+        # let the source code and `invocation` see also the decorator we pop away
         sourcecode = unparse_with_fallbacks(decorated)
+        original_decorated = copy(decorated)
+        original_decorated.decorator_list = copy(decorated.decorator_list)
+
         decorated.decorator_list.remove(innermost_macro)
         kw = {'args': macroargs}
-        new_tree = self.expand('decorator', decorated, macroname, decorated, sourcecode=sourcecode, kw=kw)
+        new_tree = self.expand('decorator', original_decorated,
+                               macroname, decorated, sourcecode=sourcecode, kw=kw)
         new_tree = _add_coverage_dummy_node(new_tree, innermost_macro, macroname)
         return new_tree
 

@@ -360,7 +360,7 @@ Full list as of v3.0.0, in alphabetical order:
    - See [`mcpyrate.core.BaseMacroExpander`](mcpyrate/core.py) and [`mcpyrate.expander.MacroExpander`](mcpyrate/expander.py) for the expander API; it's just a few methods and attributes.
 - `invocation`: the whole macro invocation AST node as-is, not only `tree`. For introspection.
    - Very rarely needed; if you need it, you'll know.
-   - **CAUTION**: no copy. Also, the node may have already been edited by the expander, e.g. to pop a block or decorator macro.
+   - **CAUTION**: not a copy, or at most a shallow copy.
  - `optional_vars`: only exists when `syntax='block'`. The *as-part* of the `with` statement. (So use it as `kw['optional_vars']`.)
  - `syntax`: invocation type. One of `expr`, `block`, `decorator`, `name`.
    - Can be `name` only if the macro function is declared `@namemacro`.

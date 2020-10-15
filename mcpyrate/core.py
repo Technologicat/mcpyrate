@@ -138,9 +138,10 @@ class BaseMacroExpander(NodeTransformer):
           - `invocation`: The `target` AST node as-is, for introspection if you
                           need to see not only the destructured `tree` and `args`,
                           but the macro invocation itself, without any processing.
+
                           Very rarely needed; if you need it, you'll know.
-                          **CAUTION**: does not make a copy. The actual expander
-                          may have already edited it (e.g. to pop a block macro).
+
+                          **CAUTION**: not a copy, or at most a shallow copy.
 
         To send additional named arguments from the actual expander to the
         macro function, place them in a dictionary and pass that dictionary
