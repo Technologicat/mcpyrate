@@ -47,39 +47,39 @@ Supports Python 3.6, 3.7, 3.8, and PyPy3.
 ## Highlights
 
 - **Agile development**:
-  - Universal bootstrapper: `macropython`. **Import and use macros in your main program**.
-  - Interactive console: `macropython -i`. **Import, define and use macros in a console session**.
+  - Universal bootstrapper: `macropython`. Import and use macros in your main program.
+  - Interactive console: `macropython -i`. Import, define and use macros in a console session.
     - Embeddable à la `code.InteractiveConsole`. See `mcpyrate.repl.console.MacroConsole`.
-  - IPython extension `mcpyrate.repl.iconsole`. **Import, define and use macros in an IPython session**.
+  - IPython extension `mcpyrate.repl.iconsole`. Import, define and use macros in an IPython session.
 - **Testing and debugging**:
-  - Statement coverage is correctly reported by tools such as [`Coverage.py`](https://github.com/nedbat/coveragepy/).
-  - Macro expansion errors are reported **at macro expansion time**, with use site traceback.
+  - Correct statement coverage from tools such as [`Coverage.py`](https://github.com/nedbat/coveragepy/).
+  - Macro expansion errors are reported at macro expansion time, with use site traceback.
   - Debug output with a step-by-step expansion breakdown. See macro `mcpyrate.debug.step_expansion`.
   - Manual expand-once. See `expander.visit_once`; get the `expander` as a named argument of your macro.
 - **Dialects, i.e. whole-module source and AST transforms**.
   - Think [Racket's](https://racket-lang.org/) `#lang`, but for Python.
   - Define languages that use Python's surface syntax, but change the semantics; or plug in a per-module transpiler that (at import time) compiles source code from some other programming language into macro-enabled Python. Also an AST [optimizer](http://compileroptimizations.com/) could be defined as a dialect. (Dialects can be chained.)
   - Sky's the limit, really. Until we get [`unpythonic`](https://github.com/Technologicat/unpythonic) ported to use `mcpyrate`, see [`pydialect`](https://github.com/Technologicat/pydialect) for old example dialects.
-  - For documentation, see the docstrings of [`mcpyrate.dialects`](mcpyrate/dialects.py).
+  - For documentation, see the docstrings in [`mcpyrate.dialects`](mcpyrate/dialects.py).
   - For debugging, `from mcpyrate.debug import dialects, StepExpansion`.
-  - If you're writing a full-module AST transformer that splices the whole module into a template, you may be interested in `mcpyrate.splicing.splice_dialect`.
-- **Advanced quasiquoting**. Inspired by `macropy`.
+  - If writing a full-module AST transformer that splices the whole module into a template, see `mcpyrate.splicing.splice_dialect`.
+- **Advanced quasiquoting**.
   - Hygienically interpolate both regular values **and macro names**.
   - Delayed macro expansion inside quasiquoted code.
     - User-controllable, see macros `expand1` and `expand` in `mcpyrate.quotes`.
-    - Expand when you want, or just leave it to `mcpyrate` to expand automatically once your macro (that uses quasiquoting) returns.
+    - Or just leave it to expand automatically once your macro (that uses quasiquoting) returns.
   - Inverse quasiquote operator. See function `mcpyrate.quotes.unastify`.
     - Convert a quasiquoted AST back into a direct AST, typically for further processing before re-quoting it.
       - Not an unquote; we have those too, but the purpose of unquotes is to interpolate values into quoted code. The inverse quasiquote, instead, undoes the quasiquote operation itself, after any unquotes have already been applied.
-    - Useful for second-order macros that need to process a quasiquoted code section at macro expansion time, before the quasiquoted tree has a chance to run. (As usual, when it runs, it converts itself into a direct AST.)
-- **Macro arguments**. Inspired by `macropy`.
-  - Opt-in. Declare by using the `@parametricmacro` decorator on your macro function (along with `@namemacro`, if used too).
-  - Use bracket syntax to invoke, e.g. `macroname[arg0, ...][expr]`. To send no args, invoke like a non-parametric macro, `macroname[expr]`.
-  - For a parametric macro, `macroname[arg0, ...]` works in `expr`, `block` and `decorator` macro invocations in place of a bare `macroname`.
-  - The named parameter `args` is a raw `list` of the macro argument ASTs. It is the empty list if no args were sent, or if the macro function is not declared as parametric.
+    - Useful for second-order macros that need to process quasiquoted code at macro expansion time, before the quasiquoted tree has a chance to run.
+- **Macro arguments**.
+  - Opt-in. Declare by using the `@parametricmacro` decorator on your macro function.
+  - Use brackets to invoke, e.g. `macroname[arg0, ...][expr]`. If no args, just leave that part out, e.g. `macroname[expr]`.
+  - The `macroname[arg0, ...]` syntax works in `expr`, `block` and `decorator` macro invocations in place of a bare `macroname`.
+  - The named parameter `args` is a raw `list` of the macro argument ASTs. Empty if no args were sent, or if the macro function is not parametric.
 - **Identifier (a.k.a. name) macros**
-  - Can be used for creating magic variables that may only appear inside specific macro invocations, erroring out at macro expansion time if they appear anywhere else.
-  - Opt-in. Declare by using the `@namemacro` decorator on your macro function. Place it outermost (along with `@parametricmacro`, if used too).
+  - Can be used for creating magic variables that may only appear inside specific macro invocations.
+  - Opt-in. Declare by using the `@namemacro` decorator on your macro function.
 - **Bytecode caching**:
   - `.pyc` bytecode caches are created and kept up-to-date. This saves the macro
     expansion cost at startup for modules that have not changed.
@@ -97,7 +97,7 @@ Supports Python 3.6, 3.7, 3.8, and PyPy3.
   - Relative macro-imports (for code in packages), e.g. `from .other import macros, kittify`.
   - The expander automatically fixes missing `ctx` attributes (and source locations) in the AST, so you don't need to care about those in your macros.
   - Several block macros can be invoked in the same `with` (equivalent to nesting them, with leftmost outermost).
-  - Walker with a state stack, à la `macropy`, to easily temporarily override the state for a given subtree.
+  - Walker à la `macropy`, to easily context-manage state for subtrees, and collect items across the whole walk.
   - AST markers (pseudo-nodes) for communication in a set of co-operating macros (and with the expander).
   - `gensym` to create a fresh, unused lexical identifier.
   - `unparse` to convert an AST to the corresponding source code.
