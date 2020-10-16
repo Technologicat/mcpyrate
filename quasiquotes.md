@@ -303,23 +303,27 @@ lightly dressed up AST, like Lisps do.
 
 Our implementation of the quasiquote system closely follows the impressive,
 pioneering work that originally appeared in MacroPy. That source code, itself
-quite short, is full of creative ingenuity, at places unfortunately muddled by
-the first-gen nature of the system.
+quite short, is full of creative ingenuity, although at places could be written
+more clearly, due to the first-generation nature of the system.
 
-Since `mcpyrate` is a third-gen system, we have actively attempted to make the best
-of lessons learned, to make the implementation as short and simple as reasonably
-possible. We have liberally changed function and class names where this makes
-the code easier to understand.
+Since `mcpyrate` is a third-generation system, we have actively attempted to
+make the best of lessons learned, to make the implementation as short and simple
+as reasonably possible. We have liberally changed function and class names where
+this makes the code easier to understand.
 
 Our `h` operator is both simpler and more general than MacroPy's `hq[]`.
 By using uuids in the lookup keys, we avoid the whole-file lexical scan.
 
 We don't need to inject any additional imports. This makes the quasiquote system
-fully orthogonal to the rest of `mcpyrate`. Because `mcpyrate` transforms `from module
-import macros, ...` (after collecting macro definitions) into `import module`,
-we can just refer to our internal stuff (including the stdlib `ast` module) as
-attributes of the module `mcpyrate.quotes`. We feel this is the "better way" that
-source code comments in MacroPy's `quotes.py` suggested must surely exist.
+fully orthogonal to the rest of `mcpyrate`. (Well, almost; it uses
+`mcpyrate.core.global_bindings`. Still, although that was created for the use case
+of supporting `h[]` on macro names, in principle it's a generic core feature.)
+
+Because `mcpyrate` transforms `from module import macros, ...` (after collecting
+macro definitions) into `import module`, we can just refer to our internal stuff
+(including the stdlib `ast` module) as attributes of the module
+`mcpyrate.quotes`. We feel this is the "better way" that source code comments in
+MacroPy's `quotes.py` suggested must surely exist.
 
 We allow capturing the value of any expr, not just identifiers. However, we also
 take a somewhat different approach, in that we don't even pretend to capture
