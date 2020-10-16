@@ -57,7 +57,9 @@ The operators:
 
  - `h[expr]`, appearing inside a `q[]`, is the value of the expression `expr` at
    the macro *definition* site. The result of evaluating `expr` is allowed to
-   be any run-time value.
+   be any run-time value, as long as it is picklable.
+
+   (We use `pickle` to support bytecode caching for hygienically unquoted values.)
 
  - `u[expr]`, appearing inside a `q[]`, is the value of the expression `expr` at
    the macro definition site.
