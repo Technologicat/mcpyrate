@@ -306,8 +306,8 @@ lightly dressed up AST, like Lisps do.
 
 Our implementation of the quasiquote system closely follows the impressive,
 pioneering work that originally appeared in MacroPy. That source code, itself
-quite short, is full of creative ingenuity, at places muddled by the first-gen
-nature of the system.
+quite short, is full of creative ingenuity, at places unfortunately muddled by
+the first-gen nature of the system.
 
 Since `mcpyrate` is a third-gen system, we have actively attempted to make the best
 of lessons learned, to make the implementation as short and simple as reasonably
