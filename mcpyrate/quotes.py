@@ -10,7 +10,7 @@ import ast
 import pickle
 
 from .core import global_bindings
-from .expander import expand_macros
+from .expander import MacroExpander
 from .markers import ASTMarker, get_markers
 from .unparser import unparse
 from .utils import gensym, NestingLevelTracker
@@ -324,9 +324,7 @@ def _expand_quasiquotes(tree, expander):
     # for possible as-imports. This second expander won't even see other macros,
     # thus leaving them alone.
     bindings = {k: v for k, v in expander.bindings.items() if v in (q, u, n, a, s, h)}
-    return expand_macros(tree, bindings, filename=expander.filename)
-    # This would be nicer, but doesn't work here, because it may leave `Done` ASTMarkers.
-    # return MacroExpander(bindings, expander.filename).visit(tree)
+    return MacroExpander(bindings, expander.filename).visit(tree)
 
 
 def q(tree, *, syntax, expander, **kw):
