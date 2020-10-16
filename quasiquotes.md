@@ -255,10 +255,10 @@ critical.
 
 ### Difference between `h[]` and `u[]`
 
-The `h[]` operator accepts any run-time value, including those that have no
-meaningful `repr`, such as function objects. By internally using a dictionary to
-store the captured values, it carries those values from macro expansion time to
-run time.
+The `h[]` operator accepts any picklable run-time value, including those that
+have no meaningful `repr`. Via pickling the captured value, to be stored with
+the bytecode, it carries those values from macro expansion time to run time
+(even if macro expansion time was last week).
 
 The expansion result of `h[]` is actually a capture command that executes when
 the use site of the surrounding `q[]` does, rewriting itself into a lookup
