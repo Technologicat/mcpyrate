@@ -314,9 +314,8 @@ of lessons learned, to make the implementation as short and simple as reasonably
 possible. We have liberally changed function and class names where this makes
 the code easier to understand.
 
-Our `h` operator is both simpler and more general than MacroPy's `hq[]`. We
-avoid pickling/unpickling, and by using uuids in the lookup keys, we also avoid
-the whole-file lexical scan.
+Our `h` operator is both simpler and more general than MacroPy's `hq[]`.
+By using uuids in the lookup keys, we avoid the whole-file lexical scan.
 
 We don't need to inject any additional imports. This makes the quasiquote system
 fully orthogonal to the rest of `mcpyrate`. Because `mcpyrate` transforms `from module
