@@ -2,11 +2,11 @@
 
 We provide:
 
-- [``mcpyrate.repl.iconsole``](#ipython-extension), IPython extension. **Import, define and use macros in the IPython REPL.**
+- `mcpyrate.repl.iconsole`, IPython extension. Import, define and use macros in the IPython REPL.
 
-- [``mcpyrate.repl.console.MacroConsole``](#macroconsole), a macro-enabled equivalent of ``code.InteractiveConsole``. **Import, define and use macros in a REPL. Embed a REPL.**
+- `mcpyrate.repl.console.MacroConsole`, a macro-enabled equivalent of `code.InteractiveConsole`. Import, define and use macros in a REPL. Embed a REPL.
 
-- [``macropython``](#bootstrapper), a generic bootstrapper for macro-enabled Python programs. **Use macros in your main program.**
+- `macropython`, a generic bootstrapper for macro-enabled Python programs. Use macros in your main program.
 
 These are essentially more advanced versions of those in [`imacropy`](https://github.com/Technologicat/imacropy).
 
@@ -18,7 +18,7 @@ These are essentially more advanced versions of those in [`imacropy`](https://gi
     - [IPython extension](#ipython-extension)
         - [Loading the extension](#loading-the-extension)
     - [MacroConsole](#macroconsole)
-    - [Bootstrapper](#bootstrapper)
+    - [`macropython`, the universal bootstrapper](#macropython-the-universal-bootstrapper)
         - [Interactive mode](#interactive-mode)
         - [Bootstrapping a script or a module](#bootstrapping-a-script-or-a-module)
     - [FAQ](#faq)
@@ -117,7 +117,7 @@ REPL session, using ``some_macro?``, ``some_macro??``.
 This does not affect using the macros in the intended way, as macros.
 
 
-## Bootstrapper
+## `macropython`, the universal bootstrapper
 
 The bootstrapper has two roles:
 
@@ -127,7 +127,7 @@ The bootstrapper has two roles:
 
 ### Interactive mode
 
-Interactive mode (command-line option `-i`) starts a **macro-enabled interactive Python interpreter**, using `mcpyrate.repl.console.MacroConsole`. The [readline](https://docs.python.org/3/library/readline.html) and [rlcompleter](https://docs.python.org/3/library/rlcompleter.html) modules are automatically activated and connected to the REPL session, so the command history and tab completion features work as expected, pretty much like in the standard interactive Python interpreter.
+Interactive mode (`macropython -i`) starts a **macro-enabled interactive Python interpreter**, using `mcpyrate.repl.console.MacroConsole`. The [readline](https://docs.python.org/3/library/readline.html) and [rlcompleter](https://docs.python.org/3/library/rlcompleter.html) modules are automatically activated and connected to the REPL session, so the command history and tab completion features work as expected, pretty much like in the standard interactive Python interpreter.
 
 The point of this feature is to conveniently allow starting a macro-enabled REPL directly from the shell. In interactive mode, the filename and module command-line arguments are ignored.
 
