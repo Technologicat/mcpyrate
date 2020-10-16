@@ -38,6 +38,7 @@ Supports Python 3.6, 3.7, 3.8, and PyPy3.
         - [`Coverage.py` says my quasiquoted code block is covered? It's quoted, not running, so why?](#coveragepy-says-my-quasiquoted-code-block-is-covered-its-quoted-not-running-so-why)
         - [My line numbers aren't monotonically increasing, why is that?](#my-line-numbers-arent-monotonically-increasing-why-is-that)
     - [Macro expansion error reporting](#macro-expansion-error-reporting)
+        - [Recommended exception types](#recommended-exception-types)
         - [Differences to `macropy`](#differences-to-macropy-2)
     - [Examples](#examples)
     - [Understanding the code](#understanding-the-code)
@@ -610,13 +611,20 @@ The error report includes two source locations: the macro use site (which was be
 
 The use site source location is reported in a chained exception (`raise from`), so if the second stack trace is long, scroll back in your terminal to see the original exception that was raised by the macro (including a traceback of where it occurred in the macro code).
 
+
+### Recommended exception types
+
+We recommend raising:
+
+ - `SyntaxError` with a descriptive message, if there's something wrong with how the macro was invoked, or with the AST layout of the `tree` (or `args`) it got vs. what it was expecting.
+ - `TypeError` or a `ValueError`, as appropriate if there is a problem in the macro arguments meant for the macro itself. (As opposed to macro arguments such as in the `let` example, where it's just another place to send in an AST to be transformed.)
+
+
 ### Differences to `macropy`
 
 In `mcpyrate`, any exception that occurs while expanding a macro is reported immediately, at macro expansion time.
 
 In `mcpyrate`, **any type of** exception raised at macro-expansion time will be reported and chained into a macro-expansion error.
-
-We recommend raising a `SyntaxError` with a descriptive message if there's something wrong with how the macro was invoked (or with the AST layout of the `tree` it got vs. what it was expecting); and `TypeError` or a `ValueError` (as appropriate) if there is a problem in the macro arguments meant for the macro itself. (As opposed to macro arguments such as in the `let` example, where it's just another place to send in an AST to be transformed.)
 
 
 ## Examples
