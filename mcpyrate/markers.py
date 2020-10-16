@@ -5,7 +5,7 @@
 macros may use them to work together.
 """
 
-__all__ = ["ASTMarker", "get_markers"]
+__all__ = ["ASTMarker", "get_markers", "delete_markers"]
 
 import ast
 
@@ -50,3 +50,16 @@ def get_markers(tree, cls=ASTMarker):
     w = ASTMarkerCollector()
     w.visit(tree)
     return w.collected
+
+def delete_markers(tree, cls=ASTMarker):
+    """Delete any `cls` ASTMarker instances found in `tree`.
+
+    The deletion takes place by replacing each marker node with
+    the actual AST node stored in its `body` attribute.
+    """
+    class ASTMarkerDeleter(Walker):
+        def transform(self, tree):
+            if isinstance(tree, cls):
+                tree = tree.body
+            return self.generic_visit(tree)
+    return ASTMarkerDeleter().visit(tree)
