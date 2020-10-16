@@ -58,6 +58,8 @@ For a realistic example, see [`mcpyrate.astfixers`](mcpyrate/astfixers.py).
 
  - `__init__(k0=v0, ...)`: load the given bindings into the walker's initial state.
 
+   The bindings can be accessed as `self.state.k0`, ...
+
  - `visit(tree)`: start walking. Can also be used to manually recurse selectively.
 
    **Do not override this method**, override `transform` instead.
