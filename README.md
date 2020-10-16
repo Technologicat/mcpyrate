@@ -533,12 +533,16 @@ If you need to temporarily expand one layer, but let the expander continue expan
 
 ### Expand macros inside-out, but only those in a given set
 
-This can be done by temporarily running a second expander instance, with different macro bindings. The implementation of the quasiquote system has an example. The recipe is as follows:
+This can be done by temporarily running a second expander instance with different macro bindings. This is cheaper than it sounds; really the only state the expander keeps are the macro bindings, the filename of the source file being expanded, and a flag for the current recursive mode setting. Everything else is data-driven, based on the input AST.
+
+The recipe is as follows:
 
  1. Add the import `from mcpyrate.expander import MacroExpander`.
  2. In your macro, on your primary `expander`, consult `expander.bindings` to grab the macro functions you need.
-   - Note you **must look at the values** (whether they are the function objects you expect), not at the names. Names can be aliased to anything at the use site - and that very use site also gives you the `tree` that uses those possibly aliased names.
+    - Note you **must look at the values** (whether they are the function objects you expect), not at the names. Names can be aliased to anything at the use site - and that very use site also gives you the `tree` that uses those possibly aliased names.
  3. In your macro, call `MacroExpander(modified_bindings, expander.filename).visit(tree)` to invoke a new expander instance with the modified bindings.
+
+The implementation of the quasiquote system has an example of this.
 
 Obviously, if you want to expand just one layer with the second expander, use its `visit_once` method instead of `visit`. (And if you do that, you'll need to decide if you should keep the `Done` marker - to prevent further expansion in that subtree - or discard it and grab the real AST from its `body` attribute.)
 
