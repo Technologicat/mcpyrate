@@ -256,9 +256,6 @@ critical.
 
 ## Technical notes
 
-Various technical points about the quasiquote system.
-
-
 ### Difference between `h[]` and `u[]`
 
 The `h[]` operator accepts any run-time value, including those that have no
