@@ -240,7 +240,7 @@ from module import macros, macroname as alias
 
 This will register the macro binding under the name `alias`.
 
-Note this implies that if one of your macros needs to analyze whether the tree it's expanding is going to invoke specific other macros, then in `expander.bindings`, you **must look at the values** (whether they are the function objects you expect), not at the names (since names can be aliased to anything at the use site).
+Note this implies that, when writing your own macros, if one of them needs to analyze whether the tree it's expanding is going to invoke specific other macros, then in `expander.bindings`, you **must look at the values** (whether they are the function objects you expect), not at the names (since names can be aliased to anything at the use site).
 
 
 ## Writing macros
