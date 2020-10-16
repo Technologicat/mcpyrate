@@ -169,7 +169,7 @@ This will import `application`, making that module believe it's `__main__`. In a
 
 ### Interactive use
 
-[full documentation](repl.md)
+[[full documentation](repl.md)]
 
 For interactive macro-enabled sessions, we provide an macro-enabled equivalent for `code.InteractiveConsole` (also available from the shell, as `macropython -i`), as well as an IPython extension.
 
@@ -314,7 +314,7 @@ Notes on each invocation type:
 
 ### Quasiquotes
 
-[full documentation](quasiquotes.md)
+[[full documentation](quasiquotes.md)]
 
 We provide a [quasiquote system](https://en.wikipedia.org/wiki/Lisp_(programming_language)#Self-evaluating_forms_and_quoting) (both classical and hygienic) to make macro code both much more readable and simpler to write. Rewriting the above example, note the `ast` import is gone:
 
