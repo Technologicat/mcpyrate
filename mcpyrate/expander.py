@@ -421,7 +421,7 @@ class MacroCollector(NodeVisitor):
             for decorator in others:
                 self.visit(decorator)
             for k, v in iter_fields(decorated):
-                if k == "decorator_list":
+                if k in ("decorator_list", "name"):
                     continue
                 self.visit(v)
         else:
