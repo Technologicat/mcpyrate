@@ -86,7 +86,7 @@ For a realistic example, see [`mcpyrate.astfixers`](mcpyrate/astfixers.py).
    Just like in `ast.NodeTransformer.visit`, you'll only ever get an individual
    AST node passed in as `tree`; statement suites will be sent one node at a time.
    If you need to replace or delete a whole suite, you can do that when transforming
-   the statement node that the suite belongs to.
+   the statement node the suite belongs to.
 
    Like in any `ast.NodeTransformer`, call `self.generic_visit(tree)` to
    recurse into all children of `tree` (including each node in any contained suite).
