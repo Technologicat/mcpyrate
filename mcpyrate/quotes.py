@@ -485,7 +485,11 @@ def expand1(tree, *, syntax, expander, **kw):
     # If the input `tree` is a `Done`, it will likewise do nothing.
     tree = expander.visit_once(tree)  # -> Done(body=...)
     tree = expander.visit_once(unastify(tree.body))  # On wrong kind of input, `unastify` will `TypeError` for us.
-    return q(tree, syntax=syntax, expander=expander, **kw)
+    # The final piece of the magic, why this works in the expander's recursive mode,
+    # without wrapping the result with `Done`, is that after `q` has finished, the output
+    # will be a **quoted** AST, so macro invocations in it don't look like macro invocations.
+    # Hence upon looping on the output, the expander finds no more macros.
+    return q(tree.body, syntax=syntax, expander=expander, **kw)
 
 
 def expand(tree, *, syntax, expander, **kw):
