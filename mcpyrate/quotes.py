@@ -21,11 +21,11 @@ class QuasiquoteMarker(ASTMarker):
     """Base class for AST markers used by quasiquotes. Compiled away by `astify`."""
     pass
 
-class ASTLiteral(QuasiquoteMarker):  # like MacroPy's `Literal`
+class ASTLiteral(QuasiquoteMarker):  # like `macropy`'s `Literal`
     """Keep the given subtree as-is."""
     pass
 
-class CaptureLater(QuasiquoteMarker):  # like MacroPy's `Captured`
+class CaptureLater(QuasiquoteMarker):  # like `macropy`'s `Captured`
     """Capture the value the given subtree evaluates to at the use site of `q`."""
     def __init__(self, body, name):
         super().__init__(body)
@@ -121,7 +121,7 @@ def lookup(key):
 
 # --------------------------------------------------------------------------------
 
-def astify(x, expander=None):  # like MacroPy's `ast_repr`
+def astify(x, expander=None):  # like `macropy`'s `ast_repr`
     """Lift a value into its AST representation, if possible.
 
     When the AST is compiled and run, it will evaluate to `x`.
@@ -447,7 +447,7 @@ def expandq(tree, *, syntax, **kw):
     '''[syntax, expr/block] quote-then-expand.
 
     Quasiquote `tree`, then expand it until no macros remain. Return the result
-    quasiquoted. This operator is equivalent to MacroPy's `q`.
+    quasiquoted. This operator is equivalent to `macropy`'s `q`.
 
     If your tree is already quasiquoted, use `expand` instead.
     '''

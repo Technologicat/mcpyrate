@@ -17,7 +17,7 @@
 
 To bridge the feature gap between
 [`ast.NodeTransformer`](https://docs.python.org/3/library/ast.html#ast.NodeTransformer)
-and MacroPy's `Walker`, we provide `mcpyrate.walker.Walker`, a zen-minimalistic
+and `macropy`'s `Walker`, we provide `mcpyrate.walker.Walker`, a zen-minimalistic
 AST walker base class based on `ast.NodeTransformer`, that can context-manage
 its state for different subtrees, while optionally collecting items across the
 whole walk.
@@ -47,7 +47,7 @@ For a realistic example, see [`mcpyrate.astfixers`](mcpyrate/astfixers.py).
    things in a dict. The point of using `Bunch` is convenience in access syntax;
    `self.state.x` instead of `self.state['x']`.
 
-   If you're familiar with MacroPy's `Walker`, this replaces the `set_ctx`,
+   If you're familiar with `macropy`'s `Walker`, this replaces the `set_ctx`,
    `set_ctx_for` mechanism. Mutating the state directly is equivalent to
    `set_ctx`, and `withstate(tree, k0=v0, ...)` is equivalent to `set_ctx_for`.
 

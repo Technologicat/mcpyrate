@@ -28,7 +28,7 @@ Build ASTs in your macros, using syntax that mostly looks like regular code.
         - [Difference between `h[]` and `u[]`](#difference-between-h-and-u)
     - [For Common Lispers](#for-common-lispers)
     - [Python vs. Lisp](#python-vs-lisp)
-    - [Differences to MacroPy](#differences-to-macropy)
+    - [Differences to `macropy`](#differences-to-macropy)
 
 <!-- markdown-toc end -->
 
@@ -115,7 +115,7 @@ code. Classically, in Lisps, the quasiquote operator doesn't need to do much,
 because Lisps are homoiconic; i.e. there's not much of a difference between
 source code and its AST representation.
 
-In Python, as was pioneered by MacroPy, quasiquoting is a way to write ASTs
+In Python, as was pioneered by `macropy`, quasiquoting is a way to write ASTs
 using the standard surface syntax of Python. This works surprisingly well,
 although sometimes you, the macro writer, will have to do small old-fashioned
 AST edits to the resulting AST, because some things that would be sensible as
@@ -299,10 +299,10 @@ Python has a surface syntax, instead of representing source code directly as a
 lightly dressed up AST, like Lisps do.
 
 
-## Differences to MacroPy
+## Differences to `macropy`
 
 Our implementation of the quasiquote system closely follows the impressive,
-pioneering work that originally appeared in MacroPy. That source code, itself
+pioneering work that originally appeared in `macropy`. That source code, itself
 quite short, is full of creative ingenuity, although at places could be written
 more clearly, due to the first-generation nature of the system.
 
@@ -311,7 +311,7 @@ make the best of lessons learned, to make the implementation as short and simple
 as reasonably possible. We have liberally changed function and class names where
 this makes the code easier to understand.
 
-Our `h` operator is both simpler and more general than MacroPy's `hq[]`.
+Our `h` operator is both simpler and more general than `macropy`'s `hq[]`.
 By using uuids in the lookup keys, we avoid the whole-file lexical scan.
 
 We don't need to inject any additional imports. This makes the quasiquote system
@@ -323,7 +323,7 @@ Because `mcpyrate` transforms `from module import macros, ...` (after collecting
 macro definitions) into `import module`, we can just refer to our internal stuff
 (including the stdlib `ast` module) as attributes of the module
 `mcpyrate.quotes`. We feel this is the "better way" that source code comments in
-MacroPy's `quotes.py` suggested must surely exist.
+`macropy`'s `quotes.py` suggested must surely exist.
 
 We allow capturing the value of any expr, not just identifiers. However, we also
 take a somewhat different approach, in that we don't even pretend to capture

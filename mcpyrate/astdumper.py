@@ -21,7 +21,7 @@ def dump(tree, *, include_attributes=False, multiline=True):
 
     To put everything on one line, use `multiline=False`.
 
-    Similar to MacroPy's `real_repr`, but with indentation. The method
+    Similar to `macropy`'s `real_repr`, but with indentation. The method
     `ast.AST.__repr__` itself can't be monkey-patched, because `ast.AST`
     is a built-in/extension type.
     """

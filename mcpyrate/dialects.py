@@ -83,7 +83,7 @@ class Dialect:
 
         As an example, for now, until `unpythonic` is ported to `mcpyrate`, see the
         example dialects in `pydialect`, which are implemented using this exact
-        strategy, but with the older MacroPy macro expander, the older `pydialect`
+        strategy, but with the older `macropy` macro expander, the older `pydialect`
         dialect system, and `unpythonic`.
 
             https://github.com/Technologicat/pydialect
