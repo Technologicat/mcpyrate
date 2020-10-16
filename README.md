@@ -350,7 +350,9 @@ Because the code is backconverted from the AST representation, the result may di
 
 ### Walk an AST
 
-To bridge the feature gap between [`ast.NodeTransformer`](https://docs.python.org/3/library/ast.html#ast.NodeTransformer) and `macropy`'s `Walker`, we provide [`mcpyrate.walker.Walker`](walker.md), a zen-minimalistic AST walker base class based on `ast.NodeTransformer`, that can context-manage its state for different subtrees, while optionally collecting items across the whole walk.
+[[full documentation](walker.md)]
+
+To bridge the feature gap between [`ast.NodeTransformer`](https://docs.python.org/3/library/ast.html#ast.NodeTransformer) and `macropy`'s `Walker`, we provide [`mcpyrate.walker.Walker`](mcpyrate/walker.py), a zen-minimalistic AST walker base class based on `ast.NodeTransformer`, that can context-manage its state for different subtrees, while optionally collecting items across the whole walk.
 
 
 ### The named parameters
