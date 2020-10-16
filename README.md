@@ -36,6 +36,7 @@ Supports Python 3.6, 3.7, 3.8, and PyPy3.
         - [I just ran my program again and no macro expansion is happening?](#i-just-ran-my-program-again-and-no-macro-expansion-is-happening)
         - [Error in `compile`, an AST node is missing the required field `lineno`?](#error-in-compile-an-ast-node-is-missing-the-required-field-lineno)
         - [Expander says it doesn't know how to `astify` X?](#expander-says-it-doesnt-know-how-to-astify-x)
+            - [Expander says it doesn't know how to `unastify` X?](#expander-says-it-doesnt-know-how-to-unastify-x)
         - [Why do my block and decorator macros generate extra do-nothing nodes?](#why-do-my-block-and-decorator-macros-generate-extra-do-nothing-nodes)
         - [`Coverage.py` says my quasiquoted code block is covered? It's quoted, not running, so why?](#coveragepy-says-my-quasiquoted-code-block-is-covered-its-quoted-not-running-so-why)
         - [My line numbers aren't monotonically increasing, why is that?](#my-line-numbers-arent-monotonically-increasing-why-is-that)
@@ -592,6 +593,10 @@ If it's the former, check that what you have is listed among the supported value
 If it's the latter, and the expander is complaining specifically about an AST marker, those indeed can't currently be astified. To remove them from your tree recursively, you can use [`mcpyrate.markers.delete_markers`](mcpyrate/markers.py).
 
 If these don't help, I'd have to see the details. Please file an issue so we can either document the reason, or if reasonably possible, fix it.
+
+#### Expander says it doesn't know how to `unastify` X?
+
+Most likely, the input to `expand` or `expand1` wasn't a quasiquoted tree. See `expandq` and `expand1q`, or just `expander.visit(tree)`, depending on what you want.
 
 
 ### Why do my block and decorator macros generate extra do-nothing nodes?
