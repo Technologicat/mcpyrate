@@ -49,8 +49,6 @@ The intention is to allow viewing macro docstrings and source code easily in the
 
 This does not affect using the macros in the intended way, as macros.
 
-Make sure `c.TerminalInteractiveShell.autocall = 0`. Expression macro invocations will not work in the REPL if autocall is enabled, because in `mcpyrate` macros are functions, and the REPL imports those functions so you can easily view their docstrings.
-
 
 ### Loading the extension
 
@@ -58,7 +56,7 @@ To load the extension once, ``%load_ext mcpyrate.repl.iconsole``.
 
 To autoload it when IPython starts, add the string ``"mcpyrate.repl.iconsole"`` to the list ``c.InteractiveShellApp.extensions`` in your ``ipython_config.py``. To find the config file, ``ipython profile locate``.
 
-When the extension loads, it imports ``mcpyrate`` into the REPL session. You can use this to debug whether it is loaded, if necessary.
+In your IPython configuration, make sure `c.TerminalInteractiveShell.autocall = 0`. Expression macro invocations will not work in the REPL if autocall is enabled, because in `mcpyrate` macros are functions, and the REPL imports those functions so you can easily view their docstrings.
 
 Currently **no startup banner is printed**, because extension loading occurs after IPython has already printed its own banner. We cannot manually print a banner, because some tools (notably ``importmagic.el`` for Emacs, included in [Spacemacs](http://spacemacs.org/)) treat the situation as a fatal error in Python interpreter startup if anything is printed (and ``ipython3 --no-banner`` is rather convenient to have as the python-shell, to run IPython in Emacs's inferior-shell mode).
 
