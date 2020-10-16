@@ -272,9 +272,9 @@ constants, or to trees of such containers, where all leaves are constants.
 
 ## For Common Lispers
 
-The `mcpyrate` equivalent of the Common Lisp macro-implementation pattern, where one
-gensyms a new name, `let`-binds that to the current value of the old name, and
-then unquotes the new name in the quasiquoted code, looks like this:
+In `mcpyrate`, the Common Lisp macro-implementation pattern, where one gensyms
+a new name, `let`-binds that to the current value of the old name, and then
+unquotes the new name in the quasiquoted code, looks like this:
 
     hygx = q[h[x]]
     tree = q[...a[hygx]...]
