@@ -195,6 +195,10 @@ time, it is automatically unpickled the first time it is accessed in a given
 Python process. Further accesses, by the same invocation of `h[]`, then refer
 to the same object.
 
+Note that due to how `pickle` works, you can hygienically unquote local and
+nonlocal variables just fine, as long as the *type* of the value (i.e. the
+`class`) is defined at the top-level scope of some module.
+
 Because `h[]` is essentially a bind operation, the result of `h[expr]` will
 forever point to the value `expr` had at capture time:
 
