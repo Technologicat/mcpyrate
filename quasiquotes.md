@@ -223,7 +223,7 @@ refers to.
 Macro hygiene has its place, but non-hygienic quoting leads to two advanced
 techniques that are sometimes useful:
 
-  - *Anaphora*. The macro defines an identifier that has a specific name.
+  - [*Anaphora*](https://en.wikipedia.org/wiki/Anaphoric_macro). The macro defines an identifier that has a specific name.
 
     Typically, the macro computes some value and binds it to that identifier.
     That value is then intended to be referred to, by that name, at the macro
