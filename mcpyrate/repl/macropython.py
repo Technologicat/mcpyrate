@@ -16,6 +16,7 @@ from ..coreutils import relativize
 from .. import activate  # noqa: F401
 
 __version__ = "3.0.0"
+_macropython_module = None  # sys.modules doesn't always seem to keep it, so stash it locally too.
 
 def import_module_as_main(name, script_mode):
     """Import a module, pretending it's __main__.
@@ -95,7 +96,7 @@ def import_module_as_main(name, script_mode):
         try:
             spec.loader.exec_module(module)
         except Exception:
-            sys.modules["__main__"] = sys.modules["__macropython__"]
+            sys.modules["__main__"] = _macropython_module
             raise
         # # __main__ has no parent module so we don't need to do this.
         # if path is not None:
@@ -220,5 +221,5 @@ def main():
         import_module_as_main(module_name, script_mode=True)
 
 if __name__ == '__main__':
-    sys.modules["__macropython__"] = sys.modules["__main__"]
+    _macropython_module = sys.modules["__macropython__"] = sys.modules["__main__"]
     main()
