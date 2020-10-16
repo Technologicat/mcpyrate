@@ -169,7 +169,9 @@ This will import `application`, making that module believe it's `__main__`. In a
 
 ### Interactive use
 
-For interactive macro-enabled sessions, we provide an macro-enabled equivalent for `code.InteractiveConsole` (also available from the shell, as `macropython -i`), as well as an IPython extension. See the [REPL system documentation](repl.md).
+[full documentation](repl.md)
+
+For interactive macro-enabled sessions, we provide an macro-enabled equivalent for `code.InteractiveConsole` (also available from the shell, as `macropython -i`), as well as an IPython extension.
 
 
 ### Macro invocation syntax
@@ -312,7 +314,9 @@ Notes on each invocation type:
 
 ### Quasiquotes
 
-We provide [a quasiquote system](quasiquotes.md) (both classical and hygienic) to make macro code both much more readable and simpler to write. Rewriting the above example, note the `ast` import is gone:
+[full documentation](quasiquotes.md)
+
+We provide a [quasiquote system](https://en.wikipedia.org/wiki/Lisp_(programming_language)#Self-evaluating_forms_and_quoting) (both classical and hygienic) to make macro code both much more readable and simpler to write. Rewriting the above example, note the `ast` import is gone:
 
 ```python
 from mcpyrate import unparse
