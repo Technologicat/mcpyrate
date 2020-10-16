@@ -22,7 +22,7 @@ Build ASTs in your macros, using syntax that mostly looks like regular code.
     - [Full reference](#full-reference)
     - [Introduction to quasiquoting](#introduction-to-quasiquoting)
         - [Avoiding name conflicts at the macro use site](#avoiding-name-conflicts-at-the-macro-use-site)
-            - [gensym](#gensym)
+            - [`gensym`](#gensym)
             - [Macro hygiene](#macro-hygiene)
             - [Advanced uses of non-hygienic quasiquoting](#advanced-uses-of-non-hygienic-quasiquoting)
     - [Technical notes](#technical-notes)
@@ -156,7 +156,7 @@ scope of your macro definition module, so it could be called by your macro
 expansion), that's where *macro hygiene* comes in.
 
 
-#### gensym
+#### `gensym`
 
 Short for *generate symbol*, `gensym` provides fresh, unused identifiers.
 
