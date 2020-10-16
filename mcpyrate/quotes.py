@@ -510,5 +510,5 @@ def expand(tree, *, syntax, expander, **kw):
     # Always use recursive mode, because `expand[...]` may appear inside
     # another macro invocation that uses `visit_once` (which sets the expander
     # mode to non-recursive for the dynamic extent of the visit).
-    tree = expander.visit_recursively(unastify(tree.body))
+    tree = expander.visit_recursively(unastify(tree.body))  # On wrong kind of input, `unastify` will `TypeError` for us.
     return q(tree, syntax=syntax, expander=expander, **kw)
