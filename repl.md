@@ -58,7 +58,7 @@ To autoload it when IPython starts, add the string ``"mcpyrate.repl.iconsole"`` 
 
 In your IPython configuration, make sure `c.TerminalInteractiveShell.autocall = 0`. Expression macro invocations will not work in the REPL if autocall is enabled, because in `mcpyrate` macros are functions, and the REPL imports those functions so you can easily view their docstrings.
 
-Currently **no startup banner is printed**, because extension loading occurs after IPython has already printed its own banner. We cannot manually print a banner, because some tools (notably ``importmagic.el`` for Emacs, included in [Spacemacs](http://spacemacs.org/)) treat the situation as a fatal error in Python interpreter startup if anything is printed (and ``ipython3 --no-banner`` is rather convenient to have as the python-shell, to run IPython in Emacs's inferior-shell mode).
+Currently **no startup banner is printed**, because extension loading occurs after IPython has already printed its own banner. We cannot manually print a banner, because some tools (notably ``importmagic.el`` for Emacs, included in [Spacemacs](http://spacemacs.org/)) treat the situation as a fatal error in Python interpreter startup if anything is printed.
 
 
 ## `mcpyrate.repl.console.MacroConsole`, the macro-enabled embeddable REPL
