@@ -535,15 +535,14 @@ If you need to temporarily expand one layer, but let the expander continue expan
 
 This can be done by temporarily running a second expander instance, with different macro bindings. The implementation of the quasiquote system has an example. The recipe is as follows:
 
-On your primary expander, consult `expander.bindings` to grab the macro functions you need. Note you **must look at the values** (whether they are the function objects you expect), not at the names. Names can be aliased to anything at the use site - and that very use site also gives you the `tree` that uses those possibly aliased names.
-
-Then, add the import `from mcpyrate.expander import MacroExpander`.
-
-Finally, in your macro, use `MacroExpander(modified_bindings, expander.filename).visit(tree)` to invoke a new expander instance with the modified bindings.
+ 1. Add the import `from mcpyrate.expander import MacroExpander`.
+ 2. In your macro, on your primary `expander`, consult `expander.bindings` to grab the macro functions you need.
+   - Note you **must look at the values** (whether they are the function objects you expect), not at the names. Names can be aliased to anything at the use site - and that very use site also gives you the `tree` that uses those possibly aliased names.
+ 3. In your macro, call `MacroExpander(modified_bindings, expander.filename).visit(tree)` to invoke a new expander instance with the modified bindings.
 
 Obviously, if you want to expand just one layer with the second expander, use its `visit_once` method instead of `visit`. (And if you do that, you'll need to decide if you should keep the `Done` marker - to prevent further expansion in that subtree - or discard it and grab the real AST from its `body` attribute.)
 
-Note that if you're going to quasiquote a tree, it's a good idea to get rid of AST markers first, since those can't be astified. See [`mcpyrate.markers.delete_markers`](mcpyrate/markers.py) to do that recursively. (Astification is the internal mechanism that produces the quoted AST, see [`mcpyrate.quotes.astify`](mcpyrate/quotes.py), if curious.)
+Finally, note that if you're going to quasiquote a tree after advanced hackery, it's a good idea to get rid of AST markers first, since (at least currently) those can't be astified. See [`mcpyrate.markers.delete_markers`](mcpyrate/markers.py) to do that recursively. (Astification is the internal mechanism that produces the quoted AST, see [`mcpyrate.quotes.astify`](mcpyrate/quotes.py), if curious.)
 
 
 ## Debugging
