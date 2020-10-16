@@ -6,6 +6,7 @@ __all__ = ["splice_statements", "splice_dialect"]
 import ast
 from copy import deepcopy
 
+from .astfixers import fix_missing_locations
 from .coreutils import ismacroimport
 from .walker import Walker
 
@@ -139,13 +140,12 @@ def splice_dialect(body, template, tag="__paste_here__"):
 
     # Generally speaking, dialect templates are fully macro-generated
     # quasiquoted snippets with no source location info to start with.
-    # Pretend it's at the beginning of the user module.
+    # Even if they have location info, it's for a different file compared
+    # to the use site where `body` comes from.
     #
-    # The dialect expander runs before the macro expander, so it's our job to
-    # give its source location filling logic something sensible to work with.
+    # Pretend the template code appears at the beginning of the user module.
     for stmt in template:
-        ast.copy_location(stmt, body[0])
-        ast.fix_missing_locations(stmt)
+        fix_missing_locations(stmt, body[0], mode="overwrite")
 
     # TODO: remove ast.Str once we bump minimum language version to Python 3.8
     if type(body[0]) is ast.Expr and type(body[0].value) in (ast.Constant, ast.Str):

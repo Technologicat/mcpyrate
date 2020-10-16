@@ -200,7 +200,7 @@ class BaseMacroExpander(NodeTransformer):
         if it detects any more macro invocations.
         '''
         if expansion is not None:
-            expansion = fix_missing_locations(expansion, target)
+            expansion = fix_missing_locations(expansion, target, mode="reference")
             expansion = fix_missing_ctx(expansion)
             if self.recursive:
                 expansion = self.visit(expansion)

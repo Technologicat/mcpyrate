@@ -92,16 +92,38 @@ def fix_missing_ctx(tree):
     return _CtxFixer().visit(tree)
 
 
-def fix_missing_locations(tree, reference_node):
+def fix_missing_locations(tree, reference_node, *, mode):
     '''Like `ast.fix_missing_locations`, but customized for a macro expander.
 
     Differences:
 
-      - At the top level of `tree`, initialize `lineno` and `col_offset`
-        to those of `reference_node`.
-        - If `reference_node` has no location info, no-op.
-      - If `tree is None`, no-op.
+      - If `reference_node` has no location info, return immediately (no-op).
+      - If `tree is None`, return immediately (no-op).
       - If `tree` is a `list` of AST nodes, loop over it.
+
+    The `mode` parameter:
+
+      - If `mode="reference"`, populate any missing location info by
+        copying it from `reference_node`. Always use the same values.
+
+        Good for a macro expander.
+
+      - If `mode="update"`, behave exactly like `ast.fix_missing_locations`,
+        except that at the top level of `tree`, initialize `lineno` and
+        `col_offset` from `reference_node` (instead of using `1` and `0`
+        like `ast.fix_missing_locations` does).
+
+        So if a node is missing location info, copy the current reference info
+        in, but if it has location info, then update the reference info.
+
+        Good for general use.
+
+      - If `mode="overwrite"`, copy location info from `reference_node`,
+        regardless of if the target node already has it.
+
+        Good when `tree` is a code template that comes from another file,
+        so that any line numbers already in the AST would be misleading
+        at the use site.
 
     Modifies `tree` in-place. For convenience, returns the modified `tree`.
     '''
@@ -115,15 +137,21 @@ def fix_missing_locations(tree, reference_node):
                 _fix(elt, lineno, col_offset)
             return
         if 'lineno' in tree._attributes:
-            if not hasattr(tree, 'lineno'):
+            if mode == "overwrite":
                 tree.lineno = lineno
             else:
-                lineno = tree.lineno
+                if not hasattr(tree, 'lineno'):
+                    tree.lineno = lineno
+                elif mode == "update":
+                    lineno = tree.lineno
         if 'col_offset' in tree._attributes:
-            if not hasattr(tree, 'col_offset'):
+            if mode == "overwrite":
                 tree.col_offset = col_offset
             else:
-                col_offset = tree.col_offset
+                if not hasattr(tree, 'col_offset'):
+                    tree.col_offset = col_offset
+                elif mode == "update":
+                    col_offset = tree.col_offset
         for child in iter_child_nodes(tree):
             _fix(child, lineno, col_offset)
     _fix(tree, reference_node.lineno, reference_node.col_offset)
