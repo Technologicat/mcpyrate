@@ -38,6 +38,7 @@ Supports Python 3.6, 3.7, 3.8, and PyPy3.
         - [Expander says it doesn't know how to `astify` X?](#expander-says-it-doesnt-know-how-to-astify-x)
             - [Expander says it doesn't know how to `unastify` X?](#expander-says-it-doesnt-know-how-to-unastify-x)
         - [Why do my block and decorator macros generate extra do-nothing nodes?](#why-do-my-block-and-decorator-macros-generate-extra-do-nothing-nodes)
+        - [`Coverage.py` says some of the lines inside my block macro invocation aren't covered?](#coveragepy-says-some-of-the-lines-inside-my-block-macro-invocation-arent-covered)
         - [`Coverage.py` says my quasiquoted code block is covered? It's quoted, not running, so why?](#coveragepy-says-my-quasiquoted-code-block-is-covered-its-quoted-not-running-so-why)
         - [My line numbers aren't monotonically increasing, why is that?](#my-line-numbers-arent-monotonically-increasing-why-is-that)
     - [Macro expansion error reporting](#macro-expansion-error-reporting)
@@ -608,6 +609,21 @@ We assign the line number from the macro invocation itself to any new AST nodes 
 The macro invocation itself is compiled away by the macro expander, so to guarantee that the invocation shows as covered, it must (upon successful macro expansion) be replaced by some other AST node that actually runs at run-time, with source location information taken from the invocation node, for the coverage analyzer to pick up.
 
 For this, we use an assignment to a variable `_mcpyrate_coverage`, with a human-readable string as the value. We can't use an `ast.Pass` or a do-nothing `ast.Expr`, since CPython optimizes those away when it compiles the AST into bytecode.
+
+
+### `Coverage.py` says some of the lines inside my block macro invocation aren't covered?
+
+In `mcpyrate`, the rules for handling source location information are simple. When a macro returns control back to the expander:
+
+ - Any node that already has source location information keeps it.
+   - Especially, this includes nodes that existed in the unexpanded source code.
+ - Any node that is missing source location information gets its source location information auto-filled, by copying it from the macro invocation node.
+
+The fixing is done recursively, so e.g. in `Expr(Constant(value="kitten"))`, the `Expr` and `Constant` nodes are considered independently.
+
+This means that by default, if the output of a macro does not have any original nodes from a particular source line, **that line will show as not covered** in the coverage report.
+
+So, if your macro generates new nodes based on the original nodes from the unexpanded source, and then discards the original nodes, **make sure to copy source location information manually** as appropriate. (Use `ast.copy_location`, as usual.)
 
 
 ### `Coverage.py` says my quasiquoted code block is covered? It's quoted, not running, so why?
