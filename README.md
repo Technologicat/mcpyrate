@@ -31,6 +31,7 @@ Supports Python 3.6, 3.7, 3.8, and PyPy3.
             - [Differences to `macropy`](#differences-to-macropy-1)
         - [Identifier macros](#identifier-macros)
         - [Expand macros inside-out](#expand-macros-inside-out)
+        - [Expand only macros in a given set](#expand-only-macros-in-a-given-set)
     - [Debugging](#debugging)
         - [I just ran my program again and no macro expansion is happening?](#i-just-ran-my-program-again-and-no-macro-expansion-is-happening)
         - [Error in `compile`, an AST node is missing the required field `lineno`?](#error-in-compile-an-ast-node-is-missing-the-required-field-lineno)
@@ -510,7 +511,7 @@ def it(tree, *, syntax, **kw):
 
 This way any invalid, stray mentions of the magic variable `it` trigger an error at macro expansion time. (It's not quite [`syntax-parameterize`](https://docs.racket-lang.org/reference/stxparam.html), but it'll do for Python.)
 
-If you want to expand only `it` inside an invocation of `mymacro[...]` (thus checking that the mentions are valid), leaving other nested macro invocations untouched, that's also possible. See below how to temporarily run a second expander with different bindings (from which you can omit everything but `it`).
+If you want to expand only `it` inside an invocation of `mymacro[...]` (thus checking that the mentions are valid), leaving other nested macro invocations untouched, that's also possible. See below how to expand only macros in a given set (from which you can omit everything but `it`).
 
 
 ### Expand macros inside-out
@@ -529,9 +530,18 @@ If you want to expand only one layer of macro invocations (even when inside the 
 
 If you need to temporarily expand one layer, but let the expander continue expanding your AST later (when your macro returns), observe that `visit_once` will return a `Done` AST marker, which is the thing whose sole purpose is to tell the expander not to expand further in that subtree. It is a wrapper with the actual AST stored in its `body` attribute. So if you need to ignore the `Done`, you can grab the actual AST from there, and discard the wrapper.
 
-If you need to temporarily run a second expander with different macro bindings, consult `expander.bindings` to grab the macro functions you need.  Note you **must look at the values** (whether they are the function objects you expect), not at the names (since names can be aliased to anything at the use site - and that very use site also gives you the `tree`). Then, add the import `from mcpyrate.expander import MacroExpander`, and in your macro, use `MacroExpander(modified_bindings, expander.filename).visit(tree)` to invoke a new expander with the modified bindings. The implementation of the quasiquote system has an example.
 
-Obviously, if you want to expand just one layer with the second expander, use its `visit_once` method instead of `visit`. (Then, decide if you need to keep the `Done` marker, or discard it and grab the real AST from its `body` attribute.)
+### Expand only macros in a given set
+
+This can be done by temporarily running a second expander instance, with different macro bindings. The implementation of the quasiquote system has an example. The recipe is as follows:
+
+On your primary expander, consult `expander.bindings` to grab the macro functions you need. Note you **must look at the values** (whether they are the function objects you expect), not at the names (since names can be aliased to anything at the use site - and that very use site also gives you the `tree`).
+
+Then, you'll need to add the import `from mcpyrate.expander import MacroExpander`.
+
+Finally, in your macro, use `MacroExpander(modified_bindings, expander.filename).visit(tree)` to invoke a new expander instance with the modified bindings.
+
+Obviously, if you want to expand just one layer with the second expander, use its `visit_once` method instead of `visit`. (And if you do that, you'll need to decide if you should keep the `Done` marker - to prevent further expansion in that subtree - or discard it and grab the real AST from its `body` attribute.)
 
 
 ## Debugging
