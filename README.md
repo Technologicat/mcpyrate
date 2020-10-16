@@ -46,12 +46,12 @@ Supports Python 3.6, 3.7, 3.8, and PyPy3.
 
 ## Highlights
 
-- **Agile development**:
+- **Agile development**.
   - Universal bootstrapper: `macropython`. Import and use macros in your main program.
   - Interactive console: `macropython -i`. Import, define and use macros in a console session.
     - Embeddable à la `code.InteractiveConsole`. See `mcpyrate.repl.console.MacroConsole`.
   - IPython extension `mcpyrate.repl.iconsole`. Import, define and use macros in an IPython session.
-- **Testing and debugging**:
+- **Testing and debugging**.
   - Correct statement coverage from tools such as [`Coverage.py`](https://github.com/nedbat/coveragepy/).
   - Macro expansion errors are reported at macro expansion time, with use site traceback.
   - Debug output with a step-by-step expansion breakdown. See macro `mcpyrate.debug.step_expansion`.
@@ -77,10 +77,10 @@ Supports Python 3.6, 3.7, 3.8, and PyPy3.
   - Use brackets to invoke, e.g. `macroname[arg0, ...][expr]`. If no args, just leave that part out, e.g. `macroname[expr]`.
   - The `macroname[arg0, ...]` syntax works in `expr`, `block` and `decorator` macro invocations in place of a bare `macroname`.
   - The named parameter `args` is a raw `list` of the macro argument ASTs. Empty if no args were sent, or if the macro function is not parametric.
-- **Identifier (a.k.a. name) macros**
+- **Identifier (a.k.a. name) macros**.
   - Can be used for creating magic variables that may only appear inside specific macro invocations.
   - Opt-in. Declare by using the `@namemacro` decorator on your macro function.
-- **Bytecode caching**:
+- **Bytecode caching**.
   - `.pyc` bytecode caches are created and kept up-to-date. This saves the macro
     expansion cost at startup for modules that have not changed.
 
@@ -93,7 +93,7 @@ Supports Python 3.6, 3.7, 3.8, and PyPy3.
     source file as "changed", thus re-expanding and recompiling it (hence,
     updating the corresponding `.pyc`).
   - **CAUTION**: [PEP 552 - Deterministic pycs](https://www.python.org/dev/peps/pep-0552/) is not supported; we support only the default *mtime* invalidation mode, at least for now.
-- **Conveniences**:
+- **Conveniences**.
   - Relative macro-imports (for code in packages), e.g. `from .other import macros, kittify`.
   - The expander automatically fixes missing `ctx` attributes (and source locations) in the AST, so you don't need to care about those in your macros.
   - Several block macros can be invoked in the same `with` (equivalent to nesting them, with leftmost outermost).
@@ -168,7 +168,7 @@ This will import `application`, making that module believe it's `__main__`. In a
 
 ### Interactive use
 
-For interactive macro-enabled sessions, we provide an macro-enabled equivalent for `code.InteractiveConsole`, as well as an IPython extension. See the [REPL system documentation](repl.md).
+For interactive macro-enabled sessions, we provide an macro-enabled equivalent for `code.InteractiveConsole` (also available from the shell, as `macropython -i`), as well as an IPython extension. See the [REPL system documentation](repl.md).
 
 
 ### Macro invocation syntax
