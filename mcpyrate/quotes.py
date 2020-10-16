@@ -308,10 +308,6 @@ def unastify(tree):
 #
 # These operators are named after Qu'nash, the goddess of quasiquotes in high-tech-elven mythology.
 
-# TODO: Support nested quasiquotes properly, like Lisps do.
-# (For higher-order macros that generate macros parametrically. Though that's not very useful
-# until we can call other macros from the same module. We can, as a function, but the syntax...)
-
 _quotelevel = NestingLevelTracker()
 
 def _unquote_expand(tree, expander):
