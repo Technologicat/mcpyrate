@@ -604,7 +604,7 @@ Hence, non-monotonicity occurs if a block (or decorator) macro adds new AST node
 
 ## Macro expansion error reporting
 
-Any exception raised during macro expansion is reported immediately at macro expansion time, and the program exits.
+In `mcpyrate`, any exception raised during macro expansion is reported immediately at macro expansion time, and the program exits.
 
 The error report includes two source locations: the macro use site (which was being expanded, not running yet), and the macro code that raised the exception (that was running and was terminated due to the exception).
 
