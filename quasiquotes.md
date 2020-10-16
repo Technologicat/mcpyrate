@@ -127,7 +127,9 @@ For example, it is not possible to directly interpolate a name for a function
 parameter in quasiquote notation, because parameter definitions must use literal
 strings, not expressions. In this case, the technique is to first use a
 placeholder name, such as `_`, and then manually assign a new name for the
-parameter in the AST that was returned by the quasiquote operation.
+parameter in the AST that was returned by the quasiquote operation. (Although
+see [`mcpyrate.utils.rename`](mcpyrate/utils.py), which can do the editing for
+you.)
 
 You'll still need to keep [Green Tree
 Snakes](https://greentreesnakes.readthedocs.io/en/latest/nodes.html) and maybe
