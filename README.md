@@ -302,7 +302,7 @@ Notes on each invocation type:
 
 - If `syntax == 'expr'`, then `tree` is a single AST node.
 
-- If `syntax == 'block'`, then `tree` is always a `list` of AST nodes. If several block macros appear in the same `with`, they are popped one by one, left-to-right; the `with` goes away when (if) all its context managers have been popped. As long as the `with` is there, it appears as the only top-level statement in the input list. The macro may return a `list` of AST nodes.
+- If `syntax == 'block'`, then `tree` is always a `list` of AST nodes. If several block macros appear in the same `with`, they are popped one by one, left-to-right; the `with` goes away when (if) all its context managers have been popped. As long as the `with` is there, it appears as the only top-level statement in the list `tree`. The macro may return a `list` of AST nodes.
 
 - If `syntax == 'decorator'`, then `tree` is the decorated node itself. If several decorator macros decorate the same node, they are popped one by one, innermost-to-outermost (same processing order as in regular decorators). The macro may return a `list` of AST nodes.
 
