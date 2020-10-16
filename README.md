@@ -35,6 +35,7 @@ Supports Python 3.6, 3.7, 3.8, and PyPy3.
     - [Debugging](#debugging)
         - [I just ran my program again and no macro expansion is happening?](#i-just-ran-my-program-again-and-no-macro-expansion-is-happening)
         - [Error in `compile`, an AST node is missing the required field `lineno`?](#error-in-compile-an-ast-node-is-missing-the-required-field-lineno)
+        - [Expander says it doesn't know how to `astify` X?](#expander-says-it-doesnt-know-how-to-astify-x)
         - [Why do my block and decorator macros generate extra do-nothing nodes?](#why-do-my-block-and-decorator-macros-generate-extra-do-nothing-nodes)
         - [`Coverage.py` says my quasiquoted code block is covered? It's quoted, not running, so why?](#coveragepy-says-my-quasiquoted-code-block-is-covered-its-quoted-not-running-so-why)
         - [My line numbers aren't monotonically increasing, why is that?](#my-line-numbers-arent-monotonically-increasing-why-is-that)
@@ -546,8 +547,6 @@ The implementation of the quasiquote system has an example of this.
 
 Obviously, if you want to expand just one layer with the second expander, use its `visit_once` method instead of `visit`. (And if you do that, you'll need to decide if you should keep the `Done` marker - to prevent further expansion in that subtree - or discard it and grab the real AST from its `body` attribute.)
 
-Finally, note that if you're going to quasiquote a tree after advanced hackery, it's a good idea to get rid of AST markers first, since (at least currently) those can't be astified. See [`mcpyrate.markers.delete_markers`](mcpyrate/markers.py) to do that recursively. (Astification is the internal mechanism that produces the quoted AST; if curious, see [`mcpyrate.quotes.astify`](mcpyrate/quotes.py).)
-
 
 ## Debugging
 
@@ -582,6 +581,17 @@ If you edit ASTs manually, check that you're really using a `list` where the [AS
 If you use quasiquotes, check that you're using the unquote operators you intended. It's easy to accidentally put an `u[]` or `h[]` in place of an `a[]`, or vice versa.
 
 Finally, it goes without saying, but use `git diff` liberally. Most likely whatever the issue is, it's something in the latest changes.
+
+
+### Expander says it doesn't know how to `astify` X?
+
+This may happen in two cases: trying to `u[]` something that operator doesn't support, or trying to quasiquote a tree after advanced hackery on it. (Astification is the internal mechanism that produces a quasiquoted AST; if curious, see [`mcpyrate.quotes.astify`](mcpyrate/quotes.py).)
+
+If it's the former, check that what you have is listed among the supported value types for `u[]` in [the quasiquote docs](quasiquotes.md). If the value type is not supported for `u[]`, use `h[]` instead.
+
+If it's the latter, and the expander is complaining specifically about an AST marker, those indeed can't currently be astified. To remove them from your tree recursively, you can use [`mcpyrate.markers.delete_markers`](mcpyrate/markers.py).
+
+If these don't help, I'd have to see the details. Please file an issue so we can either document the reason, or if reasonably possible, fix it.
 
 
 ### Why do my block and decorator macros generate extra do-nothing nodes?
