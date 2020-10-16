@@ -1,33 +1,22 @@
 # REPL system for mcpyrate
 
-We provide:
-
-- `mcpyrate.repl.iconsole`, IPython extension. Import, define and use macros in the IPython REPL.
-
-- `mcpyrate.repl.console.MacroConsole`, a macro-enabled equivalent of `code.InteractiveConsole`. Import, define and use macros in a REPL. Embed a REPL.
-
-- `macropython`, a generic bootstrapper for macro-enabled Python programs. Use macros in your main program.
-
-These are essentially more advanced versions of those in [`imacropy`](https://github.com/Technologicat/imacropy).
-
-
 <!-- markdown-toc start - Don't edit this section. Run M-x markdown-toc-refresh-toc -->
 **Table of Contents**
 
 - [REPL system for mcpyrate](#repl-system-for-mcpyrate)
-    - [IPython extension](#ipython-extension)
+    - [`mcpyrate.repl.iconsole`, the IPython extension](#mcpyraterepliconsole-the-ipython-extension)
         - [Loading the extension](#loading-the-extension)
-    - [MacroConsole](#macroconsole)
+    - [`mcpyrate.repl.console.MacroConsole`, the macro-enabled embeddable REPL](#mcpyratereplconsolemacroconsole-the-macro-enabled-embeddable-repl)
     - [`macropython`, the universal bootstrapper](#macropython-the-universal-bootstrapper)
-        - [Interactive mode](#interactive-mode)
-        - [Bootstrapping a script or a module](#bootstrapping-a-script-or-a-module)
+        - [Starting a macro-enabled REPL from the shell](#starting-a-macro-enabled-repl-from-the-shell)
+        - [Running a macro-enabled main program](#running-a-macro-enabled-main-program)
     - [FAQ](#faq)
         - [`@macro` is convenient, why is it only available in the REPL?](#macro-is-convenient-why-is-it-only-available-in-the-repl)
 
 <!-- markdown-toc end -->
 
 
-## IPython extension
+## `mcpyrate.repl.iconsole`, the IPython extension
 
 The extension **macro-enables the IPython REPL**.
 
@@ -74,7 +63,7 @@ When the extension loads, it imports ``mcpyrate`` into the REPL session. You can
 Currently **no startup banner is printed**, because extension loading occurs after IPython has already printed its own banner. We cannot manually print a banner, because some tools (notably ``importmagic.el`` for Emacs, included in [Spacemacs](http://spacemacs.org/)) treat the situation as a fatal error in Python interpreter startup if anything is printed (and ``ipython3 --no-banner`` is rather convenient to have as the python-shell, to run IPython in Emacs's inferior-shell mode).
 
 
-## MacroConsole
+## `mcpyrate.repl.console.MacroConsole`, the macro-enabled embeddable REPL
 
 This is a derivative of, and drop-in replacement for, ``code.InteractiveConsole``, which allows you to **embed a REPL that supports macros**. This offers the same semantics as the IPython extension.
 
@@ -125,7 +114,7 @@ The bootstrapper has two roles:
  - It **allows your main program to use macros**.
 
 
-### Interactive mode
+### Starting a macro-enabled REPL from the shell
 
 Interactive mode (`macropython -i`) starts a **macro-enabled interactive Python interpreter**, using `mcpyrate.repl.console.MacroConsole`. The [readline](https://docs.python.org/3/library/readline.html) and [rlcompleter](https://docs.python.org/3/library/rlcompleter.html) modules are automatically activated and connected to the REPL session, so the command history and tab completion features work as expected, pretty much like in the standard interactive Python interpreter.
 
@@ -136,7 +125,7 @@ If `-p` is given in addition to `-i`, as in `macropython -pi`, the REPL starts i
 **CAUTION**: As of v3.0.0, history is not saved between sessions. This may or may not change in a future release.
 
 
-### Bootstrapping a script or a module
+### Running a macro-enabled main program
 
 In this mode, the bootstrapper imports the specified file or module, pretending its ``__name__`` is ``"__main__"``. **This allows your main program to use macros**.
 
