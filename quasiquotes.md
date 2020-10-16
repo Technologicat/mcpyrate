@@ -25,7 +25,6 @@ Build ASTs in your macros, using syntax that mostly looks like regular code.
             - [`gensym`](#gensym)
             - [Macro hygiene](#macro-hygiene)
             - [Advanced uses of non-hygienic quasiquoting](#advanced-uses-of-non-hygienic-quasiquoting)
-    - [Technical notes](#technical-notes)
         - [Difference between `h[]` and `u[]`](#difference-between-h-and-u)
     - [For Common Lispers](#for-common-lispers)
     - [Python vs. Lisp](#python-vs-lisp)
@@ -253,8 +252,6 @@ Obviously, both of these techniques are somewhat magic, so unless absolutely
 needed, they are discouraged. When used, good documentation is absolutely
 critical.
 
-
-## Technical notes
 
 ### Difference between `h[]` and `u[]`
 
