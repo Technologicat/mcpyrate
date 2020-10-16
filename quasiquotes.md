@@ -165,8 +165,8 @@ expansion), that's where *macro hygiene* comes in.
 Short for *generate symbol*, `gensym` provides fresh, unused identifiers.
 
 When your macro needs to generate code that establishes new bindings, see
-`mcpyrate.gensym()`, and use `n[]` (and old-fashioned AST edits where needed)
-judiciously.
+`mcpyrate.gensym()`, and use `n[]` (and old-fashioned AST edits or `rename`
+where needed) judiciously.
 
 
 #### Macro hygiene
