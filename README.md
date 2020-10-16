@@ -31,7 +31,7 @@ Supports Python 3.6, 3.7, 3.8, and PyPy3.
             - [Differences to `macropy`](#differences-to-macropy-1)
         - [Identifier macros](#identifier-macros)
         - [Expand macros inside-out](#expand-macros-inside-out)
-        - [Expand only macros in a given set](#expand-only-macros-in-a-given-set)
+        - [Expand macros inside-out, but only those in a given set](#expand-macros-inside-out-but-only-those-in-a-given-set)
     - [Debugging](#debugging)
         - [I just ran my program again and no macro expansion is happening?](#i-just-ran-my-program-again-and-no-macro-expansion-is-happening)
         - [Error in `compile`, an AST node is missing the required field `lineno`?](#error-in-compile-an-ast-node-is-missing-the-required-field-lineno)
@@ -531,7 +531,7 @@ If you want to expand only one layer of macro invocations (even when inside the 
 If you need to temporarily expand one layer, but let the expander continue expanding your AST later (when your macro returns), observe that `visit_once` will return a `Done` AST marker, which is the thing whose sole purpose is to tell the expander not to expand further in that subtree. It is a wrapper with the actual AST stored in its `body` attribute. So if you need to ignore the `Done`, you can grab the actual AST from there, and discard the wrapper.
 
 
-### Expand only macros in a given set
+### Expand macros inside-out, but only those in a given set
 
 This can be done by temporarily running a second expander instance, with different macro bindings. The implementation of the quasiquote system has an example. The recipe is as follows:
 
@@ -542,7 +542,7 @@ This can be done by temporarily running a second expander instance, with differe
 
 Obviously, if you want to expand just one layer with the second expander, use its `visit_once` method instead of `visit`. (And if you do that, you'll need to decide if you should keep the `Done` marker - to prevent further expansion in that subtree - or discard it and grab the real AST from its `body` attribute.)
 
-Finally, note that if you're going to quasiquote a tree after advanced hackery, it's a good idea to get rid of AST markers first, since (at least currently) those can't be astified. See [`mcpyrate.markers.delete_markers`](mcpyrate/markers.py) to do that recursively. (Astification is the internal mechanism that produces the quoted AST, see [`mcpyrate.quotes.astify`](mcpyrate/quotes.py), if curious.)
+Finally, note that if you're going to quasiquote a tree after advanced hackery, it's a good idea to get rid of AST markers first, since (at least currently) those can't be astified. See [`mcpyrate.markers.delete_markers`](mcpyrate/markers.py) to do that recursively. (Astification is the internal mechanism that produces the quoted AST; if curious, see [`mcpyrate.quotes.astify`](mcpyrate/quotes.py).)
 
 
 ## Debugging
