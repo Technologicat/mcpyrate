@@ -622,7 +622,7 @@ In `mcpyrate`, the rules for handling source location information are simple. Wh
 
 The auto-fill of missing location information is done recursively, so e.g. in `Expr(Constant(value="kitten"))`, the `Expr` and `Constant` nodes are considered independently.
 
-The rules imply that by default, if a macro does not keep any original nodes from a particular source line in its output, **that line will show as not covered** in the coverage report.
+The rules imply that by default, if a macro does not keep any original nodes from a particular source line in its output, **that line will show as not covered** in the coverage report. (This is as it should be - it's valid for a block macro to delete some statements from its input, in which case those statements won't run.)
 
 So, if your macro generates new nodes based on the original nodes from the unexpanded source, and then discards the original nodes, **make sure to copy source location information manually** as appropriate. (Use `ast.copy_location`, as usual.)
 
