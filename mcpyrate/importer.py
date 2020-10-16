@@ -4,10 +4,11 @@
 __all__ = ['source_to_xcode', 'path_xstats', 'invalidate_xcaches']
 
 import ast
-import tokenize
-import os
 import importlib.util
 from importlib.machinery import FileFinder, SourceFileLoader
+import tokenize
+import os
+import sys
 
 from .core import MacroExpansionError
 from .dialects import expand_dialects
@@ -100,6 +101,14 @@ def path_xstats(self, path):
     mtimes.append(mtime)
 
     result = {'mtime': max(mtimes)}  # and sum(sizes)? OTOH, as of Python 3.8, only 'mtime' is mandatory.
+    if sys.version_info >= (3, 7, 0):
+        # Docs say `size` is optional, and this is correct in 3.6 (and in PyPy3 7.3.0):
+        # https://docs.python.org/3/library/importlib.html#importlib.abc.SourceLoader.path_stats
+        #
+        # but in 3.7 and later, the implementation is expecting at least a `None` there,
+        # if the `size` is not used. See `get_code` in:
+        # https://github.com/python/cpython/blob/master/Lib/importlib/_bootstrap_external.py
+        result['size'] = None
     _xstats_cache[path] = result
     return result
 
