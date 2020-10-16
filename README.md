@@ -529,9 +529,9 @@ If you want to expand only one layer of macro invocations (even when inside the 
 
 If you need to temporarily expand one layer, but let the expander continue expanding your AST later (when your macro returns), observe that `visit_once` will return a `Done` AST marker, which is the thing whose sole purpose is to tell the expander not to expand further in that subtree. It is a wrapper with the actual AST stored in its `body` attribute. So if you need to ignore the `Done`, you can grab the actual AST from there, and discard the wrapper.
 
-If you need to temporarily run a second expander with different macro bindings, consult `expander.bindings` to grab the macro functions you need.  Note you **must look at the values** (whether they are the function objects you expect), not at the names (since names can be aliased to anything at the use site - and that very use site also gives you the `tree`). Then, add the import `from mcpyrate.expander import expand_macros`, and in your macro, use `expand_macros(tree, modified_bindings, expander.filename)` to invoke a new expander with the modified bindings. The implementation of the quasiquote system has an example.
+If you need to temporarily run a second expander with different macro bindings, consult `expander.bindings` to grab the macro functions you need.  Note you **must look at the values** (whether they are the function objects you expect), not at the names (since names can be aliased to anything at the use site - and that very use site also gives you the `tree`). Then, add the import `from mcpyrate.expander import MacroExpander`, and in your macro, use `MacroExpander(modified_bindings, expander.filename).visit(tree)` to invoke a new expander with the modified bindings. The implementation of the quasiquote system has an example.
 
-Currently, there is no single call to expand only one layer of macros using a second expander. But if you need to do that, look at how `expand_macros` is implemented (it's just two lines), and adapt that.
+Obviously, if you want to expand just one layer with the second expander, use its `visit_once` method instead of `visit`. (Then, decide if you need to keep the `Done` marker, or discard it and grab the real AST from its `body` attribute.)
 
 
 ## Debugging
