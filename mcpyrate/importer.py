@@ -56,6 +56,12 @@ def path_xstats(self, path):
     If `path` does not end in `.py`, delegate to the standard implementation
     of `SourceFileLoader.path_stats`.
     '''
+    # TODO: Ignore stdlib if we can detect it reliably, it's big and doesn't use macros.
+    #
+    # Would e.g. make the process exit faster when an assertion failure occurs,
+    # because an error exit seems to load a lot of stuff from the stdlib.
+    # print(path) here to see what exactly.
+
     if not path.endswith(".py"):
         return _path_stats(path)
     if path in _xstats_cache:
