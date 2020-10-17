@@ -194,6 +194,8 @@ class IMcpyrateExtension:
                                    silent=True)
 
         for asname, function in self.macro_transformer.expander.bindings.items():
+            if not function.__module__:
+                continue
             commands = ["%%ignore_importerror",
                         f"from {function.__module__} import {function.__qualname__} as {asname}"]
             internal_execute("\n".join(commands))

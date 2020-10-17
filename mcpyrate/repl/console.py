@@ -139,5 +139,7 @@ class MacroConsole(code.InteractiveConsole):
         self._macro_bindings_changed = False
 
         for asname, function in self.expander.bindings.items():
+            if not function.__module__:    # Macros defined in the REPL have `__module__=None`.
+                continue
             source = f"from {function.__module__} import {function.__qualname__} as {asname}"
             self._internal_execute(source)
