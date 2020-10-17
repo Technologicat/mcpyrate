@@ -68,6 +68,17 @@ def path_xstats(self, path):
     # This is a single node in the dependency graph; the result depends only
     # on the content of the source file `path` itself. So we invalidate the
     # macro-import statement cache for `path` based on the mtime of `path` only.
+    #
+    # For a given source file `path`, the `.pyc` sometimes becomes newer than
+    # the macro-dependency cache. This is normal. Unlike the bytecode, the
+    # macro-dependency cache only needs to be refreshed when the text of the
+    # source file `path` changes.
+    #
+    # So if some of the macro-dependency source files have changed (so `path`
+    # must be re-expanded and recompiled), but `path` itself hasn't, the text
+    # of the source file `path` will still have the same macro-imports it did
+    # last time.
+    #
     pycpath = importlib.util.cache_from_source(path)
     importcachepath = pycpath + ".mcpyrate.pickle"
     try:
