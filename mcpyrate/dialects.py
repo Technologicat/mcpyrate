@@ -276,9 +276,11 @@ class DialectExpander:
         '''Find the first dialect-import statement by scanning the AST `tree`.
 
         Transform the dialect-import into `import ...`, where `...` is the absolute
-        module name the dialects are being imported from.
+        module name the dialects are being imported from. As a side effect, import
+        the dialect definition module.
 
-        As a side effect, import the dialect definition module.
+        Primarily meant to be called with `tree` the AST of a module that
+        uses dialects, but works with any `tree` that has a `body` attribute.
 
         A dialect-import is a statement of the form::
 
