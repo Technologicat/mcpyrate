@@ -26,10 +26,23 @@ the `PYTHONDONTWRITEBYTECODE` environment variable, and the attribute
 '''
 
 from importlib.machinery import SourceFileLoader, FileFinder
-
 from .importer import source_to_xcode, path_xstats, invalidate_xcaches
 
-SourceFileLoader.source_to_code = source_to_xcode
-# we could replace SourceFileLoader.set_data with a no-op to force-disable pyc caching.
-SourceFileLoader.path_stats = path_xstats
-FileFinder.invalidate_caches = invalidate_xcaches
+
+def activate():
+    SourceFileLoader.source_to_code = source_to_xcode
+    # we could replace SourceFileLoader.set_data with a no-op to force-disable pyc caching.
+    SourceFileLoader.path_stats = path_xstats
+    FileFinder.invalidate_caches = invalidate_xcaches
+
+
+def deactivate():
+    SourceFileLoader.source_to_code = stdlib_source_to_code
+    SourceFileLoader.path_stats = stdlib_path_stats
+    FileFinder.invalidate_caches = stdlib_invalidate_caches
+
+
+stdlib_source_to_code = SourceFileLoader.source_to_code
+stdlib_path_stats = SourceFileLoader.path_stats
+stdlib_invalidate_caches = FileFinder.invalidate_caches
+activate()
