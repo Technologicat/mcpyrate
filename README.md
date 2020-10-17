@@ -41,6 +41,7 @@ Supports Python 3.6, 3.7, 3.8, and PyPy3.
         - [`Coverage.py` says some of the lines inside my block macro invocation aren't covered?](#coveragepy-says-some-of-the-lines-inside-my-block-macro-invocation-arent-covered)
         - [`Coverage.py` says my quasiquoted code block is covered? It's quoted, not running, so why?](#coveragepy-says-my-quasiquoted-code-block-is-covered-its-quoted-not-running-so-why)
         - [My line numbers aren't monotonically increasing, why is that?](#my-line-numbers-arent-monotonically-increasing-why-is-that)
+        - [I tried making a Debian package out of an app that uses `mcpyrate`, and it's not working?](#i-tried-making-a-debian-package-out-of-an-app-that-uses-mcpyrate-and-its-not-working)
     - [Macro expansion error reporting](#macro-expansion-error-reporting)
         - [Recommended exception types](#recommended-exception-types)
         - [Differences to `macropy`](#differences-to-macropy-2)
@@ -654,6 +655,15 @@ Any AST node that existed in the unexpanded source code will, in the expanded co
 Hence, non-monotonicity occurs if a block (or decorator) macro adds new AST nodes *after* existing AST nodes that originate from lines below the macro invocation node itself in the unexpanded source file.
 
 (Note that the non-monotonicity, when present at all, is mild; it's local to each block.)
+
+
+### I tried making a Debian package out of an app that uses `mcpyrate`, and it's not working?
+
+The standard `postinst` script for Debian packages creates bytecode cache files using `py3compile` (and/or `pypy3compile`).
+
+These bytecode cache files are invalid, because they are compiled without using `mcpyrate`. This prevents the installed package from running. It will report that it can't find `macros`. To make things worse, a regular user won't be able to remove the bytecode cache files, which are owned by `root`.
+
+In order to fix this problem, you must provide a custom `postinst` script that generates the cache files using `mcpyrate`. One possible solution is to invoke the script in a way that all, or at least most, of the modules are imported. This will force the generation of the bytecode cache files.
 
 
 ## Macro expansion error reporting
