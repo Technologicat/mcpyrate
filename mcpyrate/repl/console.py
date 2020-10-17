@@ -22,6 +22,7 @@ import code
 import textwrap
 
 from .. import __version__ as mcpyrate_version
+from ..core import MacroExpansionError
 from ..debug import format_bindings
 from ..expander import find_macros, MacroExpander, global_postprocess
 from .utils import get_makemacro_sourcecode
@@ -110,7 +111,7 @@ class MacroConsole(code.InteractiveConsole):
 
             tree = ast.Interactive(tree.body)
             code = compile(tree, filename, symbol, self.compile.compiler.flags, 1)
-        except (OverflowError, SyntaxError, ValueError):
+        except (OverflowError, SyntaxError, ValueError, MacroExpansionError):
             self.showsyntaxerror(filename)
             return False  # erroneous input
         except ModuleNotFoundError as err:  # during macro module lookup
