@@ -8,6 +8,7 @@ import importlib.util
 from importlib.machinery import FileFinder, SourceFileLoader
 import tokenize
 import os
+import pickle
 import sys
 
 from .core import MacroExpansionError
@@ -60,20 +61,55 @@ def path_xstats(self, path):
     if path in _xstats_cache:
         return _xstats_cache[path]
 
-    # TODO: This can be slow, the point of `.pyc` is to avoid the parse-and-compile cost.
-    # TODO: We do save the macro-expansion cost, though, and that's likely much more expensive.
+    stat_result = os.stat(path)
+
+    # Try for cached macro-import statements for `path` to avoid the parse cost.
     #
-    # If that becomes an issue, maybe make our own cache file storing the
-    # macro-imports found in source file `path`, store it in the pyc
-    # directory, and invalidate it based on the mtime of `path` (only)?
-    with tokenize.open(path) as sourcefile:
-        tree = ast.parse(sourcefile.read())
+    # This is a single node in the dependency graph; the result depends only
+    # on the content of the source file `path` itself. So we invalidate the
+    # macro-import statement cache for `path` based on the mtime of `path` only.
+    pycpath = importlib.util.cache_from_source(path)
+    importcachepath = pycpath + ".mcpyrate.pickle"
+    cache_valid = False
+    if os.path.isfile(importcachepath):
+        try:
+            with open(importcachepath, "rb") as importcachefile:
+                data = pickle.load(importcachefile)
+            if data["st_mtime_ns"] == stat_result.st_mtime_ns:
+                cache_valid = True
+        except Exception:
+            cache_valid = False
 
-    macroimports = [stmt for stmt in tree.body if ismacroimport(stmt)]
-    dialectimports = [stmt for stmt in tree.body if ismacroimport(stmt, magicname="dialects")]
-    macro_and_dialect_imports = macroimports + dialectimports
-    has_relative_macroimports = any(macroimport.level for macroimport in macro_and_dialect_imports)
+    if cache_valid:
+        macro_and_dialect_imports = data["macro_and_dialect_imports"]
+        has_relative_macroimports = data["has_relative_macroimports"]
+    else:
+        # This can be slow, the point of `.pyc` is to avoid the parse-and-compile cost.
+        # We do save the macro-expansion cost, though, and that's likely much more expensive.
+        with tokenize.open(path) as sourcefile:
+            tree = ast.parse(sourcefile.read())
 
+        # TODO: Dialects may inject imports in the template that the dialect transformer itself
+        # TODO: doesn't need. How to detect those? Regex-search the source text?
+
+        macroimports = [stmt for stmt in tree.body if ismacroimport(stmt)]
+        dialectimports = [stmt for stmt in tree.body if ismacroimport(stmt, magicname="dialects")]
+        macro_and_dialect_imports = macroimports + dialectimports
+        has_relative_macroimports = any(macroimport.level for macroimport in macro_and_dialect_imports)
+
+        # macro-import statement cache goes with the .pyc
+        if not sys.dont_write_bytecode:
+            data = {"st_mtime_ns": stat_result.st_mtime_ns,
+                    "macroimports": macroimports,
+                    "dialectimports": dialectimports,
+                    "macro_and_dialect_imports": macro_and_dialect_imports,
+                    "has_relative_macroimports": has_relative_macroimports}
+            with open(importcachepath, "wb") as importcachefile:
+                pickle.dump(data, importcachefile)
+
+    # The rest of the lookup process depends on the configuration of the currently
+    # running Python, particularly its `sys.path`, so we do it dynamically.
+    #
     # TODO: some duplication with code in mcpyrate.coreutils.get_macros, including the error messages.
     package_absname = None
     if has_relative_macroimports:
@@ -95,7 +131,6 @@ def path_xstats(self, path):
         stats = path_xstats(self, origin)
         mtimes.append(stats['mtime'])
 
-    stat_result = os.stat(path)
     mtime = stat_result.st_mtime_ns * 1e-9
     # size = stat_result.st_size
     mtimes.append(mtime)
