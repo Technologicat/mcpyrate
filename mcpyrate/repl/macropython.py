@@ -224,6 +224,8 @@ def main():
         # if not spec:
         #     raise ImportError(f"Not a Python module: '{opts.filename}'"
         # module = module_from_spec(spec)
+        # TODO: if we use this approach, we should first initialize parent packages.
+        # sys.modules[module.__name__] = module
         # spec.loader.exec_module(module)
 
         root_path, relative_path = relativize(opts.filename)
