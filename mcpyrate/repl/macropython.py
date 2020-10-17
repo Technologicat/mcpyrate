@@ -16,6 +16,8 @@ from ..coreutils import relativize
 from .. import activate  # noqa: F401
 
 __version__ = "3.0.0"
+
+_config_dir = "~/.config/mcpyrate"
 _macropython_module = None  # sys.modules doesn't always seem to keep it, so stash it locally too.
 
 def import_module_as_main(name, script_mode):
@@ -153,11 +155,21 @@ def main():
         readline.set_completer(rlcompleter.Completer(namespace=repl_locals).complete)
         readline.parse_and_bind("tab: complete")  # PyPy ignores this, but not needed there.
 
+        config_dir = pathlib.Path(_config_dir).expanduser().resolve()
+        try:
+            readline.read_history_file(config_dir / "macropython_history")
+        except FileNotFoundError:
+            pass
+
         # Add CWD to import path like the builtin interactive console does.
         if sys.path[0] != "":
             sys.path.insert(0, "")
         m = MacroConsole(locals=repl_locals)
-        return m.interact()
+        result = m.interact()
+
+        config_dir.mkdir(parents=True, exist_ok=True)
+        readline.write_history_file(config_dir / "macropython_history")
+        return result
 
     if not opts.filename and not opts.module:
         parser.print_help()

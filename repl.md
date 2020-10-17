@@ -120,7 +120,7 @@ The point of this feature is to conveniently allow starting a macro-enabled REPL
 
 If `-p` is given in addition to `-i`, as in `macropython -pi`, the REPL starts in **pylab mode**. This automatically performs `import numpy as np`, `import matplotlib.pyplot as plt`, and activates matplotlib's interactive mode, so plotting won't block the REPL. This is somewhat like IPython's pylab mode, but we keep stuff in separate namespaces. This is a convenience feature for scientific interactive use.
 
-**CAUTION**: As of v3.0.0, history is not saved between sessions. This may or may not change in a future release.
+Command history of `macropython -i` is saved in the folder `~/.config/mcpyrate/`, in a file named `macropython_history`.
 
 
 ### Running a macro-enabled main program
