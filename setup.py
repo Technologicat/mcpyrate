@@ -14,6 +14,7 @@ setup(
     packages=["mcpyrate", "mcpyrate.repl"],
     provides=["mcpyrate"],
     keywords=["macros", "syntactic-macros", "macro-expander", "metaprogramming", "import", "importer"],
+    install_requires=["colorama>=0.4.4"],
     python_requires=">=3.6",
     author="Juha Jeronen and Salvador de la Puente González",
     author_email="salva@unoyunodiez.com",

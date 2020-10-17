@@ -5,11 +5,13 @@ __all__ = ["Dialect",
            "expand_dialects"]
 
 import ast
+import functools
 import importlib
 import importlib.util
 import re
 from sys import stderr
 
+from .colorizer import setcolor, colorize, ColorScheme
 from .coreutils import ismacroimport, get_macros
 from .unparser import unparse_with_fallbacks
 
@@ -108,7 +110,7 @@ class Dialect:
         return NotImplemented
 
 
-_message_header = "**StepExpansion: "
+_message_header = colorize("**StepExpansion: ", ColorScheme.HEADING)
 class StepExpansion(Dialect):  # actually part of public API of mcpyrate.debug, for discoverability
     """[dialect] Show each step of expansion while dialect-expanding the module.
 
@@ -125,7 +127,9 @@ class StepExpansion(Dialect):  # actually part of public API of mcpyrate.debug, 
     """
     def transform_source(self, text):
         self.expander.debugmode = True
-        print(f"{_message_header}{self.expander.filename} enabled DialectExpander debug mode while taking step {self.expander._step + 1}.", file=stderr)
+        c, CS = setcolor, ColorScheme
+        msg = f"{c(CS.SOURCEFILENAME)}{self.expander.filename} {c(CS.HEADING)}enabled {c(CS.ATTENTION)}DialectExpander debug mode {c(CS.HEADING)}while taking step {self.expander._step + 1}.{c(CS._RESET)}"
+        print(_message_header + msg, file=stderr)
         # Pass through the input (instead of returning `NotImplemented`) to
         # consider this as having taken a step, thus triggering the debug mode
         # output printer. (If this was the first dialect applied, our output is
@@ -171,17 +175,19 @@ class DialectExpander:
 
     def transform_ast(self, tree):
         '''Apply all whole-module AST transformers.'''
+        formatter = functools.partial(unparse_with_fallbacks, debug=True, color=True)
         return self._transform(tree, kind="AST",
                                find_dialectimport=self.find_dialectimport_ast,
                                transform="transform_ast",
-                               format_for_display=unparse_with_fallbacks)
+                               format_for_display=formatter)
 
     def _transform(self, content, *, kind, find_dialectimport, transform, format_for_display):
+        c, CS = setcolor, ColorScheme
         if self.debugmode:
             plural = "s" if self._step != 1 else ""
-            print(f"{_message_header}{self.filename} before dialect {kind} transformers ({self._step} step{plural} total):\n", file=stderr)
+            msg = f"{c(CS.SOURCEFILENAME)}{self.filename} {c(CS.HEADING)}before dialect {c(CS.DIALECTTRANSFORMER)}{kind} {c(CS.HEADING)}transformers ({self._step} step{plural} total):{c(CS._RESET)}\n"
+            print(_message_header + msg, file=stderr)
             print(format_for_display(content), file=stderr)
-            print("-" * 79, file=stderr)
 
         while True:
             module_absname, bindings = find_dialectimport(content)
@@ -218,14 +224,14 @@ class DialectExpander:
                 self._step += 1
 
                 if self.debugmode:
-                    print(f"{_message_header}{self.filename} after {module_absname}.{dialectname}.{transform} (step {self._step}):\n", file=stderr)
+                    msg = f"{c(CS.SOURCEFILENAME)}{self.filename} {c(CS.HEADING)}after {c(CS.DIALECTTRANSFORMER)}{module_absname}.{dialectname}.{transform} {c(CS.HEADING)}(step {self._step}):{c(CS._RESET)}\n"
+                    print(_message_header + msg, file=stderr)
                     print(format_for_display(content), file=stderr)
-                    print("-" * 79, file=stderr)
 
         if self.debugmode:
             plural = "s" if self._step != 1 else ""
-            print(f"{_message_header}All dialect {kind} transformers completed for {self.filename} ({self._step} step{plural} total).", file=stderr)
-            print("-" * 79, file=stderr)
+            msg = f"{c(CS.SOURCEFILENAME)}{self.filename} {c(CS.HEADING)}completed all dialect {c(CS.DIALECTTRANSFORMER)}{kind} {c(CS.HEADING)}transforms ({self._step} step{plural} total).{c(CS._RESET)}"
+            print(_message_header + msg, file=stderr)
 
         return content
 
