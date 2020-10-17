@@ -81,19 +81,19 @@ def path_xstats(self, path):
             cache_valid = False
 
     if cache_valid:
-        macro_and_dialect_imports = data["macro_and_dialect_imports"]
+        macro_and_dialect_imports = data["macroimports"] + data["dialectimports"]
         has_relative_macroimports = data["has_relative_macroimports"]
     else:
         # This can be slow, the point of `.pyc` is to avoid the parse-and-compile cost.
         # We do save the macro-expansion cost, though, and that's likely much more expensive.
-        with tokenize.open(path) as sourcefile:
-            tree = ast.parse(sourcefile.read())
-
+        #
         # TODO: Dialects may inject imports in the template that the dialect transformer itself
         # TODO: doesn't need. How to detect those? Regex-search the source text?
-
+        with tokenize.open(path) as sourcefile:
+            tree = ast.parse(sourcefile.read())
         macroimports = [stmt for stmt in tree.body if ismacroimport(stmt)]
         dialectimports = [stmt for stmt in tree.body if ismacroimport(stmt, magicname="dialects")]
+
         macro_and_dialect_imports = macroimports + dialectimports
         has_relative_macroimports = any(macroimport.level for macroimport in macro_and_dialect_imports)
 
@@ -102,7 +102,6 @@ def path_xstats(self, path):
             data = {"st_mtime_ns": stat_result.st_mtime_ns,
                     "macroimports": macroimports,
                     "dialectimports": dialectimports,
-                    "macro_and_dialect_imports": macro_and_dialect_imports,
                     "has_relative_macroimports": has_relative_macroimports}
             with open(importcachepath, "wb") as importcachefile:
                 pickle.dump(data, importcachefile)
