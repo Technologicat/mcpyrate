@@ -80,6 +80,8 @@ def path_xstats(self, path):
     # last time.
     #
     pycpath = importlib.util.cache_from_source(path)
+    if pycpath.endswith(".pyc"):
+        pycpath = pycpath[:-4]
     importcachepath = pycpath + ".mcpyrate.pickle"
     try:
         cache_valid = False
