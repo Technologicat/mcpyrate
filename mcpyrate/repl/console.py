@@ -141,5 +141,8 @@ class MacroConsole(code.InteractiveConsole):
         for asname, function in self.expander.bindings.items():
             if not function.__module__:    # Macros defined in the REPL have `__module__=None`.
                 continue
-            source = f"from {function.__module__} import {function.__qualname__} as {asname}"
-            self._internal_execute(source)
+            try:
+                source = f"from {function.__module__} import {function.__qualname__} as {asname}"
+                self._internal_execute(source)
+            except (ModuleNotFoundError, ImportError):
+                pass
