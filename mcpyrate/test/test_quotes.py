@@ -7,7 +7,6 @@ from .macros import (macros, test_q, test_hq,  # noqa: F401, F811
 
 import ast
 
-# from ..astdumper import dump
 from ..quotes import unastify
 from ..unparser import unparse
 
@@ -133,7 +132,7 @@ def test():
     # Rarely needed. It's not an unquote - unquotes interpolate stuff, which
     # then becomes quoted. Unastify inverts the quoting process itself.
 
-    # Note the extra q[], this code is inside two levels of quoting.'
+    # Note the extra q[], this code is inside two levels of quoting.
     # We undo one level by `unastify`, so we're left with an AST.
     assert unparse(unastify(q[q[foo(a, b=c, *lst, **dic)]])) == "foo(a, *lst, b=c, **dic)"  # noqa: F821
 
