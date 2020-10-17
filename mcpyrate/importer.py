@@ -70,15 +70,13 @@ def path_xstats(self, path):
     # macro-import statement cache for `path` based on the mtime of `path` only.
     pycpath = importlib.util.cache_from_source(path)
     importcachepath = pycpath + ".mcpyrate.pickle"
-    cache_valid = False
-    if os.path.isfile(importcachepath):
-        try:
-            with open(importcachepath, "rb") as importcachefile:
-                data = pickle.load(importcachefile)
-            if data["st_mtime_ns"] == stat_result.st_mtime_ns:
-                cache_valid = True
-        except Exception:
-            cache_valid = False
+    try:
+        with open(importcachepath, "rb") as importcachefile:
+            data = pickle.load(importcachefile)
+        if data["st_mtime_ns"] == stat_result.st_mtime_ns:
+            cache_valid = True
+    except Exception:
+        cache_valid = False
 
     if cache_valid:
         macro_and_dialect_imports = data["macroimports"] + data["dialectimports"]
