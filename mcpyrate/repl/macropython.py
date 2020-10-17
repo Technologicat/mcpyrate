@@ -4,12 +4,13 @@
 
 # TODO: Currently tested in CPython 3.6, and PyPy3 7.3.0 (Python 3.6). Test in 3.7+.
 
+import argparse
+import atexit
 from importlib import import_module
 from importlib.util import resolve_name, module_from_spec
-import pathlib
 import os
+import pathlib
 import sys
-import argparse
 
 from ..coreutils import relativize
 
@@ -161,15 +162,17 @@ def main():
         except FileNotFoundError:
             pass
 
+        def save_history():
+            config_dir.mkdir(parents=True, exist_ok=True)
+            readline.set_history_length(1000)
+            readline.write_history_file(config_dir / "macropython_history")
+        atexit.register(save_history)
+
         # Add CWD to import path like the builtin interactive console does.
         if sys.path[0] != "":
             sys.path.insert(0, "")
         m = MacroConsole(locals=repl_locals)
-        result = m.interact()
-
-        config_dir.mkdir(parents=True, exist_ok=True)
-        readline.write_history_file(config_dir / "macropython_history")
-        return result
+        return m.interact()
 
     if not opts.filename and not opts.module:
         parser.print_help()
