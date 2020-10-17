@@ -115,8 +115,11 @@ def path_xstats(self, path):
                     "macroimports": macroimports,
                     "dialectimports": dialectimports,
                     "has_relative_macroimports": has_relative_macroimports}
-            with open(importcachepath, "wb") as importcachefile:
-                pickle.dump(data, importcachefile)
+            try:
+                with open(importcachepath, "wb") as importcachefile:
+                    pickle.dump(data, importcachefile)
+            except Exception:
+                pass
 
     # The rest of the lookup process depends on the configuration of the currently
     # running Python, particularly its `sys.path`, so we do it dynamically.
