@@ -56,11 +56,16 @@ class ColorScheme:
     of `gnome-terminal`, with "Show bold text in bright colors" set to OFF.
     But they should work with most color schemes.
     """
+    _RESET = Style.RESET_ALL
+
     # ------------------------------------------------------------
     # unparse
 
-    LANGUAGEKEYWORD = (Style.BRIGHT, Fore.YELLOW)
-    DEFNAME = (Style.BRIGHT, Fore.CYAN)
+    LINENUMBER = Style.DIM
+
+    LANGUAGEKEYWORD = (Style.BRIGHT, Fore.YELLOW)  # for, if, import, ...
+
+    DEFNAME = (Style.BRIGHT, Fore.CYAN)  # name of a function or class being defined
     DECORATOR = Fore.LIGHTBLUE_EX
 
     STRING = Fore.GREEN
@@ -68,7 +73,7 @@ class ColorScheme:
     NAMECONSTANT = Fore.GREEN  # True, False, None
 
     BUILTINEXCEPTION = Fore.CYAN
-    BUILTINOTHER = Style.BRIGHT
+    BUILTINOTHER = Style.BRIGHT  # str, property, print, ...
 
     INVISIBLENODE = Style.DIM  # AST node with no surface syntax repr (Module, Expr)
 
@@ -76,24 +81,26 @@ class ColorScheme:
     ASTMARKER = Style.DIM  # the "$AstMarker" title
     ASTMARKERCLASS = Fore.YELLOW  # the actual marker type name
 
-    LINENUMBER = Style.DIM
-
     # ------------------------------------------------------------
-    # step_expansion, StepExpansion, format_bindings
+    # format_bindings, step_expansion, StepExpansion
 
-    # all
     HEADING = (Style.BRIGHT, Fore.LIGHTBLUE_EX)
-
-    # step_expansion
-    TREEID = (Style.NORMAL, Fore.LIGHTBLUE_EX)
 
     # format_bindings
     MACROBINDING = Style.BRIGHT
     GREYEDOUT = Style.DIM
 
+    # step_expansion
+    TREEID = (Style.NORMAL, Fore.LIGHTBLUE_EX)
+
     # StepExpansion
-    ATTENTION = (Style.BRIGHT, Fore.GREEN)
+    ATTENTION = (Style.BRIGHT, Fore.GREEN)  # the string "DialectExpander debug mode"
     SOURCEFILENAME = Style.BRIGHT
     DIALECTTRANSFORMER = (Style.BRIGHT, Fore.YELLOW)
 
-    _RESET = Style.RESET_ALL
+    # ------------------------------------------------------------
+    # dump
+
+    NODETYPE = (Style.BRIGHT, Fore.LIGHTBLUE_EX)
+    FIELDNAME = Fore.YELLOW
+    BAREVALUE = Fore.GREEN
