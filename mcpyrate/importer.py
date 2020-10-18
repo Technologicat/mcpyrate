@@ -4,6 +4,7 @@
 __all__ = ['source_to_xcode', 'path_xstats', 'invalidate_xcaches']
 
 import ast
+import distutils.sysconfig
 import importlib.util
 from importlib.machinery import FileFinder, SourceFileLoader
 import tokenize
@@ -39,7 +40,7 @@ def source_to_xcode(self, data, path, *, _optimize=-1):
 
 # TODO: Support PEP552 (Deterministic pycs). Need to intercept source file hashing, too.
 # TODO: https://www.python.org/dev/peps/pep-0552/
-_path_stats = SourceFileLoader.path_stats
+_stdlib_path_stats = SourceFileLoader.path_stats
 _xstats_cache = {}
 def path_xstats(self, path):
     '''[mcpyrate] Compute a `.py` source file's mtime, accounting for macro-imports.
@@ -56,14 +57,11 @@ def path_xstats(self, path):
     If `path` does not end in `.py`, delegate to the standard implementation
     of `SourceFileLoader.path_stats`.
     '''
-    # TODO: Ignore stdlib if we can detect it reliably, it's big and doesn't use macros.
-    #
-    # Would e.g. make the process exit faster when an assertion failure occurs,
-    # because an error exit seems to load a lot of stuff from the stdlib.
-    # print(path) here to see what exactly.
-
-    if not path.endswith(".py"):
-        return _path_stats(path)
+    # Ignore stdlib, it's big and doesn't use macros. Allows faster error
+    # exits, because an uncaught exception causes Python to load a ton of
+    # .py based stdlib modules. Also makes `macropython -i` start faster.
+    if path in _stdlib_sourcefile_paths or not path.endswith(".py"):
+        return _stdlib_path_stats(self, path)
     if path in _xstats_cache:
         return _xstats_cache[path]
 
@@ -168,11 +166,25 @@ def path_xstats(self, path):
     return result
 
 
-_invalidate_caches = FileFinder.invalidate_caches
+_stdlib_invalidate_caches = FileFinder.invalidate_caches
 def invalidate_xcaches(self):
     '''[mcpyrate] Clear the macro dependency tree cache.
 
     Then delegate to the standard implementation of `FileFinder.invalidate_caches`.
     '''
     _xstats_cache.clear()
-    return _invalidate_caches(self)
+    return _stdlib_invalidate_caches(self)
+
+
+def _detect_stdlib_sourcefile_paths():
+    '''Return a set of full paths of `.py` files that are part of Python's standard library.'''
+    # Adapted from StackOverflow answer by Adam Spiers, https://stackoverflow.com/a/8992937
+    # Note we don't want to get module names, but full paths to `.py` files.
+    stdlib_dir = distutils.sysconfig.get_python_lib(standard_lib=True)
+    paths = set()
+    for root, dirs, files in os.walk(stdlib_dir):
+        for nm in files:
+            if nm[-3:] == '.py':
+                paths.add(os.path.join(root, nm))
+    return paths
+_stdlib_sourcefile_paths = _detect_stdlib_sourcefile_paths()
