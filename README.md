@@ -107,7 +107,7 @@ Supports Python 3.6, 3.7, 3.8, and PyPy3.
   - AST markers (pseudo-nodes) for communication in a set of co-operating macros (and with the expander).
   - `gensym` to create a fresh, unused lexical identifier.
   - `unparse` to convert an AST to the corresponding source code, optionally with syntax highlighting (for terminal output).
-  - `dump` to look at an AST representation directly, with (mostly) PEP8-compliant indentation.
+  - `dump` to look at an AST representation directly, with (mostly) PEP8-compliant indentation, optionally with syntax highlighting (node types, field names, bare values).
 
 
 ## Install & uninstall
