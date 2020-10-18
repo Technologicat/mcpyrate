@@ -31,7 +31,8 @@ from .importer import source_to_xcode, path_xstats, invalidate_xcaches
 
 def activate():
     SourceFileLoader.source_to_code = source_to_xcode
-    # we could replace SourceFileLoader.set_data with a no-op to force-disable pyc caching.
+    # Bytecode caching (`.pyc`) support. If you need to force-disable `.pyc`
+    # caching, replace `SourceFileLoader.set_data` with a no-op, like `mcpy` does.
     SourceFileLoader.path_stats = path_xstats
     FileFinder.invalidate_caches = invalidate_xcaches
 
