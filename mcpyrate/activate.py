@@ -25,6 +25,8 @@ the `PYTHONDONTWRITEBYTECODE` environment variable, and the attribute
     https://www.python.org/dev/peps/pep-0552/
 '''
 
+__all__ = ["activate", "deactivate"]
+
 from importlib.machinery import SourceFileLoader, FileFinder
 from .importer import source_to_xcode, path_xstats, invalidate_xcaches
 
