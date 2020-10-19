@@ -122,7 +122,11 @@ def test():
     # expandq[...] is shorthand for expand[q[...]]
     assert unparse(expandq[first[21]]) == "(2 * 21)"
 
-    # TODO: Currently, whatever the original macro expands to is not hygienically treated.
+    # Whatever the original macro expands to is *not* hygienically treated.
+    #
+    # This is a *feature*; if you want a macro to invoke other macros hygienically
+    # in its output, the original macro must do that explicitly (i.e. use `q[h[]]`
+    # in its output).
     assert unparse(expand1[q[h[first][21]]]) == "second[21]"
     assert unparse(expand[q[h[first][21]]]) == "(2 * 21)"
 
