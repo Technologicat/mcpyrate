@@ -234,4 +234,9 @@ def global_postprocess(tree):
     Call this after macro expansion is otherwise done, before sending `tree`
     to Python's `compile`.
     '''
-    return delete_markers(tree, cls=MacroExpanderMarker)
+    tree = delete_markers(tree, cls=MacroExpanderMarker)
+    # A name macro, appearing as an assignment target, gets the wrong ctx,
+    # because when expanding the name macro, the expander sees only the Name
+    # node, and thus puts an `ast.Load` there as the ctx.
+    tree = fix_ctx(tree)
+    return tree
