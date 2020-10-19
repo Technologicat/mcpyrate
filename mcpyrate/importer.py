@@ -33,7 +33,7 @@ def source_to_xcode(self, data, path, *, _optimize=-1):
 
     remaining_markers = get_markers(expansion)
     if remaining_markers:
-        raise MacroExpansionError("{path}: AST markers remaining after expansion: {remaining_markers}")
+        raise MacroExpansionError(f"{path}: AST markers remaining after expansion: {remaining_markers}")
 
     return compile(expansion, path, 'exec', dont_inherit=True, optimize=_optimize)
 
