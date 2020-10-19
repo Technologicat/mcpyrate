@@ -46,16 +46,6 @@ def _mcpyrate_quotes_attr(attr):
                          attr=attr,
                          ctx=ast.Load())
 
-def _capture_into(mapping, value, basename):
-    for k, v in mapping.items():
-        if v is value:
-            key = k
-            break
-    else:
-        key = gensym(basename)
-        mapping[key] = value
-    return key
-
 def capture(value, name):
     """Hygienically capture a run-time value.
 
@@ -64,19 +54,11 @@ def capture(value, name):
 
     The return value is an AST that, when compiled and run, returns the
     captured value (even in another Python process later).
-
-    Hygienically captured macro invocations are treated using a different
-    mechanism; see `mcpyrate.core.global_bindings`.
     """
     # If we didn't need to consider bytecode caching, we could just store the
     # value in a registry that is populated at macro expansion time. Each
     # unique value (by `id`) could be stored only once.
     #
-    # key = _capture_into(_hygienic_registry, value, name)
-    # return ast.Call(_mcpyrate_quotes_attr("lookup"),
-    #                 [ast.Constant(value=key)],
-    #                 [])
-
     # But we want to support bytecode caching. To avoid introducing hard-to-find
     # bugs into user code, we must provide consistent semantics, regardless of
     # whether updating of the bytecode cache is actually enabled or not (see
@@ -101,23 +83,48 @@ def capture(value, name):
     #
     frozen_value = pickle.dumps(value)
     return ast.Call(_mcpyrate_quotes_attr("lookup"),
-                    [ast.Tuple(elts=[ast.Constant(value=name),  # for human-readability of expanded code
+                    [ast.Tuple(elts=[ast.Constant(value=name),
                                      ast.Constant(value=frozen_value)])],
                     [])
 
 _lookup_cache = {}
 def lookup(key):
     """Look up a hygienically captured run-time value."""
-    # if type(key) is str:  # captured in sys.dont_write_bytecode mode, in this process
-    #     return _hygienic_registry[key]
-    # else:  # frozen into macro-expanded code
-    #     name, frozen_value = key
-    #     return pickle.loads(frozen_value)
     name, frozen_value = key
     cachekey = (name, id(frozen_value))  # id() so each capture instance behaves independently
     if cachekey not in _lookup_cache:
         _lookup_cache[cachekey] = pickle.loads(frozen_value)
     return _lookup_cache[cachekey]
+
+def capture_macro(macro, name):
+    """Hygienically capture a macro.
+
+    `macro`: A macro function. Must be picklable.
+    `name`:  The name of the macro, as it appeared in the bindings of
+             the expander it was captured from. For human-readability.
+
+    The return value is an AST that, when compiled and run, injects the
+    macro into the expander's global macro bindings table (even in another
+    Python process later), and then evaluates to that macro name as an
+    `ast.Name` (so further expansion of that AST will invoke the macro).
+    """
+    frozen_macro = pickle.dumps(macro)
+    unique_name = gensym(name)
+    return ast.Call(_mcpyrate_quotes_attr("lookup_macro"),
+                    [ast.Tuple(elts=[ast.Constant(value=unique_name),
+                                     ast.Constant(value=frozen_macro)])],
+                    [])
+
+def lookup_macro(key):
+    """Look up a hygienically captured macro.
+
+    This will inject the macro to the global macro bindings table,
+    and then evaluate to that macro name, as an `ast.Name`.
+    """
+    unique_name, frozen_macro = key
+    if unique_name not in global_bindings:
+        global_bindings[unique_name] = pickle.loads(frozen_macro)
+    return ast.Name(id=unique_name)
 
 # --------------------------------------------------------------------------------
 
@@ -154,15 +161,17 @@ def astify(x, expander=None):  # like `macropy`'s `ast_repr`
             if expander and type(x.body) is ast.Name:
                 function = expander.isbound(x.body.id)
                 if function:
-                    # Hygienically capture a macro name. We do this immediately,
-                    # during the expansion of `q`. This allows macros in scope at
-                    # the use site of `q` to be hygienically propagated out to the
-                    # use site of the macro that used `q`. So you can write macros
-                    # that `q[h[macroname][...]]` and `macroname` doesn't have to be
-                    # macro-imported wherever that code gets spliced in.
-                    macroname = x.body.id
-                    uniquename = _capture_into(global_bindings, function, macroname)
-                    return recurse(ast.Name(id=uniquename))
+                    # Hygienically capture a macro. We do this immediately,
+                    # during the expansion of `q`, because the value we want to
+                    # store, i.e. the macro function, is available only at
+                    # macro-expansion time.
+                    #
+                    # This allows macros in scope at the use site of `q` to be
+                    # hygienically propagated out to the use site of the macro
+                    # that used `q`. So you can write macros that `q[h[macroname][...]]`,
+                    # and `macroname` doesn't have to be macro-imported wherever
+                    # that code gets spliced in.
+                    return capture_macro(function, x.body.id)
             # Hygienically capture a garden variety run-time value.
             # At the use site of q[], this captures the value, and rewrites itself
             # into a lookup. At the use site of the macro that used q[], that
