@@ -147,14 +147,17 @@ class BaseMacroExpander(NodeTransformer):
         macro function, place them in a dictionary and pass that dictionary
         as `kw`.
         '''
-        macro = self.bindings[macroname]
+        loc = format_location(self.filename, target, sourcecode)
+
+        macro = self.isbound(macroname)
+        if not macro:
+            raise MacroExpansionError(f"{loc}\nThe name '{macroname}' is not bound to a macro.")
+
         kw = kw or {}
         kw.update({
             'syntax': syntax,
             'expander': self,
             'invocation': target})
-
-        loc = format_location(self.filename, target, sourcecode)
 
         # Expand the macro.
         try:
