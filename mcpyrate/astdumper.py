@@ -36,7 +36,7 @@ def dump(tree, *, include_attributes=False, multiline=True, color=False):
             return text
         return colorize(text, *colors)
 
-    def colorize_value(value):
+    def maybe_colorize_value(value):
         if type(value) in (str, bytes, NoneType, bool, int, float, complex):
             # Pass through an already formatted list-as-a-string from an inner level.
             if isinstance(value, str) and value.startswith("["):
@@ -58,7 +58,7 @@ def dump(tree, *, include_attributes=False, multiline=True, color=False):
                                            previndent + moreindent + len(f"{k}=")))
                                for k in tree._attributes])
             colorized_fields = [(maybe_colorize(k, ColorScheme.FIELDNAME),
-                                 colorize_value(v))
+                                 maybe_colorize_value(v))
                                 for k, v in fields]
             return ''.join([
                 maybe_colorize(tree.__class__.__name__, ColorScheme.NODETYPE),
