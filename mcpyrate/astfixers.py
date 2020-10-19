@@ -1,7 +1,7 @@
 # -*- coding: utf-8; -*-
-'''Fix missing `ctx` attributes and source location info in an AST.'''
+'''Fix `ctx` attributes and source location info in an AST.'''
 
-__all__ = ['fix_missing_ctx', 'fix_missing_locations']
+__all__ = ['fix_ctx', 'fix_locations']
 
 from ast import (Load, Store, Del,
                  Assign, AnnAssign, AugAssign,
@@ -32,8 +32,8 @@ class _CtxFixer(Walker):
         return self.generic_visit(tree)
 
     def _fix_one(self, tree):
-        '''Fix one missing `ctx` attribute, using the currently active ctx class.'''
-        if ("ctx" in type(tree)._fields and (not hasattr(tree, "ctx") or tree.ctx is None)):
+        '''Fix one `ctx` attribute, using the currently active ctx class.'''
+        if "ctx" in type(tree)._fields:
             tree.ctx = self.state.ctxclass()
 
     def _setup_subtree_contexts(self, tree):
@@ -84,29 +84,30 @@ class _CtxFixer(Walker):
             self.withstate(tree.targets, ctxclass=Del)
 
 
-def fix_missing_ctx(tree):
-    '''Fix any missing `ctx` attributes in `tree`.
+def fix_ctx(tree):
+    '''Fix `ctx` attributes in `tree`.
 
     Modifies `tree` in-place. For convenience, returns the modified `tree`.
     '''
     return _CtxFixer().visit(tree)
 
 
-def fix_missing_locations(tree, reference_node, *, mode):
+def fix_locations(tree, reference_node, *, mode):
     '''Like `ast.fix_missing_locations`, but customized for a macro expander.
 
     Differences:
 
-      - If `reference_node` has no location info, return immediately (no-op).
+      - If `reference_node` has source no location info, return immediately (no-op).
       - If `tree is None`, return immediately (no-op).
       - If `tree` is a `list` of AST nodes, loop over it.
 
     The `mode` parameter:
 
       - If `mode="reference"`, populate any missing location info by
-        copying it from `reference_node`. Always use the same values.
+        copying it from `reference_node`. Always use the same reference info.
 
-        Good for a macro expander.
+        Good when expanding a macro invocation, to set the source location
+        of any macro-generated nodes to that of the macro invocation node.
 
       - If `mode="update"`, behave exactly like `ast.fix_missing_locations`,
         except that at the top level of `tree`, initialize `lineno` and
@@ -123,7 +124,7 @@ def fix_missing_locations(tree, reference_node, *, mode):
 
         Good when `tree` is a code template that comes from another file,
         so that any line numbers already in the AST would be misleading
-        at the use site.
+        at the use site (because they point to lines in that other file).
 
     Modifies `tree` in-place. For convenience, returns the modified `tree`.
     '''

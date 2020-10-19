@@ -6,7 +6,7 @@ __all__ = ["splice_statements", "splice_dialect"]
 import ast
 from copy import deepcopy
 
-from .astfixers import fix_missing_locations
+from .astfixers import fix_locations
 from .coreutils import ismacroimport
 from .walker import Walker
 
@@ -145,7 +145,7 @@ def splice_dialect(body, template, tag="__paste_here__"):
     #
     # Pretend the template code appears at the beginning of the user module.
     for stmt in template:
-        fix_missing_locations(stmt, body[0], mode="overwrite")
+        fix_locations(stmt, body[0], mode="overwrite")
 
     # TODO: remove ast.Str once we bump minimum language version to Python 3.8
     if type(body[0]) is ast.Expr and type(body[0].value) in (ast.Constant, ast.Str):
