@@ -85,9 +85,10 @@ class ColorScheme:
     # format_bindings, step_expansion, StepExpansion
 
     HEADING = (Style.BRIGHT, Fore.LIGHTBLUE_EX)
+    SOURCEFILENAME = (Style.BRIGHT, Fore.RESET)
 
     # format_bindings
-    MACROBINDING = Style.BRIGHT
+    MACROBINDING = (Style.BRIGHT, Fore.RESET)
     GREYEDOUT = Style.DIM
 
     # step_expansion
@@ -95,7 +96,6 @@ class ColorScheme:
 
     # StepExpansion
     ATTENTION = (Style.BRIGHT, Fore.GREEN)  # the string "DialectExpander debug mode"
-    SOURCEFILENAME = Style.BRIGHT
     DIALECTTRANSFORMER = (Style.BRIGHT, Fore.YELLOW)
 
     # ------------------------------------------------------------

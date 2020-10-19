@@ -140,14 +140,19 @@ def format_bindings(expander, *, color=False):
 
     If you want to access them programmatically, just access `expander.bindings` directly.
     """
+    def maybe_setcolor(*colors):
+        if not color:
+            return ""
+        return setcolor(*colors)
     def maybe_colorize(text, *colors):
         if not color:
             return text
         return colorize(text, *colors)
 
+    c, CS = maybe_setcolor, ColorScheme
+
     with io.StringIO() as output:
-        output.write(maybe_colorize(f"Macro bindings for {expander.filename}:\n",
-                                    ColorScheme.HEADING))
+        output.write(f"{c(CS.HEADING)}Macro bindings for {c(CS.SOURCEFILENAME)}{expander.filename}{c(CS.HEADING)}:{c(CS._RESET)}\n")
         if not expander.bindings:
             output.write(maybe_colorize("    <no bindings>\n",
                                         ColorScheme.GREYEDOUT))
