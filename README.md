@@ -343,7 +343,7 @@ In `mcpyrate`, there is **just one *quote* operator**, `q[]`, although just like
 
 For [macro hygiene](https://en.wikipedia.org/wiki/Hygienic_macro), we provide a **hygienic unquote** operator, `h[]`. So instead of implicitly hygienifying all `Name` nodes inside a `hq[]` like `macropy` does, `mcpyrate` instead expects the user to use the regular `q[]`, and explicitly say which subexpressions to hygienify, by unquoting each of those separately with `h[]`.
 
-In `mcpyrate`, also macro names can be unquoted hygienically. Doing this registers a macro binding, with a uniqified name, into a global table for the current process. This allows the expanded code of your macro to hygienically invoke a macro imported to your macro definition site (and leave that invocation unexpanded, for the expander to handle later), without requiring the use site of your macro to import that macro.
+In `mcpyrate`, also macro names can be unquoted hygienically. Doing this registers a macro binding, with a uniqified name. This allows the expanded code of your macro to hygienically invoke a macro imported to your macro definition site (and leave that invocation unexpanded, for the expander to handle later), without requiring the use site of your macro to import that macro.
 
 
 ### Get the source of an AST
