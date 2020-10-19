@@ -109,12 +109,19 @@ def show_bindings(tree, *, syntax, expander, **kw):
 
     This can appear in any expression position, and at run-time evaluates to `None`.
 
-    At macro expansion time, for each macro binding, this prints to `sys.stderr`
-    the macro name, and the fully qualified name of the corresponding macro function.
+    At macro expansion time, when the macro expander reaches the `show_bindings`
+    expression, bindings *that are in effect at that point in time* are shown.
+
+    (That disclaimer is important, because hygienically unquoted macros may add
+     new bindings as those expressions are reached, and true to the dynamic nature
+     of Python, when a macro runs, it is allowed to edit the expander's bindings.)
+
+    For each macro binding, we print to `sys.stderr` the macro name, and the
+    fully qualified name of the corresponding macro function.
 
     Any bindings that have an uuid as part of the name are hygienically
-    unquoted macros. Those make a per-process global binding across all modules
-    and all expander instances.
+    unquoted macros. Those bindings are global across all modules and
+    all expander instances.
     """
     if syntax != "name":
         raise SyntaxError("`show_bindings` is an identifier macro only")
