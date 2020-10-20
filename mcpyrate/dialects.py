@@ -185,7 +185,7 @@ class DialectExpander:
         c, CS = setcolor, ColorScheme
         if self.debugmode:
             plural = "s" if self._step != 1 else ""
-            msg = f"{c(CS.SOURCEFILENAME)}{self.filename} {c(CS.HEADING)}before dialect {c(CS.DIALECTTRANSFORMER)}{kind} {c(CS.HEADING)}transformers ({self._step} step{plural} total):{c(CS._RESET)}\n"
+            msg = f"{c(CS.SOURCEFILENAME)}{self.filename} {c(CS.HEADING)}before dialect {c(CS.TRANSFORMERKIND)}{kind} {c(CS.HEADING)}transformers ({self._step} step{plural} total):{c(CS._RESET)}\n"
             print(_message_header + msg, file=stderr)
             print(format_for_display(content), file=stderr)
 
@@ -224,13 +224,13 @@ class DialectExpander:
                 self._step += 1
 
                 if self.debugmode:
-                    msg = f"{c(CS.SOURCEFILENAME)}{self.filename} {c(CS.HEADING)}after {c(CS.DIALECTTRANSFORMER)}{module_absname}.{dialectname}.{transform} {c(CS.HEADING)}(step {self._step}):{c(CS._RESET)}\n"
+                    msg = f"{c(CS.SOURCEFILENAME)}{self.filename} {c(CS.HEADING)}after {c(CS.DIALECTTRANSFORMERNAME)}{module_absname}.{dialectname}.{transform} {c(CS.HEADING)}(step {self._step}):{c(CS._RESET)}\n"
                     print(_message_header + msg, file=stderr)
                     print(format_for_display(content), file=stderr)
 
         if self.debugmode:
             plural = "s" if self._step != 1 else ""
-            msg = f"{c(CS.SOURCEFILENAME)}{self.filename} {c(CS.HEADING)}completed all dialect {c(CS.DIALECTTRANSFORMER)}{kind} {c(CS.HEADING)}transforms ({self._step} step{plural} total).{c(CS._RESET)}"
+            msg = f"{c(CS.SOURCEFILENAME)}{self.filename} {c(CS.HEADING)}completed all dialect {c(CS.TRANSFORMERKIND)}{kind} {c(CS.HEADING)}transforms ({self._step} step{plural} total).{c(CS._RESET)}"
             print(_message_header + msg, file=stderr)
 
         return content
