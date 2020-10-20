@@ -45,8 +45,8 @@ class BaseMacroExpander(NodeTransformer):
     '''
 
     def __init__(self, bindings, filename):
-        self._bindings = bindings
-        self.bindings = ChainMap(self._bindings, global_bindings)
+        self.local_bindings = bindings
+        self.bindings = ChainMap(self.local_bindings, global_bindings)
         self.filename = filename
         self.recursive = True
 
