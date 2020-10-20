@@ -32,6 +32,14 @@ class CaptureLater(QuasiquoteMarker):  # like `macropy`'s `Captured`
         self.name = name
         self._fields += ["name"]
 
+class LiftIdentifier(QuasiquoteMarker):
+    """Mark a tree as needing string to identifier conversion. Used by `n[]`.
+
+    Lift whatever the given tree (when compiled and run) evaluates to, at the
+    use site of `q[]`, into an identifier or attribute access.
+    """
+    pass
+
 # --------------------------------------------------------------------------------
 
 # Hygienically captured run-time values... but to support `.pyc` caching, we can't use a per-process dictionary.
@@ -126,6 +134,35 @@ def lookup_macro(key):
         global_bindings[unique_name] = pickle.loads(frozen_macro)
     return ast.Name(id=unique_name)
 
+def lift_identifier(value):
+    """Lift a string into an identifier or attribute access. Used by `n[]`.
+
+    `value` must be a string, which is either a valid identifier, or a dotted
+    name with each part an identifier.
+
+    Return value is an AST for the corresponding identifier or attribute access.
+
+    Examples::
+
+        lift_identifier("kitty") -> Name(id='kitty')
+        lift_identifier("kitty.tail") -> Attribute(value=Name(id='kitty'),
+                                                   attr='tail')
+        lift_identifier("kitty.tail.color") -> Attribute(value=Attribute(value=Name(id='kitty'),
+                                                                         attr='tail'),
+                                                         attr='color')
+    """
+    if not isinstance(value, str):
+        raise TypeError(f"n[]: expected an expression that evaluates to str, result was {type(value)} with value {repr(value)}")
+    path = value.split(".")
+    if not all(component.isidentifier() for component in path):
+        raise ValueError(f"n[]: expected an identifier or a dotted name with each part an identifier, got '{value}'")
+    # e.g. `obj`, `obj.a`, `(outer.inner).a`, `((outer.middle).inner).a`
+    thing, *path = path
+    result = ast.Name(id=thing)
+    for attr in path:
+        result = ast.Attribute(value=result, attr=attr)
+    return result
+
 # --------------------------------------------------------------------------------
 
 def astify(x, expander=None):  # like `macropy`'s `ast_repr`
@@ -179,6 +216,13 @@ def astify(x, expander=None):  # like `macropy`'s `ast_repr`
             return ast.Call(_mcpyrate_quotes_attr('capture'),
                             [x.body,
                              ast.Constant(value=x.name)],
+                            [])
+
+        # Magic part of q[n[]]. This delays the string to identifier conversion
+        # until we are at the use site of `q`, and the actual value becomes available.
+        elif T is LiftIdentifier:
+            return ast.Call(_mcpyrate_quotes_attr('lift_identifier'),
+                            [x.body],
                             [])
 
         elif T in (int, float, str, bytes, bool, type(None)):
@@ -366,7 +410,7 @@ def n(tree, *, syntax, **kw):
     if _quotelevel.value < 1:
         raise SyntaxError("`n` encountered while quotelevel < 1")
     with _quotelevel.changed_by(-1):
-        return ast.Name(id=ASTLiteral(tree))
+        return LiftIdentifier(tree)
 
 
 def a(tree, *, syntax, **kw):
