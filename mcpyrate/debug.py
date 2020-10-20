@@ -144,7 +144,7 @@ def format_bindings(expander, *, color=False):
 
     Global bindings (across all expanders) are also included.
 
-    If `color=True`, use `colorama` to colorize the output. (For terminals.)
+    If `color=True`, colorize the output for printing into a terminal.
 
     If you want to access them programmatically, just access `expander.bindings` directly.
     """
