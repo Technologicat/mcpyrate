@@ -127,16 +127,7 @@ def show_bindings(tree, *, syntax, expander, **kw):
     if syntax != "name":
         raise SyntaxError("`show_bindings` is an identifier macro only")
     print(format_bindings(expander, color=True), file=stderr)
-    # Can't just delete the node (return None) if it's in an Expr(value=...).
-    #
-    # For correct coverage reporting, we can't return a `Constant`, because CPython
-    # optimizes away do-nothing constants. So trick the compiler into thinking
-    # this is important, by making the expansion result call a no-op function.
-    lam = ast.Lambda(args=ast.arguments(posonlyargs=[], args=[], vararg=None,
-                                        kwonlyargs=[], kw_defaults=[], kwarg=None,
-                                        defaults=[]),
-                     body=ast.Constant(value=None))
-    return ast.Call(func=lam, args=[], keywords=[])
+    return None
 
 
 def format_bindings(expander, *, color=False):
