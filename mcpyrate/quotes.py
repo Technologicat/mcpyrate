@@ -247,29 +247,13 @@ def unastify(tree):
     quote operation.
     """
     # CAUTION: in `unastify`, we implement only what we minimally need.
-    def attr_ast_to_dotted_name(tree):
-        # Input is like:
-        #     (mcpyrate.quotes).thing
-        #     ((mcpyrate.quotes).ast).thing
-        if type(tree) is not ast.Attribute:
-            raise TypeError
-        acc = []
-        def recurse(tree):
-            acc.append(tree.attr)
-            if type(tree.value) is ast.Attribute:
-                recurse(tree.value)
-            elif type(tree.value) is ast.Name:
-                acc.append(tree.value.id)
-            else:
-                raise NotImplementedError
-        recurse(tree)
-        return ".".join(reversed(acc))
-
     our_module_globals = globals()
     def lookup_thing(dotted_name):
         if not dotted_name.startswith("mcpyrate.quotes"):
             raise NotImplementedError
         path = dotted_name.split(".")
+        if not all(component.isidentifier() for component in path):
+            raise NotImplementedError
         if len(path) < 3:
             raise NotImplementedError
         name_of_thing = path[2]
@@ -302,7 +286,7 @@ def unastify(tree):
         return {unastify(elt) for elt in tree.elts}
 
     elif T is ast.Call:
-        dotted_name = attr_ast_to_dotted_name(tree.func)
+        dotted_name = unparse(tree.func)
         callee = lookup_thing(dotted_name)
         args = unastify(tree.args)
         kwargs = {k: v for k, v in unastify(tree.keywords)}
