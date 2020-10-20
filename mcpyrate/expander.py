@@ -52,7 +52,7 @@ __all__ = ['namemacro', 'isnamemacro',
            'expand_macros', 'find_macros']
 
 from ast import (Name, Subscript, Tuple, Import, alias, AST, Assign, Store, Constant,
-                 copy_location, iter_fields, NodeVisitor)
+                 Lambda, arguments, Call, copy_location, iter_fields, NodeVisitor)
 from copy import copy
 from warnings import warn_explicit
 
@@ -145,6 +145,11 @@ class MacroExpander(BaseMacroExpander):
             sourcecode = unparse_with_fallbacks(subscript)
             new_tree = self.expand('expr', subscript,
                                    macroname, tree, sourcecode=sourcecode, kw=kw)
+            if new_tree is None:
+                # Expression slots in the AST cannot be empty, but we can make
+                # something that evaluates to `None` at run-time, and get
+                # correct coverage while at it.
+                new_tree = _make_coverage_dummy_expr(subscript)
         else:
             new_tree = self.generic_visit(subscript)
         return new_tree
@@ -317,7 +322,12 @@ class MacroExpander(BaseMacroExpander):
                 kw = {'args': None}
                 sourcecode = unparse_with_fallbacks(name)
                 new_tree = self.expand('name', name, macroname, name, sourcecode=sourcecode, kw=kw)
-            if new_tree is not None:
+            if new_tree is None:
+                # Expression slots in the AST cannot be empty, but we can make
+                # something that evaluates to `None` at run-time, and get
+                # correct coverage while at it.
+                new_tree = _make_coverage_dummy_expr(name)
+            else:
                 if not ismodified(new_tree):
                     new_tree = Done(new_tree)
                 elif self.recursive:  # and modified
@@ -462,6 +472,30 @@ def _insert_coverage_dummy_stmt(tree, macronode, macroname):
     dummy = copy_location(Assign(targets=[t], value=v), macronode)
     tree.insert(0, Done(dummy))  # mark as Done so any expansions further out won't mess this up.
     return tree
+
+
+def _make_coverage_dummy_expr(macronode):
+    '''Force expression `macronode` to be reported as covered by coverage tools.
+
+    This facilitates "deleting" expression nodes by `return None` from a macro.
+    Since an expression slot in the AST cannot be empty, we inject a dummy node
+    that evaluates to `None`.
+
+    `macronode` is the macro invocation node to copy source location info from.
+    '''
+    # TODO: inject the macro name for human-readability
+    # We inject a lambda and an immediate call to it, because a constant `None`,
+    # if it appears alone in an `ast.Expr`, is optimized away by CPython.
+    # We must set location info manually, because we run after `expand`.
+    non = copy_location(Constant(value=None), macronode)
+    lam = copy_location(Lambda(args=arguments(posonlyargs=[], args=[], vararg=None,
+                                              kwonlyargs=[], kw_defaults=[], kwarg=None,
+                                              defaults=[]),
+                               body=non),
+                        macronode)
+    call = copy_location(Call(func=lam, args=[], keywords=[]), macronode)
+    return Done(call)
+
 
 # --------------------------------------------------------------------------------
 
