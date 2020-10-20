@@ -42,9 +42,6 @@ class LiftIdentifier(QuasiquoteMarker):
 
 # --------------------------------------------------------------------------------
 
-# Hygienically captured run-time values... but to support `.pyc` caching, we can't use a per-process dictionary.
-# _hygienic_registry = {}
-
 def _mcpyrate_quotes_attr(attr):
     """Create an AST that, when compiled and run, looks up `mcpyrate.quotes.attr` in `Load` context."""
     mcpyrate_quotes_module = ast.Attribute(value=ast.Name(id="mcpyrate", ctx=ast.Load()),
