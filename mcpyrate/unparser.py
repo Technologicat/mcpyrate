@@ -72,6 +72,8 @@ class Unparser:
         print("", file=self.f)
         self.f.flush()
 
+    # --------------------------------------------------------------------------------
+
     def maybe_colorize(self, text, *colors):
         "Colorize text if color is enabled."
         if self._color_override:
@@ -100,6 +102,8 @@ class Unparser:
             finally:
                 self._color_override = old_color_override
         return _nocolor()
+
+    # --------------------------------------------------------------------------------
 
     def fill(self, text="", *, lineno_node=None):
         """Begin a new line, indent to the current level, then write `text`.
