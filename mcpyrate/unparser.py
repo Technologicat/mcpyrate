@@ -49,7 +49,8 @@ class Unparser:
     for the abstract syntax. Original formatting is disregarded.
     """
 
-    def __init__(self, tree, *, file=sys.stdout, debug=False, color=False):
+    def __init__(self, tree, *, file=sys.stdout,
+                 debug=False, color=False, expander=None):
         """Print the source for `tree` to `file`.
 
         `debug`: bool, print invisible nodes (`Module`, `Expr`).
@@ -62,10 +63,14 @@ class Unparser:
                  fails to compile (even though a non-debug unparse looks ok).
 
         `color`: bool, whether to use syntax highlighting. For terminal output.
+
+        `expander`: optional `BaseMacroExpander` instance. If provided,
+                    used for syntax highlighting macro names.
         """
         self.debug = debug
         self.color = color
         self._color_override = False  # for syntax highlighting of decorators
+        self.expander = expander
         self.f = file
         self._indent = 0
         self.dispatch(tree)
@@ -560,6 +565,8 @@ class Unparser:
             v = self.maybe_colorize(v, ColorScheme.BUILTINEXCEPTION)
         elif v in builtin_others:
             v = self.maybe_colorize(v, ColorScheme.BUILTINOTHER)
+        elif self.expander and self.expander.isbound(v):
+            v = self.maybe_colorize(v, ColorScheme.MACRONAME)
         self.write(v)
 
     def _NameConstant(self, t):  # up to Python 3.7
@@ -913,7 +920,7 @@ class Unparser:
             self.dispatch(t.optional_vars)
 
 
-def unparse(tree, *, debug=False, color=False):
+def unparse(tree, *, debug=False, color=False, expander=None):
     """Convert the AST `tree` into source code. Return the code as a string.
 
     `debug`: bool, print invisible nodes (`Module`, `Expr`).
@@ -926,7 +933,7 @@ def unparse(tree, *, debug=False, color=False):
     """
     try:
         with io.StringIO() as output:
-            Unparser(tree, file=output, debug=debug, color=color)
+            Unparser(tree, file=output, debug=debug, color=color, expander=expander)
             code = output.getvalue().strip()
         return code
     except UnparserError as err:  # fall back to an AST dump
@@ -942,7 +949,7 @@ def unparse(tree, *, debug=False, color=False):
             raise UnparserError(msg) from err
 
 
-def unparse_with_fallbacks(tree, *, debug=False, color=False):
+def unparse_with_fallbacks(tree, *, debug=False, color=False, expander=None):
     """Like `unparse`, but upon error, don't raise; return the error message.
 
     Usually you'll want the exception to be raised. This is mainly useful to
@@ -951,7 +958,7 @@ def unparse_with_fallbacks(tree, *, debug=False, color=False):
     at the receiving end.
     """
     try:
-        text = unparse(tree, debug=debug, color=color)
+        text = unparse(tree, debug=debug, color=color, expander=expander)
     except UnparserError as err:
         text = str(err)
     except Exception as err:
