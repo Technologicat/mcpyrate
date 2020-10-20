@@ -89,18 +89,26 @@ class ColorScheme:
     LINENUMBER = Style.DIM
 
     LANGUAGEKEYWORD = (Style.BRIGHT, Fore.YELLOW)  # for, if, import, ...
+    BUILTINEXCEPTION = Fore.CYAN  # TypeError, ValueError, Warning, ...
+    BUILTINOTHER = Style.BRIGHT  # str, property, print, ...
 
     DEFNAME = (Style.BRIGHT, Fore.CYAN)  # name of a function or class being defined
     DECORATOR = Fore.LIGHTBLUE_EX
 
+    # These can be highlighted differently although Python 3.8+ uses `Constant` for all.
     STRING = Fore.GREEN
     NUMBER = Fore.GREEN
     NAMECONSTANT = Fore.GREEN  # True, False, None
 
-    BUILTINEXCEPTION = Fore.CYAN
-    BUILTINOTHER = Style.BRIGHT  # str, property, print, ...
+    # Macro names are syntax-highlighted when a macro expander instance is
+    # running and is provided to `unparse`, so it can query for bindings.
+    # `step_expansion` does that automatically.
+    #
+    # So they won't yet be highlighted during dialect AST transforms,
+    # because at that point, there is no *macro* expander.
+    MACRONAME = Fore.BLUE
 
-    INVISIBLENODE = Style.DIM  # AST node with no surface syntax repr (Module, Expr)
+    INVISIBLENODE = Style.DIM  # AST node with no surface syntax repr (`Module`, `Expr`)
 
     # AST markers for data-driven communication within the macro expander
     ASTMARKER = Style.DIM  # the "$AstMarker" title
@@ -116,15 +124,16 @@ class ColorScheme:
     SOURCEFILENAME = (Style.BRIGHT, Fore.RESET)
 
     # format_bindings
-    MACROBINDING = (Style.BRIGHT, Fore.RESET)
-    GREYEDOUT = Style.DIM
+    MACROBINDING = MACRONAME
+    GREYEDOUT = Style.DIM  # if no bindings
 
     # step_expansion
     TREEID = (Style.NORMAL, Fore.LIGHTBLUE_EX)
 
     # StepExpansion
-    ATTENTION = (Style.BRIGHT, Fore.GREEN)  # the string "DialectExpander debug mode"
-    DIALECTTRANSFORMER = (Style.BRIGHT, Fore.YELLOW)
+    ATTENTION = (Style.BRIGHT, Fore.GREEN)  # "DialectExpander debug mode"
+    TRANSFORMERKIND = (Style.BRIGHT, Fore.GREEN)  # source, AST
+    DIALECTTRANSFORMERNAME = (Style.BRIGHT, Fore.YELLOW)
 
     # ------------------------------------------------------------
     # dump
