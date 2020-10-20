@@ -400,6 +400,17 @@ def u(tree, *, syntax, expander, **kw):
 def n(tree, *, syntax, **kw):
     """[syntax, expr] name-unquote. Splice a string, lifted into a lexical identifier, into a quasiquote.
 
+    Examples::
+
+        `n["kitty"]` refers to the variable `kitty`,
+        `n[x]` refers to the variable whose name is taken from the variable `x` (at the use site of `q`),
+        `n["kitty.tail"]` refers to the attribute `tail` of the variable `kitty`,
+        `n["kitty." + x]` refers to an attribute of the variable `kitty`, where the attribute
+                          is determined by the value of the variable `x` at the use site of `q`.
+
+    Any expression can be used, as long as it evaluates to a string containing
+    only valid identifiers and dots. This is checked when the use site of `q` runs.
+
     The resulting node's `ctx` is filled in automatically by the macro expander later.
     """
     if syntax != "expr":
