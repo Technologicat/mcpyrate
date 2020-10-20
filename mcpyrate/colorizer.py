@@ -5,7 +5,10 @@ __all__ = ["setcolor", "colorize", "ColorScheme",
            "Fore", "Back", "Style"]
 
 from colorama import init as colorama_init, Fore, Back, Style
+
+
 colorama_init()
+
 
 def setcolor(*colors):
     """Set color for ANSI terminal display.
@@ -20,6 +23,7 @@ def setcolor(*colors):
             return "".join(_setcolor(elt) for elt in color)
         return color
     return _setcolor(colors)
+
 
 def colorize(text, *colors, reset=True):
     """Colorize string `text` for ANSI terminal display. Reset color at end of `text`.
