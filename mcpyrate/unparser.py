@@ -80,7 +80,7 @@ class Unparser:
             return text
         return colorize(text, *colors)
 
-    def python_keyword(self, text):
+    def maybe_colorize_python_keyword(self, text):
         "Shorthand to colorize a language keyword such as `def`, `for`, ..."
         return self.maybe_colorize(text, ColorScheme.LANGUAGEKEYWORD)
 
@@ -210,15 +210,15 @@ class Unparser:
             self.dispatch(t.value)
 
     def _Import(self, t):
-        self.fill(self.python_keyword("import "), lineno_node=t)
+        self.fill(self.maybe_colorize_python_keyword("import "), lineno_node=t)
         interleave(lambda: self.write(", "), self.dispatch, t.names)
 
     def _ImportFrom(self, t):
-        self.fill(self.python_keyword("from "), lineno_node=t)
+        self.fill(self.maybe_colorize_python_keyword("from "), lineno_node=t)
         self.write("." * t.level)
         if t.module:
             self.write(t.module)
-        self.write(self.python_keyword(" import "))
+        self.write(self.maybe_colorize_python_keyword(" import "))
         interleave(lambda: self.write(", "), self.dispatch, t.names)
 
     def _Assign(self, t):
@@ -249,42 +249,42 @@ class Unparser:
         self.dispatch(t.value)
 
     def _Return(self, t):
-        self.fill(self.python_keyword("return"), lineno_node=t)
+        self.fill(self.maybe_colorize_python_keyword("return"), lineno_node=t)
         if t.value:
             self.write(" ")
             self.dispatch(t.value)
 
     def _Pass(self, t):
-        self.fill(self.python_keyword("pass"), lineno_node=t)
+        self.fill(self.maybe_colorize_python_keyword("pass"), lineno_node=t)
 
     def _Break(self, t):
-        self.fill(self.python_keyword("break"), lineno_node=t)
+        self.fill(self.maybe_colorize_python_keyword("break"), lineno_node=t)
 
     def _Continue(self, t):
-        self.fill(self.python_keyword("continue"), lineno_node=t)
+        self.fill(self.maybe_colorize_python_keyword("continue"), lineno_node=t)
 
     def _Delete(self, t):
-        self.fill(self.python_keyword("del "), lineno_node=t)
+        self.fill(self.maybe_colorize_python_keyword("del "), lineno_node=t)
         interleave(lambda: self.write(", "), self.dispatch, t.targets)
 
     def _Assert(self, t):
-        self.fill(self.python_keyword("assert "), lineno_node=t)
+        self.fill(self.maybe_colorize_python_keyword("assert "), lineno_node=t)
         self.dispatch(t.test)
         if t.msg:
             self.write(", ")
             self.dispatch(t.msg)
 
     def _Global(self, t):
-        self.fill(self.python_keyword("global "), lineno_node=t)
+        self.fill(self.maybe_colorize_python_keyword("global "), lineno_node=t)
         interleave(lambda: self.write(", "), self.write, t.names)
 
     def _Nonlocal(self, t):
-        self.fill(self.python_keyword("nonlocal "), lineno_node=t)
+        self.fill(self.maybe_colorize_python_keyword("nonlocal "), lineno_node=t)
         interleave(lambda: self.write(", "), self.write, t.names)
 
     def _Await(self, t):  # expr
         self.write("(")
-        self.write(self.python_keyword("await"))
+        self.write(self.maybe_colorize_python_keyword("await"))
         if t.value:
             self.write(" ")
             self.dispatch(t.value)
@@ -292,7 +292,7 @@ class Unparser:
 
     def _Yield(self, t):  # expr
         self.write("(")
-        self.write(self.python_keyword("yield"))
+        self.write(self.maybe_colorize_python_keyword("yield"))
         if t.value:
             self.write(" ")
             self.dispatch(t.value)
@@ -300,48 +300,48 @@ class Unparser:
 
     def _YieldFrom(self, t):  # expr
         self.write("(")
-        self.write(self.python_keyword("yield from"))
+        self.write(self.maybe_colorize_python_keyword("yield from"))
         if t.value:
             self.write(" ")
             self.dispatch(t.value)
         self.write(")")
 
     def _Raise(self, t):
-        self.fill(self.python_keyword("raise"), lineno_node=t)
+        self.fill(self.maybe_colorize_python_keyword("raise"), lineno_node=t)
         if not t.exc:
             assert not t.cause
             return
         self.write(" ")
         self.dispatch(t.exc)
         if t.cause:
-            self.write(self.python_keyword(" from "))
+            self.write(self.maybe_colorize_python_keyword(" from "))
             self.dispatch(t.cause)
 
     def _Try(self, t):
-        self.fill(self.python_keyword("try"), lineno_node=t)
+        self.fill(self.maybe_colorize_python_keyword("try"), lineno_node=t)
         self.enter()
         self.dispatch(t.body)
         self.leave()
         for ex in t.handlers:
             self.dispatch(ex)
         if t.orelse:
-            self.fill(self.python_keyword("else"))
+            self.fill(self.maybe_colorize_python_keyword("else"))
             self.enter()
             self.dispatch(t.orelse)
             self.leave()
         if t.finalbody:
-            self.fill(self.python_keyword("finally"))
+            self.fill(self.maybe_colorize_python_keyword("finally"))
             self.enter()
             self.dispatch(t.finalbody)
             self.leave()
 
     def _ExceptHandler(self, t):
-        self.fill(self.python_keyword("except"), lineno_node=t)
+        self.fill(self.maybe_colorize_python_keyword("except"), lineno_node=t)
         if t.type:
             self.write(" ")
             self.dispatch(t.type)
         if t.name:
-            self.write(self.python_keyword(" as "))
+            self.write(self.maybe_colorize_python_keyword(" as "))
             self.write(t.name)
         self.enter()
         self.dispatch(t.body)
@@ -358,7 +358,7 @@ class Unparser:
                 self.dispatch(deco)
             self.write(ColorScheme._RESET)
 
-        class_str = (self.python_keyword("class ") +
+        class_str = (self.maybe_colorize_python_keyword("class ") +
                      self.maybe_colorize(t.name, ColorScheme.DEFNAME))
         self.fill(class_str, lineno_node=t)
         self.write("(")
@@ -398,7 +398,7 @@ class Unparser:
                 self.dispatch(deco)
             self.write(ColorScheme._RESET)
 
-        def_str = (self.python_keyword(fill_suffix) +
+        def_str = (self.maybe_colorize_python_keyword(fill_suffix) +
                    " " + self.maybe_colorize(t.name, ColorScheme.DEFNAME) + "(")
         self.fill(def_str, lineno_node=t)
         self.dispatch(t.args)
@@ -412,28 +412,28 @@ class Unparser:
         # TODO: Python 3.8 type_comment, ignore it?
 
     def _For(self, t):
-        self.__For_helper(self.python_keyword("for "), t)
+        self.__For_helper(self.maybe_colorize_python_keyword("for "), t)
 
     def _AsyncFor(self, t):
-        self.__For_helper(self.python_keyword("async for "), t)
+        self.__For_helper(self.maybe_colorize_python_keyword("async for "), t)
 
     def __For_helper(self, fill, t):
         self.fill(fill, lineno_node=t)
         self.dispatch(t.target)
-        self.write(self.python_keyword(" in "))
+        self.write(self.maybe_colorize_python_keyword(" in "))
         self.dispatch(t.iter)
         self.enter()
         self.dispatch(t.body)
         self.leave()
         if t.orelse:
-            self.fill(self.python_keyword("else"))
+            self.fill(self.maybe_colorize_python_keyword("else"))
             self.enter()
             self.dispatch(t.orelse)
             self.leave()
         # TODO: Python 3.8 type_comment, ignore it?
 
     def _If(self, t):
-        self.fill(self.python_keyword("if "), lineno_node=t)
+        self.fill(self.maybe_colorize_python_keyword("if "), lineno_node=t)
         self.dispatch(t.test)
         self.enter()
         self.dispatch(t.body)
@@ -442,32 +442,32 @@ class Unparser:
         while (t.orelse and len(t.orelse) == 1 and
                isinstance(t.orelse[0], ast.If)):
             t = t.orelse[0]
-            self.fill(self.python_keyword("elif "))
+            self.fill(self.maybe_colorize_python_keyword("elif "))
             self.dispatch(t.test)
             self.enter()
             self.dispatch(t.body)
             self.leave()
         # final else
         if t.orelse:
-            self.fill(self.python_keyword("else"))
+            self.fill(self.maybe_colorize_python_keyword("else"))
             self.enter()
             self.dispatch(t.orelse)
             self.leave()
 
     def _While(self, t):
-        self.fill(self.python_keyword("while "), lineno_node=t)
+        self.fill(self.maybe_colorize_python_keyword("while "), lineno_node=t)
         self.dispatch(t.test)
         self.enter()
         self.dispatch(t.body)
         self.leave()
         if t.orelse:
-            self.fill(self.python_keyword("else"))
+            self.fill(self.maybe_colorize_python_keyword("else"))
             self.enter()
             self.dispatch(t.orelse)
             self.leave()
 
     def _With(self, t):
-        self.fill(self.python_keyword("with "), lineno_node=t)
+        self.fill(self.maybe_colorize_python_keyword("with "), lineno_node=t)
         interleave(lambda: self.write(", "), self.dispatch, t.items)
         self.enter()
         self.dispatch(t.body)
@@ -475,7 +475,7 @@ class Unparser:
         # TODO: Python 3.8 type_comment, ignore it?
 
     def _AsyncWith(self, t):
-        self.fill(self.python_keyword("async with "), lineno_node=t)
+        self.fill(self.maybe_colorize_python_keyword("async with "), lineno_node=t)
         interleave(lambda: self.write(", "), self.dispatch, t.items)
         self.enter()
         self.dispatch(t.body)
@@ -567,21 +567,21 @@ class Unparser:
 
     def _comprehension(self, t):
         if t.is_async:
-            self.write(self.python_keyword(" async"))
-        self.write(self.python_keyword(" for "))
+            self.write(self.maybe_colorize_python_keyword(" async"))
+        self.write(self.maybe_colorize_python_keyword(" for "))
         self.dispatch(t.target)
-        self.write(self.python_keyword(" in "))
+        self.write(self.maybe_colorize_python_keyword(" in "))
         self.dispatch(t.iter)
         for if_clause in t.ifs:
-            self.write(self.python_keyword(" if "))
+            self.write(self.maybe_colorize_python_keyword(" if "))
             self.dispatch(if_clause)
 
     def _IfExp(self, t):
         self.write("(")
         self.dispatch(t.body)
-        self.write(self.python_keyword(" if "))
+        self.write(self.maybe_colorize_python_keyword(" if "))
         self.dispatch(t.test)
-        self.write(self.python_keyword(" else "))
+        self.write(self.maybe_colorize_python_keyword(" else "))
         self.dispatch(t.orelse)
         self.write(")")
 
@@ -642,7 +642,7 @@ class Unparser:
     boolops = {ast.And: 'and', ast.Or: 'or'}
     def _BoolOp(self, t):
         self.write("(")
-        s = self.python_keyword(self.boolops[t.op.__class__])
+        s = self.maybe_colorize_python_keyword(self.boolops[t.op.__class__])
         s = f" {s} "
         interleave(lambda: self.write(s), self.dispatch, t.values)
         self.write(")")
@@ -839,7 +839,7 @@ class Unparser:
 
     def _Lambda(self, t):
         self.write("(")
-        self.write(self.python_keyword("lambda "))
+        self.write(self.maybe_colorize_python_keyword("lambda"))
         self.dispatch(t.args)
         self.write(": ")
         self.dispatch(t.body)
@@ -848,12 +848,12 @@ class Unparser:
     def _alias(self, t):
         self.write(t.name)
         if t.asname:
-            self.write(self.python_keyword(" as ") + t.asname)
+            self.write(self.maybe_colorize_python_keyword(" as ") + t.asname)
 
     def _withitem(self, t):
         self.dispatch(t.context_expr)
         if t.optional_vars:
-            self.write(self.python_keyword(" as "))
+            self.write(self.maybe_colorize_python_keyword(" as "))
             self.dispatch(t.optional_vars)
 
 
