@@ -205,7 +205,7 @@ class MacroExpander(BaseMacroExpander):
         tree = withstmt.body if not withstmt.items else [withstmt]
         new_tree = self.expand('block', original_withstmt,
                                macroname, tree, sourcecode=sourcecode, kw=kw)
-        new_tree = _add_coverage_dummy_node(new_tree, withstmt, macroname)
+        new_tree = _insert_coverage_dummy_stmt(new_tree, withstmt, macroname)
         return new_tree
 
     def visit_ClassDef(self, classdef):
@@ -258,7 +258,7 @@ class MacroExpander(BaseMacroExpander):
         kw = {'args': macroargs}
         new_tree = self.expand('decorator', original_decorated,
                                macroname, decorated, sourcecode=sourcecode, kw=kw)
-        new_tree = _add_coverage_dummy_node(new_tree, innermost_macro, macroname)
+        new_tree = _insert_coverage_dummy_stmt(new_tree, innermost_macro, macroname)
         return new_tree
 
     def _detect_macro_items(self, items, syntax):
@@ -436,11 +436,11 @@ class MacroCollector(NodeVisitor):
                 self._seen.add(key)
 
 
-def _add_coverage_dummy_node(tree, macronode, macroname):
-    '''Force `macronode` to be reported as covered by coverage tools.
+def _insert_coverage_dummy_stmt(tree, macronode, macroname):
+    '''Force statement `macronode` to be reported as covered by coverage tools.
 
-    The dummy node will be injected to `tree`. The `tree` must appear in a
-    position where `ast.NodeTransformer.visit` may return a list of nodes.
+    A dummy node will be injected to `tree`. The `tree` must appear in a
+    statement position, so `ast.NodeTransformer.visit` may return a list of nodes.
 
     `macronode` is the macro invocation node to copy source location info from.
     `macroname` is included in the dummy node, to ease debugging.
