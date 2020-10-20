@@ -422,10 +422,8 @@ def h(tree, *, syntax, expander, **kw):
     Python process. (In other words, values from "macro expansion time
     last week" would not otherwise be available.)
 
-    Supports also macros. To hygienically splice a macro invocation, `h[]` only
-    the macro name. Macro captures are not pickled; they simply extend the bindings
-    of the expander (with a uniqified macro name) that is expanding the use site of
-    the surrounding `q`.
+    Supports also macros. To hygienically splice a macro invocation,
+    `h[]` only the macro name.
     """
     if syntax != "expr":
         raise SyntaxError("`h` is an expr macro only")
