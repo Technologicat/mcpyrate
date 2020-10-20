@@ -840,6 +840,15 @@ class Unparser:
     def _Lambda(self, t):
         self.write("(")
         self.write(self.maybe_colorize_python_keyword("lambda"))
+
+        def takes_arguments(lam):
+            a = lam.args
+            if hasattr(a, "posonlyargs") and a.posonlyargs:
+                return True
+            return a.args or a.vararg or a.kwonlyargs or a.kwarg
+        if takes_arguments(t):
+            self.write(" ")
+
         self.dispatch(t.args)
         self.write(": ")
         self.dispatch(t.body)
