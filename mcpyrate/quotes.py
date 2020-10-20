@@ -22,7 +22,7 @@ class QuasiquoteMarker(ASTMarker):
     pass
 
 class ASTLiteral(QuasiquoteMarker):  # like `macropy`'s `Literal`
-    """Keep the given subtree as-is."""
+    """While building a quoted tree, keep the given subtree as-is."""
     pass
 
 class CaptureLater(QuasiquoteMarker):  # like `macropy`'s `Captured`
