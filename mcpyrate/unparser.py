@@ -775,13 +775,13 @@ class Unparser:
         if hasattr(t, "posonlyargs"):
             args_sets = [t.posonlyargs, t.args]
             defaults_sets = [defaults[:nposonlyargs], defaults[nposonlyargs:]]
-            set_separator = ', /'
         else:
             args_sets = [t.args]
             defaults_sets = [defaults]
-            set_separator = ''
 
-        for args, defaults in zip(args_sets, defaults_sets):
+        def write_arg_default_pairs(data):
+            nonlocal first
+            args, defaults = data
             for a, d in zip(args, defaults):
                 if first:
                     first = False
@@ -791,7 +791,14 @@ class Unparser:
                 if d:
                     self.write("=")
                     self.dispatch(d)
-            self.write(set_separator)
+
+        def maybe_separate_positional_only_args():
+            if not first:
+                self.write(', /')
+
+        interleave(maybe_separate_positional_only_args,
+                   write_arg_default_pairs,
+                   zip(args_sets, defaults_sets))
 
         # varargs, or bare '*' if no varargs but keyword-only arguments present
         if t.vararg or t.kwonlyargs:
