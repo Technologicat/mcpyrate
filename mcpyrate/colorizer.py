@@ -11,12 +11,21 @@ colorama_init()
 
 
 def setcolor(*colors):
-    """Set color for ANSI terminal display.
+    """Set color for terminal display.
+
+    Returns a string that, when printed into a terminal, sets the color
+    and style. We use `colorama`, so this works on any OS.
 
     For available `colors`, see `Fore`, `Back` and `Style`.
+    These are imported from `colorama`.
 
     Each entry can also be a tuple (arbitrarily nested), which is useful
     for defining compound styles.
+
+    **CAUTION**: The specified style and color remain in effect until another
+    explicit call to `setcolor`. To reset, use `setcolor(Style.RESET_ALL)`.
+    If you want to colorize a piece of text so that the color and style
+    auto-reset after your text, use `colorize` instead.
     """
     def _setcolor(color):
         if isinstance(color, (list, tuple)):
@@ -26,24 +35,29 @@ def setcolor(*colors):
 
 
 def colorize(text, *colors, reset=True):
-    """Colorize string `text` for ANSI terminal display. Reset color at end of `text`.
+    """Colorize string `text` for terminal display.
+
+    Returns `text`, augmented with color and style commands for terminals.
+    We use `colorama`, so this works on any OS.
 
     For available `colors`, see `Fore`, `Back` and `Style`.
     These are imported from `colorama`.
 
     Usage::
 
-        colorize("I'm new here", Fore.GREEN)
-        colorize("I'm bold and bluetiful", Style.BRIGHT, Fore.BLUE)
+        print(colorize("I'm new here", Fore.GREEN))
+        print(colorize("I'm bold and bluetiful", Style.BRIGHT, Fore.BLUE))
 
     Each entry can also be a tuple (arbitrarily nested), which is useful
     for defining compound styles::
 
         BRIGHT_BLUE = (Style.BRIGHT, Fore.BLUE)
         ...
-        colorize("I'm bold and bluetiful, too", BRIGHT_BLUE)
+        print(colorize("I'm bold and bluetiful, too", BRIGHT_BLUE))
 
-    **CAUTION**: Does not nest. Style resets after the colorized text.
+    **CAUTION**: Does not nest. Style and color reset after the colorized text.
+    If you want to set a color and style until further notice, use `setcolor`
+    instead.
     """
     return "{}{}{}".format(setcolor(colors),
                            text,
@@ -51,14 +65,20 @@ def colorize(text, *colors, reset=True):
 
 
 class ColorScheme:
-    """The color scheme for debug utilities.
+    """The color scheme for terminal output in `mcpyrate`'s debug utilities.
+
+    This is just a bunch of constants. To change the colors, simply assign new
+    values to them. Changes take effect immediately for any new output.
+
+    (Don't replace the `ColorScheme` class itself, though; all the use sites
+    from-import it.)
 
     See `Fore`, `Back`, `Style` in `colorama` for valid values. To make a
     compound style, place the values into a tuple.
 
     The defaults are designed to fit the "Solarized" (Zenburn-like) theme
     of `gnome-terminal`, with "Show bold text in bright colors" set to OFF.
-    But they should work with most color schemes.
+    But they work also with "Tango", and indeed with most themes.
     """
     _RESET = Style.RESET_ALL
 
