@@ -55,7 +55,8 @@ def step_expansion(tree, *, args, syntax, expander, **kw):
     if syntax not in ("expr", "block"):
         raise SyntaxError("`step_expansion` is an expr and block macro only")
 
-    formatter = functools.partial(unparse_with_fallbacks, debug=True, color=True)
+    formatter = functools.partial(unparse_with_fallbacks, debug=True, color=True,
+                                  expander=expander)
     if args:
         if len(args) != 1:
             raise SyntaxError("expected `step_expansion` or `step_expansion['mode_str']`")
