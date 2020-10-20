@@ -65,7 +65,7 @@ class Unparser:
         """
         self.debug = debug
         self.color = color
-        self._color_override = False  # to syntax highlight decorators
+        self._color_override = False  # for syntax highlighting of decorators
         self.f = file
         self._indent = 0
         self.dispatch(tree)
