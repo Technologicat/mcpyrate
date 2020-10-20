@@ -366,7 +366,7 @@ def n(tree, *, syntax, **kw):
     if _quotelevel.value < 1:
         raise SyntaxError("`n` encountered while quotelevel < 1")
     with _quotelevel.changed_by(-1):
-        return ASTLiteral(astify(ast.Name(id=ASTLiteral(tree))))
+        return ast.Name(id=ASTLiteral(tree))
 
 
 def a(tree, *, syntax, **kw):
