@@ -897,7 +897,7 @@ def unparse_with_fallbacks(tree, *, debug=False, color=False):
     try:
         text = unparse(tree, debug=debug, color=color)
     except UnparserError as err:
-        text = err.args[0]
+        text = str(err)
     except Exception as err:
         # This can only happen if there is a bug in the unparser, but we don't
         # want to lose the macro use site filename and line number if this
