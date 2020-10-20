@@ -54,12 +54,14 @@ class Unparser:
 
         `debug`: bool, print invisible nodes (`Module`, `Expr`).
 
+                 For statement nodes, print also line numbers (`lineno`
+                 attribute from the AST node).
+
                  The output is then not valid Python, but may better show
                  the problem when code produced by a macro mysteriously
                  fails to compile (even though a non-debug unparse looks ok).
 
-        `color`: bool, use Colorama to color output. For syntax highlighting
-                 when printing into a terminal.
+        `color`: bool, whether to use syntax highlighting. For terminal output.
         """
         self.debug = debug
         self.color = color
@@ -87,7 +89,7 @@ class Unparser:
 
         Useful for syntax highlighting decorators (so that the method rendering
         the decorator may force a particular color, instead of allowing
-        auto-coloring based on the data in the decorator AST node).
+        auto-coloring based on the AST data).
         """
         @contextmanager
         def _nocolor():
@@ -100,7 +102,11 @@ class Unparser:
         return _nocolor()
 
     def fill(self, text="", *, lineno_node=None):
-        "Indent a piece of text, according to the current indentation level."
+        """Begin a new line, indent to the current level, then write `text`.
+
+        If in debug mode, then from `lineno_node`, get the `lineno` attribute
+        for printing the line number. Print `----` if `lineno` missing.
+        """
         self.write("\n")
         if self.debug and isinstance(lineno_node, ast.AST):
             lineno = lineno_node.lineno if hasattr(lineno_node, "lineno") else None
@@ -145,10 +151,13 @@ class Unparser:
     # --------------------------------------------------------------------------------
     # Unparsing methods
     #
-    # There should be one method per concrete grammar type.
-    # Constructors should be grouped by sum type. Ideally,
-    # this would follow the order in the grammar, but
-    # currently doesn't.
+    # Beside `astmarker`, which is a macro expander data-driven communication
+    # thing, there should be one method per concrete grammar type. Constructors
+    # should be grouped by sum type. Ideally, this would follow the order in
+    # the grammar, but currently doesn't.
+    #
+    # https://docs.python.org/3/library/ast.html#abstract-grammar
+    # https://greentreesnakes.readthedocs.io/en/latest/nodes.html
 
     def astmarker(self, tree):
         def write_field_value(v):
@@ -855,7 +864,7 @@ def unparse(tree, *, debug=False, color=False):
 
              The output is then not valid Python, but may better show
              the problem when code produced by a macro mysteriously
-             fails to compile (even though the unparse looks ok).
+             fails to compile (even though a non-debug unparse looks ok).
 
     Upon invalid input, raises `UnparserError`.
     """
