@@ -164,28 +164,64 @@ class Unparser:
     # https://greentreesnakes.readthedocs.io/en/latest/nodes.html
 
     def astmarker(self, tree):
-        def write_field_value(v):
+        def write_astmarker_field_value(v):
             if isinstance(v, ast.AST):
                 self.dispatch(v)
             else:
                 self.write(repr(v))
-        self.fill(self.maybe_colorize(f"$ASTMarker", ColorScheme.ASTMARKER),
-                  lineno_node=tree)  # markers cannot be eval'd
+
+        # Print like a statement or like an expression, depending on the
+        # content. The marker itself is neither. Prefix by a "$" to indicate
+        # that "source code" containing AST markers cannot be eval'd.
+        # If you need to get rid of them, see `mcpyrate.markers.delete_markers`.
+
+        header = self.maybe_colorize(f"$ASTMarker", ColorScheme.ASTMARKER)
+        if isinstance(tree.body, ast.stmt):
+            print_mode = "stmt"
+            self.fill(header, lineno_node=tree)
+        else:
+            print_mode = "expr"
+            self.write("(")
+            self.write(header)
+
         clsname = self.maybe_colorize(tree.__class__.__name__,
                                       ColorScheme.ASTMARKERCLASS)
         self.write(f"<{clsname}>")
+
         self.enter()
         self.write(" ")
         if len(tree._fields) == 1 and tree._fields[0] == "body":
-            write_field_value(tree.body)
+            # If there is just a single "body" field, don't bother with field names.
+            write_astmarker_field_value(tree.body)
         else:
-            for k, v in ast.iter_fields(tree):
-                self.fill(k)
-                self.enter()
-                self.write(" ")
-                write_field_value(v)
-                self.leave()
+            # The following is just a notation. There's no particular reason to
+            # use "k: v" syntax in statement mode and "k=v" in expression mode,
+            # except that it meshes well with the indentation rules and looks
+            # somewhat pythonic.
+            #
+            # In statement mode, a field may contain a statement; dispatching
+            # to a statement will begin a new line.
+            if print_mode == "stmt":
+                for k, v in ast.iter_fields(tree):
+                    self.fill(k, lineno_node=tree)
+                    self.enter()
+                    self.write(" ")
+                    write_astmarker_field_value(v)
+                    self.leave()
+            else:  # "expr"
+                first = True
+                for k, v in ast.iter_fields(tree):
+                    if first:
+                        first = False
+                    else:
+                        self.write(", ")
+                    self.write(f"{k}=")
+                    self.write("(")
+                    write_astmarker_field_value(v)
+                    self.write(")")
         self.leave()
+        if print_mode == "expr":
+            self.write(")")
 
     def _Module(self, t):
         # TODO: Python 3.8 type_ignores. Since we don't store the source text, maybe ignore that?
