@@ -64,6 +64,7 @@ def colorize(text, *colors, reset=True):
                            setcolor(Style.RESET_ALL))
 
 
+# TODO: use a Bunch to support `clear` and `update`?
 class ColorScheme:
     """The color scheme for terminal output in `mcpyrate`'s debug utilities.
 
@@ -107,6 +108,9 @@ class ColorScheme:
 
     # ------------------------------------------------------------
     # format_bindings, step_expansion, StepExpansion
+
+    # TODO: Clean the implementations to use `_RESET` at the appropriate points
+    # TODO: so we don't need to specify things `Fore.RESET` or `Style.NORMAL` here.
 
     HEADING = (Style.BRIGHT, Fore.LIGHTBLUE_EX)
     SOURCEFILENAME = (Style.BRIGHT, Fore.RESET)
