@@ -18,16 +18,10 @@ from .unparser import unparse
 from .utils import gensym, NestingLevelTracker
 
 
-# TODO: remove all manually inserted `ctx` now that the expander auto-fills them.
-
 def _mcpyrate_quotes_attr(attr):
     """Create an AST that, when compiled and run, looks up `mcpyrate.quotes.attr` in `Load` context."""
-    mcpyrate_quotes_module = ast.Attribute(value=ast.Name(id="mcpyrate", ctx=ast.Load()),
-                                           attr="quotes",
-                                           ctx=ast.Load())
-    return ast.Attribute(value=mcpyrate_quotes_module,
-                         attr=attr,
-                         ctx=ast.Load())
+    mcpyrate_quotes_module = ast.Attribute(value=ast.Name(id="mcpyrate"), attr="quotes")
+    return ast.Attribute(value=mcpyrate_quotes_module, attr=attr)
 
 
 class QuasiquoteMarker(ASTMarker):
@@ -337,8 +331,7 @@ def astify(x, expander=None):  # like `macropy`'s `ast_repr`
             # name conflicts at the use site of `q[]`.
             fields = [ast.keyword(a, recurse(b)) for a, b in ast.iter_fields(x)]
             node = ast.Call(ast.Attribute(value=_mcpyrate_quotes_attr('ast'),
-                                          attr=x.__class__.__name__,
-                                          ctx=ast.Load()),
+                                          attr=x.__class__.__name__),
                             [],
                             fields)
             # Copy source location info for correct coverage reporting of a quoted block.
