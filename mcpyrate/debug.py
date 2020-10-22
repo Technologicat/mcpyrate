@@ -126,14 +126,14 @@ def show_bindings(tree, *, syntax, expander, **kw):
     """
     if syntax != "name":
         raise SyntaxError("`show_bindings` is an identifier macro only")
-    print(format_bindings(expander, color=True), file=stderr)
+    print(format_bindings(expander, globals_too=False, color=True), file=stderr)
     return None
 
 
-def format_bindings(expander, *, color=False):
+def format_bindings(expander, *, globals_too=False, color=False):
     """Return a human-readable report of the macro bindings currently seen by `expander`.
 
-    Global bindings (across all expanders) are also included.
+    If `globals_too=True`, global bindings (across all expanders) are also included.
 
     If `color=True`, colorize the output for printing into a terminal.
 
@@ -150,13 +150,14 @@ def format_bindings(expander, *, color=False):
 
     c, CS = maybe_setcolor, ColorScheme
 
+    bindings = expander.bindings if globals_too else expander.local_bindings
     with io.StringIO() as output:
         output.write(f"{c(CS.HEADING)}Macro bindings for {c(CS.SOURCEFILENAME)}{expander.filename}{c(CS.HEADING)}:{c(CS._RESET)}\n")
-        if not expander.bindings:
+        if not bindings:
             output.write(maybe_colorize("    <no bindings>\n",
                                         ColorScheme.GREYEDOUT))
         else:
-            for k, v in sorted(expander.bindings.items()):
+            for k, v in sorted(bindings.items()):
                 k = maybe_colorize(k, ColorScheme.MACROBINDING)
                 output.write(f"    {k}: {format_macrofunction(v)}\n")
         return output.getvalue()
