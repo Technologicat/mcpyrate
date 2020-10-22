@@ -54,11 +54,34 @@ The operators:
 
    By default, any names in the quasiquoted code remain exactly as they appear.
 
- - `h[expr]`, appearing inside a `q[]`, is the value of the expression `expr` at
-   the macro *definition* site. The result of evaluating `expr` is allowed to
-   be any run-time value, as long as it is picklable.
+ - `h[expr]`, appearing inside a `q[]`, captures the value of the expression
+   `expr` at the macro *definition* site, and makes the expansion use the
+   captured value.
 
-   (We use `pickle` to support bytecode caching for hygienically unquoted values.)
+   The result of evaluating `expr` is allowed to be any run-time value, as
+   long as it is picklable. We use `pickle` to support bytecode caching for
+   hygienically unquoted values.
+
+   Alternatively, if `expr` is the name of a macro bound in the current
+   expander, that macro is captured. This allows macros in scope at the use site
+   of `q` to be hygienically propagated out to the use site of the macro that
+   uses `q`. So you can write macros that `q[h[macroname][...]]`, and `macroname`
+   doesn't have to be macro-imported wherever that code gets spliced in.
+
+   Note hygienic macro capture must be asked for explicitly, and it is not
+   recursive. Only the macro explicitly tagged `h[macroname][...]` will be
+   captured hygienically; any macro invocations in its output will not be.
+
+   The main use case of `h[]` is to safely (*hygienically*) refer to a function
+   or a macro that is in scope at the macro *definition* site, so that you can be
+   sure that when the macro expansion is spliced in at the macro *use* site, the
+   expanded code will call the function you meant, and not some other function
+   that just happens to have the same name at the macro use site. Hygienic
+   unquoting also means that the macro use site *does not need to import* the
+   thing being referred to.
+
+   The value is frozen once (by pickling) at the macro definition site, and each
+   use site gets a fresh copy of the value.
 
  - `u[expr]`, appearing inside a `q[]`, is the value of the expression `expr` at
    the macro definition site.
@@ -70,13 +93,16 @@ The operators:
 
    In cases where that's all you need, prefer `u[]`; it's cheaper than `h[]`.
 
- - `n[expr]`, appearing inside a `q[]`, is a lexical identifier, with its name
-   determined by evaluating the expression `expr` at the macro definition site.
+ - `n[expr]`, appearing inside a `q[]`, is an access to a variable, determined
+   by parsing the expression `expr`, at the macro definition site, as Python
+   source code.
 
    `expr` must evaluate to a string.
 
-   With this, you can compute a name (e.g. by `mcpyrate.gensym`) and then use it as
-   an identifier in quasiquoted code.
+   With this, you can compute a name (e.g. by `mcpyrate.gensym`) and then use it
+   as an identifier in quasiquoted code. The `n[]` operator also works with
+   attribute accesses and subscript expressions, so you can also do things like
+   `n[f"self.{x}"]` and `n[f"kitties[{j}].paws[{k}].claws"]`.
 
  - `a[tree]`, appearing inside a `q[]`, is the AST stored in the variable `tree`
    at the macro definition site. It's the same as just `tree` outside any `q[]`.
@@ -102,7 +128,8 @@ Finally, observe that:
    `x` at the macro use site. It's the same as just `x` inside the same `q[]`.
 
    This is a useless use of `n[]`. The reason `n[]` exists at all is that the
-   argument may be a variable.
+   argument can be the result of a computation performed at the macro definition
+   site.
 
    Using `n[]` to name-unquote a string literal does shut up flake8 concerning
    the "undefined" name `x`, but for that use case, we recommend `# noqa: F821`.
