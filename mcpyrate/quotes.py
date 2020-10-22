@@ -37,11 +37,13 @@ class Unquote(QuasiquoteMarker):
 
 
 class LiftIdentifier(QuasiquoteMarker):
-    """Perform string to lexical variable conversion on given subtree. Emitted by `n[]`.
+    """Perform string to variable access conversion on given subtree. Emitted by `n[]`.
 
     Details: convert the string the given subtree evaluates to, at the use site
-    of `q`, into the lexical variable or attribute access the text of the string
-    represents, when it is interpreted as Python source code.
+    of `q`, into the variable access the text of the string represents, when it
+    is interpreted as Python source code.
+
+    (This allows computing the name to be accessed.)
     """
     pass
 
@@ -79,11 +81,8 @@ class Capture(QuasiquoteMarker):  # like `macropy`'s `Captured`
 
 # Unquote doesn't have its own function here, because it's a special case of `astify`.
 
-def lift_identifier(value):
-    """Lift a string into a lexical variable or attribute access. Run-time part of `n[]`.
-
-    `value` must be a string, which is either a valid identifier, or a dotted
-    name with each part an identifier.
+def lift_identifier(value, filename="<unknown>"):
+    """Lift a string into a variable access. Run-time part of `n[]`.
 
     Examples::
 
@@ -93,19 +92,14 @@ def lift_identifier(value):
         lift_identifier("kitty.tail.color") -> Attribute(value=Attribute(value=Name(id='kitty'),
                                                                          attr='tail'),
                                                          attr='color')
+
+    Works with subscript expressions, too::
+
+        lift_identifier("kitties[3].paws[2].claws")
     """
     if not isinstance(value, str):
         raise TypeError(f"n[]: expected an expression that evaluates to str, result was {type(value)} with value {repr(value)}")
-    path = value.split(".")
-    if not all(component.isidentifier() for component in path):
-        raise ValueError(f"n[]: expected an identifier or a dotted name with each part an identifier, got {repr(value)}")
-    # TODO: Add support for subscripting so we can do things like `outer[3].inner.a`.
-    # e.g. `obj`, `obj.a`, `(outer.inner).a`, `((outer.middle).inner).a`
-    thing, *path = path
-    result = ast.Name(id=thing)
-    for attr in path:
-        result = ast.Attribute(value=result, attr=attr)
-    return result
+    return ast.parse(value, filename=filename, mode="eval").body
 
 
 def ast_literal(tree):
@@ -267,7 +261,11 @@ def astify(x, expander=None):  # like `macropy`'s `ast_repr`
         elif T is LiftIdentifier:  # `n[]`
             # Delay the identifier lifting, so it runs at the use site of `q`,
             # where the actual value of `x.body` becomes available.
-            return ast.Call(_mcpyrate_quotes_attr('lift_identifier'), [x.body], [])
+            filename = expander.filename if expander else "<unknown>"
+            return ast.Call(_mcpyrate_quotes_attr('lift_identifier'),
+                            [x.body,
+                             ast.Constant(value=filename)],
+                            [])
 
         elif T is ASTLiteral:  # `a[]`
             # Pass through this subtree as-is, but typecheck the argument
@@ -488,7 +486,7 @@ def u(tree, *, syntax, expander, **kw):
 
 
 def n(tree, *, syntax, expander, **kw):
-    """[syntax, expr] name-unquote. Splice a string, lifted into a lexical identifier, into a quasiquote.
+    """[syntax, expr] name-unquote. In a quasiquote, lift a string into a variable access.
 
     Examples::
 
@@ -498,10 +496,14 @@ def n(tree, *, syntax, expander, **kw):
         `n["kitty." + x]` refers to an attribute of the variable `kitty`, where the attribute
                           is determined by the value of the variable `x` at the use site of `q`.
 
+    Works with subscript expressions, too::
+
+        `n[f"kitties[{j}].paws[{k}].claws"]`
+
     Any expression can be used, as long as it evaluates to a string containing
     only valid identifiers and dots. This is checked when the use site of `q` runs.
 
-    The resulting node's `ctx` is filled in automatically by the macro expander later.
+    The correct `ctx` for the use site is filled in automatically by the macro expander later.
     """
     if syntax != "expr":
         raise SyntaxError("`n` is an expr macro only")
