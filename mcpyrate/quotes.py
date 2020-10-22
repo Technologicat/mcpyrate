@@ -89,10 +89,10 @@ def lift_identifier(value):
 
         lift_identifier("kitty") -> Name(id='kitty')
         lift_identifier("kitty.tail") -> Attribute(value=Name(id='kitty'),
-                                                     attr='tail')
+                                                   attr='tail')
         lift_identifier("kitty.tail.color") -> Attribute(value=Attribute(value=Name(id='kitty'),
-                                                                           attr='tail'),
-                                                           attr='color')
+                                                                         attr='tail'),
+                                                         attr='color')
     """
     if not isinstance(value, str):
         raise TypeError(f"n[]: expected an expression that evaluates to str, result was {type(value)} with value {repr(value)}")
