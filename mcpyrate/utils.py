@@ -1,7 +1,7 @@
 # -*- coding: utf-8; -*-
 '''General utilities. Can be useful for writing both macros as well as macro expanders.'''
 
-__all__ = ['gensym', 'flatten_suite', 'rename',
+__all__ = ['gensym', 'flatten', 'flatten_suite', 'rename',
            'format_location', 'format_macrofunction',
            'NestingLevelTracker']
 
@@ -33,6 +33,18 @@ def gensym(basename=None):
     return sym
 
 
+def flatten(lst, *, recursive=True):
+    """Flatten a nested list."""
+    out = []
+    for elt in lst:
+        if isinstance(elt, list):
+            sublst = flatten(elt) if recursive else elt
+            out.extend(sublst)
+        elif elt is not None:
+            out.append(elt)
+    return out
+
+
 def flatten_suite(lst):
     """Flatten a statement suite (by one level).
 
@@ -41,12 +53,7 @@ def flatten_suite(lst):
     an empty list, return `None`. (This matches the AST representation
     of statement suites.)
     """
-    out = []
-    for elt in lst:
-        if isinstance(elt, list):
-            out.extend(elt)
-        elif elt is not None:
-            out.append(elt)
+    out = flatten(lst, recursive=False)
     return out if out else None
 
 
