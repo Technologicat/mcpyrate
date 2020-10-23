@@ -1,7 +1,7 @@
 # -*- coding: utf-8; -*-
 """Quasiquotes. Build ASTs in your macros, using syntax that mostly looks like regular code."""
 
-__all__ = ['lift_identifier',
+__all__ = ['lift_sourcecode',
            'capture_value', 'capture_macro',
            'astify', 'unastify',
            'q', 'u', 'n', 'a', 's', 'h',
@@ -12,7 +12,7 @@ import ast
 import pickle
 
 from .core import global_bindings
-from .expander import MacroExpander
+from .expander import MacroExpander, isnamemacro
 from .markers import ASTMarker, get_markers
 from .unparser import unparse
 from .utils import gensym, NestingLevelTracker
@@ -36,14 +36,10 @@ class Unquote(QuasiquoteMarker):
     pass
 
 
-class LiftIdentifier(QuasiquoteMarker):
-    """Perform string to variable access conversion on given subtree. Emitted by `n[]`.
+class LiftSourcecode(QuasiquoteMarker):
+    """Parse a string as a Python expression, interpolate the resulting AST. Emitted by `n[]`.
 
-    Details: convert the string the given subtree evaluates to, at the use site
-    of `q`, into the variable access the text of the string represents, when it
-    is interpreted as Python source code.
-
-    (This allows computing the name to be accessed.)
+    This allows e.g. computing a lexical variable name to be accessed.
     """
     pass
 
@@ -81,21 +77,21 @@ class Capture(QuasiquoteMarker):  # like `macropy`'s `Captured`
 
 # Unquote doesn't have its own function here, because it's a special case of `astify`.
 
-def lift_identifier(value, filename="<unknown>"):
-    """Lift a string into a variable access. Run-time part of `n[]`.
+def lift_sourcecode(value, filename="<unknown>"):
+    """Parse a string as a Python expression. Run-time part of `n[]`.
 
     Examples::
 
-        lift_identifier("kitty") -> Name(id='kitty')
-        lift_identifier("kitty.tail") -> Attribute(value=Name(id='kitty'),
+        lift_sourcecode("kitty") -> Name(id='kitty')
+        lift_sourcecode("kitty.tail") -> Attribute(value=Name(id='kitty'),
                                                    attr='tail')
-        lift_identifier("kitty.tail.color") -> Attribute(value=Attribute(value=Name(id='kitty'),
+        lift_sourcecode("kitty.tail.color") -> Attribute(value=Attribute(value=Name(id='kitty'),
                                                                          attr='tail'),
                                                          attr='color')
 
     Works with subscript expressions, too::
 
-        lift_identifier("kitties[3].paws[2].claws")
+        lift_sourcecode("kitties[3].paws[2].claws")
     """
     if not isinstance(value, str):
         raise TypeError(f"n[]: expected an expression that evaluates to str, result was {type(value)} with value {repr(value)}")
@@ -258,11 +254,11 @@ def astify(x, expander=None):  # like `macropy`'s `ast_repr`
             # `ast.Call` to delay until run-time, and pass in `x.body` as-is.
             return ast.Call(_mcpyrate_quotes_attr("astify"), [x.body], [])
 
-        elif T is LiftIdentifier:  # `n[]`
+        elif T is LiftSourcecode:  # `n[]`
             # Delay the identifier lifting, so it runs at the use site of `q`,
             # where the actual value of `x.body` becomes available.
             filename = expander.filename if expander else "<unknown>"
-            return ast.Call(_mcpyrate_quotes_attr('lift_identifier'),
+            return ast.Call(_mcpyrate_quotes_attr('lift_sourcecode'),
                             [x.body,
                              ast.Constant(value=filename)],
                             [])
@@ -435,13 +431,6 @@ def unastify(tree):
 
 _quotelevel = NestingLevelTracker()
 
-def _unquote_expand(tree, expander):
-    """Expand quasiquote macros in `tree`. If quotelevel is zero, expand all macros in `tree`."""
-    if _quotelevel.value == 0:
-        tree = expander.visit(tree)
-    else:
-        tree = _expand_quasiquotes(tree, expander)
-
 def _expand_quasiquotes(tree, expander):
     """Expand quasiquote macros only."""
     # Use a second expander instance, with different bindings. Copy only the
@@ -450,6 +439,16 @@ def _expand_quasiquotes(tree, expander):
     # thus leaving them alone.
     bindings = {k: v for k, v in expander.bindings.items() if v in (q, u, n, a, s, h)}
     return MacroExpander(bindings, expander.filename).visit(tree)
+
+def _unquote(tree, syntax, expander, macroname, makemarker):
+    """Expand an unquote macro. Unquotes are expr macros that expand to AST markers."""
+    if syntax != "expr":
+        raise SyntaxError(f"`{macroname}` is an expr macro only")
+    if _quotelevel.value < 1:
+        raise SyntaxError(f"`{macroname}` encountered while quotelevel < 1")
+    with _quotelevel.changed_by(-1):
+        tree = expander.visit_recursively(tree)
+        return makemarker(tree)
 
 
 def q(tree, *, syntax, expander, **kw):
@@ -476,64 +475,41 @@ def u(tree, *, syntax, expander, **kw):
 
     The value is lifted into an AST that re-constructs that value.
     """
-    if syntax != "expr":
-        raise SyntaxError("`u` is an expr macro only")
-    if _quotelevel.value < 1:
-        raise SyntaxError("`u` encountered while quotelevel < 1")
-    with _quotelevel.changed_by(-1):
-        _unquote_expand(tree, expander)
-        return Unquote(tree)
+    return _unquote(tree, syntax, expander, "u", Unquote)
 
 
 def n(tree, *, syntax, expander, **kw):
-    """[syntax, expr] name-unquote. In a quasiquote, lift a string into a variable access.
+    """[syntax, expr] name-unquote. Parse a string, as Python source code, into an AST.
 
-    Examples::
+    With `n[]`, you can e.g. compute a name (e.g. by `mcpyrate.gensym`) for a
+    variable and then use that variable in quasiquoted code - also as an assignment
+    target. Things like `n[f"self.{x}"]` and `n[f"kitties[{j}].paws[{k}].claws"]`
+    are also valid.
 
-        `n["kitty"]` refers to the variable `kitty`,
-        `n[x]` refers to the variable whose name is taken from the variable `x` (at the use site of `q`),
-        `n["kitty.tail"]` refers to the attribute `tail` of the variable `kitty`,
-        `n["kitty." + x]` refers to an attribute of the variable `kitty`, where the attribute
-                          is determined by the value of the variable `x` at the use site of `q`.
+    The use case this operator was designed for is variable access (identifiers,
+    attributes, subscripts, in any syntactically allowed nested combination) with
+    computed names, but who knows what else can be done with it?
 
-    Works with subscript expressions, too::
+    The correct `ctx` is filled in automatically by the macro expander later.
 
-        `n[f"kitties[{j}].paws[{k}].claws"]`
+    See also `n[]`'s sister, `a[]`.
 
-    Any expression can be used, as long as it evaluates to a string containing
-    only valid identifiers and dots. This is checked when the use site of `q` runs.
-
-    The correct `ctx` for the use site is filled in automatically by the macro expander later.
+    Generalized from `macropy`'s `n`, which converts a string into a variable access.
     """
-    if syntax != "expr":
-        raise SyntaxError("`n` is an expr macro only")
-    if _quotelevel.value < 1:
-        raise SyntaxError("`n` encountered while quotelevel < 1")
-    with _quotelevel.changed_by(-1):
-        _unquote_expand(tree, expander)
-        return LiftIdentifier(tree)
+    return _unquote(tree, syntax, expander, "n", LiftSourcecode)
 
 
 def a(tree, *, syntax, expander, **kw):
-    """[syntax, expr] AST-unquote. Splice an AST into a quasiquote."""
-    if syntax != "expr":
-        raise SyntaxError("`a` is an expr macro only")
-    if _quotelevel.value < 1:
-        raise SyntaxError("`a` encountered while quotelevel < 1")
-    with _quotelevel.changed_by(-1):
-        _unquote_expand(tree, expander)
-        return ASTLiteral(tree)
+    """[syntax, expr] AST-unquote. Splice an AST into a quasiquote.
+
+    See also `a[]`'s sister, `n[]`.
+    """
+    return _unquote(tree, syntax, expander, "a", ASTLiteral)
 
 
 def s(tree, *, syntax, expander, **kw):
     """[syntax, expr] list-unquote. Splice a `list` of ASTs, as an `ast.List`, into a quasiquote."""
-    if syntax != "expr":
-        raise SyntaxError("`s` is an expr macro only")
-    if _quotelevel.value < 1:
-        raise SyntaxError("`s` encountered while quotelevel < 1")
-    with _quotelevel.changed_by(-1):
-        _unquote_expand(tree, expander)
-        return ASTList(tree)
+    return _unquote(tree, syntax, expander, "s", ASTList)
 
 
 def h(tree, *, syntax, expander, **kw):
@@ -554,13 +530,27 @@ def h(tree, *, syntax, expander, **kw):
     Supports also macros. To hygienically splice a macro invocation,
     `h[]` only the macro name.
     """
+    # Almost fits into the generic template for an unquote macro, but we
+    # need to produce a name for the `Capture`, and detect if the thing
+    # being captured is a name macro.
     if syntax != "expr":
-        raise SyntaxError("`h` is an expr macro only")
+        raise SyntaxError(f"`h` is an expr macro only")
     if _quotelevel.value < 1:
-        raise SyntaxError("`h` encountered while quotelevel < 1")
+        raise SyntaxError(f"`h` encountered while quotelevel < 1")
     with _quotelevel.changed_by(-1):
         name = unparse(tree)
-        _unquote_expand(tree, expander)
+
+        # Expand macros in the unquoted expression. The only case we need to
+        # look out for is a `@namemacro` if we have a `h[macroname]`. We're
+        # just capturing it, so don't expand it just yet.
+        expand = True
+        if type(tree) is ast.Name:
+            function = expander.isbound(tree.id)
+            if function and isnamemacro(function):
+                expand = False
+
+        if expand:
+            tree = expander.visit_recursively(tree)
         return Capture(tree, name)
 
 # --------------------------------------------------------------------------------
@@ -599,7 +589,9 @@ def expand1(tree, *, syntax, expander, **kw):
 
     The result remains in quasiquoted form.
 
-    Like calling `expander.visit_once(tree)`, but for quasiquoted `tree`.
+    Like calling `expander.visit_once(tree)`, but for quasiquoted `tree`,
+    and already at macro expansion time. Convenient for interactively expanding
+    macros in quoted trees in the REPL.
 
     `tree` must be a quasiquoted AST; i.e. output from, or an invocation of,
     `q`, `expand1q`, `expandq`, `expand1`, or `expand`. Passing any other AST
@@ -631,7 +623,9 @@ def expand(tree, *, syntax, expander, **kw):
 
     The result remains in quasiquoted form.
 
-    Like calling `expander.visit_recursively(tree)`, but for quasiquoted `tree`.
+    Like calling `expander.visit_recursively(tree)`, but for quasiquoted `tree`,
+    and already at macro expansion time. Convenient for interactively expanding
+    macros in quoted trees in the REPL.
 
     `tree` must be a quasiquoted AST; i.e. output from, or an invocation of,
     `q`, `expand1q`, `expandq`, `expand1`, or `expand`. Passing any other AST
