@@ -61,6 +61,10 @@ Supports Python 3.6, 3.7, 3.8, and PyPy3.
   - Correct statement coverage from tools such as [`Coverage.py`](https://github.com/nedbat/coveragepy/).
   - Macro expansion errors are reported at macro expansion time, with use site traceback.
   - Debug output with a step-by-step expansion breakdown. See macro `mcpyrate.debug.step_expansion`.
+    - Has both expr and block modes. Use `step_expansion[...]` or `with step_expansion` as appropriate.
+    - The output is **syntax-highlighted**, and **line-numbered** based on `lineno` fields from the AST.
+      - Also names of macros currently bound in the expander are highlighted by `step_expansion`.
+    - The invisible nodes `ast.Module` and `ast.Expr` are shown, since especially `ast.Expr` is a common trap for the unwary.
   - Manual expand-once. See `expander.visit_once`; get the `expander` as a named argument of your macro.
 - **Dialects, i.e. whole-module source and AST transforms**.
   - Think [Racket's](https://racket-lang.org/) `#lang`, but for Python.
@@ -224,7 +228,7 @@ import module
 
 Even if the original macro-import was relative, the transformed import is always resolved to an absolute one, based on `sys.path`, like Python itself does. If the import cannot be resolved, it is a macro-expansion-time error. (Not just because of this; the import must resolve successfully, so that the expander can find the macro functions.)
 
-This macro-import transformation is part of the public API. If the expanded form of your macro needs to refer to `thing` that exists in (whether is defined in, or has been imported to) the global, top-level scope of the module where the macro definition lives, you can just refer to `module.thing` in your expanded code. This is the `mcpyrate` equivalent of `macropy`'s `unhygienic_expose` mechanism.
+This macro-import transformation is part of the public API. If the expanded form of your macro needs to refer to `thing` that exists in (whether is defined in, or has been imported to) the global, top-level scope of the module where the macro definition lives, you can just refer to `module.thing` in your expanded code. This is the `mcpyrate` equivalent of `macropy`'s `expose_unhygienic` mechanism.
 
 If your expansion needs to refer to some other value from the macro definition site (including local and nonlocal variables, and imported macros), see [the quasiquote system](quasiquotes.md), specifically the `h[]` (hygienic-unquote) operator.
 
@@ -333,17 +337,25 @@ def log(expr, **kw):
     return q[print(u[label], a[expr])]
 ```
 
-Here `q[]` quasiquotes an expression, `u[]` unquotes a simple value, and `a[]` unquotes an expression AST. If you're worried that `print` may refer to something else at the use site of `log[]`, you can hygienically unquote the function name with `h[]`: `q[h[print](u[label], a[expr])]`.
+Here `q[]` quasiquotes an expression, `u[]` unquotes a simple value, and `a[]` unquotes an expression AST. If you're worried that `print` may refer to something else at the use site of `log[]`, you can hygienically capture the function with `h[]`: `q[h[print](u[label], a[expr])]`.
 
 #### Differences to `macropy`
 
-By default, in `mcpyrate`, macros in quasiquoted code are not expanded when the quasiquote itself expands. We provide macros to perform expansion in quoted code, to give you control. See `mcpyrate.quotes.expand` and `mcpyrate.quotes.expand1`.
+By default, in `mcpyrate`, macros in quasiquoted code are not expanded when the quasiquote itself expands. 
 
-In `mcpyrate`, there is **just one *quote* operator**, `q[]`, although just like in `macropy`, there are several different *unquote* operators, depending on what you want to do.
+In `mcpyrate`, all quote and unquote operators have single-character names by default: `q`, `u`, `n`, `a`, `s`, `h`. Of these, `q` and `u` are as in `macropy`, the operator `n` corresponds to `name`, `a` to `ast_literal`, and `s` to `ast_list`.
 
-For [macro hygiene](https://en.wikipedia.org/wiki/Hygienic_macro), we provide a **hygienic unquote** operator, `h[]`. So instead of implicitly hygienifying all `Name` nodes inside a `hq[]` like `macropy` does, `mcpyrate` instead expects the user to use the regular `q[]`, and explicitly say which subexpressions to hygienify, by unquoting each of those separately with `h[]`.
+In `mcpyrate`, there is **just one *quote* operator**, `q[]`, although just like in `macropy`, there are several different *unquote* operators, depending on what you want to do. In `mcpyrate`, there is no `unhygienic`, because there is no separate `hq`.
 
-In `mcpyrate`, also macro names can be unquoted hygienically. Doing this registers a macro binding, with a uniqified name. This allows the expanded code of your macro to hygienically invoke a macro imported to your macro definition site (and leave that invocation unexpanded, for the expander to handle later), without requiring the use site of your macro to import that macro.
+For [macro hygiene](https://en.wikipedia.org/wiki/Hygienic_macro), we provide a **hygienic unquote** operator, `h[]`. So instead of implicitly hygienifying all `Name` nodes inside a `hq[]` like `macropy` does, `mcpyrate` instead expects the user to use the regular `q[]`, and explicitly say which subexpressions to hygienify, by unquoting each of those separately with `h[]`. The hygienic unquote operator captures expressions by snapshotting a value; it does not care about names, except for human-readable output.
+
+In `mcpyrate`, also macro names can be captured hygienically.
+
+In `mcpyrate`, there is no `expose_unhygienic`, and no names are reserved for the macro system. (You can call a variable `ast` if you want, and it won't shadow anything important.)
+
+The `expose_unhygienic` mechanism is not needed, because in `mcpyrate`, each macro-import is transformed into a regular import of the module the macros are imported from. So the macros can refer to anything in the top-level namespace of their module as attributes of that module object. (As usual in Python, this includes any imports. For example, `mcpyrate.quotes` refers to the stdlib `ast` module in the macro expansions as `mcpyrate.quotes.ast` for this reason.)
+
+In `mcpyrate`, the `n[]` operator is a wrapper for `ast.parse`, so it will lift any source code that represents an expression, not only lexical variable references.
 
 
 ### Get the source of an AST
@@ -453,7 +465,7 @@ For example, a *let* macro invoked as `let[x << 1, y << 2][...]` could alternati
 
 #### Differences to `macropy`
 
-In `mcpyrate`, macro arguments are passed using brackets, e.g. `macroname[arg0, ...][expr]`. This syntax looks macro-like, as well as makes it explicit that macro arguments are positional-only.
+In `mcpyrate`, macro arguments are passed using brackets, e.g. `macroname[arg0, ...][expr]`. This syntax looks macropythonic, as well as makes it explicit that macro arguments are positional-only.
 
 In `mcpyrate`, macros must explicitly opt in to accept arguments. This makes it easier to implement macros that don't need arguments (which is a majority of all macros), since then you don't need to worry about `args` (it's guaranteed to be empty).
 
@@ -566,7 +578,7 @@ If you want to force all of your code to be macro-expanded again, delete your by
 
 Normally there is no need to delete bytecode caches manually.
 
-However, there is an edge case. If you hygienically unquote a value that was imported (to the macro definition site) from another module, and that other module is not a macro-dependency, then - if the class definition of the hygienically stored value changes on disk, that is not detected.
+However, there is an edge case. If you hygienically capture a value that was imported (to the macro definition site) from another module, and that other module is not a macro-dependency, then - if the class definition of the hygienically captured value changes on disk, that is not detected.
 
 This can be a problem, because hygienic value storage uses `pickle`, which in order to unpickle the value, expects to be able to load the original (or at least a data-compatible) class definition from the same place where it was defined when the value was pickled. If this happens, then delete the bytecode cache (`.pyc`) files, and the program should work again once the macros re-expand.
 
