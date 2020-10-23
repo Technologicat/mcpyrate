@@ -11,6 +11,7 @@ from ast import (Load, Store, Del,
                  withitem,
                  Delete,
                  iter_child_nodes)
+from copy import copy
 
 from .walker import Walker
 
@@ -23,18 +24,31 @@ except ImportError:
 
 
 class _CtxFixer(Walker):
-    def __init__(self):
+    def __init__(self, *, copy_seen_nodes):
         super().__init__(ctxclass=Load)
+        self.copy_seen_nodes = copy_seen_nodes
+
+    def reset(self, **bindings):
+        super().reset(**bindings)
+        self._seen = set()
 
     def transform(self, tree):
-        self._fix_one(tree)
+        tree = self._fix_one(tree)
         self._setup_subtree_contexts(tree)
         return self.generic_visit(tree)
 
     def _fix_one(self, tree):
         '''Fix one `ctx` attribute, using the currently active ctx class.'''
         if "ctx" in type(tree)._fields:
+            if self.copy_seen_nodes:
+                # Shallow-copy `tree` if already seen. This mode is used in the
+                # global postprocess pass. Note only nodes whose `ctx` we have
+                # already updated are considered seen.
+                if id(tree) in self._seen:
+                    tree = copy(tree)
             tree.ctx = self.state.ctxclass()
+            self._seen.add(id(tree))
+        return tree
 
     def _setup_subtree_contexts(self, tree):
         '''Autoselect correct `ctx` class for subtrees of `tree`.'''
@@ -84,12 +98,18 @@ class _CtxFixer(Walker):
             self.withstate(tree.targets, ctxclass=Del)
 
 
-def fix_ctx(tree):
+def fix_ctx(tree, *, copy_seen_nodes):
     '''Fix `ctx` attributes in `tree`.
+
+    If `copy_seen_nodes=True`, then, if the same AST node instance appears
+    multiple times, and the node requires a `ctx`, shallow-copy it the second
+    and further times it is encountered. This prevents problems if the same
+    node instance has been spliced into two or more positions that require
+    different `ctx`.
 
     Modifies `tree` in-place. For convenience, returns the modified `tree`.
     '''
-    return _CtxFixer().visit(tree)
+    return _CtxFixer(copy_seen_nodes=copy_seen_nodes).visit(tree)
 
 
 def fix_locations(tree, reference_node, *, mode):
