@@ -4,10 +4,20 @@
 __all__ = ["setcolor", "colorize", "ColorScheme",
            "Fore", "Back", "Style"]
 
-from colorama import init as colorama_init, Fore, Back, Style
+no_colorama = False
+try:
+    from colorama import init as colorama_init, Fore, Back, Style
+except ImportError:  # pragma: no cover
+    no_colorama = True
 
+if no_colorama:
+    class Fore(object):
+        YELLOW = CYAN = LIGHTBLUE_EX = RESET = GREEN = BLUE = ''
 
-colorama_init()
+    class Style(object):
+        BRIGHT = DIM = RESET_ALL = NORMAL = ''
+else:
+    colorama_init()
 
 
 def setcolor(*colors):
