@@ -18,121 +18,30 @@ Build ASTs in your macros, using syntax that mostly looks like regular code.
 **Table of Contents**
 
 - [Quasiquotes](#quasiquotes)
-    - [Quick reference](#quick-reference)
-    - [Full reference](#full-reference)
     - [Introduction to quasiquoting](#introduction-to-quasiquoting)
         - [Avoiding name conflicts at the macro use site](#avoiding-name-conflicts-at-the-macro-use-site)
             - [`gensym`](#gensym)
             - [Macro hygiene](#macro-hygiene)
+            - [Macro hygiene without quasiquotes](#macro-hygiene-without-quasiquotes)
             - [Advanced uses of non-hygienic quasiquoting](#advanced-uses-of-non-hygienic-quasiquoting)
+    - [Reference manual](#reference-manual)
+        - [`q`: quasiquote](#q-quasiquote)
+        - [`u`: unquote](#u-unquote)
+        - [`n`: name-unquote](#n-name-unquote)
+        - [`a`: AST-unquote](#a-ast-unquote)
+        - [`s`: AST-list-unquote](#s-ast-list-unquote)
+        - [`h`: hygienic-unquote](#h-hygienic-unquote)
+            - [Hygienically captured run-time values](#hygienically-captured-run-time-values)
+            - [Hygienically captured macros](#hygienically-captured-macros)
+        - [General](#general)
+    - [Notes](#notes)
         - [Difference between `h[]` and `u[]`](#difference-between-h-and-u)
-    - [For Common Lispers](#for-common-lispers)
-    - [Python vs. Lisp](#python-vs-lisp)
-    - [Differences to `macropy`](#differences-to-macropy)
+        - [Differences to Common Lisp](#differences-to-common-lisp)
+        - [Differences to `macropy`](#differences-to-macropy)
+            - [In usage](#in-usage)
+            - [In implementation](#in-implementation)
 
 <!-- markdown-toc end -->
-
-
-## Quick reference
-
-  - `q` quasiquote,
-  - `u` value-unquote,
-  - `n` name-unquote,
-  - `a` AST-unquote,
-  - `s` AST-list-unquote,
-  - `h` hygienic-unquote.
-
-
-## Full reference
-
-Here *macro definition site* and *macro use site* refer to those sites for the
-macro in whose implementation `q` is used to construct (part of) the output AST.
-
-The operators:
-
- - `q[expr]` is the expression `expr`, lifted into an AST.
-
-   By default, any names in the quasiquoted code remain exactly as they appear.
-
- - `h[expr]`, appearing inside a `q[]`, captures the value of the expression
-   `expr` at the macro *definition* site, and makes the expansion use the
-   captured value.
-
-   The result of evaluating `expr` is allowed to be any run-time value, as
-   long as it is picklable. We use `pickle` to support bytecode caching for
-   hygienically unquoted values.
-
-   Alternatively, if `expr` is the name of a macro bound in the current
-   expander, that macro is captured. This allows macros in scope at the use site
-   of `q` to be hygienically propagated out to the use site of the macro that
-   uses `q`. So you can write macros that `q[h[macroname][...]]`, and `macroname`
-   doesn't have to be macro-imported wherever that code gets spliced in.
-
-   Note hygienic macro capture must be asked for explicitly, and it is not
-   recursive. Only the macro explicitly tagged `h[macroname][...]` will be
-   captured hygienically; any macro invocations in its output will not be.
-
-   The main use case of `h[]` is to safely (*hygienically*) refer to a function
-   or a macro that is in scope at the macro *definition* site, so that you can be
-   sure that when the macro expansion is spliced in at the macro *use* site, the
-   expanded code will call the function you meant, and not some other function
-   that just happens to have the same name at the macro use site. Hygienic
-   unquoting also means that the macro use site *does not need to import* the
-   thing being referred to.
-
-   The value is frozen once (by pickling) at the macro definition site, and each
-   use site gets a fresh copy of the value.
-
- - `u[expr]`, appearing inside a `q[]`, is the value of the expression `expr` at
-   the macro definition site.
-
-   The result of evaluating `expr` must be a constant (number, string, bytes,
-   boolean or None), a built-in container (`list`, `dict` or `set`) containing
-   only constants, or a tree built out of multiple levels of such containers,
-   where all leaves are constants.
-
-   In cases where that's all you need, prefer `u[]`; it's cheaper than `h[]`.
-
- - `n[expr]`, appearing inside a `q[]`, is an access to a variable, determined
-   by parsing the expression `expr`, at the macro definition site, as Python
-   source code.
-
-   `expr` must evaluate to a string.
-
-   With this, you can compute a name (e.g. by `mcpyrate.gensym`) and then use it
-   as an identifier in quasiquoted code. The `n[]` operator also works with
-   attribute accesses and subscript expressions, so you can also do things like
-   `n[f"self.{x}"]` and `n[f"kitties[{j}].paws[{k}].claws"]`.
-
- - `a[tree]`, appearing inside a `q[]`, is the AST stored in the variable `tree`
-   at the macro definition site. It's the same as just `tree` outside any `q[]`.
-
-   The point is `a[]` can appear as a part of the expression inside the `q[]`,
-   so you can construct subtrees separately (using any strategy of your
-   choosing), and then interpolate them into a quasiquoted code snippet.
-
- - `s[lst]`, appearing inside a `q[]`, is the `ast.List` with its elements
-   taken from `lst`.
-
-   This allows interpolating a list of ASTs as an `ast.List` node.
-
-Unquote operators may only appear inside quasiquoted code.
-
-Otherwise, any of the operators may appear anywhere a subscript expression is
-syntactically allowed, including on the LHS of an assignment, or as the operand
-of a `del`. The macro expander fills in the correct `ctx` automatically.
-
-Finally, observe that:
-
- - `n["x"]`, appearing inside a `q[]`, is the identifier with the literal name
-   `x` at the macro use site. It's the same as just `x` inside the same `q[]`.
-
-   This is a useless use of `n[]`. The reason `n[]` exists at all is that the
-   argument can be the result of a computation performed at the macro definition
-   site.
-
-   Using `n[]` to name-unquote a string literal does shut up flake8 concerning
-   the "undefined" name `x`, but for that use case, we recommend `# noqa: F821`.
 
 
 ## Introduction to quasiquoting
@@ -153,9 +62,8 @@ For example, it is not possible to directly interpolate a name for a function
 parameter in quasiquote notation, because parameter definitions must use literal
 strings, not expressions. In this case, the technique is to first use a
 placeholder name, such as `_`, and then manually assign a new name for the
-parameter in the AST that was returned by the quasiquote operation. (Although
-see [`mcpyrate.utils.rename`](mcpyrate/utils.py), which can do the editing for
-you.)
+parameter in the AST that was returned by the quasiquote operation. See [`mcpyrate.utils.rename`](mcpyrate/utils.py), which can do this editing for
+you.
 
 You'll still need to keep [Green Tree
 Snakes](https://greentreesnakes.readthedocs.io/en/latest/nodes.html) and maybe
@@ -244,6 +152,16 @@ value will be pickled** and that pickled copy becomes the thing the `h[]`
 refers to.
 
 
+#### Macro hygiene without quasiquotes
+
+If you want to capture values or macro names hygienically in an old-school macro
+that does not use the quasiquote notation, this is also possible. The machinery
+underlying the `h[]` operator is part of the public API, by design.
+
+The functions `mcpyrate.quotes.capture_value` and `mcpyrate.quotes.capture_macro`
+perform the actual capture. They will return the AST snippet you want.
+
+
 #### Advanced uses of non-hygienic quasiquoting
 
 Macro hygiene has its place, but non-hygienic quoting leads to two advanced
@@ -280,6 +198,266 @@ needed, they are discouraged. When used, good documentation is absolutely
 critical.
 
 
+## Reference manual
+
+Here *macro definition site* and *macro use site* refer to those sites for the
+macro in whose implementation `q` is used to construct (part of) the output AST.
+
+### `q`: quasiquote
+
+`q[expr]` lifts the expression `expr` into an AST. E.g. `q[42]` becomes
+`ast.Constant(value=42)`.
+
+To lift statements, use block mode. `with q as quoted` lifts the `with` block
+body into a `list` of AST nodes. The list is assigned to the name given as the
+asname (in the example, `quoted`).
+
+In both expression and block modes, any names in the quoted code remain exactly
+as they appear in the source. This may cause name conflicts with names already
+present at the macro use site. If you want to hygienify, see the `h[]` unquote.
+
+Like `macropy`'s `q`, except macro invocations within the quoted code are not
+expanded by default. See the macros `expand` and `expand1`.
+
+The macro `expandq`, which is shorthand for "`q`, then `expand`", is equivalent
+to `macropy`'s `q`.
+
+### `u`: unquote
+
+`u[expr]` unquotes `expr`. It evaluates the value of the expression `expr`
+at the macro definition site, and lifts the result into an AST that is
+spliced into the quoted code.
+
+`expr` must evaluate to a value of a built-in type (number, string, bytes,
+boolean or None), a built-in container (`list`, `dict` or `set`) containing
+only such values, or a tree built out of multiple levels of such containers,
+where all leaves are such values.
+
+If you need to unquote a more general value from the macro definition site
+(e.g. an object instance, or a top-level function), see `h[]`.
+
+In cases where the type restriction is acceptable, prefer `u[]`;
+it's cheaper than `h[]`.
+
+Typical use is like:
+
+```python
+sourcecode = unparse(tree)
+logging_call = q[h[log_value_with_sourcecode](tree, u[sourcecode])]
+```
+
+If you don't need the extra line for clearer stack traces, the temporary variable is not needed:
+
+```python
+logging_call = q[h[log_value_with_sourcecode](tree, u[unparse(tree)])]
+```
+
+### `n`: name-unquote
+
+`n[code]` parses the expression `code` as Python source code at the macro
+definition site, and splices the resulting AST into the quoted code.
+
+`code` must evaluate to a string.
+
+This operator was mainly designed for generating an AST to access a lexical
+variable, whose name is computed when your macro runs (identifiers, attributes,
+subscripts, in any syntactically allowed nested combination). But who knows
+what else can be done with it?
+
+Examples:
+
+```python
+temp = q[n[gensym()]]
+with q as quoted:
+    a[temp] = "I'm in a lexical variable with a computed name"
+
+x = "computed_name"
+with q as quoted:
+    n[f"self.{x}"] = "I'm in an attribute with a computed name"
+
+q[n[f"kitties[{j}].paws[{k}].claws"]]
+```
+
+The second example can also be written as:
+
+```python
+x = "computed_name"
+with q as quoted:
+    setattr(self, u[x], "I'm in an attribute with a computed name")
+```
+
+The first version generates the AST that corresponds to the source code
+`self.computed_name = ...`, whereas the second generates the AST that
+corresponds to `setattr(self, "computed_name", ...)`.
+
+The first example, on the other hand, cannot (in general) be written using
+`setattr`, since it is assigning *to a lexical variable with a computed name*,
+which is not supported by Python.
+
+As an alternative to `n[]`, see also `mcpyrate.utils.rename`, which can replace
+a literal dummy name (e.g. `_`) by a computed name in all places in a given AST
+where name-like things appear (e.g. function parameters, call keywords,
+except-as, imports, ...).
+
+Essentially, `n[code]` is defined as `a[ast.parse(code, mode="eval").body]`,
+but it will also automatically set the `filename` argument of `ast.parse`
+to the `.py` filename the invocation of `n[]` appears in.
+
+Finally, observe that `n["x"]`, appearing inside a `q[]`, is the name `x` at the
+macro use site. It's the same as just `x` inside the same `q[]`. This is a
+useless use of `n[]`. The reason `n[]` exists at all is that its argument
+can be the result of a computation.
+
+Using `n[]` to name-unquote a string literal does shut up flake8 concerning
+the "undefined" name `x`, but for that use case, we recommend `# noqa: F821`.
+
+Generalized from `macropy`'s `name`, which converts a string into a lexical variable access.
+
+### `a`: AST-unquote
+
+`a[tree]` takes the AST `tree` at the macro definition site, and splices it
+into the quoted code. It's the same as just `tree` outside any `q`.
+
+`tree` must evaluate to an AST node.
+
+The use case is that `a[]` can appear in any subexpression inside a `q`,
+so you can construct subtrees separately (using any strategy of your choosing),
+and then interpolate them into a quasiquoted code snippet.
+
+**With `a[]`, the result is always an expression AST.** If you need to splice
+statements, see the function `mcpyrate.splicing.splice_statements`.
+
+Note `tree` is **not copied**, so if you `a[]` the same AST instance multiple
+times, it will do exactly that. If needed, explicitly `copy.copy(tree)` or
+`copy.deepcopy(tree)` depending on what you want.
+
+However, as a convenience, in the final global postprocess pass, the expander's
+automatic `ctx` fixer detects if a node instance requiring a `ctx` has already
+been seen during that postprocess pass, and shallow-copies it automatically
+to eliminate `ctx` conflicts, because the same node instance might appear
+in two or more positions that require different `ctx`. But until that final
+global postprocess pass, the `id` of any node you pass into `a[]` is not
+affected by the `a[]`.
+
+Equivalent to `macropy`'s `ast_literal`.
+
+### `s`: AST-list-unquote
+
+`s[lst]` takes a `list`, and into the quoted code, splices an `ast.List` node,
+with the original list as its `elts` attribute. Note the list is not copied.
+
+This allows interpolating a list of ASTs as an `ast.List` node. This can be
+convenient because in Python, lists can appear in many places, such as on
+the LHS of an assignment:
+
+```python
+lst = [q[a], q[b], q[c]]  # noqa: F821, only quoted.
+with q as quoted:
+    s[lst] = 1, 2, 3
+```
+
+In this example, the resulting AST corresponds to the source code `[a, b, c] = 1, 2, 3`.
+
+**With `s[]`, the result is always an expression AST.** If you need to splice
+statements, see the function `mcpyrate.splicing.splice_statements`.
+
+Equivalent to `macropy`'s `ast_list`.
+
+### `h`: hygienic-unquote
+
+`h[expr]` captures the value of the expression `expr` at the macro *definition*
+site, and makes the expansion use the captured value.
+
+`expr` may also be the name of a macro bound in the current expander. Then
+that macro is captured. This allows macros in scope at the use site of `q` to
+be hygienically propagated out to the use site of the macro that uses `q`.
+So you can write macros that `q[h[macroname][...]]`, and `macroname` doesn't
+have to be macro-imported wherever that code gets spliced in.
+
+The main use case of `h[]` is to safely (*hygienically*) refer to a function
+or a macro that is in scope at the macro *definition* site, so that you can be
+sure that when the macro expansion is spliced in at the macro *use* site, the
+expanded code will call the function you meant, and not some other function
+that just happened to have the same name at the macro use site. Hygienic
+unquoting also means that the macro use site *does not need to import* the
+thing being referred to.
+
+Whether `expr` is a run-time value or a macro name, the hygienically captured
+thing can be looked up even in another Python process later. (This allows
+bytecode caching of use sites of macros that use `q[h[...]]`.)
+
+#### Hygienically captured run-time values
+
+The result of evaluating `expr` can be any run-time value, as long as it is
+picklable.
+
+We use `pickle` to support bytecode caching for hygienically captured values.
+For maximum flexibility, the pickled data is embedded as a byte string in the
+macro-expanded source code.
+
+The value is frozen once (by pickling) at the macro definition site, and each
+use site (of the macro that used `q[h[...]]`) gets a fresh copy of the value.
+
+At each use site, the value is unpickled only once (per Python process).
+Further activations of any particular use site refer to the same object
+instance the unpickling during that site's first activation (in the current
+process) produced.
+
+#### Hygienically captured macros
+
+Hygienic macro capture must be asked for explicitly, and it is not
+recursive. Only the macro explicitly tagged `h[macroname][...]` will be
+captured hygienically; any macro invocations in its output will not be.
+
+Thus, each macro in a chain must use `h[]` explicitly, if it wants macro
+invocations in its output to be hygienified. This is a feature, to keep
+things explicit.
+
+### General
+
+Unquote operators may only appear inside quasiquoted code. This is checked at
+macro expansion time. Otherwise, they may appear anywhere a subscript expression
+is syntactically allowed.
+
+Especially, when `q` is used block mode, unquotes may appear on the LHS of an
+assignment, and as the operand of a `del`, simply because these are syntactically
+allowed positions for subscript expressions. The macro expander fills in the
+correct `ctx` automatically. Examples::
+
+```python
+target = ...  # AST for something that can appear on the LHS of an assignment
+with q as quoted:
+    a[target] = ...
+
+with q as quoted:
+    a[target1], a[target2] = ...
+
+targets = [target1, target2]
+with q as quoted:
+    s[targets] = ...
+
+with q as quoted:
+    del n[some_computed_name]
+```
+
+In an unquote expression inside quoted code, regardless of how many levels of
+quoting are present, macros are always fully expanded, because the purpose of
+an unquote is to interpolate a value.
+
+Anywhere else in quoted code, macros are **not** expanded by default.
+Depending on what you want, you can:
+
+ - Just leave them for the expander to handle automatically, *in the use site's context*,
+   after the macro using `q` has returned. Useful if you hygienically unquote any
+   macro names in the output.
+
+ - Expand them explicitly. Use the macros `expand` and `expand1` in `mcpyrate.quotes`,
+   or the method `expander.visit` (`visit_once`, `visit_recursively`), as appropriate.
+   Useful if you want to return a plain AST that has no macro invocations remaining.
+
+
+## Notes
+
 ### Difference between `h[]` and `u[]`
 
 The `h[]` operator accepts any picklable run-time value, including those that
@@ -292,30 +470,34 @@ the use site of the surrounding `q[]` does, rewriting itself into a lookup
 command at that time. The use site of `q[]` then sees just that lookup command.
 
 The `u[]` operator operates statically, purely at macro expansion time. It takes
-the value apart, and writes an AST that will re-construct it. It only works for
-expressions that evaluate to constants, to built-in containers containing
-constants, or to trees of such containers, where all leaves are constants.
+the value apart, and generates an AST that will re-construct it. It is cheaper,
+but only works for expressions that evaluate to certain built-in types.
 
 
-## For Common Lispers
+### Differences to Common Lisp
 
 In `mcpyrate`, the Common Lisp macro-implementation pattern, where one gensyms
 a new name, `let`-binds that to the current value of the old name, and then
 unquotes the new name in the quasiquoted code, looks like this:
 
-    hygx = q[h[x]]
-    tree = q[...a[hygx]...]
+    thex = q[h[x]]
+    tree = q[...a[thex]...]
 
-Note in `mcpyrate` the `h[]` operator pickles its input, to support storing
-macro-expanded code using hygienically unquoted values into a bytecode cache
-(`.pyc`).
+In the Lisp family, this is perhaps closer to how Scheme and Racket handle things,
+except that the hygienification must be asked for explicitly.
 
+The above is for use cases where you need to *access* something that exists at
+the macro definition site.
 
-## Python vs. Lisp
+If you instead need a new lexical variable name to assign something to, do this:
+
+    name = q[n[gensym()]]
+    with q as quoted:
+        a[name] = ...
 
 It's a peculiarity of Python that the quasiquote system is implemented as
-macros; in Lisps, these are typically special operators built in to the language
-core.
+macros, unlike in Lisps, where these are typically special operators built in
+to the language core.
 
 Python's macro systems themselves are obviously third-party addons. The core
 language wasn't designed to support this level of semantic extensibility, but
@@ -326,17 +508,38 @@ Python has a surface syntax, instead of representing source code directly as a
 lightly dressed up AST, like Lisps do.
 
 
-## Differences to `macropy`
+### Differences to `macropy`
 
-Our implementation of the quasiquote system closely follows the impressive,
-pioneering work that originally appeared in `macropy`. That source code, itself
-quite short, is full of creative ingenuity, although at places could be written
-more clearly, due to the first-generation nature of the system.
+#### In usage
 
-Since `mcpyrate` is a third-generation system, we have actively attempted to
-make the best of lessons learned, to make the implementation as short and simple
-as reasonably possible. We have liberally changed function and class names where
-this makes the code easier to understand.
+By default, in `mcpyrate`, macros in quasiquoted code are not expanded when the quasiquote itself expands. 
+
+In `mcpyrate`, all quote and unquote operators have single-character names by default: `q`, `u`, `n`, `a`, `s`, `h`. Of these, `q` and `u` are as in `macropy`, the operator `n` corresponds to `name`, `a` to `ast_literal`, and `s` to `ast_list`.
+
+In `mcpyrate`, there is **just one *quote* operator**, `q[]`, although just like in `macropy`, there are several different *unquote* operators, depending on what you want to do. In `mcpyrate`, there is no `unhygienic`, because there is no separate `hq`.
+
+For [macro hygiene](https://en.wikipedia.org/wiki/Hygienic_macro), we provide a **hygienic unquote** operator, `h[]`. So instead of implicitly hygienifying all `Name` nodes inside a `hq[]` like `macropy` does, `mcpyrate` instead expects the user to use the regular `q[]`, and explicitly say which subexpressions to hygienify, by unquoting each of those separately with `h[]`. The hygienic unquote operator captures expressions by snapshotting a value; it does not care about names, except for human-readable output.
+
+In `mcpyrate`, also macro names can be captured hygienically.
+
+In `mcpyrate`, there is no `expose_unhygienic`, and no names are reserved for the macro system. (You can call a variable `ast` if you want, and it won't shadow anything important.)
+
+The `expose_unhygienic` mechanism is not needed, because in `mcpyrate`, each macro-import is transformed into a regular import of the module the macros are imported from. So the macros can refer to anything in the top-level namespace of their module as attributes of that module object. (As usual in Python, this includes any imports. For example, `mcpyrate.quotes` refers to the stdlib `ast` module in the macro expansions as `mcpyrate.quotes.ast` for this reason.)
+
+In `mcpyrate`, the `n[]` operator is a wrapper for `ast.parse`, so it will lift any source code that represents an expression, not only lexical variable references.
+
+#### In implementation
+
+We have closely followed the impressive, pioneering approach that originally
+appeared in `macropy`. That source code, itself quite short, is full of creative
+ingenuity, although at places could be written more clearly, due to the
+first-generation nature of the system.
+
+Since `mcpyrate` is a third-generation macro expander (and second-generation in
+quasiquote support), we have actively attempted to make the best of lessons
+learned, to make the implementation as readable as reasonably possible. We have
+liberally changed function and class names, and refactored things where this
+makes the code easier to understand.
 
 Our `h` operator is both simpler and more general than `macropy`'s `hq[]`.
 By using uuids in the lookup keys, we avoid the whole-file lexical scan.
