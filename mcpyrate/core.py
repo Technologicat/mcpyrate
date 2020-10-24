@@ -187,7 +187,7 @@ class BaseMacroExpander(NodeTransformer):
         except Exception:
             output_type_ok = False
         if not output_type_ok:
-            reason = f"expected macro to return AST, iterable or None; got {type(expansion)} with value {repr(expansion)}"
+            reason = f"expected macro to return AST node, iterable of AST nodes, or None; got {type(expansion)} with value {repr(expansion)}"
             msg = f"{loc}\n{reason}"
             raise MacroExpansionError(msg)
 

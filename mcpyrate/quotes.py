@@ -11,11 +11,11 @@ __all__ = ['lift_sourcecode',
 import ast
 import pickle
 
-from .core import global_bindings
+from .core import global_bindings, Done
 from .expander import MacroExpander, isnamemacro
 from .markers import ASTMarker, get_markers
 from .unparser import unparse
-from .utils import gensym, NestingLevelTracker
+from .utils import gensym, flatten, NestingLevelTracker  # noqa: F401, flatten is needed by the expansion of `q`.
 
 
 def _mcpyrate_quotes_attr(attr):
@@ -96,13 +96,6 @@ def lift_sourcecode(value, filename="<unknown>"):
     if not isinstance(value, str):
         raise TypeError(f"n[]: expected an expression that evaluates to str, result was {type(value)} with value {repr(value)}")
     return ast.parse(value, filename=filename, mode="eval").body
-
-
-def ast_literal(tree):
-    """Interpolate an AST node. Run-time part of `a[]`."""
-    if not isinstance(tree, ast.AST):
-        raise TypeError(f"a[]: expected an AST node, got {type(tree)} with value {repr(tree)}")
-    return tree
 
 
 def ast_list(nodes):
@@ -243,10 +236,7 @@ def astify(x, expander=None):  # like `macropy`'s `ast_repr`
         #
         # Minimally, `astify` must support `ASTLiteral`; the others could be
         # implemented inside the unquote operators, as `ASTLiteral(ast.Call(...))`.
-        #
-        # But maybe this approach is cleaner. We can do almost everything here,
-        # in a regular function, and each unquote macro is just a thin wrapper
-        # on top of the corresponding marker type.
+        # But maybe this approach is cleaner.
         if T is Unquote:  # `u[]`
             # We want to generate an AST that compiles to the *value* of `x.body`,
             # evaluated at the use site of `q`. But when the `q` expands, it is
@@ -264,9 +254,8 @@ def astify(x, expander=None):  # like `macropy`'s `ast_repr`
                             [])
 
         elif T is ASTLiteral:  # `a[]`
-            # Pass through this subtree as-is, but typecheck the argument
-            # at the use site of `q`.
-            return ast.Call(_mcpyrate_quotes_attr('ast_literal'), [x.body], [])
+            # Pass through this subtree as-is.
+            return x.body
 
         elif T is ASTList:  # `s[]`
             return ast.Call(_mcpyrate_quotes_attr('ast_list'), [x.body], [])
@@ -310,9 +299,18 @@ def astify(x, expander=None):  # like `macropy`'s `ast_repr`
         elif T is set:
             return ast.Set(elts=list(recurse(elt) for elt in x))
 
+        # We must support at least the `Done` AST marker, so that things like
+        # coverage dummy nodes and expanded name macros can be astified.
+        elif isinstance(x, Done):
+            fields = [ast.keyword(a, recurse(b)) for a, b in ast.iter_fields(x)]
+            node = ast.Call(_mcpyrate_quotes_attr('Done'),
+                            [],
+                            fields)
+            return node
+
         # General case.
         elif isinstance(x, ast.AST):
-            # TODO: Add support for astifying ASTMarkers?
+            # TODO: Add support for astifying general ASTMarkers?
             # Otherwise the same as regular AST node, but need to refer to the
             # module it is defined in, and we don't have everything in scope here.
             if isinstance(x, ASTMarker):
@@ -440,16 +438,6 @@ def _expand_quasiquotes(tree, expander):
     bindings = {k: v for k, v in expander.bindings.items() if v in (q, u, n, a, s, h)}
     return MacroExpander(bindings, expander.filename).visit(tree)
 
-def _unquote(tree, syntax, expander, macroname, makemarker):
-    """Expand an unquote macro. Unquotes are expr macros that expand to AST markers."""
-    if syntax != "expr":
-        raise SyntaxError(f"`{macroname}` is an expr macro only")
-    if _quotelevel.value < 1:
-        raise SyntaxError(f"`{macroname}` encountered while quotelevel < 1")
-    with _quotelevel.changed_by(-1):
-        tree = expander.visit_recursively(tree)
-        return makemarker(tree)
-
 
 def q(tree, *, syntax, expander, **kw):
     """[syntax, expr/block] quasiquote. Lift code into its AST representation."""
@@ -458,15 +446,26 @@ def q(tree, *, syntax, expander, **kw):
     with _quotelevel.changed_by(+1):
         tree = _expand_quasiquotes(tree, expander)  # expand any inner quotes and unquotes first
         tree = astify(tree, expander)  # Magic part of `q`. Supply `expander` for `h[macro]` detection.
+
         ps = get_markers(tree, QuasiquoteMarker)  # postcondition: no remaining QuasiquoteMarkers
         if ps:
             assert False, f"QuasiquoteMarker instances remaining in output: {ps}"
+
+        # Generate AST to perform the assignment for `with q as quoted`.
         if syntax == 'block':
             target = kw['optional_vars']  # List, Tuple, Name
             if type(target) is not ast.Name:
-                raise SyntaxError(f"expected a single asname, got {unparse(target)}")
-            # Note this `Assign` runs at the use site of `q`, it's not part of the quoted code block.
-            tree = ast.Assign([target], tree)  # Here `tree` is a List.
+                raise SyntaxError(f"`q` expected a single asname, got {unparse(target)}")
+            # Note this `Assign` runs at the use site of `q`, it's not part of
+            # the quoted code block. Here `tree` is a `List`, because the original
+            # input was a `list` of AST nodes, and we ran it through `astify`.
+            #
+            # We fix the possibly nested list structure (due to block mode `a`)
+            # at run time, by injecting a fixer on the RHS here.
+            # TODO: Add a validator. After the `flatten`, nodes should be statements.
+            tree = ast.Assign([target], ast.Call(_mcpyrate_quotes_attr('flatten'),
+                                                 [tree],
+                                                 []))
         return tree
 
 
@@ -475,7 +474,13 @@ def u(tree, *, syntax, expander, **kw):
 
     The value is lifted into an AST that re-constructs that value.
     """
-    return _unquote(tree, syntax, expander, "u", Unquote)
+    if syntax != "expr":
+        raise SyntaxError("`u` is an expr macro only")
+    if _quotelevel.value < 1:
+        raise SyntaxError("`u` encountered while quotelevel < 1")
+    with _quotelevel.changed_by(-1):
+        tree = expander.visit_recursively(tree)
+        return Unquote(tree)
 
 
 def n(tree, *, syntax, expander, **kw):
@@ -492,24 +497,92 @@ def n(tree, *, syntax, expander, **kw):
 
     The correct `ctx` is filled in automatically by the macro expander later.
 
-    See also `n[]`'s sister, `a[]`.
+    See also `n[]`'s sister, `a`.
 
     Generalized from `macropy`'s `n`, which converts a string into a variable access.
     """
-    return _unquote(tree, syntax, expander, "n", LiftSourcecode)
+    if syntax != "expr":
+        raise SyntaxError("`n` is an expr macro only")
+    if _quotelevel.value < 1:
+        raise SyntaxError("`n` encountered while quotelevel < 1")
+    with _quotelevel.changed_by(-1):
+        tree = expander.visit_recursively(tree)
+        return LiftSourcecode(tree)
 
 
 def a(tree, *, syntax, expander, **kw):
-    """[syntax, expr] AST-unquote. Splice an AST into a quasiquote.
+    """[syntax, expr/block] AST-unquote. Splice an AST into a quasiquote.
 
-    See also `a[]`'s sister, `n[]`.
+    Syntax::
+
+        a[expr]
+
+        with a:
+            stmts
+            ...
+
+    `expr` must evaluate to an *expression* AST node. Typically, it is the
+    name of a variable (from the use site of the surrounding `q`) that holds
+    such a node.
+
+    Each `stmts` must evaluate to either a single *statement* AST node,
+    or a `list` of *statement* AST nodes. It is as if all those statements
+    appeared in the `with` body, in a top to bottom order.
+
+    Note that the `with` body must not contain anything else. Most other inputs
+    cause a mysterious compile error; the only thing we can check at macro
+    expansion time is that the body contains only "expression statements"
+    (which include references to variables).
+
+    See also `a`'s sister, `n[]`.
     """
-    return _unquote(tree, syntax, expander, "a", ASTLiteral)
+    if syntax not in ("expr", "block"):
+        raise SyntaxError("`a` is an expr and block macro only")
+    if _quotelevel.value < 1:
+        raise SyntaxError("`a` encountered while quotelevel < 1")
+
+    with _quotelevel.changed_by(-1):
+        tree = expander.visit_recursively(tree)
+
+        if syntax == "expr":
+            return ASTLiteral(tree)
+
+        # Block mode: replace `Expr` wrappers with `ASTLiteral` wrappers.
+        #
+        # The `Expr` wrapper must be deleted, because the nodes that will be
+        # eventually spliced in are *statement* nodes. The `ASTLiteral` wrapper
+        # must be added so that the node references will be passed through to
+        # the use site of `q` as-is.
+        #
+        # Note that when `a` expands, the elements of the list `tree` are
+        # just names (or in general, expressions that at run time evaluate
+        # to statement ASTs, or lists of statement ASTs). Their values become
+        # available when the use site of `q` reaches run time, but then it's
+        # too late to edit the AST structure in a macro.
+        #
+        # So, once the values become available, we often actually produce an
+        # invalid AST with a nested list structure. This is fixed by injecting
+        # a fixer in the block mode of `q` (so that the fixer runs at run time
+        # at the use site of `q` - which is the right time for that, since the
+        # inputs vary at run time).
+        assert syntax == "block"
+        out = []
+        for stmt in tree:
+            if type(stmt) is not ast.Expr:
+                raise SyntaxError("`with a` takes in statement tree references only")
+            out.append(ASTLiteral(stmt.value))
+        return out
 
 
 def s(tree, *, syntax, expander, **kw):
     """[syntax, expr] list-unquote. Splice a `list` of ASTs, as an `ast.List`, into a quasiquote."""
-    return _unquote(tree, syntax, expander, "s", ASTList)
+    if syntax != "expr":
+        raise SyntaxError("`s` is an expr macro only")
+    if _quotelevel.value < 1:
+        raise SyntaxError("`s` encountered while quotelevel < 1")
+    with _quotelevel.changed_by(-1):
+        tree = expander.visit_recursively(tree)
+        return ASTList(tree)
 
 
 def h(tree, *, syntax, expander, **kw):
@@ -530,13 +603,11 @@ def h(tree, *, syntax, expander, **kw):
     Supports also macros. To hygienically splice a macro invocation,
     `h[]` only the macro name.
     """
-    # Almost fits into the generic template for an unquote macro, but we
-    # need to produce a name for the `Capture`, and detect if the thing
-    # being captured is a name macro.
     if syntax != "expr":
-        raise SyntaxError(f"`h` is an expr macro only")
+        raise SyntaxError("`h` is an expr macro only")
     if _quotelevel.value < 1:
-        raise SyntaxError(f"`h` encountered while quotelevel < 1")
+        raise SyntaxError("`h` encountered while quotelevel < 1")
+
     with _quotelevel.changed_by(-1):
         name = unparse(tree)
 
