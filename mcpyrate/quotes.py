@@ -310,9 +310,18 @@ def astify(x, expander=None):  # like `macropy`'s `ast_repr`
         elif T is set:
             return ast.Set(elts=list(recurse(elt) for elt in x))
 
+        # We must support at least the `Done` AST marker, so that things like
+        # coverage dummy nodes and expanded name macros can be astified.
+        elif isinstance(x, Done):
+            fields = [ast.keyword(a, recurse(b)) for a, b in ast.iter_fields(x)]
+            node = ast.Call(_mcpyrate_quotes_attr('Done'),
+                            [],
+                            fields)
+            return node
+
         # General case.
         elif isinstance(x, ast.AST):
-            # TODO: Add support for astifying ASTMarkers?
+            # TODO: Add support for astifying general ASTMarkers?
             # Otherwise the same as regular AST node, but need to refer to the
             # module it is defined in, and we don't have everything in scope here.
             if isinstance(x, ASTMarker):
