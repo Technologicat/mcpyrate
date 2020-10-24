@@ -4,16 +4,14 @@
 __all__ = ["setcolor", "colorize", "ColorScheme",
            "Fore", "Back", "Style"]
 
-no_colorama = False
 try:
     from colorama import init as colorama_init, Fore, Back, Style
-except ImportError:  # pragma: no cover
-    no_colorama = True
-
-if no_colorama:
-    from .ansi import Fore, Back, Style
-else:
     colorama_init()
+except ImportError:  # pragma: no cover
+    # The `ansi` module is a slightly modified, POSIX-only,
+    # vendored version from Colorama. Useful e.g. in Docker
+    # images that don't have the library available.
+    from .ansi import Fore, Back, Style  # noqa: F811
 
 
 def setcolor(*colors):
