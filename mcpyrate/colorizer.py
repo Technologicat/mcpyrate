@@ -1,5 +1,10 @@
 # -*- coding: utf-8; -*-
-"""Colorize terminal output using Colorama."""
+"""Colorize terminal output.
+
+Use Colorama if available; works on any OS.
+
+If not available, and OS is a *nix, use ANSI escape codes.
+"""
 
 __all__ = ["setcolor", "colorize", "ColorScheme",
            "Fore", "Back", "Style"]
@@ -18,10 +23,9 @@ def setcolor(*colors):
     """Set color for terminal display.
 
     Returns a string that, when printed into a terminal, sets the color
-    and style. We use `colorama`, so this works on any OS.
+    and style.
 
     For available `colors`, see `Fore`, `Back` and `Style`.
-    These are imported from `colorama`.
 
     Each entry can also be a tuple (arbitrarily nested), which is useful
     for defining compound styles.
@@ -42,10 +46,8 @@ def colorize(text, *colors, reset=True):
     """Colorize string `text` for terminal display.
 
     Returns `text`, augmented with color and style commands for terminals.
-    We use `colorama`, so this works on any OS.
 
     For available `colors`, see `Fore`, `Back` and `Style`.
-    These are imported from `colorama`.
 
     Usage::
 
@@ -78,8 +80,8 @@ class ColorScheme:
     (Don't replace the `ColorScheme` class itself, though; all the use sites
     from-import it.)
 
-    See `Fore`, `Back`, `Style` in `colorama` for valid values. To make a
-    compound style, place the values into a tuple.
+    See `Fore`, `Back`, `Style` for valid values. To make a compound style,
+    place the values into a tuple.
 
     The defaults are designed to fit the "Solarized" (Zenburn-like) theme
     of `gnome-terminal`, with "Show bold text in bright colors" set to OFF.
