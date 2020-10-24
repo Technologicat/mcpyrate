@@ -548,9 +548,10 @@ def h(tree, *, syntax, expander, **kw):
     `h[]` only the macro name.
     """
     if syntax != "expr":
-        raise SyntaxError(f"`h` is an expr macro only")
+        raise SyntaxError("`h` is an expr macro only")
     if _quotelevel.value < 1:
-        raise SyntaxError(f"`h` encountered while quotelevel < 1")
+        raise SyntaxError("`h` encountered while quotelevel < 1")
+
     with _quotelevel.changed_by(-1):
         name = unparse(tree)
 
