@@ -88,8 +88,7 @@ def test():
     assert unparse(expand1q[h[q][42]]) in ("mcpyrate.quotes.ast.Num(n=42)",
                                            "mcpyrate.quotes.ast.Constant(value=42)")
 
-    # Macro names can be hygienically captured, too. It inserts a uniqified macro binding
-    # into a global table for the current process. The name becomes "originalname_uuid".
+    # Macro names can be hygienically captured, too. The name becomes "originalname_uuid".
     assert unparse(q[h[first][42]]).startswith("first_")
     assert unparse(q[h[q][42]]).startswith("q_")
 
