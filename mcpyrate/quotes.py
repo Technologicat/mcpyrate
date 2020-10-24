@@ -449,16 +449,6 @@ def _expand_quasiquotes(tree, expander):
     bindings = {k: v for k, v in expander.bindings.items() if v in (q, u, n, a, s, h)}
     return MacroExpander(bindings, expander.filename).visit(tree)
 
-def _unquote(tree, syntax, expander, macroname, makemarker):
-    """Expand an unquote macro. Unquotes are expr macros that expand to AST markers."""
-    if syntax != "expr":
-        raise SyntaxError(f"`{macroname}` is an expr macro only")
-    if _quotelevel.value < 1:
-        raise SyntaxError(f"`{macroname}` encountered while quotelevel < 1")
-    with _quotelevel.changed_by(-1):
-        tree = expander.visit_recursively(tree)
-        return makemarker(tree)
-
 
 def q(tree, *, syntax, expander, **kw):
     """[syntax, expr/block] quasiquote. Lift code into its AST representation."""
@@ -484,7 +474,13 @@ def u(tree, *, syntax, expander, **kw):
 
     The value is lifted into an AST that re-constructs that value.
     """
-    return _unquote(tree, syntax, expander, "u", Unquote)
+    if syntax != "expr":
+        raise SyntaxError("`u` is an expr macro only")
+    if _quotelevel.value < 1:
+        raise SyntaxError("`u` encountered while quotelevel < 1")
+    with _quotelevel.changed_by(-1):
+        tree = expander.visit_recursively(tree)
+        return Unquote(tree)
 
 
 def n(tree, *, syntax, expander, **kw):
@@ -505,7 +501,13 @@ def n(tree, *, syntax, expander, **kw):
 
     Generalized from `macropy`'s `n`, which converts a string into a variable access.
     """
-    return _unquote(tree, syntax, expander, "n", LiftSourcecode)
+    if syntax != "expr":
+        raise SyntaxError("`n` is an expr macro only")
+    if _quotelevel.value < 1:
+        raise SyntaxError("`n` encountered while quotelevel < 1")
+    with _quotelevel.changed_by(-1):
+        tree = expander.visit_recursively(tree)
+        return LiftSourcecode(tree)
 
 
 def a(tree, *, syntax, expander, **kw):
@@ -518,7 +520,13 @@ def a(tree, *, syntax, expander, **kw):
 
 def s(tree, *, syntax, expander, **kw):
     """[syntax, expr] list-unquote. Splice a `list` of ASTs, as an `ast.List`, into a quasiquote."""
-    return _unquote(tree, syntax, expander, "s", ASTList)
+    if syntax != "expr":
+        raise SyntaxError("`s` is an expr macro only")
+    if _quotelevel.value < 1:
+        raise SyntaxError("`s` encountered while quotelevel < 1")
+    with _quotelevel.changed_by(-1):
+        tree = expander.visit_recursively(tree)
+        return ASTList(tree)
 
 
 def h(tree, *, syntax, expander, **kw):
@@ -539,9 +547,6 @@ def h(tree, *, syntax, expander, **kw):
     Supports also macros. To hygienically splice a macro invocation,
     `h[]` only the macro name.
     """
-    # Almost fits into the generic template for an unquote macro, but we
-    # need to produce a name for the `Capture`, and detect if the thing
-    # being captured is a name macro.
     if syntax != "expr":
         raise SyntaxError(f"`h` is an expr macro only")
     if _quotelevel.value < 1:
