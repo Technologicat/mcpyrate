@@ -38,8 +38,9 @@ class Walker(NodeTransformer, metaclass=ABCMeta):
         newstate = self.state.copy()
         newstate.update(**bindings)
         # Due to how `ast.NodeTransformer.generic_visit` works, `visit` is
-        # never called for a statement suite. So if we get one, set newstate
-        # for all of its elements.
+        # never called for a statement suite, but only separately for each
+        # individual statement in it. So if we should set `newstate` for a
+        # suite, do it for each statement in it.
         if isinstance(tree, list):
             for elt in tree:
                 self._subtree_overrides[id(elt)] = newstate
