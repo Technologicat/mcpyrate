@@ -6,7 +6,7 @@ from abc import ABCMeta, abstractmethod
 from ast import NodeTransformer
 
 from .bunch import Bunch
-from .utils import flatten_suite
+from .utils import flatten
 
 
 class Walker(NodeTransformer, metaclass=ABCMeta):
@@ -58,7 +58,7 @@ class Walker(NodeTransformer, metaclass=ABCMeta):
             self._stack.append(newstate)
         try:
             if isinstance(tree, list):
-                newtree = flatten_suite(self.visit(elt) for elt in tree)
+                newtree = flatten(self.visit(elt) for elt in tree)
                 if newtree:
                     tree[:] = newtree
                     return tree

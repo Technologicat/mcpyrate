@@ -10,7 +10,7 @@ from collections import ChainMap
 
 from .astfixers import fix_ctx, fix_locations
 from .markers import ASTMarker, delete_markers
-from .utils import flatten_suite, format_location
+from .utils import flatten, format_location
 
 # Global macro bindings shared across all expanders in the current process.
 # This is used by `mcpyrate.quotes` for hygienically captured macro functions.
@@ -65,7 +65,7 @@ class BaseMacroExpander(NodeTransformer):
         if tree is None:
             return None
         if isinstance(tree, list):
-            newtree = flatten_suite(self.visit(elt) for elt in tree)
+            newtree = flatten(self.visit(elt) for elt in tree)
             if newtree:
                 tree[:] = newtree
                 return tree

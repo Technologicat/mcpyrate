@@ -1,7 +1,7 @@
 # -*- coding: utf-8; -*-
 '''General utilities. Can be useful for writing both macros as well as macro expanders.'''
 
-__all__ = ['gensym', 'flatten', 'flatten_suite', 'rename',
+__all__ = ['gensym', 'flatten', 'rename',
            'format_location', 'format_macrofunction',
            'NestingLevelTracker']
 
@@ -34,7 +34,10 @@ def gensym(basename=None):
 
 
 def flatten(lst, *, recursive=True):
-    """Flatten a nested list."""
+    """Flatten a nested list.
+
+    Useful for splicing in transformations of statement suites.
+    """
     out = []
     for elt in lst:
         if isinstance(elt, list):
@@ -43,18 +46,6 @@ def flatten(lst, *, recursive=True):
         elif elt is not None:
             out.append(elt)
     return out
-
-
-def flatten_suite(lst):
-    """Flatten a statement suite (by one level).
-
-    `lst` may contain both individual items and `list`s. Any item that
-    `is None` is omitted. If the final result is empty, then instead of
-    an empty list, return `None`. (This matches the AST representation
-    of statement suites.)
-    """
-    out = flatten(lst, recursive=False)
-    return out if out else None
 
 
 def rename(oldname, newname, tree):
