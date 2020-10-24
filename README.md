@@ -278,7 +278,7 @@ Although you don't strictly have to import anything to write macros, there are s
 Other modules contain utilities for writing macros:
 
  - [`mcpyrate.quotes`](mcpyrate/quotes.py) provides [quasiquote syntax](quasiquotes.md) as macros, to easily build ASTs in your macros.
- - [`mcpyrate.utils`](mcpyrate/utils.py) provides some macro-writing utilities that are too specific to warrant a spot in the top-level namespace; of these, at least `rename` and `flatten_suite` solve problems that come up relatively often.
+ - [`mcpyrate.utils`](mcpyrate/utils.py) provides some macro-writing utilities that are too specific to warrant a spot in the top-level namespace; of these, at least `rename` and `flatten` (for statement suites) solve problems that come up relatively often.
  - [`mcpyrate.walker`](mcpyrate/walker.py) provides an AST walker that can context-manage its state for different subtrees, while optionally collecting items across the whole walk. It's an `ast.NodeTransformer`, but with functionality equivalent to `macropy.core.walkers.Walker`.
  - [`mcpyrate.splicing`](mcpyrate/splicing.py) helps splice a list of statements into a code template. This is especially convenient when the template is written in the quasiquoted notation; there's no need to think about how the template looks like as an AST in order to paste statements into it.
  - [`mcpyrate.debug`](mcpyrate/debug.py) may be useful if something in your macro is not working.
