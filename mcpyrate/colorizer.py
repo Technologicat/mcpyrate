@@ -11,11 +11,7 @@ except ImportError:  # pragma: no cover
     no_colorama = True
 
 if no_colorama:
-    class Fore(object):
-        YELLOW = CYAN = LIGHTBLUE_EX = RESET = GREEN = BLUE = ''
-
-    class Style(object):
-        BRIGHT = DIM = RESET_ALL = NORMAL = ''
+    from .ansi import Fore, Back, Style
 else:
     colorama_init()
 
