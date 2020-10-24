@@ -462,6 +462,7 @@ def q(tree, *, syntax, expander, **kw):
             #
             # We fix the possibly nested list structure (due to block mode `a`)
             # at run time, by injecting a fixer on the RHS here.
+            # TODO: Add a validator. After the `flatten`, nodes should be statements.
             tree = ast.Assign([target], ast.Call(_mcpyrate_quotes_attr('flatten'),
                                                  [tree],
                                                  []))
