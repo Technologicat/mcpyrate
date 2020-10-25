@@ -309,7 +309,7 @@ def astify(x, expander=None):  # like `macropy`'s `ast_repr`
         # Compile the unquote commands.
         #
         # Minimally, `astify` must support `ASTLiteral`; the others could be
-        # implemented inside the unquote operators, as `ASTLiteral(ast.Call(...))`.
+        # implemented inside the unquote operators, as `ASTLiteral(ast.Call(...), "expr")`.
         # But maybe this approach is cleaner.
         if T is Unquote:  # `u[]`
             # We want to generate an AST that compiles to the *value* of `x.body`,
