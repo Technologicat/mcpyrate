@@ -694,15 +694,15 @@ def h(tree, *, syntax, expander, **kw):
 
         # Expand macros in the unquoted expression. The only case we need to
         # look out for is a `@namemacro` if we have a `h[macroname]`. We're
-        # just capturing it, so don't expand it just yet.
+        # only capturing it, so don't expand it just yet.
         expand = True
         if type(tree) is ast.Name:
             function = expander.isbound(tree.id)
             if function and isnamemacro(function):
                 expand = False
-
         if expand:
             tree = expander.visit_recursively(tree)
+
         return Capture(tree, name)
 
 # --------------------------------------------------------------------------------
