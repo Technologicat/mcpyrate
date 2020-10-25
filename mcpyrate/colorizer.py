@@ -18,6 +18,8 @@ except ImportError:  # pragma: no cover
     # images that don't have the library available.
     from .ansi import Fore, Back, Style  # noqa: F811
 
+from .bunch import Bunch
+
 
 def setcolor(*colors):
     """Set color for terminal display.
@@ -70,14 +72,17 @@ def colorize(text, *colors, reset=True):
                            setcolor(Style.RESET_ALL))
 
 
-# TODO: use a Bunch to support `clear` and `update`?
-class ColorScheme:
+class ColorScheme(Bunch):
     """The color scheme for terminal output in `mcpyrate`'s debug utilities.
 
     This is just a bunch of constants. To change the colors, simply assign new
     values to them. Changes take effect immediately for any new output.
 
-    (Don't replace the `ColorScheme` class itself, though; all the use sites
+    To replace the whole color scheme, fill in a suitable `Bunch`, and then
+    call `ColorScheme.replace(newbunch)`. To get the names of all settings,
+    use `ColorScheme.keys()`.
+
+    (Don't replace the `ColorScheme` object itself; all the use sites
     from-import it.)
 
     See `Fore`, `Back`, `Style` for valid values. To make a compound style,
@@ -87,63 +92,67 @@ class ColorScheme:
     of `gnome-terminal`, with "Show bold text in bright colors" set to OFF.
     But they work also with "Tango", and indeed with most themes.
     """
-    _RESET = Style.RESET_ALL
+    def __init__(self):
+        super().__init__()
 
-    # ------------------------------------------------------------
-    # unparse
+        self._RESET = Style.RESET_ALL
 
-    LINENUMBER = Style.DIM
+        # ------------------------------------------------------------
+        # unparse
 
-    LANGUAGEKEYWORD = (Style.BRIGHT, Fore.YELLOW)  # for, if, import, ...
-    BUILTINEXCEPTION = Fore.CYAN  # TypeError, ValueError, Warning, ...
-    BUILTINOTHER = Style.BRIGHT  # str, property, print, ...
+        self.LINENUMBER = Style.DIM
 
-    DEFNAME = (Style.BRIGHT, Fore.CYAN)  # name of a function or class being defined
-    DECORATOR = Fore.LIGHTBLUE_EX
+        self.LANGUAGEKEYWORD = (Style.BRIGHT, Fore.YELLOW)  # for, if, import, ...
+        self.BUILTINEXCEPTION = Fore.CYAN  # TypeError, ValueError, Warning, ...
+        self.BUILTINOTHER = Style.BRIGHT  # str, property, print, ...
 
-    # These can be highlighted differently although Python 3.8+ uses `Constant` for all.
-    STRING = Fore.GREEN
-    NUMBER = Fore.GREEN
-    NAMECONSTANT = Fore.GREEN  # True, False, None
+        self.DEFNAME = (Style.BRIGHT, Fore.CYAN)  # name of a function or class being defined
+        self.DECORATOR = Fore.LIGHTBLUE_EX
 
-    # Macro names are syntax-highlighted when a macro expander instance is
-    # running and is provided to `unparse`, so it can query for bindings.
-    # `step_expansion` does that automatically.
-    #
-    # So they won't yet be highlighted during dialect AST transforms,
-    # because at that point, there is no *macro* expander.
-    MACRONAME = Fore.BLUE
+        # These can be highlighted differently although Python 3.8+ uses `Constant` for all.
+        self.STRING = Fore.GREEN
+        self.NUMBER = Fore.GREEN
+        self.NAMECONSTANT = Fore.GREEN  # True, False, None
 
-    INVISIBLENODE = Style.DIM  # AST node with no surface syntax repr (`Module`, `Expr`)
+        # Macro names are syntax-highlighted when a macro expander instance is
+        # running and is provided to `unparse`, so it can query for bindings.
+        # `step_expansion` does that automatically.
+        #
+        # So they won't yet be highlighted during dialect AST transforms,
+        # because at that point, there is no *macro* expander.
+        self.MACRONAME = Fore.BLUE
 
-    # AST markers for data-driven communication within the macro expander
-    ASTMARKER = Style.DIM  # the "$AstMarker" title
-    ASTMARKERCLASS = Fore.YELLOW  # the actual marker type name
+        self.INVISIBLENODE = Style.DIM  # AST node with no surface syntax repr (`Module`, `Expr`)
 
-    # ------------------------------------------------------------
-    # format_bindings, step_expansion, StepExpansion
+        # AST markers for data-driven communication within the macro expander
+        self.ASTMARKER = Style.DIM  # the "$AstMarker" title
+        self.ASTMARKERCLASS = Fore.YELLOW  # the actual marker type name
 
-    # TODO: Clean the implementations to use `_RESET` at the appropriate points
-    # TODO: so we don't need to specify things `Fore.RESET` or `Style.NORMAL` here.
+        # ------------------------------------------------------------
+        # format_bindings, step_expansion, StepExpansion
 
-    HEADING = (Style.BRIGHT, Fore.LIGHTBLUE_EX)
-    SOURCEFILENAME = (Style.BRIGHT, Fore.RESET)
+        # TODO: Clean the implementations to use `_RESET` at the appropriate points
+        # TODO: so we don't need to specify things `Fore.RESET` or `Style.NORMAL` here.
 
-    # format_bindings
-    MACROBINDING = MACRONAME
-    GREYEDOUT = Style.DIM  # if no bindings
+        self.HEADING = (Style.BRIGHT, Fore.LIGHTBLUE_EX)
+        self.SOURCEFILENAME = (Style.BRIGHT, Fore.RESET)
 
-    # step_expansion
-    TREEID = (Style.NORMAL, Fore.LIGHTBLUE_EX)
+        # format_bindings
+        self.MACROBINDING = self.MACRONAME
+        self.GREYEDOUT = Style.DIM  # if no bindings
 
-    # StepExpansion
-    ATTENTION = (Style.BRIGHT, Fore.GREEN)  # "DialectExpander debug mode"
-    TRANSFORMERKIND = (Style.BRIGHT, Fore.GREEN)  # source, AST
-    DIALECTTRANSFORMERNAME = (Style.BRIGHT, Fore.YELLOW)
+        # step_expansion
+        self.TREEID = (Style.NORMAL, Fore.LIGHTBLUE_EX)
 
-    # ------------------------------------------------------------
-    # dump
+        # StepExpansion
+        self.ATTENTION = (Style.BRIGHT, Fore.GREEN)  # "DialectExpander debug mode"
+        self.TRANSFORMERKIND = (Style.BRIGHT, Fore.GREEN)  # source, AST
+        self.DIALECTTRANSFORMERNAME = (Style.BRIGHT, Fore.YELLOW)
 
-    NODETYPE = (Style.BRIGHT, Fore.LIGHTBLUE_EX)
-    FIELDNAME = Fore.YELLOW
-    BAREVALUE = Fore.GREEN
+        # ------------------------------------------------------------
+        # dump
+
+        self.NODETYPE = (Style.BRIGHT, Fore.LIGHTBLUE_EX)
+        self.FIELDNAME = Fore.YELLOW
+        self.BAREVALUE = Fore.GREEN
+ColorScheme = ColorScheme()
