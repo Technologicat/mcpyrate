@@ -78,12 +78,12 @@ class ColorScheme(Bunch):
     This is just a bunch of constants. To change the colors, simply assign new
     values to them. Changes take effect immediately for any new output.
 
-    To replace the whole color scheme, fill in a suitable `Bunch`, and then
-    call `ColorScheme.replace(newbunch)`. To get the names of all settings,
-    use `ColorScheme.keys()`.
+    To replace the whole color scheme at once, fill in a suitable `Bunch`, and
+    then use the `replace` method. To get the names of all settings, call the
+    `keys` method.
 
-    (Don't replace the `ColorScheme` object itself; all the use sites
-    from-import it.)
+    Don't replace the color scheme object itself; all the use sites
+    from-import it.
 
     See `Fore`, `Back`, `Style` for valid values. To make a compound style,
     place the values into a tuple.
