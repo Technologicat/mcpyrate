@@ -83,17 +83,17 @@ class Capture(QuasiquoteMarker):  # like `macropy`'s `Captured`
 def lift_sourcecode(value, filename="<unknown>"):
     """Parse a string as a Python expression. Run-time part of `n[]`.
 
-    Examples::
+    Main use case is to access lexical variables with names computed at your macro definition site::
 
         lift_sourcecode("kitty") -> Name(id='kitty')
+
+    More complex expressions work, too::
+
         lift_sourcecode("kitty.tail") -> Attribute(value=Name(id='kitty'),
                                                    attr='tail')
         lift_sourcecode("kitty.tail.color") -> Attribute(value=Attribute(value=Name(id='kitty'),
                                                                          attr='tail'),
                                                          attr='color')
-
-    Works with subscript expressions, too::
-
         lift_sourcecode("kitties[3].paws[2].claws")
     """
     if not isinstance(value, str):
