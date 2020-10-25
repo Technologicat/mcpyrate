@@ -532,6 +532,8 @@ def q(tree, *, syntax, expander, **kw):
         if syntax == 'block':
             # Generate AST to perform the assignment for `with q as quoted`.
             target = kw['optional_vars']  # List, Tuple, Name
+            if target is None:
+                raise SyntaxError("`q` (block mode) requires an asname to receive the quoted code")
             if type(target) is not ast.Name:
                 raise SyntaxError(f"`q` (block mode) expected a single asname, got {unparse(target)}")
             # This `Assign` runs at the use site of `q`, it's not part of the
@@ -620,6 +622,8 @@ def a(tree, *, syntax, expander, **kw):
         raise SyntaxError("`a` is an expr and block macro only")
     if _quotelevel.value < 1:
         raise SyntaxError("`a` encountered while quotelevel < 1")
+    if syntax == "block" and kw['optional_vars'] is not None:
+        raise SyntaxError("`a` (block mode) does not take an asname")
 
     with _quotelevel.changed_by(-1):
         tree = expander.visit_recursively(tree)
