@@ -15,7 +15,7 @@ from .core import global_bindings, Done
 from .expander import MacroExpander, isnamemacro
 from .markers import ASTMarker, get_markers
 from .unparser import unparse
-from .utils import gensym, flatten, NestingLevelTracker  # noqa: F401, flatten is needed by the expansion of `q`.
+from .utils import gensym, flatten, NestingLevelTracker
 
 
 def _mcpyrate_quotes_attr(attr):
@@ -44,15 +44,18 @@ class LiftSourcecode(QuasiquoteMarker):
     pass
 
 
-class ASTLiteral(QuasiquoteMarker):  # like `macropy`'s `Literal`
-    """Keep the given subtree as-is. Emitted by `a[]`.
+class ASTLiteral(QuasiquoteMarker):  # similar to `macropy`'s `Literal`, but supports block mode, too.
+    """Keep the given subtree as-is. Emitted by `a`.
 
     Although the effect is similar, this is semantically different from
     `mcpyrate.core.Done`. This controls AST unquoting in the quasiquote
     subsystem, whereas `Done` tells the expander to stop expanding that
     subtree.
     """
-    pass
+    def __init__(self, body, syntax):
+        super().__init__(body)
+        self.syntax = syntax
+        self._fields += ["syntax"]
 
 
 class ASTList(QuasiquoteMarker):
@@ -73,7 +76,7 @@ class Capture(QuasiquoteMarker):  # like `macropy`'s `Captured`
         self._fields += ["name"]
 
 # --------------------------------------------------------------------------------
-# Run-time parts of the unquote operators.
+# Run-time parts of the operators.
 
 # Unquote doesn't have its own function here, because it's a special case of `astify`.
 
@@ -96,6 +99,77 @@ def lift_sourcecode(value, filename="<unknown>"):
     if not isinstance(value, str):
         raise TypeError(f"n[]: expected an expression that evaluates to str, result was {type(value)} with value {repr(value)}")
     return ast.parse(value, filename=filename, mode="eval").body
+
+
+_splice_ast_literal_block_marker = object()  # nonce value, only used at run time inside the same process.
+def ast_literal(tree, syntax):
+    """Perform run-time typecheck on AST literal `tree`. Run-time part of `a`.
+
+    In block mode, also flatten locally, and inject a run-time marker for
+    `splice_ast_literal_blocks`, to indicate where splicing into the
+    surrounding context is needed.
+    """
+    if syntax not in ("expr", "block"):
+        raise TypeError(f"expected `syntax` either 'expr' or 'block', got {type(syntax)} with value {repr(syntax)}")
+
+    if syntax == "expr":
+        body = tree.body if isinstance(tree, ASTMarker) else tree
+        if not isinstance(body, ast.expr):
+            raise TypeError(f"`a` (expr mode): expected an expression node, got {type(body)} with value {repr(body)}")
+        return tree
+
+    assert syntax == "block"
+    # Block mode `a` always produces a `list` of the items in its body.
+    # Each item may refer, at run time, to a statement AST node or to a `list`
+    # of statement AST nodes.
+    #
+    # We flatten locally here to get rid of the sublists, so that all statement
+    # nodes injected by this invocation of block mode `a` become gathered into
+    # a single flat "master list".
+    #
+    # However, there's a piece of postprocessing we cannot do here: the splice
+    # of the master list into the surrounding context. For that, we mark the
+    # place for `splice_ast_literal_blocks`, which is the run-time part of the
+    # surrounding block mode `q` (which allows it to operate on the whole
+    # quoted tree).
+    assert isinstance(tree, list)
+    tree = flatten(tree)
+    for stmt in tree:
+        body = stmt.body if isinstance(stmt, ASTMarker) else stmt
+        if not isinstance(body, ast.stmt):
+            raise TypeError(f"`a` (block mode): expected statement nodes only, got {type(body)} with value {repr(body)}")
+    return [_splice_ast_literal_block_marker] + tree
+
+def splice_ast_literal_blocks(tree):
+    """Splice block mode `a` AST literals into the surrounding context. Run-time part of block mode `q`."""
+    assert isinstance(tree, list)  # block mode of `q` always produces a list of nodes
+
+    # We do this recursively to splice also at any inner levels of the quoted
+    # AST (e.g. `with a` inside an `if`). We have to be careful to splice only
+    # output from block mode of `a`, because lists occur in many places in a
+    # Python AST beside statement suites (e.g. `Assign` targets, the parameter
+    # list in a function definition, ...).
+    def doit(thing):
+        if isinstance(thing, list):
+            newthing = []
+            for item in thing:
+                if isinstance(item, list) and item and item[0] == _splice_ast_literal_block_marker:
+                    elts = item[1:]
+                    doit(elts)
+                    newthing.extend(elts)
+                else:
+                    doit(item)
+                    newthing.append(item)
+            thing[:] = newthing
+        elif isinstance(thing, ast.AST):
+            for fieldname, value in ast.iter_fields(thing):
+                if isinstance(value, list):
+                    doit(value)
+        else:
+            raise TypeError(f"Expected `list` or AST node, got {type(thing)} with value {repr(thing)}")
+    doit(tree)
+
+    return tree
 
 
 def ast_list(nodes):
@@ -253,9 +327,13 @@ def astify(x, expander=None):  # like `macropy`'s `ast_repr`
                              ast.Constant(value=filename)],
                             [])
 
-        elif T is ASTLiteral:  # `a[]`
-            # Pass through this subtree as-is.
-            return x.body
+        elif T is ASTLiteral:  # `a`
+            # Pass through this subtree as-is, but apply a run-time typecheck,
+            # as well as some special run-time handling for block mode `a`.
+            return ast.Call(_mcpyrate_quotes_attr('ast_literal'),
+                            [x.body,
+                             ast.Constant(value=x.syntax)],
+                            [])
 
         elif T is ASTList:  # `s[]`
             return ast.Call(_mcpyrate_quotes_attr('ast_list'), [x.body], [])
@@ -451,19 +529,19 @@ def q(tree, *, syntax, expander, **kw):
         if ps:
             assert False, f"QuasiquoteMarker instances remaining in output: {ps}"
 
-        # Generate AST to perform the assignment for `with q as quoted`.
         if syntax == 'block':
+            # Generate AST to perform the assignment for `with q as quoted`.
             target = kw['optional_vars']  # List, Tuple, Name
             if type(target) is not ast.Name:
-                raise SyntaxError(f"`q` expected a single asname, got {unparse(target)}")
-            # Note this `Assign` runs at the use site of `q`, it's not part of
-            # the quoted code block. Here `tree` is a `List`, because the original
+                raise SyntaxError(f"`q` (block mode) expected a single asname, got {unparse(target)}")
+            # This `Assign` runs at the use site of `q`, it's not part of the
+            # quoted code block. Here `tree` is a `List`, because the original
             # input was a `list` of AST nodes, and we ran it through `astify`.
             #
-            # We fix the possibly nested list structure (due to block mode `a`)
-            # at run time, by injecting a fixer on the RHS here.
-            # TODO: Add a validator. After the `flatten`, nodes should be statements.
-            tree = ast.Assign([target], ast.Call(_mcpyrate_quotes_attr('flatten'),
+            # Because block mode `a` introduces the need to splice the interpolated
+            # ASTs at run time into the surrounding context (which is only available
+            # to the surrounding `q`), we inject a handler for that on the RHS here.
+            tree = ast.Assign([target], ast.Call(_mcpyrate_quotes_attr('splice_ast_literal_blocks'),
                                                  [tree],
                                                  []))
         return tree
@@ -513,26 +591,28 @@ def n(tree, *, syntax, expander, **kw):
 def a(tree, *, syntax, expander, **kw):
     """[syntax, expr/block] AST-unquote. Splice an AST into a quasiquote.
 
-    Syntax::
+    **Expression mode**::
 
         a[expr]
+
+    `expr` must evaluate, at the use site of `q`, to an *expression* AST node.
+    Typically, it is the name of a variable that holds such a node. Any kind
+    of expression is fine.
+
+    **Block mode**::
 
         with a:
             stmts
             ...
 
-    `expr` must evaluate to an *expression* AST node. Typically, it is the
-    name of a variable (from the use site of the surrounding `q`) that holds
-    such a node.
-
     Each `stmts` must evaluate to either a single *statement* AST node,
-    or a `list` of *statement* AST nodes. It is as if all those statements
-    appeared in the `with` body, in a top to bottom order.
+    or a `list` of *statement* AST nodes. Typically, it is the name of
+    a variable that holds such data.
 
-    Note that the `with` body must not contain anything else. Most other inputs
-    cause a mysterious compile error; the only thing we can check at macro
-    expansion time is that the body contains only "expression statements"
-    (which include references to variables).
+    This expands as if all those statements appeared in the `with` body,
+    in the order listed.
+
+    The `with` body must not contain anything else.
 
     See also `a`'s sister, `n[]`.
     """
@@ -545,33 +625,30 @@ def a(tree, *, syntax, expander, **kw):
         tree = expander.visit_recursively(tree)
 
         if syntax == "expr":
-            return ASTLiteral(tree)
+            return ASTLiteral(tree, syntax)
 
-        # Block mode: replace `Expr` wrappers with `ASTLiteral` wrappers.
-        #
-        # The `Expr` wrapper must be deleted, because the nodes that will be
-        # eventually spliced in are *statement* nodes. The `ASTLiteral` wrapper
-        # must be added so that the node references will be passed through to
-        # the use site of `q` as-is.
-        #
-        # Note that when `a` expands, the elements of the list `tree` are
-        # just names (or in general, expressions that at run time evaluate
-        # to statement ASTs, or lists of statement ASTs). Their values become
-        # available when the use site of `q` reaches run time, but then it's
-        # too late to edit the AST structure in a macro.
-        #
-        # So, once the values become available, we often actually produce an
-        # invalid AST with a nested list structure. This is fixed by injecting
-        # a fixer in the block mode of `q` (so that the fixer runs at run time
-        # at the use site of `q` - which is the right time for that, since the
-        # inputs vary at run time).
         assert syntax == "block"
+        # Block mode: strip `Expr` wrappers.
+        #
+        # When `a` expands, the elements of the list `tree` are `Expr` nodes
+        # containing expressions. Typically each is just a `Name` node, or in
+        # general, any expression that at run time evaluates to a statement AST
+        # node, or to a list of statement AST nodes.
+        #
+        # We want to return, as an AST, a list of those expressions for processing
+        # later.
+        #
+        # The value of the expressions become available when the use site of
+        # `q` reaches run time. Because each expression may refer to a list of
+        # AST nodes, the block mode of `q` injects a call to a postprocessor
+        # that, at run time (once the values are available), will flatten the
+        # quoted AST structure.
         out = []
         for stmt in tree:
             if type(stmt) is not ast.Expr:
-                raise SyntaxError("`with a` takes in statement tree references only")
-            out.append(ASTLiteral(stmt.value))
-        return out
+                raise SyntaxError("`a` (block mode): each item in the body must be an expression (that at run time evaluates to a statement node or list of statement nodes)")
+            out.append(stmt.value)
+        return ASTLiteral(ast.List(elts=out), syntax)
 
 
 def s(tree, *, syntax, expander, **kw):
