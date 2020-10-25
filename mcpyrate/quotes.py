@@ -97,7 +97,7 @@ def lift_sourcecode(value, filename="<unknown>"):
         lift_sourcecode("kitties[3].paws[2].claws")
     """
     if not isinstance(value, str):
-        raise TypeError(f"n[]: expected an expression that evaluates to str, result was {type(value)} with value {repr(value)}")
+        raise TypeError(f"`n[]`: expected an expression that evaluates to str, result was {type(value)} with value {repr(value)}")
     return ast.parse(value, filename=filename, mode="eval").body
 
 
@@ -175,9 +175,9 @@ def splice_ast_literal_blocks(tree):
 def ast_list(nodes):
     """Interpolate a `list` of AST nodes as an `ast.List` node. Run-time part of `s[]`."""
     if not isinstance(nodes, list):
-        raise TypeError(f"s[]: expected an expression that evaluates to list, result was {type(nodes)} with value {repr(nodes)}")
+        raise TypeError(f"`s[]`: expected an expression that evaluates to list, result was {type(nodes)} with value {repr(nodes)}")
     if not all(isinstance(tree, ast.AST) for tree in nodes):
-        raise ValueError(f"s[]: expected a list of AST nodes, got {repr(nodes)}")
+        raise ValueError(f"`s[]`: expected a list of AST nodes, got {repr(nodes)}")
     return ast.List(elts=nodes)
 
 
