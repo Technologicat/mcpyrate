@@ -23,7 +23,13 @@ class Bunch:
         self._reserved_names = dir(self)
 
     def copy(self):
+        """Return a copy of this `Bunch`."""
         return Bunch(**{k: v for k, v in self._data.items()})
+    def replace(self, other):
+        """Replace all data in this `Bunch` with data from the `other` one (shallow-copying it)."""
+        if not isinstance(other, Bunch):
+            raise TypeError(f"expected Bunch, got {type(other)} with value {repr(other)}")
+        self._data = other.copy()._data
 
     def __getattr__(self, name):
         return self._data[name]
