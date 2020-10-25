@@ -41,6 +41,7 @@ Supports Python 3.6, 3.7, 3.8, and PyPy3.
         - [`Coverage.py` says some of the lines inside my block macro invocation aren't covered?](#coveragepy-says-some-of-the-lines-inside-my-block-macro-invocation-arent-covered)
         - [`Coverage.py` says my quasiquoted code block is covered? It's quoted, not running, so why?](#coveragepy-says-my-quasiquoted-code-block-is-covered-its-quoted-not-running-so-why)
         - [My line numbers aren't monotonically increasing, why is that?](#my-line-numbers-arent-monotonically-increasing-why-is-that)
+        - [I tried making a PyPI package with `setuptools` out of an app that uses `mcpyrate`, and it's not working?](#i-tried-making-a-pypi-package-with-setuptools-out-of-an-app-that-uses-mcpyrate-and-its-not-working)
         - [I tried making a Debian package out of an app that uses `mcpyrate`, and it's not working?](#i-tried-making-a-debian-package-out-of-an-app-that-uses-mcpyrate-and-its-not-working)
     - [Macro expansion error reporting](#macro-expansion-error-reporting)
         - [Recommended exception types](#recommended-exception-types)
@@ -675,6 +676,19 @@ Any AST node that existed in the unexpanded source code will, in the expanded co
 Hence, non-monotonicity occurs if a block (or decorator) macro adds new AST nodes *after* existing AST nodes that originate from lines below the macro invocation node itself in the unexpanded source file.
 
 (Note that the non-monotonicity, when present at all, is mild; it's local to each block.)
+
+
+### I tried making a PyPI package with `setuptools` out of an app that uses `mcpyrate`, and it's not working?
+
+The `py3compile` (and `pypy3compile`) command-line tools are not macro-aware. So the bytecode produced by them tries to treat macro-imports as regular imports. If this happens, you'll get an error about being unable to import the name `macros`.
+
+For now, as a workaround, do one of the following:
+
+ - Activate `mcpyrate`, and call `py3compile` from Python.
+   - The tool is just a wrapper around the standard library module [`py_compile`](https://docs.python.org/3/library/py_compile.html), which uses the standard loader (see `compile` in [the source code](https://github.com/python/cpython/blob/3.9/Lib/py_compile.py)). That standard loader is exactly what `mcpyrate.activate` monkey-patches to add macro support.
+   - Explicitly: first `import mcpyrate.activate`, then `import py_compile`, and then use the functions from that module (either `compile` or `main`, depending on what you want).
+
+ - Disable bytecode precompilation when making the package.
 
 
 ### I tried making a Debian package out of an app that uses `mcpyrate`, and it's not working?
