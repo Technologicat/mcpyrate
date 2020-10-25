@@ -39,19 +39,13 @@ class Unquote(QuasiquoteMarker):
 class LiftSourcecode(QuasiquoteMarker):
     """Parse a string as a Python expression, interpolate the resulting AST. Emitted by `n[]`.
 
-    This allows e.g. computing a lexical variable name to be accessed.
+    This allows e.g. computing names of lexical variables.
     """
     pass
 
 
 class ASTLiteral(QuasiquoteMarker):  # similar to `macropy`'s `Literal`, but supports block mode, too.
-    """Keep the given subtree as-is. Emitted by `a`.
-
-    Although the effect is similar, this is semantically different from
-    `mcpyrate.core.Done`. This controls AST unquoting in the quasiquote
-    subsystem, whereas `Done` tells the expander to stop expanding that
-    subtree.
-    """
+    """Interpolate the given AST. Emitted by `a`."""
     def __init__(self, body, syntax):
         super().__init__(body)
         self.syntax = syntax
@@ -105,8 +99,8 @@ _splice_ast_literal_block_marker = object()  # nonce value, only used at run tim
 def ast_literal(tree, syntax):
     """Perform run-time typecheck on AST literal `tree`. Run-time part of `a`.
 
-    In block mode, also flatten locally, and inject a run-time marker for
-    `splice_ast_literal_blocks`, to indicate where splicing into the
+    If `syntax="block", also flatten locally, and inject a run-time marker
+    for `splice_ast_literal_blocks`, to indicate where splicing into the
     surrounding context is needed.
     """
     if syntax not in ("expr", "block"):
@@ -598,8 +592,8 @@ def a(tree, *, syntax, expander, **kw):
         a[expr]
 
     `expr` must evaluate, at the use site of `q`, to an *expression* AST node.
-    Typically, it is the name of a variable that holds such a node. Any kind
-    of expression is fine.
+    Typically, it is the name of a variable that holds such a node, but any
+    kind of expression is fine.
 
     **Block mode**::
 

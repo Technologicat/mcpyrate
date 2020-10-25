@@ -203,6 +203,7 @@ critical.
 Here *macro definition site* and *macro use site* refer to those sites for the
 macro in whose implementation `q` is used to construct (part of) the output AST.
 
+
 ### `q`: quasiquote
 
 `q[expr]` lifts the expression `expr` into an AST. E.g. `q[42]` becomes
@@ -221,6 +222,7 @@ expanded by default. See the macros `expand` and `expand1`.
 
 The macro `expandq`, which is shorthand for "`q`, then `expand`", is equivalent
 to `macropy`'s `q`.
+
 
 ### `u`: unquote
 
@@ -251,6 +253,7 @@ If you don't need the extra line for clearer stack traces, the temporary variabl
 ```python
 logging_call = q[h[log_value_with_sourcecode](tree, u[unparse(tree)])]
 ```
+
 
 ### `n`: name-unquote
 
@@ -313,33 +316,103 @@ the "undefined" name `x`, but for that use case, we recommend `# noqa: F821`.
 
 Generalized from `macropy`'s `name`, which converts a string into a lexical variable access.
 
+
 ### `a`: AST-unquote
 
-`a[tree]` takes the AST `tree` at the macro definition site, and splices it
-into the quoted code. It's the same as just `tree` outside any `q`.
+Splice an existing AST into quoted code. This unquote supports both expr and block modes.
 
-`tree` must evaluate to an AST node.
+#### Expression mode
 
-The use case is that `a[]` can appear in any subexpression inside a `q`,
-so you can construct subtrees separately (using any strategy of your choosing),
-and then interpolate them into a quasiquoted code snippet.
+```python
+a[expr]
+```
 
-**With `a[]`, the result is always an expression AST.** If you need to splice
-statements, see the function `mcpyrate.splicing.splice_statements`.
+The expression `expr` must evaluate, at run time at the use site of `q`, to an
+*expression* AST node. Typically, it is the name of a variable that holds such a
+node, but any kind of expression is fine.
 
-Note `tree` is **not copied**, so if you `a[]` the same AST instance multiple
-times, it will do exactly that. If needed, explicitly `copy.copy(tree)` or
-`copy.deepcopy(tree)` depending on what you want.
+The result is an *expression* AST, replacing the invocation of `a[]`. Note that
+if `a[]` appears in a statement position (inside a block mode `q`), it actually
+appears inside Python's invisible `ast.Expr` "expression statement" node. If you
+want to inject a tree to the raw statement position, use the block mode of `a`.
+
+The `a[]` operator will type-check at run time, at the use site of the
+surrounding `q`, that the value of `expr` is an *expression* AST node
+(or an `ASTMarker`, with an expression AST node in its `body`).
+
+#### Block mode
+
+```python
+with a:
+    stmts
+    ...
+```
+
+Each `stmts` must evaluate, at run time at the use site of `q`, to either a
+single *statement* AST node, or a `list` of *statement* AST nodes. Typically,
+it is the name of a variable that holds such data.
+
+This expands as if all those statements appeared in the `with` body,
+in the order listed. The `with a` block itself is compiled away;
+the statements are spliced into the surrounding context.
+
+The body of the `with a` must not contain anything else.
+
+The `with a` operator will type-check at run time, at the use site of the
+surrounding `q`, once each `stmts` has been resolved to a value, that each node
+it got is a *statement* AST node (or an `ASTMarker`, with such valid data in its
+`body`).
+
+#### Notes
+
+**Very important**: *If `mymacro` uses `q`, run time for the use site of `q`
+is typically macro expansion time for an invocation of `mymacro`.*
+
+Furthermore, when the use site of `q` has reached run time, the `q` macro
+invocation is already long gone - it was expanded away when the **definition**
+of `mymacro` was macro-expanded. At run time of the use site of `q`, the AST
+corresponding to the quoted code has already been constructed, with just some
+final details to be filled in by the run-time parts of the quote/unquote
+operators. (Mainly, any value or tree splicing occurs at that time, because
+that's the earliest time that has the values available.)
+
+So any AST node type errors are still caught during macro expansion time, but
+it's the macro expansion time *of some module in your app*. The macro that uses
+`q` must be invoked in order for the type check to run. It must behave like
+this, simply because the trees being spliced in are not available until the use
+site of `q` reaches run time.
+
+The type checks are **not recursive**, because Python's AST format provides
+no information on which positions in the AST expect statements and which ones
+expect expressions. So this cannot be automatically checked, short of
+duplicating the full grammar, which would increase the maintenance effort
+for `mcpyrate` beyond a reasonable level, whenever a new minor version of the
+Python language is released.
+
+So we check only the node(s) explicitly given to `a`, because there the macro
+invocation type (expr or block) explicitly tells which node type is expected.
+If the tree being spliced was built manually (not using quasiquotes), it may
+still contain type-invalid data at a deeper level.
+
+Or in plain English: the type checks will **not** eliminate *all* sources of
+mysterious compile errors caused by manually introduced type errors in a macro
+output AST. They only eliminate the most common error source for such when
+quasiquotes are used (which is to say, the accidental incorrect use of `a`).
+
+The tree being spliced is **not copied**, so if you `a` the same AST instance
+multiple times, it will do exactly that. If needed, explicitly `copy.copy`
+or `copy.deepcopy` depending on what you want.
 
 However, as a convenience, in the final global postprocess pass, the expander's
 automatic `ctx` fixer detects if a node instance requiring a `ctx` has already
 been seen during that postprocess pass, and shallow-copies it automatically
 to eliminate `ctx` conflicts, because the same node instance might appear
 in two or more positions that require different `ctx`. But until that final
-global postprocess pass, the `id` of any node you pass into `a[]` is not
-affected by the `a[]`.
+global postprocess pass, the `id` of any node you pass into `a` is not
+affected by the `a`.
 
-Equivalent to `macropy`'s `ast_literal`.
+The expression mode is equivalent to `macropy`'s `ast_literal`.
+
 
 ### `s`: AST-list-unquote
 

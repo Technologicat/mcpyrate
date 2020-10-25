@@ -585,13 +585,21 @@ This can be a problem, because hygienic value storage uses `pickle`, which in or
 
 ### Error in `compile`, an AST node is missing the required field `lineno`?
 
-Welcome to the club. It is likely the actual error is something else, because the expander automatically fills in missing source location information.
+Welcome to the club. It is likely not much of an exaggeration to say all Python macro authors (regardless of which expander you pick) have seen this error at some point.
+
+It is overwhelmingly likely the actual error is something else, because all macro expanders for Python automatically fill in source location information for nodes that don't have it. (There are differences in what exact line numbers are filled in by `mcpyrate`/`mcpy`/`macropy`, but they all do it in some form.)
 
 The misleading error message is due to an unfortunate lack of input validation in Python's compiler, because Python wasn't designed for an environment where AST editing is part of the daily programming experience.
 
 The first thing to check is that your macro is really placing AST nodes where the compiler expects those, instead of accidentally using bare values.
 
-If you edit ASTs manually, check that you're really using a `list` where the [AST docs at Green Tree Snakes](https://greentreesnakes.readthedocs.io/en/latest/nodes.html) say *"a list of ..."*, and not a `tuple`. Also note statement suites are represented as a bare `list`, and **not** as an `ast.List`.
+If you edit ASTs manually, check that you're really using a `list` where the [AST docs at Green Tree Snakes](https://greentreesnakes.readthedocs.io/en/latest/nodes.html) say *"a list of ..."*, and not a `tuple`. Also note statement suites are represented as a bare `list`, and **not** as an `ast.List`. Any optional statement suite, when not present, is represented by an empty list, `[]`.
+
+The next thing to check is that the macro is placing *expression* AST nodes where Python's grammar expects those, and *statement* AST nodes where it expects those. There is no easy way to check this automatically, because Python's AST format does not provide this information.
+
+A common trap here is the invisible `ast.Expr` "expression statement" node. The grammar requires that, in the source code, when an expression appears in a position where a statement is expected, the expression node must be wrapped in an `ast.Expr` statement node. So when manually building an AST, the problem may be an accidentally omitted `ast.Expr`.
+
+When using quasiquotes, the common problem is the opposite, i.e. the accidental presence of an `ast.Expr` node. For example, one may use an `ast.Name(id="__paste_here__")` as a paste target marker in a quoted code block, and try to manually replace that marker with a statement node. Unless one is very careful, the statement node will then easily accidentally end up in the `value` field of the `ast.Expr` node, producing an invalid AST. (This is taken into account in `mcpyrate.splicing.splice_statements`, as well as in `with a` in `mcpyrate.quotes`. Both of them specifically remove the `ast.Expr` node when splicing statements into quoted code.)
 
 If you use quasiquotes, check that you're using the unquote operators you intended. It's easy to accidentally put an `u[]` or `h[]` in place of an `a[]`, or vice versa.
 
