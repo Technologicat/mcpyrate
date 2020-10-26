@@ -10,7 +10,7 @@ import io
 import sys
 
 from .astdumper import dump  # fallback
-from .colorizer import colorize, ColorScheme
+from .colorizer import setcolor, colorize, ColorScheme
 from .markers import ASTMarker
 
 # Large float and imaginary literals get turned into infinities in the AST.
@@ -398,10 +398,12 @@ class Unparser:
         for deco in t.decorator_list:
             self.fill(self.maybe_colorize("@", ColorScheme.DECORATOR),
                       lineno_node=deco)
-            self.write(ColorScheme.DECORATOR)
-            with self.nocolor():
-                self.dispatch(deco)
-            self.write(ColorScheme._RESET)
+            self.write(setcolor(ColorScheme.DECORATOR))
+            try:
+                with self.nocolor():
+                    self.dispatch(deco)
+            finally:
+                self.write(setcolor())
 
         class_str = (self.maybe_colorize_python_keyword("class ") +
                      self.maybe_colorize(t.name, ColorScheme.DEFNAME))
@@ -438,10 +440,12 @@ class Unparser:
         for deco in t.decorator_list:
             self.fill(self.maybe_colorize("@", ColorScheme.DECORATOR),
                       lineno_node=deco)
-            self.write(ColorScheme.DECORATOR)
-            with self.nocolor():
-                self.dispatch(deco)
-            self.write(ColorScheme._RESET)
+            self.write(setcolor(ColorScheme.DECORATOR))
+            try:
+                with self.nocolor():
+                    self.dispatch(deco)
+            finally:
+                self.write(setcolor())
 
         def_str = (self.maybe_colorize_python_keyword(fill_suffix) +
                    " " + self.maybe_colorize(t.name, ColorScheme.DEFNAME) + "(")

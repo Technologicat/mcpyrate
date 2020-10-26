@@ -79,7 +79,7 @@ def step_expansion(tree, *, args, syntax, expander, **kw):
         stars = indent * '*'
         codeindent = indent
         tag = id(tree)
-        print(f"{c(CS.HEADING)}{stars}Tree {c(CS.TREEID)}0x{tag:x} {c(CS.HEADING)}before macro expansion:{c(CS._RESET)}",
+        print(f"{c(CS.HEADING)}{stars}Tree {c(CS.TREEID)}0x{tag:x} ({expander.filename}) {c(CS.HEADING)}before macro expansion:{c()}",
               file=stderr)
         print(textwrap.indent(formatter(tree), codeindent * ' '), file=stderr)
         mc = MacroCollector(expander)
@@ -89,13 +89,13 @@ def step_expansion(tree, *, args, syntax, expander, **kw):
             step += 1
             tree = expander.visit_once(tree)  # -> Done(body=...)
             tree = tree.body
-            print(f"{c(CS.HEADING)}{stars}Tree {c(CS.TREEID)}0x{tag:x} {c(CS.HEADING)}after step {step}:{c(CS._RESET)}",
+            print(f"{c(CS.HEADING)}{stars}Tree {c(CS.TREEID)}0x{tag:x} ({expander.filename}) {c(CS.HEADING)}after step {step}:{c()}",
                   file=stderr)
             print(textwrap.indent(formatter(tree), codeindent * ' '), file=stderr)
             mc.clear()
             mc.visit(tree)
         plural = "s" if step != 1 else ""
-        print(f"{c(CS.HEADING)}{stars}Tree {c(CS.TREEID)}0x{tag:x} {c(CS.HEADING)}macro expansion complete after {step} step{plural}.{c(CS._RESET)}",
+        print(f"{c(CS.HEADING)}{stars}Tree {c(CS.TREEID)}0x{tag:x} ({expander.filename}) {c(CS.HEADING)}macro expansion complete after {step} step{plural}.{c()}",
               file=stderr)
     return tree
 
@@ -152,13 +152,13 @@ def format_bindings(expander, *, globals_too=False, color=False):
 
     bindings = expander.bindings if globals_too else expander.local_bindings
     with io.StringIO() as output:
-        output.write(f"{c(CS.HEADING)}Macro bindings for {c(CS.SOURCEFILENAME)}{expander.filename}{c(CS.HEADING)}:{c(CS._RESET)}\n")
+        output.write(f"{c(CS.HEADING)}Macro bindings for {c(CS.SOURCEFILENAME)}{expander.filename}{c(CS.HEADING)}:{c()}\n")
         if not bindings:
             output.write(maybe_colorize("    <no bindings>\n",
                                         ColorScheme.GREYEDOUT))
         else:
             for k, v in sorted(bindings.items()):
-                k = maybe_colorize(k, ColorScheme.MACROBINDING)
+                k = maybe_colorize(k, ColorScheme.MACRONAME)
                 output.write(f"    {k}: {format_macrofunction(v)}\n")
         return output.getvalue()
 

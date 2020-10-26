@@ -128,7 +128,7 @@ class StepExpansion(Dialect):  # actually part of public API of mcpyrate.debug, 
     def transform_source(self, text):
         self.expander.debugmode = True
         c, CS = setcolor, ColorScheme
-        msg = f"{c(CS.SOURCEFILENAME)}{self.expander.filename} {c(CS.HEADING)}enabled {c(CS.ATTENTION)}DialectExpander debug mode {c(CS.HEADING)}while taking step {self.expander._step + 1}.{c(CS._RESET)}"
+        msg = f"{c(CS.SOURCEFILENAME)}{self.expander.filename} {c(CS.HEADING)}enabled {c(CS.ATTENTION)}DialectExpander debug mode {c(CS.HEADING)}while taking step {self.expander._step + 1}.{c()}"
         print(_message_header + msg, file=stderr)
         # Pass through the input (instead of returning `NotImplemented`) to
         # consider this as having taken a step, thus triggering the debug mode
@@ -185,7 +185,7 @@ class DialectExpander:
         c, CS = setcolor, ColorScheme
         if self.debugmode:
             plural = "s" if self._step != 1 else ""
-            msg = f"{c(CS.SOURCEFILENAME)}{self.filename} {c(CS.HEADING)}before dialect {c(CS.TRANSFORMERKIND)}{kind} {c(CS.HEADING)}transformers ({self._step} step{plural} total):{c(CS._RESET)}\n"
+            msg = f"{c(CS.SOURCEFILENAME)}{self.filename} {c(CS.HEADING)}before dialect {c(CS.TRANSFORMERKIND)}{kind} {c(CS.HEADING)}transformers ({self._step} step{plural} total):{c()}\n"
             print(_message_header + msg, file=stderr)
             print(format_for_display(content), file=stderr)
 
@@ -224,13 +224,13 @@ class DialectExpander:
                 self._step += 1
 
                 if self.debugmode:
-                    msg = f"{c(CS.SOURCEFILENAME)}{self.filename} {c(CS.HEADING)}after {c(CS.DIALECTTRANSFORMERNAME)}{module_absname}.{dialectname}.{transform} {c(CS.HEADING)}(step {self._step}):{c(CS._RESET)}\n"
+                    msg = f"{c(CS.SOURCEFILENAME)}{self.filename} {c(CS.HEADING)}after {c(CS.DIALECTTRANSFORMERNAME)}{module_absname}.{dialectname}.{transform} {c(CS.HEADING)}(step {self._step}):{c()}\n"
                     print(_message_header + msg, file=stderr)
                     print(format_for_display(content), file=stderr)
 
         if self.debugmode:
             plural = "s" if self._step != 1 else ""
-            msg = f"{c(CS.SOURCEFILENAME)}{self.filename} {c(CS.HEADING)}completed all dialect {c(CS.TRANSFORMERKIND)}{kind} {c(CS.HEADING)}transforms ({self._step} step{plural} total).{c(CS._RESET)}"
+            msg = f"{c(CS.SOURCEFILENAME)}{self.filename} {c(CS.HEADING)}completed all dialect {c(CS.TRANSFORMERKIND)}{kind} {c(CS.HEADING)}transforms ({self._step} step{plural} total).{c()}"
             print(_message_header + msg, file=stderr)
 
         return content

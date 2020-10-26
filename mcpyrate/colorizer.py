@@ -21,11 +21,18 @@ except ImportError:  # pragma: no cover
 from .bunch import Bunch
 
 
-def setcolor(*colors):
+def setcolor(*colors, reset=True):
     """Set color for terminal display.
 
-    Returns a string that, when printed into a terminal, sets the color
-    and style.
+    Returns a string that, when printed into a terminal, sets the style
+    and color.
+
+    If `reset=True`, reset style and color before setting the requested
+    style and color.
+
+    If `reset=False`, augment current style and color. E.g. if `Style.BRIGHT`
+    is already active, and you set `Fore.BLUE`, the style will remain BRIGHT,
+    and color will be BLUE.
 
     For available `colors`, see `Fore`, `Back` and `Style`.
 
@@ -33,7 +40,8 @@ def setcolor(*colors):
     for defining compound styles.
 
     **CAUTION**: The specified style and color remain in effect until another
-    explicit call to `setcolor`. To reset, use `setcolor(Style.RESET_ALL)`.
+    explicit call to `setcolor`. To reset, use `setcolor()`.
+
     If you want to colorize a piece of text so that the color and style
     auto-reset after your text, use `colorize` instead.
     """
@@ -41,11 +49,15 @@ def setcolor(*colors):
         if isinstance(color, (list, tuple)):
             return "".join(_setcolor(elt) for elt in color)
         return color
-    return _setcolor(colors)
+    out = [_setcolor(Style.RESET_ALL)] if reset else []
+    out.append(_setcolor(colors))
+    return "".join(out)
 
 
-def colorize(text, *colors, reset=True):
+def colorize(text, *colors):
     """Colorize string `text` for terminal display.
+
+    Always reset style and color at the start of `text`, as well as after it.
 
     Returns `text`, augmented with color and style commands for terminals.
 
@@ -63,13 +75,12 @@ def colorize(text, *colors, reset=True):
         ...
         print(colorize("I'm bold and bluetiful, too", BRIGHT_BLUE))
 
-    **CAUTION**: Does not nest. Style and color reset after the colorized text.
-    If you want to set a color and style until further notice, use `setcolor`
-    instead.
+    **CAUTION**: Does not nest. If you want to set a color and style
+    until further notice, use `setcolor` instead.
     """
     return "{}{}{}".format(setcolor(colors),
                            text,
-                           setcolor(Style.RESET_ALL))
+                           setcolor())
 
 
 class ColorScheme(Bunch):
@@ -79,8 +90,8 @@ class ColorScheme(Bunch):
     values to them. Changes take effect immediately for any new output.
 
     To replace the whole color scheme at once, fill in a suitable `Bunch`, and
-    then use the `replace` method. To get the names of all settings, call the
-    `keys` method.
+    then use the `replace` method. If you need to get the names of all settings
+    programmatically, call the `keys` method.
 
     Don't replace the color scheme object itself; all the use sites
     from-import it.
@@ -94,8 +105,6 @@ class ColorScheme(Bunch):
     """
     def __init__(self):
         super().__init__()
-
-        self._RESET = Style.RESET_ALL
 
         # ------------------------------------------------------------
         # unparse
@@ -131,22 +140,18 @@ class ColorScheme(Bunch):
         # ------------------------------------------------------------
         # format_bindings, step_expansion, StepExpansion
 
-        # TODO: Clean the implementations to use `_RESET` at the appropriate points
-        # TODO: so we don't need to specify things `Fore.RESET` or `Style.NORMAL` here.
-
         self.HEADING = (Style.BRIGHT, Fore.LIGHTBLUE_EX)
-        self.SOURCEFILENAME = (Style.BRIGHT, Fore.RESET)
+        self.SOURCEFILENAME = Style.BRIGHT
 
         # format_bindings
-        self.MACROBINDING = self.MACRONAME
         self.GREYEDOUT = Style.DIM  # if no bindings
 
         # step_expansion
-        self.TREEID = (Style.NORMAL, Fore.LIGHTBLUE_EX)
+        self.TREEID = Fore.LIGHTBLUE_EX
 
         # StepExpansion
         self.ATTENTION = (Style.BRIGHT, Fore.GREEN)  # "DialectExpander debug mode"
-        self.TRANSFORMERKIND = (Style.BRIGHT, Fore.GREEN)  # source, AST
+        self.TRANSFORMERKIND = (Style.BRIGHT, Fore.GREEN)  # "source", "AST"
         self.DIALECTTRANSFORMERNAME = (Style.BRIGHT, Fore.YELLOW)
 
         # ------------------------------------------------------------
