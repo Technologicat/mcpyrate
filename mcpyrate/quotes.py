@@ -437,10 +437,10 @@ def unastify(tree):
     We *could* detect those calls and uncompile them into AST markers, but we
     currently don't.
 
-    The use case of `unastify` is second-order macros, to transform a quoted
+    The use case of `unastify` is higher-order macros, to transform a quoted
     AST at macro expansion time when the extra AST layer added by `astify` is
     still present. The recipe is `unastify`, process just like any AST, then
-    quote again.
+    quote again. (`expand` and `expand1` are examples of this.)
 
     If you just want to macro-expand a quoted AST, see `expand` and `expand1`.
     """
