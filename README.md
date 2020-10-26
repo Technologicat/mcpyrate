@@ -35,6 +35,8 @@ Supports Python 3.6, 3.7, 3.8, and PyPy3.
     - [Troubleshooting](#troubleshooting)
         - [I just ran my program again and no macro expansion is happening?](#i-just-ran-my-program-again-and-no-macro-expansion-is-happening)
         - [My own macros are working, but I'm not seeing any output from `step_expansion` (or `show_bindings`)?](#my-own-macros-are-working-but-im-not-seeing-any-output-from-stepexpansion-or-showbindings)
+        - [`step_expansion` is treating `expand[]` (or nested `expand1[]`) as a single step?](#stepexpansion-is-treating-expand-or-nested-expand1-as-a-single-step)
+        - [Can I use the `step_expansion` macro to report steps with `expander.visit(tree)`?](#can-i-use-the-stepexpansion-macro-to-report-steps-with-expandervisittree)
         - [Error in `compile`, an AST node is missing the required field `lineno`?](#error-in-compile-an-ast-node-is-missing-the-required-field-lineno)
             - [Unexpected bare value](#unexpected-bare-value)
             - [Wrong type of list](#wrong-type-of-list)
@@ -600,6 +602,34 @@ Unlike most macros, the whole point of `step_expansion` and `show_bindings` are 
 Your own macros "work", because Python is loading the bytecode, which was macro-expanded during an earlier run. Your macros didn't run this time, but the expanded code from the previous run is still there in the bytecode cache.
 
 Force an *mtime* update on your source file (`touch` it, or just save it again in a text editor), so the expander will then run again (seeing that the source file has been modified).
+
+
+### `step_expansion` is treating `expand[]` (or nested `expand1[]`) as a single step?
+
+This is a natural consequence of `expand` and `expand1` being defined as macros.
+
+In the case of `expand`, when `step_expansion` takes one step, by telling the expander to visit the tree once, the expander will (eventually) find the `expand` invocation. So it will invoke that macro.
+
+The `expand` macro, by definition, expands whatever is inside the invocation until no macros remain there. So when `step_expansion` gets control back, all macro invocations within the `expand` are gone.
+
+Then, consider the case with two or more nested `expand1` invocations. When `step_expansion` takes one step, by telling the expander to visit the tree once, the expander will (eventually) find the outermost `expand1` invocation. So it will invoke that macro.
+
+The `expand1` macro, by definition, expands once whatever is inside the invocation. So it will call the expander to expand once... and now the expander will find the next inner `expand1`. This will get invoked, too. The chain continues until all `expand1` in the expression or block are gone.
+
+This is not a major issue, though, because beside use in an occasional higher-order macro, `expand` and `expand1` are mainly useful in the REPL, for interactive experimentation on quoted code. Note also `step_expansion` is available in the REPL, as well.
+
+
+### Can I use the `step_expansion` macro to report steps with `expander.visit(tree)`?
+
+Right now, no. We might add a convenience function in the future, but for now:
+
+If you need it for `expander.visit_recursively(tree)`, just import and call `step_expansion` as a function. Beside printing the debug output, it'll do the expanding for you, and return the expanded `tree`. Since you're calling it from inside your own macro, you'll have `expander` and `syntax` you can pass on. The `args` you can set to the empty list (or to `[ast.Constant(value="dump")]` if that's what you want).
+
+If you need it for `expander.visit_once(tree)`, just perform the `visit_once` first, and then `unparse(tree, debug=True, color=True)` and print the result to `sys.stderr`.
+
+If you need it for `expander.visit(tree)`, detect the current mode from `expander.recursive`, and use one of the above.
+
+(We recommend `sys.stderr`, because that's what `step_expansion` uses, and that's also the stream used for detecting the availability of color support, if `colorama` is not available. If `colorama` is available, it'll detect separately for `sys.stdout` and `sys.stderr`.)
 
 
 ### Error in `compile`, an AST node is missing the required field `lineno`?
