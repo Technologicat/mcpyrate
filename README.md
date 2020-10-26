@@ -657,7 +657,7 @@ This may happen in two cases: trying to `u[]` something that operator doesn't su
 
 If it's the former, check that what you have is listed among the supported value types for `u[]` in [the quasiquote docs](quasiquotes.md). If the value type is not supported for `u[]`, use `h[]` instead.
 
-If it's the latter, and the expander is complaining specifically about an AST marker, those indeed can't currently be astified. To remove them from your tree recursively, you can use [`mcpyrate.markers.delete_markers`](mcpyrate/markers.py).
+If it's the latter, and the expander is complaining specifically about an AST marker, those indeed can't currently be astified (except `mcpyrate.core.Done`, which is supported specifically to allow astification of coverage dummy nodes and expanded name macros). To remove AST markers from your tree recursively, you can use [`mcpyrate.markers.delete_markers`](mcpyrate/markers.py).
 
 If these don't help, I'd have to see the details. Please file an issue so we can either document the reason, or if reasonably possible, fix it.
 
