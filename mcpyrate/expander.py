@@ -210,7 +210,7 @@ class MacroExpander(BaseMacroExpander):
         tree = withstmt.body if not withstmt.items else [withstmt]
         new_tree = self.expand('block', original_withstmt,
                                macroname, tree, sourcecode=sourcecode, kw=kw)
-        new_tree = _insert_coverage_dummy_stmt(new_tree, withstmt, macroname)
+        new_tree = _insert_coverage_dummy_stmt(new_tree, withstmt, macroname, self.filename)
         return new_tree
 
     def visit_ClassDef(self, classdef):
@@ -263,7 +263,7 @@ class MacroExpander(BaseMacroExpander):
         kw = {'args': macroargs}
         new_tree = self.expand('decorator', original_decorated,
                                macroname, decorated, sourcecode=sourcecode, kw=kw)
-        new_tree = _insert_coverage_dummy_stmt(new_tree, innermost_macro, macroname)
+        new_tree = _insert_coverage_dummy_stmt(new_tree, innermost_macro, macroname, self.filename)
         return new_tree
 
     def _detect_macro_items(self, items, syntax):
@@ -446,14 +446,14 @@ class MacroCollector(NodeVisitor):
                 self._seen.add(key)
 
 
-def _insert_coverage_dummy_stmt(tree, macronode, macroname):
+def _insert_coverage_dummy_stmt(tree, macronode, macroname, filename):
     '''Force statement `macronode` to be reported as covered by coverage tools.
 
     A dummy node will be injected to `tree`. The `tree` must appear in a
     statement position, so `ast.NodeTransformer.visit` may return a list of nodes.
 
     `macronode` is the macro invocation node to copy source location info from.
-    `macroname` is included in the dummy node, to ease debugging.
+    `macroname` and `filename` are included in the dummy node, to ease debugging.
     '''
     # `macronode` itself might be macro-generated. In that case don't bother.
     if not hasattr(macronode, 'lineno') and not hasattr(macronode, 'col_offset'):
@@ -465,7 +465,7 @@ def _insert_coverage_dummy_stmt(tree, macronode, macroname):
     # The dummy node must actually run to get coverage, so an `ast.Pass` won't do.
     # It must *do* something, or CPython optimizes it away, so an `ast.Expr` won't do.
     # We must set location info manually, because we run after `expand`.
-    v = copy_location(Constant(value=f"source line {macronode.lineno} invoked macro {macroname}"),
+    v = copy_location(Constant(value=f"{filename}:{macronode.lineno} invoked macro '{macroname}'"),
                       macronode)
     t = copy_location(Name(id="_mcpyrate_coverage", ctx=Store()),
                       macronode)
