@@ -734,6 +734,8 @@ For now, as a workaround, do one of the following:
 
  - Disable bytecode precompilation when making the package.
 
+Another `setuptools` thing to be aware of is that **macros are not zip_safe**, because they need to access source code, which the zip file importer does not provide.
+
 
 ### I tried making a Debian package out of an app that uses `mcpyrate`, and it's not working?
 
