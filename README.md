@@ -32,9 +32,16 @@ Supports Python 3.6, 3.7, 3.8, and PyPy3.
         - [Identifier macros](#identifier-macros)
         - [Expand macros inside-out](#expand-macros-inside-out)
         - [Expand macros inside-out, but only those in a given set](#expand-macros-inside-out-but-only-those-in-a-given-set)
-    - [Debugging](#debugging)
+    - [Troubleshooting](#troubleshooting)
         - [I just ran my program again and no macro expansion is happening?](#i-just-ran-my-program-again-and-no-macro-expansion-is-happening)
+        - [My own macros are working, but I'm not seeing any output from `step_expansion` (or `show_bindings`)?](#my-own-macros-are-working-but-im-not-seeing-any-output-from-stepexpansion-or-showbindings)
         - [Error in `compile`, an AST node is missing the required field `lineno`?](#error-in-compile-an-ast-node-is-missing-the-required-field-lineno)
+            - [Unexpected bare value](#unexpected-bare-value)
+            - [Wrong type of list](#wrong-type-of-list)
+            - [Wrong type of AST node](#wrong-type-of-ast-node)
+            - [The notorious invisible `ast.Expr` statement](#the-notorious-invisible-astexpr-statement)
+            - [Wrong unquote operator](#wrong-unquote-operator)
+            - [Failing all else](#failing-all-else)
         - [Expander says it doesn't know how to `astify` X?](#expander-says-it-doesnt-know-how-to-astify-x)
             - [Expander says it doesn't know how to `unastify` X?](#expander-says-it-doesnt-know-how-to-unastify-x)
         - [Why do my block and decorator macros generate extra do-nothing nodes?](#why-do-my-block-and-decorator-macros-generate-extra-do-nothing-nodes)
@@ -564,7 +571,7 @@ The implementation of the quasiquote system has an example of this.
 Obviously, if you want to expand just one layer with the second expander, use its `visit_once` method instead of `visit`. (And if you do that, you'll need to decide if you should keep the `Done` marker - to prevent further expansion in that subtree - or discard it and grab the real AST from its `body` attribute.)
 
 
-## Debugging
+## Troubleshooting
 
 To troubleshoot your macros, see [`mcpyrate.debug`](mcpyrate/debug.py), particularly the macro `step_expansion`. It is both an `expr` and `block` macro.
 
@@ -584,27 +591,64 @@ However, there is an edge case. If you hygienically capture a value that was imp
 This can be a problem, because hygienic value storage uses `pickle`, which in order to unpickle the value, expects to be able to load the original (or at least a data-compatible) class definition from the same place where it was defined when the value was pickled. If this happens, then delete the bytecode cache (`.pyc`) files, and the program should work again once the macros re-expand.
 
 
+### My own macros are working, but I'm not seeing any output from `step_expansion` (or `show_bindings`)?
+
+The most likely cause is that the bytecode cache for your `.py` source file is up to date. Hence, the macro expander was skipped.
+
+Unlike most macros, the whole point of `step_expansion` and `show_bindings` are their side effects - which occur at macro expansion time. So you'll get output from them only if the expander runs.
+
+Your own macros "work", because Python is loading the bytecode, which was macro-expanded during an earlier run. Your macros didn't run this time, but the expanded code from the previous run is still there in the bytecode cache.
+
+Force an *mtime* update on your source file (`touch` it, or just save it again in a text editor), so the expander will then run again (seeing that the source file has been modified).
+
+
 ### Error in `compile`, an AST node is missing the required field `lineno`?
 
 Welcome to the club. It is likely not much of an exaggeration to say all Python macro authors (regardless of which expander you pick) have seen this error at some point.
 
-It is overwhelmingly likely the actual error is something else, because all macro expanders for Python automatically fill in source location information for nodes that don't have it. (There are differences in what exact line numbers are filled in by `mcpyrate`/`mcpy`/`macropy`, but they all do it in some form.)
+It is overwhelmingly likely the actual error is something else, because all macro expanders for Python automatically fill in source location information for any AST nodes that don't have it. (There are differences in what exact line numbers are filled in by `mcpyrate`/`mcpy`/`macropy`, but they all do this in some form.)
 
 The misleading error message is due to an unfortunate lack of input validation in Python's compiler, because Python wasn't designed for an environment where AST editing is part of the daily programming experience.
 
-The first thing to check is that your macro is really placing AST nodes where the compiler expects those, instead of accidentally using bare values.
+Possible causes:
 
-If you edit ASTs manually, check that you're really using a `list` where the [AST docs at Green Tree Snakes](https://greentreesnakes.readthedocs.io/en/latest/nodes.html) say *"a list of ..."*, and not a `tuple`. Also note statement suites are represented as a bare `list`, and **not** as an `ast.List`. Any optional statement suite, when not present, is represented by an empty list, `[]`.
+#### Unexpected bare value
 
-The next thing to check is that the macro is placing *expression* AST nodes where Python's grammar expects those, and *statement* AST nodes where it expects those. There is no easy way to check this automatically, because Python's AST format does not provide this information.
+Is your macro placing AST nodes where the compiler expects those, and not accidentally using bare values?
 
-A common trap here is the invisible `ast.Expr` "expression statement" node. The grammar requires that, in the source code, when an expression appears in a position where a statement is expected, the expression node must be wrapped in an `ast.Expr` statement node. So when manually building an AST, the problem may be an accidentally omitted `ast.Expr`.
+#### Wrong type of list
 
-When using quasiquotes, the common problem is the opposite, i.e. the accidental presence of an `ast.Expr` node. For example, one may use an `ast.Name(id="__paste_here__")` as a paste target marker in a quoted code block, and try to manually replace that marker with a statement node. Unless one is very careful, the statement node will then easily accidentally end up in the `value` field of the `ast.Expr` node, producing an invalid AST. (This is taken into account in `mcpyrate.splicing.splice_statements`, as well as in `with a` in `mcpyrate.quotes`. Both of them specifically remove the `ast.Expr` node when splicing statements into quoted code.)
+If you edit ASTs manually, check that you're really using a `list` where the [AST docs at Green Tree Snakes](https://greentreesnakes.readthedocs.io/en/latest/nodes.html) say *"a list of ..."*, and not a `tuple` or something else. (Yes, Python's compiler is that picky.) 
+
+Note that statement suites are represented as a bare `list`, and **not** as an `ast.List`. Any optional statement suite, when not present, is represented by an empty list, `[]`.
+
+#### Wrong type of AST node
+
+Is your macro placing *expression* AST nodes where Python's grammar expects those, and *statement* AST nodes where it expects those?
+
+There is no easy way to check this automatically, because Python's AST format does not say which places in the AST require what.
+
+#### The notorious invisible `ast.Expr` statement
+
+The "expression statement" node `ast.Expr` is a very common cause of mysterious compile errors. It is an implicit AST node with no surface syntax representation.
+
+Python's grammar requires that whenever, in the source code, an expression appears in a position where a statement is expected, then in the AST, the expression node must be wrapped in an `ast.Expr` statement node. The purpose of that statement is to run the expression, and discard the resulting value. (This is useful mainly for a bare function call, if the function is called for its side effects; consider e.g. `list.append` or `set.add`.)
+
+When manually building an AST, the common problem is an accidentally omitted `ast.Expr`.
+
+When using quasiquotes to build an AST, the common problem is the opposite, i.e. the accidental presence of an `ast.Expr`. For example, one may use an `ast.Name(id="__paste_here__")` as a paste target marker in a quoted code block, and try to manually replace that marker with some statement node. Unless one is very careful, the statement node will then easily end up in the `value` field of the `ast.Expr` node, producing an invalid AST.
+
+The `ast.Expr` node is taken into account in `mcpyrate.splicing.splice_statements`, as well as in `with a` in `mcpyrate.quotes`. Both of them specifically remove the `ast.Expr` when splicing statements into quoted code.
+
+To see whether this could be the problem, use `unparse(tree, debug=True, color=True)` to print out also invisible AST nodes. (The `color=True` is optional, but recommended for terminal output; it enables syntax highlighting.) The `step_expansion` macro will also print out invisible nodes (actually by using `unparse` with those settings).
+
+#### Wrong unquote operator
 
 If you use quasiquotes, check that you're using the unquote operators you intended. It's easy to accidentally put an `u[]` or `h[]` in place of an `a[]`, or vice versa.
 
-Finally, it goes without saying, but use `git diff` liberally. Most likely whatever the issue is, it's something in the latest changes.
+#### Failing all else
+
+Use `git diff` liberally. Most likely whatever the issue is, it's something in the latest changes.
 
 
 ### Expander says it doesn't know how to `astify` X?
