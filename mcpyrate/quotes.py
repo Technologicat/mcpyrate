@@ -41,7 +41,10 @@ class LiftSourcecode(QuasiquoteMarker):
 
     This allows e.g. computing names of lexical variables.
     """
-    pass
+    def __init__(self, body, filename):
+        super().__init__(body)
+        self.filename = filename
+        self._fields += ["filename"]
 
 
 class ASTLiteral(QuasiquoteMarker):  # similar to `macropy`'s `Literal`, but supports block mode, too.
@@ -315,10 +318,9 @@ def astify(x, expander=None):  # like `macropy`'s `ast_repr`
         elif T is LiftSourcecode:  # `n[]`
             # Delay the identifier lifting, so it runs at the use site of `q`,
             # where the actual value of `x.body` becomes available.
-            filename = expander.filename if expander else "<unknown>"
             return ast.Call(_mcpyrate_quotes_attr('lift_sourcecode'),
                             [x.body,
-                             ast.Constant(value=filename)],
+                             ast.Constant(value=x.filename)],
                             [])
 
         elif T is ASTLiteral:  # `a`
@@ -581,7 +583,7 @@ def n(tree, *, syntax, expander, **kw):
         raise SyntaxError("`n` encountered while quotelevel < 1")
     with _quotelevel.changed_by(-1):
         tree = expander.visit_recursively(tree)
-        return LiftSourcecode(tree)
+        return LiftSourcecode(tree, expander.filename)
 
 
 def a(tree, *, syntax, expander, **kw):
