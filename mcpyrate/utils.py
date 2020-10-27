@@ -1,7 +1,7 @@
 # -*- coding: utf-8; -*-
 '''General utilities. Can be useful for writing both macros as well as macro expanders.'''
 
-__all__ = ['gensym', 'flatten', 'rename',
+__all__ = ['gensym', 'scrub_uuid', 'flatten', 'rename',
            'format_location', 'format_macrofunction',
            'NestingLevelTracker']
 
@@ -31,6 +31,21 @@ def gensym(basename=None):
         sym = generate()  # pragma: no cover
     _previous_gensyms.add(sym)
     return sym
+
+
+def scrub_uuid(string):
+    """Scrub any existing `"_uuid"` suffix from `string`."""
+    idx = string.rfind("_")
+    if idx != -1:
+        maybe_uuid = string[(idx + 1):]
+        if len(maybe_uuid) == 32:
+            try:
+                _ = int(maybe_uuid, base=16)
+            except ValueError:
+                pass
+            else:  # yes, it was an uuid
+                return string[:idx]
+    return string
 
 
 def flatten(lst, *, recursive=True):
