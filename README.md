@@ -35,6 +35,7 @@ Supports Python 3.6, 3.7, 3.8, and PyPy3.
     - [Troubleshooting](#troubleshooting)
         - [I just ran my program again and no macro expansion is happening?](#i-just-ran-my-program-again-and-no-macro-expansion-is-happening)
         - [My own macros are working, but I'm not seeing any output from `step_expansion` (or `show_bindings`)?](#my-own-macros-are-working-but-im-not-seeing-any-output-from-stepexpansion-or-showbindings)
+        - [Macro expansion time where exactly?](#macro-expansion-time-where-exactly)
         - [`step_expansion` is treating `expand[]` (or nested `expand1[]`) as a single step?](#stepexpansion-is-treating-expand-or-nested-expand1-as-a-single-step)
         - [Can I use the `step_expansion` macro to report steps with `expander.visit(tree)`?](#can-i-use-the-stepexpansion-macro-to-report-steps-with-expandervisittree)
         - [Error in `compile`, an AST node is missing the required field `lineno`?](#error-in-compile-an-ast-node-is-missing-the-required-field-lineno)
@@ -604,6 +605,15 @@ Your own macros "work", because Python is loading the bytecode, which was macro-
 Force an *mtime* update on your source file (`touch` it, or just save it again in a text editor), so the expander will then run again (seeing that the source file has been modified).
 
 
+### Macro expansion time where exactly?
+
+This is mainly something to keep in mind when developing macros where the macro implementation itself is macro-enabled code (vs. just emitting macro invocations in the output AST). Since the [quasiquote system](quasiquotes.md) is built on macros, this includes any macros that use `q`.
+
+As an example, consider a macro `mymacro`, which uses `q` to define an AST using the quasiquote notation. When `mymacro` reaches run time, any macro invocations used as part of its own implementation (such as the `q`) are already long gone. On the other hand, the use site of `mymacro` has not yet reached run time - for that use site, it is still macro expansion time.
+
+As the old saying goes, *it's always five'o'clock **somewhere***. *There is no global macro expansion time* - the "time" must be considered separately for each source file.
+
+
 ### `step_expansion` is treating `expand[]` (or nested `expand1[]`) as a single step?
 
 This is a natural consequence of `expand` and `expand1` being defined as macros.
@@ -616,7 +626,7 @@ Then, consider the case with two or more nested `expand1` invocations. When `ste
 
 The `expand1` macro, by definition, expands once whatever is inside the invocation. So it will call the expander to expand once... and now the expander will find the next inner `expand1`. This will get invoked, too. The chain continues until all `expand1` in the expression or block are gone.
 
-This is not a major issue, though, because beside use in an occasional higher-order macro, `expand` and `expand1` are mainly useful in the REPL, for interactive experimentation on quoted code. Note also `step_expansion` is available in the REPL, as well.
+This is not a major issue, though, because `expand` and `expand1` are mainly useful in the REPL, for interactive experimentation on quoted code. Note also `step_expansion` is available in the REPL, as well.
 
 
 ### Can I use the `step_expansion` macro to report steps with `expander.visit(tree)`?
@@ -625,7 +635,7 @@ Right now, no. We might add a convenience function in the future, but for now:
 
 If you need it for `expander.visit_recursively(tree)`, just import and call `step_expansion` as a function. Beside printing the debug output, it'll do the expanding for you, and return the expanded `tree`. Since you're calling it from inside your own macro, you'll have `expander` and `syntax` you can pass on. The `args` you can set to the empty list (or to `[ast.Constant(value="dump")]` if that's what you want).
 
-If you need it for `expander.visit_once(tree)`, just perform the `visit_once` first, and then `unparse(tree, debug=True, color=True)` and print the result to `sys.stderr`.
+If you need it for `expander.visit_once(tree)`, just perform the `visit_once` first, and then `unparse(tree, debug=True, color=True)` and print the result to `sys.stderr`. This is essentially what `step_expansion` does at each step.
 
 If you need it for `expander.visit(tree)`, detect the current mode from `expander.recursive`, and use one of the above.
 
@@ -816,3 +826,5 @@ We follow the `mcpy` philosophy that macro expanders aren't rocket science. We k
 For a clean overview of the core design, look at [mcpy](https://github.com/delapuente/mcpy), version 2.0.0. Of the parts that come from it, its `visitors` is our [`core`](mcpyrate/core.py) (the `BaseMacroExpander`), its `core` is our [`expander`](mcpyrate/expander.py) (the actual `MacroExpander`), and its `import_hooks` is our [`importer`](mcpyrate/importer.py). Its `BaseMacroExpander.ismacro` method is our `BaseMacroExpander.isbound`, because that method checks for a raw string name, not an AST structure. The rest should be clear.
 
 Then see our [`importer`](mcpyrate/importer.py). After [`mcpyrate.activate`](mcpyrate/activate.py) has been imported, the importer becomes the top-level entry point whenever a module is imported.
+
+See also [Understanding the quasiquote system](quasiquotes.md#understanding-the-quasiquote-system).

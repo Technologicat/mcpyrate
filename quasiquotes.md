@@ -37,6 +37,8 @@ Build ASTs in your macros, using syntax that mostly looks like regular code.
             - [Hygienically captured run-time values](#hygienically-captured-run-time-values)
             - [Hygienically captured macros](#hygienically-captured-macros)
         - [General](#general)
+    - [Understanding the quasiquote system](#understanding-the-quasiquote-system)
+        - [When to use `expand[tree]` vs. `expander.visit(tree)`](#when-to-use-expandtree-vs-expandervisittree)
     - [Notes](#notes-1)
         - [Difference between `h[]` and `u[]`](#difference-between-h-and-u)
         - [Differences to Common Lisp](#differences-to-common-lisp)
@@ -221,7 +223,7 @@ as they appear in the source. This may cause name conflicts with names already
 present at the macro use site. If you want to hygienify, see the `h[]` unquote.
 
 Like `macropy`'s `q`, except macro invocations within the quoted code are not
-expanded by default. See the macros `expand` and `expand1`.
+expanded by default.
 
 The macro `expandq`, which is shorthand for "`q`, then `expand`", is equivalent
 to `macropy`'s `q`.
@@ -527,9 +529,51 @@ Depending on what you want, you can:
    after the macro using `q` has returned. Useful if you hygienically unquote any
    macro names in the output.
 
- - Expand them explicitly. Use the macros `expand` and `expand1` in `mcpyrate.quotes`,
-   or the method `expander.visit` (`visit_once`, `visit_recursively`), as appropriate.
-   Useful if you want to return a plain AST that has no macro invocations remaining.
+ - Expand them explicitly. Use `expander.visit` (`visit_once`, `visit_recursively`),
+   as usual. Useful if you want to return a plain AST that has no macro invocations
+   remaining.
+
+
+## Understanding the quasiquote system
+
+This section is intended for both users and developers. The quasiquote system is probably the most complex part of `mcpyrate`. In the words of Matthew Might, [*to understand is to implement*](http://matt.might.net/articles/parsing-with-derivatives/).
+
+Whether working with quasiquoted code, or thinking about how the quasiquote system itself works, be **very careful** to avoid conflating different meta-levels.
+
+Below, let `mymacro` be a macro that uses `q` to build (part of) its output AST.
+
+ - "Time" (as in macro expansion time vs. run time) [must be considered separately for each source file](README.md#macro-expansion-time-where-exactly).
+ - As for how `q` works, the question is: how does one lift the input AST of a macro, from macro expansion time (of the macro's use site), into the corresponding AST, at run time (of the macro's use site)?
+   - *We make a new AST for code that, when it runs, it builds the original input AST **as a run-time value**.* In `mcpyrate`, the function that does this is called `astify`.
+   - For example, consider the expression `q[cat]`, appearing inside the definition of `mymacro`. The input AST to `q` is `ast.Name(id='cat')`. Roughly speaking, the `q` macro outputs the "astified" AST `ast.Call(ast.Name, [], [ast.keyword('id', 'cat')])`.
+     - **Before reading on, let that sink in.** The output AST says, *call the function `ast.Name` with the named argument `id='cat'`*. The `ast.Call` node is there only because we represent that code as an AST.
+       - In surface syntax notation, the same conversion is represented as `cat` becoming `ast.Name(id='cat')`.
+     - So when that code runs (**at run time**), the resulting run-time value, i.e. the result of the function call `ast.Name(id='cat')`, is a copy the original input AST that was supplied to the `q` macro.
+       - Strictly speaking, it's a copy of the original AST **minus any source location info**, because we **didn't** say `ast.Call(ast.Name, [], [ast.keyword('id', 'cat'), ast.keyword('lineno', ...), ast.keyword('col_offset', ...)])`. This is on purpose. The result of a quasiquote will be likely spliced into a different source file, so whatever line numbers we fill, they are wrong. Thus we let the macro expander fill in the appropriate line number (which is that of the macro invocation at the use site of `mymacro`) in the source file where the code is actually used.
+     - Run time, at the use site of `q`, is exactly when we want the value. Keep in mind that in this example, the use site of `q` is inside `mymacro`. The run time of `mymacro` is the macro expansion time of **its** use site.
+     - Also keep in mind that whatever the `q` macro returns - because `q` is a macro - is spliced into the AST of the use site (inside the definition of `mymacro`), to replace the macro invocation of `q`.
+       - The code that is spliced in is the "astified" AST, which at run time builds the original input AST.
+       - When the source file containing the definition of `mymacro` is macro-expanded, the `q` macro invocation expands away, into the "astified" AST. At run time of `mymacro` the `q` macro invocation **is already long gone**.
+ - It cannot be overemphasized that **values are a run-time thing**. This includes any trees sent to the `a` (AST-unquote) operator.
+   - For example, for the invocation `a[tree]`, at macro expansion time of `a` (as well as that of the surrounding `q`), all that the `a` operator (respectively, the `q` operator) sees is just `ast.Name(id='tree')`. That `tree` **refers to a run-time value** at the use site of `q`, so it doesn't exist yet.
+   - Hence, the unquote operators must perform part of their work at run time (of their use site), when the values are available. This includes any type checking of those values.
+
+The above explanation is somewhat simplified.
+
+The code generated by `q` is mostly an "astified" AST consisting of calls to various AST node constructors, but it may also have some other function calls (to functions defined in `mcpyrate.quotes`) sprinkled in that do something and then return an AST snippet. These function calls perform the run-time work of the operators.
+
+So when the run-time value is evaluated, at run time of the use site of `q`, both the "astified" `ast.Call` function calls as well as the run-time parts of the operators run to construct the final AST. This final result is a plain AST, with no more function calls into the quasiquote system, and no extra `ast.Call` layer. **This final AST only becomes available at run time of the use site of `q`.** 
+
+
+### When to use `expand[tree]` vs. `expander.visit(tree)`
+
+So, the conclusion from the above is that *at run time at the use site of `q`*, we'll have a garden variety AST. So you can just `expander.visit` (or `visit_recursively`, or `visit_once`) it as usual.
+
+The `expand` and `expand1` operators are needed when it's still macro expansion time, because then we'll still have the "astified" AST, where macro invocations do not look like macro invocations to the expander. These operators will internally `unastify` the tree, then expand macros, and finally quote it again.
+
+Note that at macro expansion time, unquotes cannot be processed yet, so you won't get the exact same result using `expand` or `expand1` that you'd get by waiting until run time and using the `expander.visit` family of methods.
+
+The `expand` and `expand1` operators are mainly useful in the REPL, for interactive experimentation on quoted code.
 
 
 ## Notes
