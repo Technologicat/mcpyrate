@@ -436,8 +436,6 @@ def unastify(tree):
 
     Note also that `astify` compiles unquote commands into ASTs for calls to
     the run-time parts of the unquote operators. That's what `unastify` sees.
-    We *could* detect those calls and uncompile them into AST markers, but we
-    currently don't.
 
     The use case of `unastify` is higher-order macros, to transform a quoted
     AST at macro expansion time when the extra AST layer added by `astify` is
@@ -485,6 +483,16 @@ def unastify(tree):
     elif T is ast.Set:
         return {unastify(elt) for elt in tree.elts}
 
+    # TODO: fix bug. Unastification must not apply the run-time parts of the unquotes,
+    # because it's running in the wrong context. Those only work properly at run time,
+    # at the use site of `q`, and `unastify` is used earlier, at macro expansion time.
+    # Maybe convert the unquote calls back into AST markers?
+    #
+    # `capture_macro` will be gone and done by the time we get here.
+    # Unquote we can just let happen, since it's a special case of `astify`.
+    # The rest we could backconvert.
+
+    # General case: an astified AST node.
     elif T is ast.Call:
         dotted_name = unparse(tree.func)
         callee = lookup_thing(dotted_name)
