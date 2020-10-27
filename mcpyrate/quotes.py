@@ -434,15 +434,23 @@ def unastify(tree):
     that the value actually becomes quoted! - whereas `unastify` inverts the
     quote operation.
 
-    Note also that `astify` compiles unquote commands into ASTs for calls to
-    the run-time parts of the unquote operators. That's what `unastify` sees.
+    Note also that `astify` compiles unquote AST markers into ASTs for calls to
+    the run-time parts of the unquote operators. `unastify` turns these calls
+    back into the corresponding AST markers. That's the best we can do; the
+    only context that has the user-provided names (where the unquoted data
+    comes from) in scope is the use site of `q`, at run time.
+
+    The only exception is `capture_macro`, which is already gone and done.
+    It has transformed into an `ast.Call` to `lookup_macro`, which we call
+    when `unastify` runs.
 
     The use case of `unastify` is higher-order macros, to transform a quoted
     AST at macro expansion time when the extra AST layer added by `astify` is
     still present. The recipe is `unastify`, process just like any AST, then
     quote again. (`expand` and `expand1` are examples of this.)
 
-    If you just want to macro-expand a quoted AST, see `expand` and `expand1`.
+    If you just want to macro-expand a quoted AST in the REPL, see `expand`
+    and `expand1`.
     """
     # CAUTION: in `unastify`, we implement only what we minimally need.
     our_module_globals = globals()
@@ -483,24 +491,41 @@ def unastify(tree):
     elif T is ast.Set:
         return {unastify(elt) for elt in tree.elts}
 
-    # TODO: fix bug. Unastification must not apply the run-time parts of the unquotes,
-    # because it's running in the wrong context. Those only work properly at run time,
-    # at the use site of `q`, and `unastify` is used earlier, at macro expansion time.
-    # Maybe convert the unquote calls back into AST markers?
-    #
-    # `capture_macro` will be gone and done by the time we get here.
-    # Unquote we can just let happen, since it's a special case of `astify`.
-    # The rest we could backconvert.
-
-    # General case: an astified AST node.
     elif T is ast.Call:
         dotted_name = unparse(tree.func)
-        callee = lookup_thing(dotted_name)
-        args = unastify(tree.args)
-        kwargs = {k: v for k, v in unastify(tree.keywords)}
-        node = callee(*args, **kwargs)
-        node = ast.copy_location(node, tree)
-        return node
+
+        # Even though the unquote operators compile into calls, `unastify`
+        # must not apply their run-time parts, because it's running in the
+        # wrong context. Those only work properly at run time, and they
+        # must run at the use site of `q`, where the user-provided names
+        # (where the unquoted data comes from) will be in scope.
+        #
+        # So we undo what `astify` did, converting the unquote calls back into
+        # the corresponding AST markers.
+        #
+        # The only exception is `capture_macro`, which is gone and done by
+        # the time we get here. It has become an `ast.Call` to `lookup_macro`,
+        # which should have the desired effect if we call it now, so we just
+        # let that fall through to the general case.
+        if dotted_name == "mcpyrate.quotes.astify":  # `u[]`
+            return Unquote(tree.args[0])
+        elif dotted_name == "mcpyrate.quotes.lift_sourcecode":  # `n[]`
+            return LiftSourcecode(tree.args[0], tree.args[1].value)
+        elif dotted_name == "mcpyrate.quotes.ast_literal":  # `a[]`
+            return ASTLiteral(tree.args[0], tree.args[1].value)
+        elif dotted_name == "mcpyrate.quotes.ast_list":  # `s[]`
+            return ASTList(tree.args[0])
+        elif dotted_name == "mcpyrate.quotes.capture_value":  # `h[]` (run-time value)
+            return Capture(tree.args[0], tree.args[1].value)
+
+        else:
+            # General case: an astified AST node.
+            callee = lookup_thing(dotted_name)
+            args = unastify(tree.args)
+            kwargs = {k: v for k, v in unastify(tree.keywords)}
+            node = callee(*args, **kwargs)
+            node = ast.copy_location(node, tree)
+            return node
 
     raise TypeError(f"Don't know how to unastify {unparse(tree)}")
 
