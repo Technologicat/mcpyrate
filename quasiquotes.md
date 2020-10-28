@@ -558,19 +558,22 @@ If you want to expand a tree using the macro bindings *from your macro's definit
 
 #### Using the `expand` macros
 
-Beside `q`, `u`, `n`, `a`, `s`, `h`, the `mcpyrate.quotes` module provides a family of macros to expand macros, all named `expand` plus an optional suffix of up to three characters in the order `1rq`. All of the `expand` macros have both expr and block modes.
+Beside `q`, `u`, `n`, `a`, `s`, `h`, the `mcpyrate.quotes` module provides a family of macros to expand macros, all named `expand` plus a suffix of up to three characters in the order `1Xq`, where `X` is one of `s` or `r`. All of the `expand` macros have both expr and block modes.
 
-These macros are convenient when working with quasiquoted code, and with run-time AST values in general. The suffixes mean:
+These macros are convenient when working with quasiquoted code, and with run-time AST values in general. Run-time AST values are exactly the kind of thing macros operate on: the macro expansion time of the use site is the run time of the macro implementation itself.
+
+The suffixes mean:
 
  - `1`: once. Expand one layer of macros only.
- - `r`: at run time. Useful for run-time AST values, such as quoted trees.
+ - `s`: statically, i.e. at macro expansion time.
+ - `r`: dynamically, i.e. at run time. Useful for run-time AST values, such as quoted trees.
  - `q`: quote first. Apply `q` first, then the expander.
 
-The variants **without** `r` simply hook into the expander at macro expansion time of their use site (which is, typically, inside your macro definition). This is simple, but it means that if you have defined a quoted `tree`, you can't `expand[tree]` - because at macro expansion time, that `tree` is just the lexical name `tree`, it has no value yet. Also, in quasiquoted code, operating at macro expansion time means that unquotes aren't fully processed yet, because they depend on run-time values from the use site of `q`.
+The **`s` variants** simply hook into the expander at macro expansion time of their use site (which is, typically, inside your macro definition). This is simple, but it means that if you have defined a quoted `tree`, you can't just write `expands[tree]` (or `expand1s[tree]`) and expect it to work - because at macro expansion time, that `tree` argument to the `expand` macro is just the lexical name `tree`, it has no value yet. Also, in quasiquoted code, operating at macro expansion time means that unquotes aren't fully processed yet, because they depend on run-time values from the use site of `q`.
 
-The variants **with** `r`, which stands for *run time*, cover this use case. They snapshot the expander bindings at macro expansion time (of their use site), and then delay until run time (of that use site) to perform the actual expansion. They behave like calling `expander.visit` (or its sisters), but using the macro bindings from their use site (your macro's definition site).
+The **`r` variants** cover this use case. They snapshot the expander bindings at macro expansion time (of their use site), and then delay until run time (of that use site) to perform the actual expansion. They behave like calling `expander.visit` (or its sisters), but using the macro bindings *from their use site* (your macro's definition site).
 
-Thus, `expandr[tree]` (as well as `expand1r[tree]`) will do the expected thing - i.e. expand the thing the name `tree` refers to at run time when, at run time, the source code line with the `expandr` (respectively `expand1r`) invocation is reached. So you can create a quoted `tree`, and then separately expand it, in the context of the macro bindings from your macro definition site.
+Thus, `expandr[tree]` (as well as `expand1r[tree]`) will do the expected thing - i.e. expand the thing the name `tree` refers to when, at run time, the source code line with the `expandr` (respectively `expand1r`) invocation is reached. So you can create a quoted `tree`, and then separately expand it, in the context of the macro bindings from your macro definition site.
 
 When working with quasiquoted code, run-time expansion also has the benefit that any unquoted values will have been spliced in. Unquotes operate partly at run time of the use site of `q`. They must; the only context that has the user-provided names (where the unquoted data comes from) in scope is each particular use site of `q`, at its run time. The quasiquoted tree is only fully ready at run time of the use site of `q`. It is then **a run-time AST value** - which is exactly the kind of thing macros work with.
 

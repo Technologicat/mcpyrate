@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 from ..quotes import (macros, q, u, n, a, s, h,
-                      expand, expand1, expandq, expand1q,
+                      expands, expand1s, expandsq, expand1sq,
                       expandr, expand1r, expandrq, expand1rq)
 from .macros import (macros, test_q, test_hq,  # noqa: F401, F811
                      first, second, third)
@@ -102,31 +102,46 @@ def test():
     # --------------------------------------------------------------------------------
     # expand macros in quoted code (returns quoted result)
 
-    # expand1[...] expands once
+    # expand1s[...] expands once
     assert first[21] == 2 * 21
     assert unparse(q[first[21]]) == "first[21]"
-    assert unparse(expand1[q[first[21]]]) == "second[21]"
-    assert unparse(expand1[expand1[q[first[21]]]]) == "third[21]"
-    assert unparse(expand1[expand1[expand1[q[first[21]]]]]) == "(2 * 21)"
-    assert unparse(expand1[expand1[expand1[expand1q[first[21]]]]]) == "(2 * 21)"  # once no more macros, no-op.
+    assert unparse(expand1s[q[first[21]]]) == "second[21]"
+    assert unparse(expand1s[expand1s[q[first[21]]]]) == "third[21]"
+    assert unparse(expand1s[expand1s[expand1s[q[first[21]]]]]) == "(2 * 21)"
+    assert unparse(expand1s[expand1s[expand1s[expand1sq[first[21]]]]]) == "(2 * 21)"  # once no more macros, no-op.
 
-    # expand[...] expands until no macros left.
-    assert unparse(expand[q[first[21]]]) == "(2 * 21)"
+    # expands[...] expands until no macros left.
+    assert unparse(expands[q[first[21]]]) == "(2 * 21)"
 
-    # expand1q[...] is shorthand for expand1[q[...]]
-    assert unparse(expand1q[first[21]]) == "second[21]"
-    assert unparse(expand1[expand1q[first[21]]]) == "third[21]"
-    assert unparse(expand1[expand1[expand1q[first[21]]]]) == "(2 * 21)"
-    assert unparse(expand1[expand1[expand1[expand1q[first[21]]]]]) == "(2 * 21)"
+    # expand1sq[...] is shorthand for expand1s[q[...]]
+    assert unparse(expand1sq[first[21]]) == "second[21]"
+    assert unparse(expand1s[expand1sq[first[21]]]) == "third[21]"
+    assert unparse(expand1s[expand1s[expand1sq[first[21]]]]) == "(2 * 21)"
+    assert unparse(expand1s[expand1s[expand1s[expand1sq[first[21]]]]]) == "(2 * 21)"
 
-    # expandq[...] is shorthand for expand[q[...]]
-    assert unparse(expandq[first[21]]) == "(2 * 21)"
+    # expandsq[...] is shorthand for expand[q[...]]
+    assert unparse(expandsq[first[21]]) == "(2 * 21)"
 
     # Whatever the original macro expands to is *not* hygienically treated.
     #
     # This is a *feature*; if you want a macro to invoke other macros hygienically
     # in its output, the original macro must do that explicitly (i.e. use `q[h[]]`
     # in its output).
+    #
+    # Here we use the `r` variants of the `expand` macros, so that they'll perform
+    # the expansion at run time of their use site, thus allowing the expander to see
+    # unquoted values (which are only available at run time). Note that applies to
+    # the hygienic unquote, too.
+    #
+    # Though hygienically unquoting a macro name performs the actual capture at macro
+    # expansion time, the `s` variants of the `expand` macros won't expand the captured
+    # macro, because due to technical reasons, the unquote is internally converted back
+    # into a capture command. See `unastify` if curious. (This solution also treats all
+    # unquote types consistently.)
+    #
+    # The `r` variants are generally useful for expanding macros in any
+    # run-time AST value. They capture the macro bindings from their use site,
+    # at macro expansion time.
     assert unparse(expand1r[q[h[first][21]]]) == "second[21]"
     assert unparse(expandr[q[h[first][21]]]) == "(2 * 21)"
     assert unparse(expand1rq[h[first][21]]) == "second[21]"

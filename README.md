@@ -703,7 +703,7 @@ If these don't help, I'd have to see the details. Please file an issue so we can
 
 #### Expander says it doesn't know how to `unastify` X?
 
-Most likely, the input to `expand` or `expand1` wasn't a quasiquoted tree. See `expandq`, `expand1q`, `expandrq`, `expand1rq`, or just `expander.visit(tree)`, depending on what you want.
+Most likely, the input to `expands` or `expand1s` wasn't a quasiquoted tree. See `expandsq`, `expand1sq`, `expandrq`, `expand1rq`, or just `expander.visit(tree)`, depending on what you want.
 
 
 ### Why do my block and decorator macros generate extra do-nothing nodes?
