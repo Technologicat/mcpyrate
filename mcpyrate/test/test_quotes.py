@@ -1,7 +1,8 @@
 # -*- coding: utf-8 -*-
 
 from ..quotes import (macros, q, u, n, a, s, h,
-                      expand, expand1, expandq, expand1q)
+                      expand, expand1, expandq, expand1q,
+                      expandr, expand1r, expandrq, expand1rq)
 from .macros import (macros, test_q, test_hq,  # noqa: F401, F811
                      first, second, third)
 
@@ -85,8 +86,8 @@ def test():
     # TODO: Python 3.8: remove ast.Num
     assert unparse(q[q[42]]) in ("mcpyrate.quotes.ast.Num(n=42)",
                                  "mcpyrate.quotes.ast.Constant(value=42)")
-    assert unparse(expand1q[h[q][42]]) in ("mcpyrate.quotes.ast.Num(n=42)",
-                                           "mcpyrate.quotes.ast.Constant(value=42)")
+    assert unparse(expand1rq[h[q][42]]) in ("mcpyrate.quotes.ast.Num(n=42)",
+                                            "mcpyrate.quotes.ast.Constant(value=42)")
 
     # Macro names can be hygienically captured, too. The name becomes "originalname_uuid".
     assert unparse(q[h[first][42]]).startswith("first_")
@@ -126,8 +127,10 @@ def test():
     # This is a *feature*; if you want a macro to invoke other macros hygienically
     # in its output, the original macro must do that explicitly (i.e. use `q[h[]]`
     # in its output).
-    assert unparse(expand1[q[h[first][21]]]) == "second[21]"
-    assert unparse(expand[q[h[first][21]]]) == "(2 * 21)"
+    assert unparse(expand1r[q[h[first][21]]]) == "second[21]"
+    assert unparse(expandr[q[h[first][21]]]) == "(2 * 21)"
+    assert unparse(expand1rq[h[first][21]]) == "second[21]"
+    assert unparse(expandrq[h[first][21]]) == "(2 * 21)"
 
     # --------------------------------------------------------------------------------
     # unastify(): the inverse of the quote operator

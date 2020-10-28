@@ -36,9 +36,13 @@ Build ASTs in your macros, using syntax that mostly looks like regular code.
         - [`h`: hygienic-unquote](#h-hygienic-unquote)
             - [Hygienically captured run-time values](#hygienically-captured-run-time-values)
             - [Hygienically captured macros](#hygienically-captured-macros)
-        - [General](#general)
+        - [Syntactically allowed positions for unquotes](#syntactically-allowed-positions-for-unquotes)
+        - [Quotes, unquotes, and macro expansion](#quotes-unquotes-and-macro-expansion)
+        - [The `expand` family of macros](#the-expand-family-of-macros)
+            - [When to use](#when-to-use)
+            - [Using the `expand` macros](#using-the-expand-macros)
     - [Understanding the quasiquote system](#understanding-the-quasiquote-system)
-        - [When to use `expand[tree]` vs. `expander.visit(tree)`](#when-to-use-expandtree-vs-expandervisittree)
+        - [How `q` arranges hygienic captures](#how-q-arranges-hygienic-captures)
     - [Notes](#notes-1)
         - [Difference between `h[]` and `u[]`](#difference-between-h-and-u)
         - [Differences to Common Lisp](#differences-to-common-lisp)
@@ -164,7 +168,8 @@ that does not use the quasiquote notation, this is also possible. The machinery
 underlying the `h[]` operator is part of the public API, by design.
 
 The functions `mcpyrate.quotes.capture_value` and `mcpyrate.quotes.capture_macro`
-perform the actual capture. They will return the AST snippet you want.
+perform the actual capture. The return value is the AST snippet for the hygienic
+reference. You can call them directly in your macro implementation.
 
 
 #### Advanced uses of non-hygienic quasiquoting
@@ -225,8 +230,7 @@ present at the macro use site. If you want to hygienify, see the `h[]` unquote.
 Like `macropy`'s `q`, except macro invocations within the quoted code are not
 expanded by default.
 
-The macro `expandq`, which is shorthand for "`q`, then `expand`", is equivalent
-to `macropy`'s `q`.
+The macro `expandq` produces results closest to `macropy`'s `q`.
 
 
 ### `u`: unquote
@@ -338,8 +342,9 @@ node, but any kind of expression is fine.
 
 The result is an *expression* AST, replacing the invocation of `a[]`. Note that
 if `a[]` appears in a statement position (inside a block mode `q`), it actually
-appears inside Python's invisible `ast.Expr` "expression statement" node. If you
-want to inject a tree to the raw statement position, use the block mode of `a`.
+appears in the AST inside Python's invisible `ast.Expr` "expression statement"
+node. If you want to inject a tree to the raw statement position without a
+surrounding `ast.Expr`, use the block mode of `a`.
 
 The `a[]` operator will type-check at run time, at the use site of the
 surrounding `q`, that the value of `expr` is an *expression* AST node
@@ -376,8 +381,8 @@ is typically macro expansion time for an invocation of `mymacro`.*
 Furthermore, when the use site of `q` has reached run time, the `q` macro
 invocation is already long gone - it was expanded away when the **definition**
 of `mymacro` was macro-expanded. At run time of the use site of `q`, the AST
-corresponding to the quoted code has already been constructed, with just some
-final details to be filled in by the run-time parts of the quote/unquote
+corresponding to the quoted code has already been mostly constructed, with just
+some final details to be filled in by the run-time parts of the quote/unquote
 operators. (Mainly, any value or tree splicing occurs at that time, because
 that's the earliest time that has the values available.)
 
@@ -424,9 +429,9 @@ The expression mode is equivalent to `macropy`'s `ast_literal`.
 `s[lst]` takes a `list`, and into the quoted code, splices an `ast.List` node,
 with the original list as its `elts` attribute. Note the list is not copied.
 
-This allows interpolating a list of ASTs as an `ast.List` node. This can be
-convenient because in Python, lists can appear in many places, such as on
-the LHS of an assignment:
+This allows interpolating a list of expression AST nodes as an `ast.List` node.
+This can be convenient because in Python, lists can appear in many places, such
+as on the LHS of an assignment:
 
 ```python
 lst = [q[a], q[b], q[c]]  # noqa: F821, only quoted.
@@ -437,9 +442,10 @@ with q as quoted:
 In this example, the resulting AST corresponds to the source code `[a, b, c] = 1, 2, 3`.
 
 **With `s[]`, the result is always an expression AST.** If you need to splice
-statements, see the function `mcpyrate.splicing.splice_statements`.
+statements, see the block mode of `a` (AST-unquote), or the function `mcpyrate.splicing.splice_statements`.
 
 Equivalent to `macropy`'s `ast_list`.
+
 
 ### `h`: hygienic-unquote
 
@@ -460,9 +466,10 @@ that just happened to have the same name at the macro use site. Hygienic
 unquoting also means that the macro use site *does not need to import* the
 thing being referred to.
 
-Whether `expr` is a run-time value or a macro name, the hygienically captured
-thing can be looked up even in another Python process later. (This allows
-bytecode caching of use sites of macros that use `q[h[...]]`.)
+Whether `expr` is a run-time value or a macro name, `h[]` works also across
+process boundaries; that is, the hygienically captured thing can be looked up
+even in another Python process later. (This allows bytecode caching of use sites
+of macros that use `q[h[...]]`.)
 
 #### Hygienically captured run-time values
 
@@ -491,7 +498,8 @@ Thus, each macro in a chain must use `h[]` explicitly, if it wants macro
 invocations in its output to be hygienified. This is a feature, to keep
 things explicit.
 
-### General
+
+### Syntactically allowed positions for unquotes
 
 Unquote operators may only appear inside quasiquoted code. This is checked at
 macro expansion time. Otherwise, they may appear anywhere a subscript expression
@@ -507,6 +515,8 @@ target = ...  # AST for something that can appear on the LHS of an assignment
 with q as quoted:
     a[target] = ...
 
+target1 = ...
+target2 = ...
 with q as quoted:
     a[target1], a[target2] = ...
 
@@ -518,27 +528,58 @@ with q as quoted:
     del n[some_computed_name]
 ```
 
-In an unquote expression inside quoted code, regardless of how many levels of
+
+### Quotes, unquotes, and macro expansion
+
+**In an unquote expression** inside quoted code, regardless of how many levels of
 quoting are present, macros are always fully expanded, because the purpose of
 an unquote is to interpolate a value.
 
-Anywhere else in quoted code, macros are **not** expanded by default.
+Anywhere else **in quoted code**, macros are **not** expanded by default.
 Depending on what you want, you can:
 
  - Just leave them for the expander to handle automatically, *in the use site's context*,
    after the macro using `q` has returned. Useful if you hygienically unquote any
-   macro names in the output.
+   macro names in your macro output.
 
- - Expand them explicitly. Use `expander.visit` (`visit_once`, `visit_recursively`),
-   as usual. Useful if you want to return a plain AST that has no macro invocations
-   remaining.
+ - Expand them explicitly. See below. Useful if you want to return a plain AST that has
+   no macro invocations remaining.
+
+
+### The `expand` family of macros
+
+There are two main ways to explicitly expand macros: the `expander.visit` method with its sisters (`visit_once`, `visit_recursively`), and the `expand` family of macros defined in `mcpyrate.quotes`.
+
+#### When to use
+
+If you want to expand a tree using the macro bindings *from your macro's use site*, you should use `expander.visit` and its sisters.
+
+If you want to expand a tree using the macro bindings *from your macro's definition site*, you should use the `expand` family of macros. You'll most likely want `expandr` or `expand1r`.
+
+#### Using the `expand` macros
+
+Beside `q`, `u`, `n`, `a`, `s`, `h`, the `mcpyrate.quotes` module provides a family of macros to expand macros, all named `expand` plus an optional suffix of up to three characters in the order `1rq`. All of the `expand` macros have both expr and block modes.
+
+These macros are convenient when working with quasiquoted code, and with run-time AST values in general. The suffixes mean:
+
+ - `1`: once. Expand one layer of macros only.
+ - `r`: at run time. Useful for run-time AST values, such as quoted trees.
+ - `q`: quote first. Apply `q` first, then the expander.
+
+The variants **without** `r` simply hook into the expander at macro expansion time of their use site (which is, typically, inside your macro definition). This is simple, but it means that if you have defined a quoted `tree`, you can't `expand[tree]` - because at macro expansion time, that `tree` is just the lexical name `tree`, it has no value yet. Also, in quasiquoted code, operating at macro expansion time means that unquotes aren't fully processed yet, because they depend on run-time values from the use site of `q`.
+
+The variants **with** `r`, which stands for *run time*, cover this use case. They snapshot the expander bindings at macro expansion time (of their use site), and then delay until run time (of that use site) to perform the actual expansion. They behave like calling `expander.visit` (or its sisters), but using the macro bindings from their use site (your macro's definition site).
+
+Thus, `expandr[tree]` (as well as `expand1r[tree]`) will do the expected thing - i.e. expand the thing the name `tree` refers to at run time when, at run time, the source code line with the `expandr` (respectively `expand1r`) invocation is reached. So you can create a quoted `tree`, and then separately expand it, in the context of the macro bindings from your macro definition site.
+
+When working with quasiquoted code, run-time expansion also has the benefit that any unquoted values will have been spliced in. Unquotes operate partly at run time of the use site of `q`. They must; the only context that has the user-provided names (where the unquoted data comes from) in scope is each particular use site of `q`, at its run time. The quasiquoted tree is only fully ready at run time of the use site of `q`. It is then **a run-time AST value** - which is exactly the kind of thing macros work with.
 
 
 ## Understanding the quasiquote system
 
-This section is intended for both users and developers. The quasiquote system is probably the most complex part of `mcpyrate`. In the words of Matthew Might, [*to understand is to implement*](http://matt.might.net/articles/parsing-with-derivatives/).
+This section is intended for both users and developers. The quasiquote system is probably the most complex part of `mcpyrate`. In the words of Matthew Might, [*to understand is to implement*](http://matt.might.net/articles/parsing-with-derivatives/). So let's talk about the implementation.
 
-Whether working with quasiquoted code, or thinking about how the quasiquote system itself works, be **very careful** to avoid conflating different meta-levels.
+Whether working with quasiquoted code, or thinking about how the quasiquote system itself works, one must be **very careful** to avoid conflating different meta-levels.
 
 Below, let `mymacro` be a macro that uses `q` to build (part of) its output AST.
 
@@ -565,15 +606,19 @@ The code generated by `q` is mostly an "astified" AST consisting of calls to var
 So when the run-time value is evaluated, at run time of the use site of `q`, both the "astified" `ast.Call` function calls as well as the run-time parts of the operators run to construct the final AST. This final result is a plain AST, with no more function calls into the quasiquote system, and no extra `ast.Call` layer. **This final AST only becomes available at run time of the use site of `q`.** 
 
 
-### When to use `expand[tree]` vs. `expander.visit(tree)`
+### How `q` arranges hygienic captures
 
-So, the conclusion from the above is that *at run time at the use site of `q`*, we'll have a garden variety AST. So you can just `expander.visit` (or `visit_recursively`, or `visit_once`) it as usual.
+Regular macros that want to use hygienic capture, without using quasiquotes, can just call the API functions `capture_value` or `capture_macro`.
 
-The `expand` and `expand1` operators are needed when it's still macro expansion time, because then we'll still have the "astified" AST, where macro invocations do not look like macro invocations to the expander. These operators will internally `unastify` the tree, then expand macros, and finally quote it again.
+`q` itself can't simply call `capture_value`, because *it generates code for your macro*. So instead of calling `capture_value` directly in the implementation of `q`, it needs to arrange things so that `capture_value` gets called *at the use site of `q`*.
 
-Note that at macro expansion time, unquotes cannot be processed yet, so you won't get the exact same result using `expand` or `expand1` that you'd get by waiting until run time and using the `expander.visit` family of methods.
+If you write your own macro-generating macro that needs to do something similar, you can make an `ast.Call` that will, at run time, call `capture_value` with the appropriate arguments, and splice that `ast.Call` into your output. As the arguments in the `ast.Call`, you'll want to set `value` to the tree for the expression whose value you want to capture, and `name` to an `ast.Constant` with a human-readable string value.
 
-The `expand` and `expand1` operators are mainly useful in the REPL, for interactive experimentation on quoted code.
+`q` **does** call `capture_macro` directly. This works because the use site imports all the macros that source file will use already at macro-expansion time. (Even if some of the macros are only imported for use in macro output, specifically so that `h[]` can detect references to them.) So the relevant macro binding is available in the expander that is running that invocation of `q`.
+
+This is better than delaying the macro capture until run time of the use site, because at run time, macro imports are gone. So the relevant binding must be recorded at macro expansion time anyway, from the expander that's expanding the use site of `q`. That's exactly the `expander` argument of the `q` macro function.
+
+Also, there might not be an `expander` at the use site, if the use site is not in a macro. But even if it's in a macro and there happens to be a name `expander` in scope *at run time*, that points to the wrong expander - namely, the one expanding *the use site of your macro* (which is in a different file, that has different macro bindings). At that point, your macro has reached run time, so the `expander` that processed it is already gone.
 
 
 ## Notes
