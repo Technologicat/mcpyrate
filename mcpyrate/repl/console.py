@@ -84,7 +84,7 @@ class MacroConsole(code.InteractiveConsole):
     def runsource(self, source, filename="<interactive input>", symbol="single"):
         # Special REPL commands.
         if source == "macros?":
-            self.write(format_bindings(self.expander))
+            self.write(format_bindings(self.expander, color=True))
             return False  # complete input
         elif source.endswith("??"):
             return self.runsource(f'mcpyrate.repl.utils.sourcecode({source[:-2]})')

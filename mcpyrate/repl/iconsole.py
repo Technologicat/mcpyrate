@@ -86,7 +86,7 @@ class AstMagics(Magics):
     def macros(self, line):
         """Print a human-readable list of macros currently imported into the session."""
         # Line magics print `\n\n` at the end automatically, so remove our final `\n`.
-        print(format_bindings(_instance.macro_transformer.expander).rstrip())
+        print(format_bindings(_instance.macro_transformer.expander, color=True).rstrip())
 
     # I don't know if this is useful - one can use the `mcpyrate.debug.step_expansion`
     # macro also in the REPL - but let's put it in for now.

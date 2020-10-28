@@ -4,6 +4,10 @@
 __all__ = ["doc", "sourcecode", "get_makemacro_sourcecode"]
 
 import inspect
+from sys import stderr
+
+from ..colorizer import colorize, ColorScheme
+
 
 def doc(obj):
     """Print an object's docstring, non-interactively.
@@ -14,13 +18,16 @@ def doc(obj):
     try:
         filename = inspect.getsourcefile(obj)
         source, firstlineno = inspect.getsourcelines(obj)
-        print(f"{filename}:{firstlineno}")
+        print(colorize(f"{filename}:{firstlineno}", ColorScheme.SOURCEFILENAME),
+              file=stderr)
     except (TypeError, OSError):
         pass
     if not hasattr(obj, "__doc__") or not obj.__doc__:
-        print("<no docstring>")
+        print(colorize("<no docstring>", ColorScheme.GREYEDOUT),
+              file=stderr)
         return
-    print(inspect.cleandoc(obj.__doc__))
+    print(inspect.cleandoc(obj.__doc__), file=stderr)
+
 
 def sourcecode(obj):
     """Print an object's source code, non-interactively.
@@ -31,11 +38,14 @@ def sourcecode(obj):
     try:
         filename = inspect.getsourcefile(obj)
         source, firstlineno = inspect.getsourcelines(obj)
-        print(f"{filename}:{firstlineno}")
+        print(colorize(f"{filename}:{firstlineno}", ColorScheme.SOURCEFILENAME),
+              file=stderr)
+        # TODO: no syntax highlighting for now, because we'd have to parse and unparse.
         for line in source:
             print(line.rstrip("\n"))
     except (TypeError, OSError):
-        print("<no source code available>")
+        print(colorize("<no source code available>", ColorScheme.GREYEDOUT))
+
 
 def get_makemacro_sourcecode():
     """Return source code for the REPL's `macro` magic function.
