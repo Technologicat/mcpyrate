@@ -36,7 +36,7 @@ Supports Python 3.6, 3.7, 3.8, and PyPy3.
         - [I just ran my program again and no macro expansion is happening?](#i-just-ran-my-program-again-and-no-macro-expansion-is-happening)
         - [My own macros are working, but I'm not seeing any output from `step_expansion` (or `show_bindings`)?](#my-own-macros-are-working-but-im-not-seeing-any-output-from-stepexpansion-or-showbindings)
         - [Macro expansion time where exactly?](#macro-expansion-time-where-exactly)
-        - [`step_expansion` is treating `expand[]` (or nested `expand1[]`) as a single step?](#stepexpansion-is-treating-expand-or-nested-expand1-as-a-single-step)
+        - [`step_expansion` is treating the `expand` family of macros as a single step?](#stepexpansion-is-treating-the-expand-family-of-macros-as-a-single-step)
         - [Can I use the `step_expansion` macro to report steps with `expander.visit(tree)`?](#can-i-use-the-stepexpansion-macro-to-report-steps-with-expandervisittree)
         - [Error in `compile`, an AST node is missing the required field `lineno`?](#error-in-compile-an-ast-node-is-missing-the-required-field-lineno)
             - [Unexpected bare value](#unexpected-bare-value)
@@ -87,7 +87,7 @@ Supports Python 3.6, 3.7, 3.8, and PyPy3.
 - **Advanced quasiquoting**.
   - Hygienically interpolate both regular values **and macro names**.
   - Delayed macro expansion inside quasiquoted code.
-    - User-controllable, see macros `expand1` and `expand` in `mcpyrate.quotes`.
+    - User-controllable, see the `expand` family of macros in `mcpyrate.quotes`.
     - Or just leave it to expand automatically once your macro (that uses quasiquoting) returns.
   - Inverse quasiquote operator. See function `mcpyrate.quotes.unastify`.
     - Convert a quasiquoted AST back into a direct AST, typically for further processing before re-quoting it.
@@ -614,19 +614,19 @@ As an example, consider a macro `mymacro`, which uses `q` to define an AST using
 As the old saying goes, *it's always five'o'clock **somewhere***. *There is no global macro expansion time* - the "time" must be considered separately for each source file.
 
 
-### `step_expansion` is treating `expand[]` (or nested `expand1[]`) as a single step?
+### `step_expansion` is treating the `expand` family of macros as a single step?
 
-This is a natural consequence of `expand` and `expand1` being defined as macros.
+This is a natural consequence of the `expand` macros being macros.
 
-In the case of `expand`, when `step_expansion` takes one step, by telling the expander to visit the tree once, the expander will (eventually) find the `expand` invocation. So it will invoke that macro.
+For example, in the case of `expand`, when `step_expansion` takes one step, by telling the expander to visit the tree once, the expander will (eventually) find the `expand` invocation. So it will invoke that macro.
 
 The `expand` macro, by definition, expands whatever is inside the invocation until no macros remain there. So when `step_expansion` gets control back, all macro invocations within the `expand` are gone.
 
-Then, consider the case with two or more nested `expand1` invocations. When `step_expansion` takes one step, by telling the expander to visit the tree once, the expander will (eventually) find the outermost `expand1` invocation. So it will invoke that macro.
+Now consider the case with two or more nested `expand1` invocations. When `step_expansion` takes one step, by telling the expander to visit the tree once, the expander will (eventually) find the outermost `expand1` invocation. So it will invoke that macro.
 
 The `expand1` macro, by definition, expands once whatever is inside the invocation. So it will call the expander to expand once... and now the expander will find the next inner `expand1`. This will get invoked, too. The chain continues until all `expand1` in the expression or block are gone.
 
-This is not a major issue, though, because `expand` and `expand1` are mainly useful in the REPL, for interactive experimentation on quoted code. Note also `step_expansion` is available in the REPL, as well.
+For REPL experimentation, note that `step_expansion` itself is available, as well.
 
 
 ### Can I use the `step_expansion` macro to report steps with `expander.visit(tree)`?
@@ -703,7 +703,7 @@ If these don't help, I'd have to see the details. Please file an issue so we can
 
 #### Expander says it doesn't know how to `unastify` X?
 
-Most likely, the input to `expand` or `expand1` wasn't a quasiquoted tree. See `expandq` and `expand1q`, or just `expander.visit(tree)`, depending on what you want.
+Most likely, the input to `expand` or `expand1` wasn't a quasiquoted tree. See `expandq`, `expand1q`, `expandrq`, `expand1rq`, or just `expander.visit(tree)`, depending on what you want.
 
 
 ### Why do my block and decorator macros generate extra do-nothing nodes?
