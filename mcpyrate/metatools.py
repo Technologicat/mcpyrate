@@ -78,7 +78,7 @@ def runtime_expand(bindings, filename, tree):
 # --------------------------------------------------------------------------------
 
 @namemacro
-def macro_bindings(tree, syntax, expander, **kw):  # tree is unused
+def macro_bindings(tree, *, syntax, expander, **kw):  # tree is unused
     """[syntax, name] capture the macro expander's macro bindings.
 
     This macro snapshots the macro expander's current macro bindings at macro
@@ -349,7 +349,7 @@ def _expandr_impl(tree, syntax, expander, macroname):
     # avoids polluting the global bindings table.
     return ast.Call(_mcpyrate_metatools_attr(runtime_operator),
                     [],
-                    [ast.keyword("bindings", macro_bindings(None, "name", expander)),
+                    [ast.keyword("bindings", macro_bindings(None, syntax="name", expander=expander)),
                      ast.keyword("filename", ast.Constant(value=expander.filename)),
                      ast.keyword("tree", tree)])
 
@@ -372,7 +372,7 @@ def stepr(tree, *, syntax, expander, **kw):
 
     expander_node = ast.Call(_mcpyrate_metatools_attr("MacroExpander"),
                              [],
-                             [ast.keyword("bindings", macro_bindings(None, "name", expander)),
+                             [ast.keyword("bindings", macro_bindings(None, syntax="name", expander=expander)),
                               ast.keyword("filename", ast.Constant(value=expander.filename))])
     return ast.Call(_mcpyrate_metatools_attr("step_expansion"),
                     [tree],
