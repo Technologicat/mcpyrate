@@ -87,9 +87,10 @@ class MacroConsole(code.InteractiveConsole):
             self.write(format_bindings(self.expander, color=True))
             return False  # complete input
         elif source.endswith("??"):
-            return self.runsource(f'mcpyrate.repl.utils.sourcecode({source[:-2]})')
+            # Use `_internal_execute` instead of `runsource` to prevent expansion of name macros.
+            return self._internal_execute(f'mcpyrate.repl.utils.sourcecode({source[:-2]})')
         elif source.endswith("?"):
-            return self.runsource(f"mcpyrate.repl.utils.doc({source[:-1]})")
+            return self._internal_execute(f"mcpyrate.repl.utils.doc({source[:-1]})")
 
         try:
             code = self.compile(source, filename, symbol)
