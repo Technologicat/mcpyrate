@@ -36,11 +36,13 @@ __all__ = ['macro_bindings',
            'expand1sq', 'expandsq',
            'expand1s', 'expands',
            'expand1rq', 'expandrq',
-           'expand1r', 'expandr']
+           'expand1r', 'expandr',
+           'stepr']
 
 import ast
 
-# Note we import `q` as a regular function. We just want its syntax transformer.
+# Note we import some macros as regular functions. We just want their syntax transformers.
+from .debug import step_expansion  # noqa: F401, used in macro output.
 from .expander import MacroExpander, namemacro
 from .quotes import q, unastify, capture_value
 
@@ -228,6 +230,8 @@ def expand1rq(tree, *, syntax, **kw):
     Because the expansion runs at run time (of the use site of `expand1rq`),
     unquoted values have been spliced in by the time the expansion is performed.
 
+    Macro bindings are captured from the use site at macro expansion time.
+
     `expand1rq[...]` is shorthand for `expand1r[q[...]]`.
 
     `with expand1rq as quoted` has the corresponding effect on a block, but
@@ -261,6 +265,8 @@ def expandrq(tree, *, syntax, **kw):
 
     Because the expansion runs at run time (of the use site of `expandrq`),
     unquoted values have been spliced in by the time the expansion is performed.
+
+    Macro bindings are captured from the use site at macro expansion time.
 
     `expandrq[...]` is shorthand for `expandr[q[...]]`.
 
@@ -296,6 +302,8 @@ def expand1r(tree, *, syntax, expander, **kw):
     Because the expansion runs at run time (of the use site of `expand1r`),
     unquoted values have been spliced in by the time the expansion is performed.
 
+    Macro bindings are captured from the use site at macro expansion time.
+
     If you want to quote some code to produce `tree` and then immediately expand it,
     use `expand1rq` instead.
     """
@@ -311,6 +319,8 @@ def expandr(tree, *, syntax, expander, **kw):
 
     Because the expansion runs at run time (of the use site of `expandr`),
     unquoted values have been spliced in by the time the expansion is performed.
+
+    Macro bindings are captured from the use site at macro expansion time.
 
     If you want to quote some code to produce `tree` and then immediately expand it,
     use `expandrq` instead.
@@ -342,3 +352,30 @@ def _expandr_impl(tree, syntax, expander, macroname):
                     [ast.keyword("bindings", macro_bindings(None, "name", expander)),
                      ast.keyword("filename", ast.Constant(value=expander.filename)),
                      ast.keyword("tree", tree)])
+
+# --------------------------------------------------------------------------------
+
+def stepr(tree, *, syntax, expander, **kw):
+    """[syntax, expr] Like `mcpyrate.debug.step_expansion`, but at run time.
+
+    This macro shows the steps `expandr` takes for a run-time AST value,
+    by using `step_expansion` with macro bindings captured from the use site
+    as in `expandr`.
+
+    The run-time return value is the same as `expandr[tree]`.
+
+    There's no separate `steprq`; create your quoted `tree` first, then pass
+    `tree` in to this macro.
+    """
+    if syntax != "expr":
+        raise SyntaxError("`stepr` is an expr macro only")
+
+    expander_node = ast.Call(_mcpyrate_metatools_attr("MacroExpander"),
+                             [],
+                             [ast.keyword("bindings", macro_bindings(None, "name", expander)),
+                              ast.keyword("filename", ast.Constant(value=expander.filename))])
+    return ast.Call(_mcpyrate_metatools_attr("step_expansion"),
+                    [tree],
+                    [ast.keyword("args", ast.List(elts=[])),
+                     ast.keyword("syntax", ast.Constant(value=syntax)),
+                     ast.keyword("expander", expander_node)])

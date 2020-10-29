@@ -629,9 +629,11 @@ Now consider the case with two or more nested `expand1s` invocations. When `step
 
 The `expand1s` macro, by definition, expands once whatever is inside the invocation. So it will call the expander to expand once... and now the expander will find the next inner `expand1s`. This will get invoked, too. The chain continues until all `expand1s` in the expression or block are gone.
 
-In the case of `expandr`/`expand1r`, using `step_expansion` on them will show what those macros do - but it won't show what they do to your `tree`, since in the `r` variants expansion is delayed until run time. (But in that case, the name `tree` points to a run-time AST value - expanding macros in the lexical identifier `tree` itself makes no sense.)
+In the case of `expandr`/`expand1r`, using `step_expansion` on them will show what those macros do - but it won't show what they do to your `tree`, since in the `r` variants expansion is delayed until run time. (Note that in case of the `r` variants, the name `tree` points to a run-time AST value - expanding macros in the lexical identifier `tree` itself would make no sense.)
 
-If you really want to step the expansion in an `expandr`, we might add a convenience function in the future, but for now: you can use the `macro_bindings` macro (from `mcpyrate.metatools`) to lift the macro bindings into a run-time dictionary, then instantiate a `mcpyrate.expander.MacroExpander` with those bindings (and `filename=__file__`), and then call `step_expansion` as a regular function, passing it the expander you instantiated. It will happily use that alternative expander instance.
+If want to step the expansion in an `expandr`, use the expr macro `mcpyrate.metatools.stepr`. (If using quasiquotes, create your `quoted` tree first, and then do `stepr[quoted]` as a separate step.)
+
+If you want to do something similar manually, you can use the `macro_bindings` macro (from `mcpyrate.metatools`) to lift the macro bindings into a run-time dictionary, then instantiate a `mcpyrate.expander.MacroExpander` with those bindings (and `filename=__file__`), and then call `step_expansion` as a regular function, passing it the expander you instantiated. It will happily use that alternative expander instance. (This is essentially how `stepr` does it.)
 
 If you want to just experiment in the REPL, note that `step_expansion` is available there, as well. Just macro-import it, as usual.
 
