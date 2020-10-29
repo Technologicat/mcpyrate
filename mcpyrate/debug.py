@@ -36,16 +36,20 @@ def step_expansion(tree, *, args, syntax, expander, **kw):
             ...
 
     This calls `expander.visit_once` in a loop, discarding the `Done` markers,
-    and showing the AST at each step (by printing to `sys.stderr`).
+    and showing the AST at each step, by printing to `sys.stderr`.
 
     A step is defined as when `expander.visit_once` returns control to the
     expander core. If your macro does `expander.visit(subtree)`, that will
-    expand by one step; if it does `expander.visit_recursively(subtree)`,
+    expand `subtree` by one layer of macros (without adding a `Done` marker)
+    before returning control; if it does `expander.visit_recursively(subtree)`,
     then that subtree will be expanded, in a single step, until no macros remain.
 
     Since this is a debugging utility, the source code is rendered in the debug
     mode of `unparse`, which prints also invisible nodes such as `Module` and
-    `Expr` in a Python-like pseudocode notation.
+    `Expr` (as well as any AST markers) in a Python-like pseudocode notation.
+
+    The source code is rendered with syntax highlighting suitable for terminal
+    output.
 
     The optional macro argument `mode`, if present, sets the renderer mode.
     It must be one of the strings `"unparse"` (default) or `"dump"`.
