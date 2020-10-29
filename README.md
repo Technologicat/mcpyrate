@@ -30,14 +30,16 @@ Supports Python 3.6, 3.7, 3.8, and PyPy3.
             - [Arguments or no arguments?](#arguments-or-no-arguments)
             - [Differences to `macropy`](#differences-to-macropy-1)
         - [Identifier macros](#identifier-macros)
+            - [Syntax limitations](#syntax-limitations)
         - [Expand macros inside-out](#expand-macros-inside-out)
         - [Expand macros inside-out, but only those in a given set](#expand-macros-inside-out-but-only-those-in-a-given-set)
     - [Troubleshooting](#troubleshooting)
         - [I just ran my program again and no macro expansion is happening?](#i-just-ran-my-program-again-and-no-macro-expansion-is-happening)
         - [My own macros are working, but I'm not seeing any output from `step_expansion` (or `show_bindings`)?](#my-own-macros-are-working-but-im-not-seeing-any-output-from-stepexpansion-or-showbindings)
         - [Macro expansion time where exactly?](#macro-expansion-time-where-exactly)
-        - [`step_expansion` is treating the `expand` family of macros as a single step?](#stepexpansion-is-treating-the-expand-family-of-macros-as-a-single-step)
+        - [`step_expansion` is treating the `expands` family of macros as a single step?](#stepexpansion-is-treating-the-expands-family-of-macros-as-a-single-step)
         - [Can I use the `step_expansion` macro to report steps with `expander.visit(tree)`?](#can-i-use-the-stepexpansion-macro-to-report-steps-with-expandervisittree)
+        - [`step_expansion` and `stepr` report different results?](#stepexpansion-and-stepr-report-different-results)
         - [Error in `compile`, an AST node is missing the required field `lineno`?](#error-in-compile-an-ast-node-is-missing-the-required-field-lineno)
             - [Unexpected bare value](#unexpected-bare-value)
             - [Wrong type of list](#wrong-type-of-list)
@@ -279,7 +281,9 @@ Refer to [Green Tree Snakes](https://greentreesnakes.readthedocs.io/en/latest/no
 
 The `tree` parameter is the only positional parameter the macro function is called with. All other parameters are passed by name, so you can easily pick what you need (and let `**kw` gather the ones you don't).
 
-Beside returning an AST, you can return `None` to remove the `tree` you got in (provided that deleting it is syntactically valid), or return a list of `AST` nodes (if in a position where that is syntactically admissible; so `block` and `decorator` macros only). The result of the macro expansion is recursively expanded until no new macro invocations are found.
+A macro can return a single AST node, a list of AST nodes, or `None`. See [Macro invocation types](#macro-invocation-types) below for details.
+
+The result of the macro expansion is recursively expanded until no new macro invocations are found.
 
 The only explicit hint at the definition site that a function is actually a macro is the `**kw`. To be more explicit, mention it at the start of the docstring, such as above. (We recommend the terminology used in [The Racket Reference](https://docs.racket-lang.org/reference/): a macro is *a syntax*, as opposed to *a procedure* a.k.a. garden variety function.)
 
@@ -296,7 +300,15 @@ Other modules contain utilities for writing macros:
 
 Any missing source locations and `ctx` fields are fixed automatically in a postprocessing step, so you don't need to care about those when writing your AST.
 
-The recommendation is, **do not fill in source location information manually**, because if it is missing, this allows the expander to auto-fill it for any macro-generated nodes. If auto-filled, those nodes will have the source location of the macro invocation node. This makes it easy to pinpoint in debug output (e.g. for a block macro) which lines originate in the unexpanded source code and which were added by the macro invocation.
+For source location information, the recommendation is:
+
+ - If you generate new AST nodes that do not correspond to any line in the original unexpanded source code, **do not fill in their source location information**.
+   - For any node whose source location information is missing, the expander will auto-fill it. This auto-fill copies the source location from the macro invocation node. This makes it easy to pinpoint in `unparse` output in debug mode (e.g. for a block macro) which lines originate in the unexpanded source code and which lines were added by the macro invocation.
+
+ - If you edit an AST node that already exists in the input AST, or generate a new node based on an existing one and then discard the original, **be sure to `ast.copy_location` the original node's source location information to your new node**.
+   - For such edits, **it is the macro's responsibility** to ensure correct source location information in the output AST, so that coverage reporting works. There is no general rule that could generate source location information for arbitrary AST edits correctly.
+
+(What we can do automatically, and what `mcpyrate` indeed does, is to make sure that *the line with the macro invocation* shows as covered, on the condition that the macro was actually invoked.)
 
 Simple example:
 
@@ -315,21 +327,36 @@ def log(expr, **kw):
 
 A macro can be called in four different ways. The macro function acts as a dispatcher for all of them.
 
-The way the macro was called, i.e. the *invocation type*, is recorded in the `syntax` named parameter, which can have the values `'expr'`, `'block'`, `'decorator'`, or `'name'`. With this, you can distinguish the syntax used in the invocation, and provide a different implementation for each one (or `raise SyntaxError` on those your macro is not interested in).
+The way the macro was called, i.e. the *invocation type*, is recorded in the `syntax` named parameter, which has one of the values `'expr'`, `'block'`, `'decorator'`, or `'name'`. With this, you can distinguish the syntax used in the invocation, and provide a different implementation for each one (or `raise SyntaxError` on those your macro is not interested in).
 
-When valid macro invocation syntax for one of the other three types is detected, the name part is skipped, and it **does not** get called as an identifier macro. The identifier macro mechanism is invoked only for appearances of the name *in contexts that are not other types of macro invocations*.
+When valid macro invocation syntax for one of the other three types is detected, the name part of the invocation is skipped, and it **does not** get called as an identifier macro. The identifier macro mechanism is invoked only for appearances of the name *in contexts that are not other types of macro invocations*.
 
 Furthermore, identifier macros are an opt-in feature. The value of the `syntax` parameter can be `name` only if the macro function is declared as a `@namemacro`. The decorator must be placed outermost (along with `@parametricmacro`, if that is also used).
 
-Notes on each invocation type:
+Let us call all descendants of `ast.expr` (note lowercase `e`) *expression AST nodes*, and all descendants of `ast.stmt` *statement AST nodes*. The different invocation types behave as follows:
 
-- If `syntax == 'expr'`, then `tree` is a single AST node.
+ - If `syntax == 'expr'`, then `tree` is a single expression AST node.
 
-- If `syntax == 'block'`, then `tree` is always a `list` of AST nodes. If several block macros appear in the same `with`, they are popped one by one, left-to-right; the `with` goes away when (if) all its context managers have been popped. As long as the `with` is there, it appears as the only top-level statement in the list `tree`. The macro may return a `list` of AST nodes.
+ - If `syntax == 'block'`, then `tree` is always a `list` of statement AST nodes. If several block macros appear in the same `with`, they are popped one by one, left-to-right; the `with` goes away when (if) all its context managers have been popped. As long as the `with` is there, it appears as the only top-level statement in the list `tree`.
 
-- If `syntax == 'decorator'`, then `tree` is the decorated node itself. If several decorator macros decorate the same node, they are popped one by one, innermost-to-outermost (same processing order as in regular decorators). The macro may return a `list` of AST nodes.
+ - If `syntax == 'decorator'`, then `tree` is the decorated node itself, which is a statement AST node (a class definition, function definition, or async function definition). If several decorator macros decorate the same node, they are popped one by one, innermost-to-outermost. This is the same processing order as Python uses for regular decorators.
 
-- If `syntax == 'name'`, then `tree` is the `Name` node itself.
+ - If `syntax == 'name'`, then `tree` is the `Name` node itself. It is an expression AST node.
+
+Valid return values from a macro are as follows:
+
+ - `expr` and `name` macros must return a single **expression** AST node, or `None`.
+   - The node replaces the macro invocation.
+   - Because expression AST node slots in the AST cannot be empty, returning `None` is shorthand for returning a dummy expression node that does nothing, and at run time, evaluates to `None`.
+
+ - `block` and `decorator` macros must return one or more **statement** AST nodes, or `None`.
+   - The node or nodes replace the macro invocation.
+   - To return several statement nodes, place them in a `list`. Note this must be a regular run-time `list`, **not** an `ast.List` node. The nodes in the `list` will be spliced in to replace the macro invocation node.
+   - Returning `None` removes the macro invocation subtree from the output.
+
+`mcpyrate` takes care to arrange the AST to report correct coverage *for the line containing the macro invocation* even if a macro returns `None`. If the macro invocation ran, coverage tools will see the source line as covered.
+
+(If a `block` macro deletes the whole block, any lines in the source code *inside that block* will *not* be reported as covered, since they will then not run.)
 
 
 ### Quasiquotes
@@ -541,6 +568,10 @@ This way any invalid, stray mentions of the magic variable `it` trigger an error
 
 If you want to expand only `it` inside an invocation of `mymacro[...]` (thus checking that the mentions are valid), leaving other nested macro invocations untouched, that's also possible. See below how to expand only macros in a given set (from which you can omit everything but `it`).
 
+#### Syntax limitations
+
+The run-time result of an identifier macro cannot be subscripted in place, because the syntax to do that looks like an `expr` macro invocation. If you need to do that, first assign the result to a temporary variable, and then subscript that.
+
 
 ### Expand macros inside-out
 
@@ -614,6 +645,8 @@ This is mainly something to keep in mind when developing macros where the macro 
 
 As an example, consider a macro `mymacro`, which uses `q` to define an AST using the quasiquote notation. When `mymacro` reaches run time, any macro invocations used as part of its own implementation (such as the `q`) are already long gone. On the other hand, the use site of `mymacro` has not yet reached run time - for that use site, it is still macro expansion time.
 
+Any macros that `mymacro` invokes in its output AST are just data, to be spliced in to the use site. By default, they'll expand (run!) after `mymacro` has returned.
+
 As the old saying goes, *it's always five'o'clock **somewhere***. *There is no global macro expansion time* - the "time" must be considered separately for each source file.
 
 
@@ -633,7 +666,7 @@ In the case of `expandr`/`expand1r`, using `step_expansion` on them will show wh
 
 If want to step the expansion of an `expandr`, use the expr macro `mcpyrate.metatools.stepr` instead of using `expandr` itself. (If using quasiquotes, create your `quoted` tree first, and then do `stepr[quoted]` as a separate step, like you would do `expandr[quoted]`.)
 
-If you want to do something similar manually, you can use the `macro_bindings` macro (from `mcpyrate.metatools`) to lift the macro bindings into a run-time dictionary, then instantiate a `mcpyrate.expander.MacroExpander` with those bindings (and `filename=__file__`), and then call `step_expansion` as a regular function, passing it the expander you instantiated. It will happily use that alternative expander instance. (This is essentially how `stepr` does it.)
+If you want to do something similar manually, you can use the `macro_bindings` macro (from `mcpyrate.metatools`) to lift the macro bindings into a run-time dictionary, then instantiate a `mcpyrate.expander.MacroExpander` with those bindings (and `filename=__file__`), and then call `step_expansion` as a regular function, passing it the expander you instantiated. It will happily use that alternative expander instance. (This is essentially how `stepr` does it; though it is a macro, so strictly speaking, it arranges for something like that to happen at run time.)
 
 If you want to just experiment in the REPL, note that `step_expansion` is available there, as well. Just macro-import it, as usual.
 
@@ -651,6 +684,49 @@ If you need it for `expander.visit(tree)`, detect the current mode from `expande
 (We recommend `sys.stderr`, because that's what `step_expansion` uses, and that's also the stream used for detecting the availability of color support, if `colorama` is not available. If `colorama` is available, it'll detect separately for `sys.stdout` and `sys.stderr`.)
 
 
+### `step_expansion` and `stepr` report different results?
+
+In general, **they should**, because:
+
+ - `step_expansion` hooks into the expander at macro expansion time,
+ - `stepr` captures the expander's macro bindings at macro expansion time, but delays expansion (of the run-time AST value provided as its argument) until run time.
+
+For example, with the usual macro-imports,
+
+```python
+from mcpyrate.quotes import macros, q
+from mcpyrate.debug import macros, step_expansion
+from mcpyrate.metatools import macros, stepr
+```
+
+on Python 3.6, the invocation `step_expansion[q[42]]` produces:
+
+```
+**Tree 0x7f515e2454e0 (<ipython-session>) before macro expansion:
+  q[42]
+**Tree 0x7f515e2454e0 (<ipython-session>) after step 1:
+  mcpyrate.quotes.ast.Num(n=42)
+**Tree 0x7f515e2454e0 (<ipython-session>) macro expansion complete after 1 step.
+```
+
+Keep in mind each piece of source code shown is actually the unparse of an AST. So the `q[42]` is actually an `ast.Subscript`, while the expanded result is an `ast.Call` that, once compiled and run, will call `ast.Num`.
+
+The invocation `stepr[q[42]]` produces:
+
+```
+**Tree 0x7f515e00aac8 (<ipython-session>) before macro expansion:
+  42
+**Tree 0x7f515e00aac8 (<ipython-session>) macro expansion complete after 0 steps.
+```
+
+or in other words, an `ast.Num` object.
+
+So at run time, both invocations will result in an `ast.Num` object (or `ast.Constant`, if running on Python 3.8+). But they see the expansion differently, because one operates at macro expansion time, while the other operates at run time.
+
+While unquotes are processed at run time of the use site of `q` (see [the quasiquote system docs](quasiquotes.md)), the `q` itself is processed at macro expansion time. Hence expanding at run time, it will already be gone.
+
+
+
 ### Error in `compile`, an AST node is missing the required field `lineno`?
 
 Welcome to the club. It is likely not much of an exaggeration to say all Python macro authors (regardless of which expander you pick) have seen this error at some point.
@@ -659,11 +735,11 @@ It is overwhelmingly likely the actual error is something else, because all macr
 
 The misleading error message is due to an unfortunate lack of input validation in Python's compiler, because Python wasn't designed for an environment where AST editing is part of the daily programming experience.
 
-Possible causes:
+So let's look at the likely causes.
 
 #### Unexpected bare value
 
-Is your macro placing AST nodes where the compiler expects those, and not accidentally using bare values?
+Is your macro placing AST nodes where the compiler expects those, and not accidentally using bare run-time values?
 
 #### Wrong type of list
 
