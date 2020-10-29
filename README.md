@@ -631,7 +631,7 @@ The `expand1s` macro, by definition, expands once whatever is inside the invocat
 
 In the case of `expandr`/`expand1r`, using `step_expansion` on them will show what those macros do - but it won't show what they do to your `tree`, since in the `r` variants expansion is delayed until run time. (Note that in case of the `r` variants, the name `tree` points to a run-time AST value - expanding macros in the lexical identifier `tree` itself would make no sense.)
 
-If want to step the expansion in an `expandr`, use the expr macro `mcpyrate.metatools.stepr`. (If using quasiquotes, create your `quoted` tree first, and then do `stepr[quoted]` as a separate step.)
+If want to step the expansion of an `expandr`, use the expr macro `mcpyrate.metatools.stepr` instead of using `expandr` itself. (If using quasiquotes, create your `quoted` tree first, and then do `stepr[quoted]` as a separate step, like you would do `expandr[quoted]`.)
 
 If you want to do something similar manually, you can use the `macro_bindings` macro (from `mcpyrate.metatools`) to lift the macro bindings into a run-time dictionary, then instantiate a `mcpyrate.expander.MacroExpander` with those bindings (and `filename=__file__`), and then call `step_expansion` as a regular function, passing it the expander you instantiated. It will happily use that alternative expander instance. (This is essentially how `stepr` does it.)
 
