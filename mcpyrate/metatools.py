@@ -32,7 +32,8 @@ If you want to expand a tree using the macro bindings *from your macro's
 definition site*, you should use the `expand` family of macros.
 """
 
-__all__ = ['expand1sq', 'expandsq',
+__all__ = ['macro_bindings',
+           'expand1sq', 'expandsq',
            'expand1s', 'expands',
            'expand1rq', 'expandrq',
            'expand1r', 'expandr']
@@ -40,7 +41,7 @@ __all__ = ['expand1sq', 'expandsq',
 import ast
 
 # Note we import `q` as a regular function. We just want its syntax transformer.
-from .expander import MacroExpander
+from .expander import MacroExpander, namemacro
 from .quotes import q, unastify, capture_value
 
 
@@ -71,6 +72,27 @@ def runtime_expand(bindings, filename, tree):
     """
     expander = MacroExpander(bindings, filename)
     return expander.visit_recursively(tree)
+
+# --------------------------------------------------------------------------------
+
+@namemacro
+def macro_bindings(tree, syntax, expander, **kw):  # tree is unused
+    """[syntax, name] capture the macro expander's macro bindings.
+
+    This macro snapshots the macro expander's current macro bindings at macro
+    expansion time (when the invocation of `macro_bindings` is reached), and
+    at run time, evaluates to that snapshot.
+
+    The snapshot is a `dict` that contains the macro bindings. It is in the
+    format used for instantiating a `mcpyrate.expander.MacroExpander`.
+    """
+    if syntax != "name":
+        raise SyntaxError("`macro_bindings` is a name macro only")
+    # This is exactly the kind of thing the hygienic capture system was
+    # designed to do.
+    keys = list(ast.Constant(value=k) for k in expander.bindings.keys())
+    values = list(capture_value(v, k) for k, v in expander.bindings.items())
+    return ast.Dict(keys=keys, values=values)
 
 # --------------------------------------------------------------------------------
 
@@ -302,17 +324,6 @@ def _expandr_impl(tree, syntax, expander, macroname):
     if syntax not in ("expr", "block"):
         raise SyntaxError(f"`{macroname}` is an expr and block macro only")
 
-    # We must snapshot the macro expander's current bindings, and transmit them
-    # from macro expansion time to run time. This is exactly the kind of thing
-    # the hygienic capture system was designed to do.
-    #
-    # To keep the macro names as-is (which is important because that's how
-    # they'll appear in `tree`), we skip `astify`, and capture the macro
-    # functions manually as regular run-time values. As a bonus, this also
-    # avoids polluting the global bindings table.
-    keys = list(ast.Constant(value=k) for k in expander.bindings.keys())
-    values = list(capture_value(v, k) for k, v in expander.bindings.items())
-
     if macroname == "expandr":
         runtime_operator = "runtime_expand"
     elif macroname == "expand1r":
@@ -321,8 +332,13 @@ def _expandr_impl(tree, syntax, expander, macroname):
         raise ValueError(f"Unknown macroname '{macroname}'; valid: 'expandr', 'expand1r'")
 
     # Pass args by name to improve human-readability of the expanded output.
+    #
+    # We must keep the macro names as-is (because that's how they'll appear
+    # inside the run-time `tree` AST value). So we capture the macro functions
+    # as regular run-time values (from *our* run time). As a bonus, this also
+    # avoids polluting the global bindings table.
     return ast.Call(_mcpyrate_metatools_attr(runtime_operator),
                     [],
-                    [ast.keyword("bindings", ast.Dict(keys=keys, values=values)),
+                    [ast.keyword("bindings", macro_bindings(None, "name", expander)),
                      ast.keyword("filename", ast.Constant(value=expander.filename)),
                      ast.keyword("tree", tree)])
