@@ -76,7 +76,7 @@ Supports Python 3.6, 3.7, 3.8, and PyPy3.
     - The output is **syntax-highlighted**, and **line-numbered** based on `lineno` fields from the AST.
       - Also names of macros currently bound in the expander are highlighted by `step_expansion`.
     - The invisible nodes `ast.Module` and `ast.Expr` are shown, since especially `ast.Expr` is a common trap for the unwary.
-  - Manual expand-once. See `expander.visit_once`; get the `expander` as a named argument of your macro.
+  - Manual expand-once. See `expander.visit_once`; get the `expander` as a named argument of your macro. See also the `expand1s` and `expand1r` macros in `mcpyrate.metatools`.
 - **Dialects, i.e. whole-module source and AST transforms**.
   - Think [Racket's](https://racket-lang.org/) `#lang`, but for Python.
   - Define languages that use Python's surface syntax, but change the semantics; or plug in a per-module transpiler that (at import time) compiles source code from some other programming language into macro-enabled Python. Also an AST [optimizer](http://compileroptimizations.com/) could be defined as a dialect. (Dialects can be chained.)
@@ -87,8 +87,7 @@ Supports Python 3.6, 3.7, 3.8, and PyPy3.
 - **Advanced quasiquoting**.
   - Hygienically interpolate both regular values **and macro names**.
   - Delayed macro expansion inside quasiquoted code.
-    - User-controllable, see the `expand` family of macros in `mcpyrate.quotes`.
-    - Or just leave it to expand automatically once your macro (that uses quasiquoting) returns.
+    - User-controllable. See the detailed docs on quasiquotes.
   - Inverse quasiquote operator. See function `mcpyrate.quotes.unastify`.
     - Convert a quasiquoted AST back into a direct AST, typically for further processing before re-quoting it.
       - Not an unquote; we have those too, but the purpose of unquotes is to interpolate values into quoted code. The inverse quasiquote, instead, undoes the quasiquote operation itself, after any unquotes have already been applied.
@@ -289,10 +288,11 @@ Although you don't strictly have to import anything to write macros, there are s
 Other modules contain utilities for writing macros:
 
  - [`mcpyrate.quotes`](mcpyrate/quotes.py) provides [quasiquote syntax](quasiquotes.md) as macros, to easily build ASTs in your macros.
+ - [`mcpyrate.metatools`](mcpyrate/metatools.py) provides utilities to e.g. expand macros in run-time AST values, while using the macro bindings from your macro's definition site (vs. its use site like `expander.visit` does). [Documentation](quasiquotes.md#the-expand-family-of-macros).
  - [`mcpyrate.utils`](mcpyrate/utils.py) provides some macro-writing utilities that are too specific to warrant a spot in the top-level namespace; of these, at least `rename` and `flatten` (for statement suites) solve problems that come up relatively often.
  - [`mcpyrate.walker`](mcpyrate/walker.py) provides an AST walker that can context-manage its state for different subtrees, while optionally collecting items across the whole walk. It's an `ast.NodeTransformer`, but with functionality equivalent to `macropy.core.walkers.Walker`.
- - [`mcpyrate.splicing`](mcpyrate/splicing.py) helps splice a list of statements into a code template. This is especially convenient when the template is written in the quasiquoted notation; there's no need to think about how the template looks like as an AST in order to paste statements into it.
- - [`mcpyrate.debug`](mcpyrate/debug.py) may be useful if something in your macro is not working.
+ - [`mcpyrate.splicing`](mcpyrate/splicing.py) helps splice statements (or even a complete module body) into a code template. Note in quasiquoted code you can locally splice statements with the block mode `a` (AST-literal) unquote.
+ - [`mcpyrate.debug`](mcpyrate/debug.py) may be useful if something in your macro is not working. **See especially the macro `step_expansion`.**
 
 Any missing source locations and `ctx` fields are fixed automatically in a postprocessing step, so you don't need to care about those when writing your AST.
 
@@ -391,6 +391,7 @@ Full list as of v3.0.0, in alphabetical order:
    - A macro function only accepts macro arguments if declared `@parametricmacro`. For non-parametric macros (default), `args=[]`.
  - `expander`: the macro expander instance.
    - To expand macro invocations inside the current one, use `expander.visit(tree)`, or in special use cases (when you know why), `expander.visit_recursively(tree)` or `expander.visit_once(tree)`.
+     - These methods will use the macro bindings *from the use site of your macro*. If you instead need to use the macro bindings *from the definition site of your macro*, see the `expand` family of macros in [`mcpyrate.metatools`](mcpyrate/metatools.py). [Full documentation](quasiquotes.md#the-expand-family-of-macros).
    - Also potentially useful are `expander.bindings` and `expander.filename`.
    - See [`mcpyrate.core.BaseMacroExpander`](mcpyrate/core.py) and [`mcpyrate.expander.MacroExpander`](mcpyrate/expander.py) for the expander API; it's just a few methods and attributes.
 - `invocation`: the whole macro invocation AST node as-is, not only `tree`. For introspection.
@@ -404,7 +405,7 @@ Full list as of v3.0.0, in alphabetical order:
 
 No named parameter `to_source`. Use the function `mcpyrate.unparse`.
 
-No named parameter `expand_macros`. Use the named parameter `expander`, which grants access to the macro expander instance. Call `expander.visit(tree)`.
+No named parameter `expand_macros`. Use the named parameter `expander`, which grants access to the macro expander instance. Call `expander.visit(tree)`. You might also want to see the `expand` family of macros in [`mcpyrate.metatools`](mcpyrate/metatools.py).
 
 The named parameters `args` and `invocation` are new.
 
@@ -464,7 +465,7 @@ To declare a macro parametric, use the `@parametricmacro` decorator on your macr
 
 The parametric macro function receives macro arguments as the `args` named parameter. It is a raw `list` of the ASTs `arg0` and so on. If the macro was invoked without macro arguments, `args` is an empty list.
 
-Macro invocations inside the macro arguments **are not automatically expanded**. If those ASTs end up in the macro output, they are expanded after the primary macro invocation itself (as part of the default outside-in processing); but if not, they are not expanded at all. To expand them, use `expander.visit(args)` in your macro implementation.
+Macro invocations inside the macro arguments **are not automatically expanded**. If those ASTs end up in the macro output, they are expanded after the primary macro invocation itself (as part of the default outside-in processing); but if not, they are not expanded at all. To expand them, use `expander.visit(args)` in your macro implementation. (Or, in the rare case where you need to use the macro bindings *from your macro's definition site* when expanding the args, use the `expand` family of macros from `mcpyrate.metatools`.)
 
 
 #### Arguments or no arguments?
@@ -557,6 +558,8 @@ If you want to expand only one layer of macro invocations (even when inside the 
 
 If you need to temporarily expand one layer, but let the expander continue expanding your AST later (when your macro returns), observe that `visit_once` will return a `Done` AST marker, which is the thing whose sole purpose is to tell the expander not to expand further in that subtree. It is a wrapper with the actual AST stored in its `body` attribute. So if you need to ignore the `Done`, you can grab the actual AST from there, and discard the wrapper.
 
+All of the above will use the macro bindings *from your macro's use site*. This is almost always The Right Thing. But if you need to use the macro bindings *from your macro's definition site* instead, see the `expand` family of macros in [`mcpyrate.metatools`](mcpyrate/metatools.py). [Full documentation](quasiquotes.md#the-expand-family-of-macros).
+
 
 ### Expand macros inside-out, but only those in a given set
 
@@ -614,19 +617,21 @@ As an example, consider a macro `mymacro`, which uses `q` to define an AST using
 As the old saying goes, *it's always five'o'clock **somewhere***. *There is no global macro expansion time* - the "time" must be considered separately for each source file.
 
 
-### `step_expansion` is treating the `expand` family of macros as a single step?
+### `step_expansion` is treating the `expands` family of macros as a single step?
 
-This is a natural consequence of the `expand` macros being macros.
+This is a natural consequence of the `expands` macros being macros, and - the `s` meaning *static*, them doing their work at macro expansion time.
 
-For example, in the case of `expand`, when `step_expansion` takes one step, by telling the expander to visit the tree once, the expander will (eventually) find the `expand` invocation. So it will invoke that macro.
+For example, in the case of `expands`, when `step_expansion` takes one step, by telling the expander to visit the tree once, the expander will (eventually) find the `expands` invocation. So it will invoke that macro.
 
-The `expand` macro, by definition, expands whatever is inside the invocation until no macros remain there. So when `step_expansion` gets control back, all macro invocations within the `expand` are gone.
+The `expands` macro, by definition, expands whatever is inside the invocation until no macros remain there. So by the time `step_expansion` gets control back, all macro invocations within the `expands` are gone.
 
-Now consider the case with two or more nested `expand1` invocations. When `step_expansion` takes one step, by telling the expander to visit the tree once, the expander will (eventually) find the outermost `expand1` invocation. So it will invoke that macro.
+Now consider the case with two or more nested `expand1s` invocations. When `step_expansion` takes one step, by telling the expander to visit the tree once, the expander will (eventually) find the outermost `expand1s` invocation. So it will invoke that macro.
 
-The `expand1` macro, by definition, expands once whatever is inside the invocation. So it will call the expander to expand once... and now the expander will find the next inner `expand1`. This will get invoked, too. The chain continues until all `expand1` in the expression or block are gone.
+The `expand1s` macro, by definition, expands once whatever is inside the invocation. So it will call the expander to expand once... and now the expander will find the next inner `expand1s`. This will get invoked, too. The chain continues until all `expand1s` in the expression or block are gone.
 
-For REPL experimentation, note that `step_expansion` itself is available, as well.
+In the case of `expandr`/`expand1r`, using `step_expansion` on them will show what those macros do - but it won't show what they do to your `tree`, since in the `r` variants expansion is delayed until run time. (But in that case, the name `tree` points to a run-time AST value - expanding macros in the lexical identifier `tree` itself makes no sense.)
+
+If you want to just experiment in the REPL, note that `step_expansion` is available there, as well. Just macro-import it, as usual.
 
 
 ### Can I use the `step_expansion` macro to report steps with `expander.visit(tree)`?
@@ -676,7 +681,7 @@ Python's grammar requires that whenever, in the source code, an expression appea
 
 When manually building an AST, the common problem is an accidentally omitted `ast.Expr`.
 
-When using quasiquotes to build an AST, the common problem is the opposite, i.e. the accidental presence of an `ast.Expr`. For example, one may use an `ast.Name(id="__paste_here__")` as a paste target marker in a quoted code block, and try to manually replace that marker with some statement node. Unless one is very careful, the statement node will then easily end up in the `value` field of the `ast.Expr` node, producing an invalid AST.
+When using quasiquotes to build an AST, the common problem is the opposite, i.e. the accidental presence of an `ast.Expr`. For example, one may attempt to use an `ast.Name(id="__paste_here__")` as a paste target marker in a quoted code block, and manually replace that marker with some statement node. Unless one is very careful, the statement node will then easily end up in the `value` field of the `ast.Expr` node, producing an invalid AST.
 
 The `ast.Expr` node is taken into account in `mcpyrate.splicing.splice_statements`, as well as in `with a` in `mcpyrate.quotes`. Both of them specifically remove the `ast.Expr` when splicing statements into quoted code.
 

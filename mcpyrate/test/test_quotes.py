@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 
-from ..quotes import (macros, q, u, n, a, s, h,
-                      expands, expand1s, expandsq, expand1sq,
-                      expandr, expand1r, expandrq, expand1rq)
+from ..metatools import (macros, expands, expand1s, expandsq, expand1sq,  # noqa: F811
+                         expandr, expand1r, expandrq, expand1rq)
+from ..quotes import macros, q, u, n, a, s, h  # noqa: F811
 from .macros import (macros, test_q, test_hq,  # noqa: F401, F811
                      first, second, third)
 
