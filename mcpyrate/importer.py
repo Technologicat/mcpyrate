@@ -183,8 +183,8 @@ def _detect_stdlib_sourcefile_paths():
     stdlib_dir = distutils.sysconfig.get_python_lib(standard_lib=True)
     paths = set()
     for root, dirs, files in os.walk(stdlib_dir):
-        for nm in files:
-            if nm[-3:] == '.py':
-                paths.add(os.path.join(root, nm))
+        for filename in files:
+            if filename[-3:] == ".py":
+                paths.add(os.path.join(root, filename))
     return paths
 _stdlib_sourcefile_paths = _detect_stdlib_sourcefile_paths()
