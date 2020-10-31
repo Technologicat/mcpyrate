@@ -21,6 +21,7 @@ Supports Python 3.6, 3.7, 3.8, and PyPy3.
         - [Quasiquotes](#quasiquotes)
             - [Differences to `macropy`](#differences-to-macropy)
         - [Get the source of an AST](#get-the-source-of-an-ast)
+            - [Syntax highlighting](#syntax-highlighting)
         - [Walk an AST](#walk-an-ast)
         - [The named parameters](#the-named-parameters)
             - [Differences to `mcpy`](#differences-to-mcpy)
@@ -407,6 +408,8 @@ By default, `unparse` attempts to render code that can be `eval`'d (expression) 
 When debugging macros, it is often useful to see the invisible AST nodes `Expr` and `Module`. To show them, as well as display line numbers, pass the named argument `debug=True`. Then the result cannot be `eval`'d or `exec`'d, but it shows much more clearly what is going on.
 
 The line numbers shown in debug mode are taken from *statement* AST nodes, because in Python, a statement typically begins a new line. If you need to see line numbers stored in *expression* AST nodes, then instead of `unparse`, you can use the function `mcpyrate.dump` to view the raw AST. The output will be very verbose, so it is recommended to do this only for a minimally small AST snippet.
+
+#### Syntax highlighting
 
 Syntax highlighting is available for terminal output. To enable, pass the named argument `color=True`. Beside usual Python syntax highlighting, if you provide a `MacroExpander` instance, also macro names bound in that expander instance will be highlighted. The macros `mcpyrate.debug.step_expansion` and `mcpyrate.metatools.stepr` automatically pass the appropriate expander to `unparse` when they print unparsed source code.
 
