@@ -402,6 +402,26 @@ In `mcpyrate`, the `n[]` operator is a wrapper for `ast.parse`, so it will lift 
 
 Because the code is backconverted from the AST representation, the result may differ in minute details of surface syntax, such as parenthesization, whitespace, and the exact source code representation of string literals.
 
+By default, `unparse` attempts to render code that can be `eval`'d (expression) or `exec`'d (statements). But if the AST contains any AST markers, then the unparsed result cannot be `eval`'d or `exec`'d. If you need to delete AST markers recursively, see `mcpyrate.markers.delete_markers`.
+
+When debugging macros, it is often useful to see the invisible AST nodes `Expr` and `Module`. To show them, as well as display line numbers, pass the named argument `debug=True`. Then the result cannot be `eval`'d or `exec`'d, but it shows much more clearly what is going on.
+
+The line numbers shown in debug mode are taken from *statement* AST nodes, because in Python, a statement typically begins a new line. If you need to see line numbers stored in *expression* AST nodes, then instead of `unparse`, you can use the function `mcpyrate.dump` to view the raw AST. The output will be very verbose, so it is recommended to do this only for a minimally small AST snippet.
+
+Syntax highlighting is available for terminal output. To enable, pass the named argument `color=True`. Beside usual Python syntax highlighting, if you provide a `MacroExpander` instance, also macro names bound in that expander instance will be highlighted. The macros `mcpyrate.debug.step_expansion` and `mcpyrate.metatools.stepr` automatically pass the appropriate expander to `unparse` when they print unparsed source code.
+
+The `dump` function also has minimal highlighting support; to enable, pass `color=True`. AST node types, field names, and bare values (the content of many leaf fields) will be highlighted.
+
+The color scheme for syntax highlighting is read from the bunch of constants `mcpyrate.colorizer.ColorScheme`. By writing to that bunch (or completely replacing its contents with the `replace` method), you can choose which of the 16 colors of the terminal's color palette to use for which purpose. Changes will take effect immediately for any new output. But which actual colors those palette entries map to, is controlled by the color theme of your terminal app. So the constant `RED` actually represents palette entry number 2 (1-based), not the actual color red.
+
+`mcpyrate` automatically uses the [`colorama`](https://github.com/tartley/colorama) library if it is installed, so the coloring works on any OS. If `colorama` is not installed, and the OS we are running on is a *nix, `mcpyrate` will directly use ANSI escape codes instead. (This is to make the syntax highlighting work also e.g. in Docker images that do not have `colorama` installed.)
+
+Depending on the terminal app, some color themes might not have 16 *useful* colors. For example, if you like the [*Zenburn*](https://kippura.org/zenburnpage/) color theme (which is nowadays widely supported by code editors), the *Solarized* theme of `gnome-terminal` looks somewhat similar, but in that *Solarized* theme, most of the "light" color variants are useless, as they all map to a shade of gray. Also, with that theme, the `gnome-terminal` option *Show bold text in bright colors* (which is enabled by default) is useless, because any bolding then makes the text gray. So to get optimal results, depending on your terminal app, you may need to configure how it displays colors.
+
+Note `mcpyrate` can syntax-highlight ***unparsed* source code only**, because in order to know where to highlight and with which color, the code must be analyzed. Parsing source code into an AST is a form of syntactic analysis; it is the AST that is providing the information about which text snippet (in the output of `unparse`) represents what.
+
+Thus, syntax-highlighting is not available in all contexts. For example, if you use the `mcpyrate.debug.StepExpansion` debugging dialect to view dialect transforms, during source transforms the code is not syntax-highlighted at all (because at that point, the surface syntax could mean anything), and during dialect AST transforms, macro names are not highlighted (because while processing the whole-module AST transforms of a dialect, the *macro* expander is not yet running). Similarly, in the REPL, the input is not syntax-highlighted (unless you use the IPython version, in which case syntax highlighting will be provided by IPython).
+
 
 ### Walk an AST
 
