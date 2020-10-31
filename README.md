@@ -423,7 +423,9 @@ Depending on the terminal app, some color themes might not have 16 *useful* colo
 
 Note `mcpyrate` can syntax-highlight ***unparsed* source code only**, because in order to know where to highlight and with which color, the code must be analyzed. Parsing source code into an AST is a form of syntactic analysis; it is the AST that is providing the information about which text snippet (in the output of `unparse`) represents what.
 
-Thus, syntax-highlighting is not available in all contexts. For example, if you use the `mcpyrate.debug.StepExpansion` debugging dialect to view dialect transforms, during source transforms the code is not syntax-highlighted at all (because at that point, the surface syntax could mean anything), and during dialect AST transforms, macro names are not highlighted (because while processing the whole-module AST transforms of a dialect, the *macro* expander is not yet running). Similarly, in the REPL, the input is not syntax-highlighted (unless you use the IPython version, in which case syntax highlighting will be provided by IPython).
+Thus, syntax-highlighting is not available in all contexts. For example, if you use the `mcpyrate.debug.StepExpansion` debugging dialect to view dialect transforms, during source transforms the code is not syntax-highlighted at all (because at that point, the surface syntax could mean anything). Similarly, REPL input is not syntax-highlighted (unless you use the IPython version, in which case syntax highlighting will be provided by IPython).
+
+And when using the `mcpyrate.debug.StepExpansion` debugging dialect, then during dialect AST transforms, the AST is available, so syntax highlighting is enabled, but macro names are not highlighted (because while processing the whole-module AST transforms of a dialect, the *macro* expander is not yet running).
 
 
 ### Walk an AST
