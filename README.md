@@ -411,7 +411,7 @@ The line numbers shown in debug mode are taken from *statement* AST nodes, becau
 
 #### Syntax highlighting
 
-Syntax highlighting is available for terminal output. To enable, pass the named argument `color=True`. Beside usual Python syntax highlighting, if you provide a `MacroExpander` instance, also macro names bound in that expander instance will be highlighted. The macros `mcpyrate.debug.step_expansion` and `mcpyrate.metatools.stepr` automatically pass the appropriate expander to `unparse` when they print unparsed source code.
+In `unparse`, syntax highlighting is available for terminal output. To enable, pass the named argument `color=True`. Beside usual Python syntax highlighting, if you provide a `MacroExpander` instance, also macro names bound in that expander instance will be highlighted. The macros `mcpyrate.debug.step_expansion` and `mcpyrate.metatools.stepr` automatically pass the appropriate expander to `unparse` when they print unparsed source code.
 
 The `dump` function also has minimal highlighting support; to enable, pass `color=True`. AST node types, field names, and bare values (the content of many leaf fields) will be highlighted.
 
