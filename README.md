@@ -54,7 +54,7 @@ Supports Python 3.6, 3.7, 3.8, and PyPy3.
         - [`Coverage.py` says some of the lines inside my block macro invocation aren't covered?](#coveragepy-says-some-of-the-lines-inside-my-block-macro-invocation-arent-covered)
         - [`Coverage.py` says my quasiquoted code block is covered? It's quoted, not running, so why?](#coveragepy-says-my-quasiquoted-code-block-is-covered-its-quoted-not-running-so-why)
         - [My line numbers aren't monotonically increasing, why is that?](#my-line-numbers-arent-monotonically-increasing-why-is-that)
-        - [My macro needs to fill in `lineno` recursively, any suggestions?](#my-macro-needs-to-fill-in-lineno-recursively-any-suggestions)
+        - [My macro needs to fill in `lineno` recursively, any recommendations?](#my-macro-needs-to-fill-in-lineno-recursively-any-recommendations)
         - [I tried making a PyPI package with `setuptools` out of an app that uses `mcpyrate`, and it's not working?](#i-tried-making-a-pypi-package-with-setuptools-out-of-an-app-that-uses-mcpyrate-and-its-not-working)
         - [I tried making a Debian package out of an app that uses `mcpyrate`, and it's not working?](#i-tried-making-a-debian-package-out-of-an-app-that-uses-mcpyrate-and-its-not-working)
     - [Macro expansion error reporting](#macro-expansion-error-reporting)
@@ -873,11 +873,11 @@ Hence, non-monotonicity occurs if a block (or decorator) macro adds new AST node
 (Note that the non-monotonicity, when present at all, is mild; it's local to each block.)
 
 
-### My macro needs to fill in `lineno` recursively, any suggestions?
+### My macro needs to fill in `lineno` recursively, any recommendations?
 
-Yes. See [`mcpyrate.astfixers.fix_locations`](mcpyrate/astfixers.py), which is essentially an improved `ast.fix_missing_locations`. You'll likely want either `mode="overwrite"` or `mode="reference"`, depending on what your macro does.
+See [`mcpyrate.astfixers.fix_locations`](mcpyrate/astfixers.py), which is essentially an improved `ast.fix_missing_locations`. You'll likely want either `mode="overwrite"` or `mode="reference"`, depending on what your macro does.
 
-Also the stdlib solution is possible:
+There's also the stdlib solution:
 
 ```python
 from ast import walk, copy_location
