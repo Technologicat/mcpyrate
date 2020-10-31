@@ -23,7 +23,7 @@ See also [Understanding the quasiquote system](quasiquotes.md#understanding-the-
 
 ## Guidelines
 
- - **Code contributions are welcome.**
+ - **Code and/or documentation contributions are welcome.**
    - The preferred mechanism is a pull request on GitHub. [Instructions for new GitHub users](http://makeapullrequest.com/).
 
  - Follow [the Zen of Python](https://www.python.org/dev/peps/pep-0020/). Particularly, simple and explicit is often preferable.
