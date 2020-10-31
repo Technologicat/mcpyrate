@@ -662,7 +662,7 @@ def n(tree, *, syntax, expander, **kw):
 
 
 def a(tree, *, syntax, expander, **kw):
-    """[syntax, expr/block] AST-unquote. Splice an AST into a quasiquote.
+    """[syntax, expr/block] ast-unquote. Splice an AST into a quasiquote.
 
     **Expression mode**::
 
@@ -727,7 +727,7 @@ def a(tree, *, syntax, expander, **kw):
 
 
 def s(tree, *, syntax, expander, **kw):
-    """[syntax, expr] list-unquote. Splice a `list` of ASTs, as an `ast.List`, into a quasiquote."""
+    """[syntax, expr] ast-list-unquote. Splice a `list` of ASTs, as an `ast.List`, into a quasiquote."""
     if syntax != "expr":
         raise SyntaxError("`s` is an expr macro only")
     if _quotelevel.value < 1:

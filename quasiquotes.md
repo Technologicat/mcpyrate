@@ -28,11 +28,11 @@ Build ASTs in your macros, using syntax that mostly looks like regular code.
         - [`q`: quasiquote](#q-quasiquote)
         - [`u`: unquote](#u-unquote)
         - [`n`: name-unquote](#n-name-unquote)
-        - [`a`: AST-unquote](#a-ast-unquote)
+        - [`a`: ast-unquote](#a-ast-unquote)
             - [Expression mode](#expression-mode)
             - [Block mode](#block-mode)
             - [Notes](#notes)
-        - [`s`: AST-list-unquote](#s-ast-list-unquote)
+        - [`s`: ast-list-unquote](#s-ast-list-unquote)
         - [`h`: hygienic-unquote](#h-hygienic-unquote)
             - [Hygienically captured run-time values](#hygienically-captured-run-time-values)
             - [Hygienically captured macros](#hygienically-captured-macros)
@@ -327,7 +327,7 @@ the "undefined" name `x`, but for that use case, we recommend `# noqa: F821`.
 Generalized from `macropy`'s `name`, which converts a string into a lexical variable access.
 
 
-### `a`: AST-unquote
+### `a`: ast-unquote
 
 Splice an existing AST into quoted code. This unquote supports both expr and block modes.
 
@@ -425,7 +425,7 @@ affected by the `a`.
 The expression mode is equivalent to `macropy`'s `ast_literal`.
 
 
-### `s`: AST-list-unquote
+### `s`: ast-list-unquote
 
 `s[lst]` takes a `list`, and into the quoted code, splices an `ast.List` node,
 with the original list as its `elts` attribute. Note the list is not copied.
@@ -443,7 +443,7 @@ with q as quoted:
 In this example, the resulting AST corresponds to the source code `[a, b, c] = 1, 2, 3`.
 
 **With `s[]`, the result is always an expression AST.** If you need to splice
-statements, see the block mode of `a` (AST-unquote), or the function `mcpyrate.splicing.splice_statements`.
+statements, see the block mode of `a` (ast-unquote), or the function `mcpyrate.splicing.splice_statements`.
 
 Equivalent to `macropy`'s `ast_list`.
 
@@ -615,7 +615,7 @@ Below, let `mymacro` be a macro that uses `q` to build (part of) its output AST.
      - Also keep in mind that whatever the `q` macro returns - because `q` is a macro - is spliced into the AST of the use site (inside the definition of `mymacro`), to replace the macro invocation of `q`.
        - The code that is spliced in is the "astified" AST, which at run time builds the original input AST.
        - When the source file containing the definition of `mymacro` is macro-expanded, the `q` macro invocation expands away, into the "astified" AST. At run time of `mymacro` the `q` macro invocation **is already long gone**.
- - It cannot be overemphasized that **values are a run-time thing**. This includes any trees sent to the `a` (AST-unquote) operator.
+ - It cannot be overemphasized that **values are a run-time thing**. This includes any trees sent to the `a` (ast-unquote) operator.
    - For example, for the invocation `a[tree]`, at macro expansion time of `a` (as well as that of the surrounding `q`), all that the `a` operator (respectively, the `q` operator) sees is just `ast.Name(id='tree')`. That `tree` **refers to a run-time value** at the use site of `q`, so it doesn't exist yet.
    - Hence, the unquote operators must perform part of their work at run time (of their use site), when the values are available. This includes any type checking of those values.
 
