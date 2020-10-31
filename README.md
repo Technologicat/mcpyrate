@@ -34,7 +34,7 @@ Supports Python 3.6, 3.7, 3.8, and PyPy3.
             - [Syntax limitations](#syntax-limitations)
         - [Expand macros inside-out](#expand-macros-inside-out)
         - [Expand macros inside-out, but only those in a given set](#expand-macros-inside-out-but-only-those-in-a-given-set)
-    - [Troubleshooting](#troubleshooting)
+    - [Questions & Answers](#questions--answers)
         - [I just ran my program again and no macro expansion is happening?](#i-just-ran-my-program-again-and-no-macro-expansion-is-happening)
         - [My own macros are working, but I'm not seeing any output from `step_expansion` (or `show_bindings`)?](#my-own-macros-are-working-but-im-not-seeing-any-output-from-stepexpansion-or-showbindings)
         - [Macro expansion time where exactly?](#macro-expansion-time-where-exactly)
@@ -54,6 +54,7 @@ Supports Python 3.6, 3.7, 3.8, and PyPy3.
         - [`Coverage.py` says some of the lines inside my block macro invocation aren't covered?](#coveragepy-says-some-of-the-lines-inside-my-block-macro-invocation-arent-covered)
         - [`Coverage.py` says my quasiquoted code block is covered? It's quoted, not running, so why?](#coveragepy-says-my-quasiquoted-code-block-is-covered-its-quoted-not-running-so-why)
         - [My line numbers aren't monotonically increasing, why is that?](#my-line-numbers-arent-monotonically-increasing-why-is-that)
+        - [My macro needs to fill in `lineno` recursively, any suggestions?](#my-macro-needs-to-fill-in-lineno-recursively-any-suggestions)
         - [I tried making a PyPI package with `setuptools` out of an app that uses `mcpyrate`, and it's not working?](#i-tried-making-a-pypi-package-with-setuptools-out-of-an-app-that-uses-mcpyrate-and-its-not-working)
         - [I tried making a Debian package out of an app that uses `mcpyrate`, and it's not working?](#i-tried-making-a-debian-package-out-of-an-app-that-uses-mcpyrate-and-its-not-working)
     - [Macro expansion error reporting](#macro-expansion-error-reporting)
@@ -633,7 +634,7 @@ The implementation of the quasiquote system has an example of this.
 Obviously, if you want to expand just one layer with the second expander, use its `visit_once` method instead of `visit`. (And if you do that, you'll need to decide if you should keep the `Done` marker - to prevent further expansion in that subtree - or discard it and grab the real AST from its `body` attribute.)
 
 
-## Troubleshooting
+## Questions & Answers
 
 To troubleshoot your macros, see [`mcpyrate.debug`](mcpyrate/debug.py), particularly the macro `step_expansion`. It is both an `expr` and `block` macro.
 
@@ -870,6 +871,20 @@ Any AST node that existed in the unexpanded source code will, in the expanded co
 Hence, non-monotonicity occurs if a block (or decorator) macro adds new AST nodes *after* existing AST nodes that originate from lines below the macro invocation node itself in the unexpanded source file.
 
 (Note that the non-monotonicity, when present at all, is mild; it's local to each block.)
+
+
+### My macro needs to fill in `lineno` recursively, any suggestions?
+
+Yes. See [`mcpyrate.astfixers.fix_locations`](mcpyrate/astfixers.py), which is essentially an improved `ast.fix_missing_locations`. You'll likely want either `mode="overwrite"` or `mode="reference"`, depending on what your macro does.
+
+Also the stdlib solution is possible:
+
+```python
+from ast import walk, copy_location
+
+for node in walk(tree):
+    copy_location(node, reference_node)
+```
 
 
 ### I tried making a PyPI package with `setuptools` out of an app that uses `mcpyrate`, and it's not working?
