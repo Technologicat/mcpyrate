@@ -677,9 +677,9 @@ As the old saying goes, *it's always five'o'clock **somewhere***. *There is no g
 
 ### `step_expansion` is treating the `expands` family of macros as a single step?
 
-This is a natural consequence of the `expands` macros being macros, and - the `s` meaning *static*, them doing their work at macro expansion time.
+This is a natural consequence of the `expands` macros (see `mcpyrate.metatools`) being macros, and - the `s` meaning *static*, them doing their work at macro expansion time.
 
-For example, in the case of `expands`, when `step_expansion` takes one step, by telling the expander to visit the tree once, the expander will (eventually) find the `expands` invocation. So it will invoke that macro.
+For example, in the case of `expands`, when `step_expansion` (see `mcpyrate.debug`) takes one step, by telling the expander to visit the tree once, the expander will (eventually) find the `expands` invocation. So it will invoke that macro.
 
 The `expands` macro, by definition, expands whatever is inside the invocation until no macros remain there. So by the time `step_expansion` gets control back, all macro invocations within the `expands` are gone.
 
@@ -691,7 +691,7 @@ In the case of `expandr`/`expand1r`, using `step_expansion` on them will show wh
 
 If want to step the expansion of an `expandr`, use the expr macro `mcpyrate.metatools.stepr` instead of using `expandr` itself. (If using quasiquotes, create your `quoted` tree first, and then do `stepr[quoted]` as a separate step, like you would do `expandr[quoted]`.)
 
-If you want to do something similar manually, you can use the `macro_bindings` macro (from `mcpyrate.metatools`) to lift the macro bindings into a run-time dictionary, then instantiate a `mcpyrate.expander.MacroExpander` with those bindings (and `filename=__file__`), and then call `step_expansion` as a regular function, passing it the expander you instantiated. It will happily use that alternative expander instance. (This is essentially how `stepr` does it; though it is a macro, so strictly speaking, it arranges for something like that to happen at run time.)
+If you want to do something similar manually, you can use the `macro_bindings` macro (from `mcpyrate.metatools`) to lift the macro bindings into a run-time dictionary, then instantiate a `mcpyrate.expander.MacroExpander` with those bindings (and `filename=__file__`), and then call `mcpyrate.debug.step_expansion` as a regular function, passing it the expander you instantiated. It will happily use that alternative expander instance. (This is essentially how `mcpyrate.metatools.stepr` does it; though it is a macro, so strictly speaking, it arranges for something like that to happen at run time.)
 
 If you want to just experiment in the REPL, note that `step_expansion` is available there, as well. Just macro-import it, as usual.
 
@@ -700,9 +700,9 @@ If you want to just experiment in the REPL, note that `step_expansion` is availa
 
 Right now, no. We might add a convenience function in the future, but for now:
 
-If you need it for `expander.visit_recursively(tree)`, just import and call `step_expansion` as a function. Beside printing the debug output, it'll do the expanding for you, and return the expanded `tree`. Since you're calling it from inside your own macro, you'll have `expander` and `syntax` you can pass on. The `args` you can set to the empty list (or to `[ast.Constant(value="dump")]` if that's what you want).
+If you need it for `expander.visit_recursively(tree)`, just import and call `mcpyrate.debug.step_expansion` as a function. Beside printing the debug output, it'll do the expanding for you, and return the expanded `tree`. Since you're calling it from inside your own macro, you'll have `expander` and `syntax` you can pass on. The `args` you can set to the empty list (or to `[ast.Constant(value="dump")]` if that's what you want).
 
-If you need it for `expander.visit_once(tree)`, just perform the `visit_once` first, and then `unparse(tree, debug=True, color=True)` and print the result to `sys.stderr`. This is essentially what `step_expansion` does at each step.
+If you need it for `expander.visit_once(tree)`, just perform the `visit_once` first, and then `mcpyrate.unparse(tree, debug=True, color=True)` and print the result to `sys.stderr`. This is essentially what `step_expansion` does at each step.
 
 If you need it for `expander.visit(tree)`, detect the current mode from `expander.recursive`, and use one of the above.
 
@@ -713,8 +713,8 @@ If you need it for `expander.visit(tree)`, detect the current mode from `expande
 
 In general, **they should**, because:
 
- - `step_expansion` hooks into the expander at macro expansion time,
- - `stepr` captures the expander's macro bindings at macro expansion time, but delays expansion (of the run-time AST value provided as its argument) until run time.
+ - `mcpyrate.debug.step_expansion` hooks into the expander at macro expansion time,
+ - `mcpyrate.metatools.stepr` captures the expander's macro bindings at macro expansion time, but delays expansion (of the run-time AST value provided as its argument) until run time.
 
 For example, with the usual macro-imports,
 
@@ -790,7 +790,7 @@ When using quasiquotes to build an AST, the common problem is the opposite, i.e.
 
 The `ast.Expr` node is taken into account in `mcpyrate.splicing.splice_statements`, as well as in `with a` in `mcpyrate.quotes`. Both of them specifically remove the `ast.Expr` when splicing statements into quoted code.
 
-To see whether this could be the problem, use `unparse(tree, debug=True, color=True)` to print out also invisible AST nodes. (The `color=True` is optional, but recommended for terminal output; it enables syntax highlighting.) The `step_expansion` macro will also print out invisible nodes (actually by using `unparse` with those settings).
+To see whether this could be the problem, use `unparse(tree, debug=True, color=True)` to print out also invisible AST nodes. (The `color=True` is optional, but recommended for terminal output; it enables syntax highlighting.) The macro `mcpyrate.debug.step_expansion` will also print out invisible nodes (actually by using `unparse` with those settings).
 
 #### Wrong unquote operator
 
@@ -863,7 +863,7 @@ With coverage analysis of regular functions, there is no such problem, because a
 
 ### My line numbers aren't monotonically increasing, why is that?
 
-This is normal. In macro-enabled code, when looking at the expanded output (such as shown by `step_expansion`), the line numbers stored in the AST - which refer to the original, unexpanded source code - aren't necessarily monotonic.
+This is normal. In macro-enabled code, when looking at the expanded output (such as shown by `mcpyrate.debug.step_expansion`), the line numbers stored in the AST - which refer to the original, unexpanded source code - aren't necessarily monotonic.
 
 Any AST node that existed in the unexpanded source code will, in the expanded code, refer to its original line number in the unexpanded code, whereas (as mentioned above) any macro-generated node will refer to the line of the macro invocation that produced it.
 
