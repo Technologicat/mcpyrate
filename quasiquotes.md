@@ -40,6 +40,7 @@ Build ASTs in your macros, using syntax that mostly looks like regular code.
         - [Quotes, unquotes, and macro expansion](#quotes-unquotes-and-macro-expansion)
     - [The `expand` family of macros](#the-expand-family-of-macros)
         - [When to use](#when-to-use)
+        - [Stepping a run-time macro expansion with `stepr`](#stepping-a-run-time-macro-expansion-with-stepr)
         - [Using the `expand` macros](#using-the-expand-macros)
     - [Understanding the quasiquote system](#understanding-the-quasiquote-system)
         - [How `q` arranges hygienic captures](#how-q-arranges-hygienic-captures)
@@ -548,17 +549,33 @@ Depending on what you want, you can:
 
 ## The `expand` family of macros
 
-There are two main ways to explicitly expand macros: the `expander.visit` method with its sisters (`visit_once`, `visit_recursively`), and the `expand` family of macros defined in `mcpyrate.metatools`.
+In the simple case, when there are no quotes and macros never return a tree containing further macro invocations, then `expander.visit` is always sufficient. But otherwise, more fine-grained control is needed, to tell the expander which macro bindings to use, so that the tree expands correctly.
+
+Generally, considering the source code, it is always the site that built a particular AST snippet - whether implicitly by source code text, or explicitly by manual construction - that knows what the correct macro bindings for that snippet are.
+
+One possibility is to use the `h[]` unquote to hygienically transmit the correct binding. Another is to expand the macros explicitly, before returning the tree. This section is about how to do the latter.
+
+There are two main ways to explicitly expand macros in run-time AST values (such as the input `tree` of a macro, or a quoted code snippet stored in a variable): the `expander.visit` method with its sisters (`visit_once`, `visit_recursively`), and the `expand` family of macros defined in `mcpyrate.metatools`.
 
 ### When to use
 
 If you want to expand a tree using the macro bindings *from your macro's use site*, you should use `expander.visit` and its sisters.
 
-If you want to expand a tree using the macro bindings *from your macro's definition site*, you should use the `expand` family of macros. You'll most likely want `expandr` or `expand1r`.
+If you want to expand a tree using the macro bindings *from your macro's definition site*, you should use the `expand` family of macros.
+
+Of the `expand` macros, you'll most likely want `expandr` or `expand1r`, which delay expansion until your macro's run time.
+
+### Stepping a run-time macro expansion with `stepr`
+
+If you need to see the steps of macro expansion of a run-time AST value, see `mcpyrate.metatools.stepr`.
+
+Note `stepr` is an expr macro only, because it takes as its input a run-time AST value, and in Python, values are always referred to by expressions. So if you use quasiquotes, create your quoted tree first, as usual, and then `quoted = stepr[quoted]`, where `quoted` is the variable you stored it in. It doesn't matter whether the quoted snippet itself is an expression or a block of statements.
+
+The usual tool `mcpyrate.debug.step_expansion` does not work for debugging run-time macro expansion, because it operates at the macro expansion time of its use site. The `stepr` macro is otherwise the same, but it delays the stepping until the run time of its use site - and uses the same macro bindings `expandr` would.
 
 ### Using the `expand` macros
 
-The `mcpyrate.metatools` module provides a family of macros to expand macros, all named `expand` plus a suffix of up to three characters in the order `1Xq`, where `X` is one of `s` or `r`. All of the `expand` macros have both expr and block modes.
+Let's look at the `expand` macros in more detail. The `mcpyrate.metatools` module provides a family of macros to expand macros, all named `expand` plus a suffix of up to three characters in the order `1Xq`, where `X` is one of `s` or `r`. All of the `expand` macros have both expr and block modes.
 
 These macros are convenient when working with quasiquoted code, and with run-time AST values in general. Run-time AST values are exactly the kind of thing macros operate on: the macro expansion time of the use site is the run time of the macro implementation itself.
 
