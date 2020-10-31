@@ -551,11 +551,11 @@ Depending on what you want, you can:
 
 In the simple case, when there are no quotes and macros never return a tree containing further macro invocations, then `expander.visit` is always sufficient. But otherwise, more fine-grained control is needed, to tell the expander which macro bindings to use, so that the tree expands correctly.
 
-Generally, considering the source code, it is always the site that built a particular AST snippet - whether implicitly by source code text, or explicitly by manual construction - that knows what the correct macro bindings for that snippet are.
+Generally, considering the source code, it is always the site that built a particular AST snippet - whether implicitly by source code text, or explicitly by manual construction - that knows what the correct macro bindings for that snippet are. For example, if `mymacro` uses some macro invocations in its output, the definition site of `mymacro` is the place that has the right macro bindings for those. For any user-provided parts of `tree`, it's the *use site* of `mymacro` that has the right macro bindings for any macro invocations that appear in it.
 
-One possibility is to use the `h[]` unquote to hygienically transmit the correct binding. Another is to expand the macros explicitly, before returning the tree. This section is about how to do the latter.
+When `mymacro` needs to invoke other macros in its output, one possibility is to use the `h[]` unquote to hygienically transmit the correct binding from `mymacro`'s definition site to its use site (where the expander's recursive mode will automatically kick in). Another is to expand the macros explicitly, before returning the tree. This section is about how to do the latter.
 
-There are two main ways to explicitly expand macros in run-time AST values (such as the input `tree` of a macro, or a quoted code snippet stored in a variable): the `expander.visit` method with its sisters (`visit_once`, `visit_recursively`), and the `expand` family of macros defined in `mcpyrate.metatools`.
+There are two main ways to explicitly expand macros in run-time AST values (such as `tree` in a macro, or a quoted code snippet stored in a variable): the `expander.visit` method with its sisters (`visit_once`, `visit_recursively`), and the `expand` family of macros defined in `mcpyrate.metatools`.
 
 ### When to use
 
