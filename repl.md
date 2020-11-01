@@ -82,7 +82,7 @@ q[42]  # --> <ast.Num object at 0x7f4c97230e80>
 
 Just like in `code.InteractiveConsole`, exiting the REPL (Ctrl+D) returns from the `interact()` call.
 
-Similarly to IPython, `obj?` shows obj's docstring, and `obj??` shows its source code. We define two utility functions for this: `doc` and `sourcecode`. ``obj?`` is shorthand for ``mcpyrate.repl.utils.doc(obj)``, and ``obj??`` is shorthand for ``mcpyrate.repl.utils.sourcecode(obj)``. If the information is available, these operations also print the filename and the starting line number of the definition of the queried object in that file.
+Similarly to IPython, `obj?` shows obj's docstring, and `obj??` shows its source code. We define two utility functions for this: `doc` and `sourcecode`. The syntax ``obj?`` is shorthand for ``mcpyrate.repl.utils.doc(obj)``, and ``obj??`` is shorthand for ``mcpyrate.repl.utils.sourcecode(obj)``. If the information is available, these operations also print the filename and the starting line number of the definition of the queried object in that file.
 
 The command `macros?` shows the current macro bindings in the session. This shadows the `obj?` docstring lookup syntax if you happen to define anything called `macros` (`mcpyrate` itself doesn't), but that's likely not needed. That can still be invoked manually, using `mcpyrate.repl.utils.doc(macros)`.
 
