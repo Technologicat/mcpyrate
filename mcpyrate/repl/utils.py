@@ -5,6 +5,7 @@ __all__ = ["doc", "sourcecode", "get_makemacro_sourcecode"]
 
 import inspect
 from sys import stderr
+import textwrap
 
 from ..colorizer import colorize, ColorScheme
 
@@ -55,13 +56,13 @@ def get_makemacro_sourcecode():
     We assume the expander instance has been bound to the global variable
     `__macro_expander__` inside the REPL session.
     """
-    return """
+    return textwrap.dedent('''
     def macro(function):
-        '''[mcpyrate] `macro(f)`: bind function `f` as a macro. Works also as a decorator. REPL only.'''
+        """[mcpyrate] `macro(f)`: bind function `f` as a macro. Works also as a decorator. REPL only."""
         if not callable(function):
-            raise TypeError(f'`function` must be callable, got {type(function)} with value {repr(function)}')
-        if function.__name__ == '<lambda>':
-            raise TypeError('`function` must be a named function, got a lambda.')
+            raise TypeError(f"`function` must be callable, got {type(function)} with value {repr(function)}")
+        if function.__name__ == "<lambda>":
+            raise TypeError("`function` must be a named function, got a lambda.")
         __macro_expander__.bindings[function.__name__] = function
         return function
-    """
+    ''')
