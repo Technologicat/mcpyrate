@@ -6,6 +6,8 @@ Builds on `mcpy`, with a similar explicit and compact approach, but with a lot o
 
 Supports Python 3.6, 3.7, 3.8, and PyPy3.
 
+We use [semantic versioning](https://semver.org/). We're almost-but-not-quite compatible with `mcpy` 2.0.0, hence the initial release of `mcpyrate` is 3.0.0. The named parameters of macros are slightly different; for details, search this document for *differences to mcpy*.
+
 <!-- markdown-toc start - Don't edit this section. Run M-x markdown-toc-refresh-toc -->
 **Table of Contents**
 
