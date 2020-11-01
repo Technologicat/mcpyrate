@@ -146,16 +146,18 @@ nonlocal variables just fine, as long as the *type* of the value (i.e. the
 Because `h[]` is essentially a bind operation, the result of `h[expr]` will
 forever point to the value `expr` had at capture time:
 
-    x = "tabby"
-    mycat = q[h[x]]
+```python
+x = "tabby"
+mycat = q[h[x]]
 
-    x = "scottishfold"
-    yourcat = q[h[x]]
+x = "scottishfold"
+yourcat = q[h[x]]
 
-    # mycat -> AST that, when compiled and run,
-    #          resolves to the value "tabby".
-    # yourcat -> AST that, when compiled and run,
-    #            resolves to the value "scottishfold".
+# mycat -> AST that, when compiled and run,
+#          resolves to the value "tabby".
+# yourcat -> AST that, when compiled and run,
+#            resolves to the value "scottishfold".
+```
 
 If you want to `h[]` an object or an array, keep in mind that **the current
 value will be pickled** and that pickled copy becomes the thing the `h[]`
@@ -214,6 +216,9 @@ critical.
 Here *macro definition site* and *macro use site* refer to those sites for the
 macro in whose implementation `q` is used to construct (part of) the output AST.
 
+The AST for the quoted code becomes fully available at the run time of the use
+site of `q`, i.e. when your macro reaches run time.
+
 
 ### `q`: quasiquote
 
@@ -231,7 +236,7 @@ present at the macro use site. If you want to hygienify, see the `h[]` unquote.
 Like `macropy`'s `q`, except macro invocations within the quoted code are not
 expanded by default.
 
-The macro `expandq` produces results closest to `macropy`'s `q`.
+The macro [`mcpyrate.metatools.expandsq`](mcpyrate/metatools.py) produces results closest to `macropy`'s `q`.
 
 
 ### `u`: unquote
@@ -307,9 +312,9 @@ The first example, on the other hand, cannot (in general) be written using
 `setattr`, since it is assigning *to a lexical variable with a computed name*,
 which is not supported by Python.
 
-As an alternative to `n[]`, see also `mcpyrate.utils.rename`, which can replace
-a literal dummy name (e.g. `_`) by a computed name in all places in a given AST
-where name-like things appear (e.g. function parameters, call keywords,
+As an alternative to `n[]`, see also [`mcpyrate.utils.rename`](mcpyrate/utils.py),
+which can replace a literal dummy name (e.g. `_`) by a computed name in all places
+in a given AST where name-like things appear (e.g. function parameters, call keywords,
 except-as, imports, ...).
 
 Essentially, `n[code]` is defined as `a[ast.parse(code, mode="eval").body]`,
@@ -387,11 +392,11 @@ some final details to be filled in by the run-time parts of the quote/unquote
 operators. (Mainly, any value or tree splicing occurs at that time, because
 that's the earliest time that has the values available.)
 
-So any AST node type errors are still caught during macro expansion time, but
-it's the macro expansion time *of some module in your app*. The macro that uses
-`q` must be invoked in order for the type check to run. It must behave like
-this, simply because the trees being spliced in are not available until the use
-site of `q` reaches run time.
+So any AST node type errors in invocations of the `a` ast-unquote are still
+caught during macro expansion time, but it's the macro expansion time *of some
+module in your app*. The macro that uses `q` must be invoked in order for the
+type check to run. It must behave like this, simply because the trees being
+spliced in are not available until the use site of `q` reaches run time.
 
 The type checks are **not recursive**, because Python's AST format provides
 no information on which positions in the AST expect statements and which ones
@@ -428,7 +433,7 @@ The expression mode is equivalent to `macropy`'s `ast_literal`.
 ### `s`: ast-list-unquote
 
 `s[lst]` takes a `list`, and into the quoted code, splices an `ast.List` node,
-with the original list as its `elts` attribute. Note the list is not copied.
+with the original list as its `elts` attribute. Note the list is **not** copied.
 
 This allows interpolating a list of expression AST nodes as an `ast.List` node.
 This can be convenient because in Python, lists can appear in many places, such
@@ -509,7 +514,7 @@ is syntactically allowed.
 Especially, when `q` is used block mode, unquotes may appear on the LHS of an
 assignment, and as the operand of a `del`, simply because these are syntactically
 allowed positions for subscript expressions. The macro expander fills in the
-correct `ctx` automatically. Examples::
+correct `ctx` automatically. Examples:
 
 ```python
 target = ...  # AST for something that can appear on the LHS of an assignment
@@ -553,11 +558,11 @@ In the simple case, when there are no quotes and macros never return a tree cont
 
 Generally, considering the source code, it is always the site that built a particular AST snippet - whether implicitly by source code text, or explicitly by manual construction - that knows what the correct macro bindings for that snippet are. For example, if `mymacro` uses some macro invocations in its output, the definition site of `mymacro` is the place that has the right macro bindings for those. For any user-provided parts of `tree`, it's the *use site* of `mymacro` that has the right macro bindings for any macro invocations that appear in it.
 
-When `mymacro` needs to invoke other macros in its output, one possibility is to use the `h[]` unquote to hygienically transmit the correct binding from `mymacro`'s definition site to its use site (where the expander's recursive mode will automatically kick in). Another is to expand the macros explicitly, before returning the tree. This section is about how to do the latter.
-
-There are two main ways to explicitly expand macros in run-time AST values (such as `tree` in a macro, or a quoted code snippet stored in a variable): the `expander.visit` method with its sisters (`visit_once`, `visit_recursively`), and the `expand` family of macros defined in `mcpyrate.metatools`.
+When `mymacro` needs to invoke other macros in its output, one possibility is to use the `h[]` unquote to hygienically transmit the correct binding from `mymacro`'s definition site to its use site (where the expander's recursive mode will automatically kick in). Another possibility is to expand the macros explicitly, before returning the tree. This section is about how to do the latter.
 
 ### When to use
+
+There are two main ways to explicitly expand macros in run-time AST values (such as `tree` in a macro, or a quoted code snippet stored in a variable): the `expander.visit` method with its sisters (`visit_once`, `visit_recursively`), and the `expand` family of macros defined in `mcpyrate.metatools`.
 
 If you want to expand a tree using the macro bindings *from your macro's use site*, you should use `expander.visit` and its sisters.
 
@@ -567,15 +572,15 @@ Of the `expand` macros, you'll most likely want `expandr` or `expand1r`, which d
 
 ### Stepping a run-time macro expansion with `stepr`
 
-If you need to see the steps of macro expansion of a run-time AST value, see `mcpyrate.metatools.stepr`.
+If you need to see the steps of macro expansion of a run-time AST value, see [`mcpyrate.metatools.stepr`](mcpyrate/metatools.py).
 
 Note `stepr` is an expr macro only, because it takes as its input a run-time AST value, and in Python, values are always referred to by expressions. So if you use quasiquotes, create your quoted tree first, as usual, and then `quoted = stepr[quoted]`, where `quoted` is the variable you stored it in. It doesn't matter whether the quoted snippet itself is an expression or a block of statements.
 
-The usual tool `mcpyrate.debug.step_expansion` does not work for debugging run-time macro expansion, because it operates at the macro expansion time of its use site. The `stepr` macro is otherwise the same, but it delays the stepping until the run time of its use site - and uses the same macro bindings `expandr` would.
+The usual tool [`mcpyrate.debug.step_expansion`](mcpyrate/debug.py) does not work for debugging run-time macro expansion, because it operates at the macro expansion time of its use site. The `stepr` macro is otherwise the same, but it delays the stepping until the run time of its use site - and uses the same macro bindings `expandr` would.
 
 ### Using the `expand` macros
 
-Let's look at the `expand` macros in more detail. The `mcpyrate.metatools` module provides a family of macros to expand macros, all named `expand` plus a suffix of up to three characters in the order `1Xq`, where `X` is one of `s` or `r`. All of the `expand` macros have both expr and block modes.
+Let's look at the `expand` macros in more detail. The [`mcpyrate.metatools`](mcpyrate/metatools.py) module provides a family of macros to expand macros, all named `expand` plus a suffix of up to three characters in the order `1Xq`, where `X` is one of `s` or `r`. All of the `expand` macros have both expr and block modes.
 
 These macros are convenient when working with quasiquoted code, and with run-time AST values in general. Run-time AST values are exactly the kind of thing macros operate on: the macro expansion time of the use site is the run time of the macro implementation itself.
 
@@ -606,17 +611,17 @@ Below, let `mymacro` be a macro that uses `q` to build (part of) its output AST.
  - "Time" (as in macro expansion time vs. run time) [must be considered separately for each source file](README.md#macro-expansion-time-where-exactly).
  - As for how `q` works, the question is: how does one lift the input AST of a macro, from macro expansion time (of the macro's use site), into the corresponding AST, at run time (of the macro's use site)?
    - *We make a new AST for code that, when it runs, it builds the original input AST **as a run-time value**.* In `mcpyrate`, the function that does this is called `astify`.
-   - For example, consider the expression `q[cat]`, appearing inside the definition of `mymacro`. The input AST to `q` is `ast.Name(id='cat')`. Roughly speaking, the `q` macro outputs the "astified" AST `ast.Call(ast.Name, [], [ast.keyword('id', 'cat')])`.
-     - **Before reading on, let that sink in.** The output AST says, *call the function `ast.Name` with the named argument `id='cat'`*. The `ast.Call` node is there only because we represent that code as an AST.
+   - For example, consider the expression `q[cat]`, appearing inside the definition of `mymacro`. The input AST to `q` is `ast.Name(id='cat')`. Roughly speaking, the `q` macro outputs the "astified" AST `ast.Call(ast.Name, [], [ast.keyword('id', ast.Constant(value='cat'))])`.
+     - **Before reading on, let that sink in.** The output AST says, *call the function `ast.Name` with the named argument `id='cat'`*. The `ast.Call` and `ast.Constant` nodes are there only because we represent that code as an AST.
        - In surface syntax notation, the same conversion is represented as `cat` becoming `ast.Name(id='cat')`.
      - So when that code runs (**at run time**), the resulting run-time value, i.e. the result of the function call `ast.Name(id='cat')`, is a copy the original input AST that was supplied to the `q` macro.
-       - Strictly speaking, it's a copy of the original AST **minus any source location info**, because we **didn't** say `ast.Call(ast.Name, [], [ast.keyword('id', 'cat'), ast.keyword('lineno', ...), ast.keyword('col_offset', ...)])`. This is on purpose. The result of a quasiquote will be likely spliced into a different source file, so whatever line numbers we fill, they are wrong. Thus we let the macro expander fill in the appropriate line number (which is that of the macro invocation at the use site of `mymacro`) in the source file where the code is actually used.
+       - Strictly speaking, it's a copy of the original AST **minus any source location info**, because we **didn't** say `ast.Call(ast.Name, [], [ast.keyword('id', ast.Constant(value='cat')), ast.keyword('lineno', ...), ast.keyword('col_offset', ...)])`. This is on purpose. The result of a quasiquote will be likely spliced into a different source file, so whatever line numbers we fill, they are wrong. Thus we let the macro expander fill in the appropriate line number (which is that of the macro invocation at the use site of `mymacro`) in the source file where the code is actually used.
      - Run time, at the use site of `q`, is exactly when we want the value. Keep in mind that in this example, the use site of `q` is inside `mymacro`. The run time of `mymacro` is the macro expansion time of **its** use site.
      - Also keep in mind that whatever the `q` macro returns - because `q` is a macro - is spliced into the AST of the use site (inside the definition of `mymacro`), to replace the macro invocation of `q`.
        - The code that is spliced in is the "astified" AST, which at run time builds the original input AST.
        - When the source file containing the definition of `mymacro` is macro-expanded, the `q` macro invocation expands away, into the "astified" AST. At run time of `mymacro` the `q` macro invocation **is already long gone**.
  - It cannot be overemphasized that **values are a run-time thing**. This includes any trees sent to the `a` (ast-unquote) operator.
-   - For example, for the invocation `a[tree]`, at macro expansion time of `a` (as well as that of the surrounding `q`), all that the `a` operator (respectively, the `q` operator) sees is just `ast.Name(id='tree')`. That `tree` **refers to a run-time value** at the use site of `q`, so it doesn't exist yet.
+   - For example, for the invocation `a[tree]`, at macro expansion time of `a` (as well as that of the surrounding `q`), all that the `a` operator (respectively, the `q` operator) sees is just `ast.Name(id='tree')`. That `tree` **refers to a run-time value** at the use site of `q` - a value that doesn't exist yet at macro expansion time.
    - Hence, the unquote operators must perform part of their work at run time (of their use site), when the values are available. This includes any type checking of those values.
 
 The above explanation is somewhat simplified.
@@ -665,8 +670,10 @@ In `mcpyrate`, the Common Lisp macro-implementation pattern, where one gensyms
 a new name, `let`-binds that to the current value of the old name, and then
 unquotes the new name in the quasiquoted code, looks like this:
 
-    thex = q[h[x]]
-    tree = q[...a[thex]...]
+```python
+thex = q[h[x]]
+tree = q[...a[thex]...]
+```
 
 In the Lisp family, this is perhaps closer to how Scheme and Racket handle things,
 except that the hygienification must be asked for explicitly.
@@ -674,11 +681,13 @@ except that the hygienification must be asked for explicitly.
 The above is for use cases where you need to *access* something that exists at
 the macro definition site.
 
-If you instead need a new lexical variable name to assign something to, do this:
+If you instead need a new lexical variable name to *assign something to*, do this:
 
-    name = q[n[gensym()]]
-    with q as quoted:
-        a[name] = ...
+```python
+name = q[n[gensym()]]
+with q as quoted:
+    a[name] = ...
+```
 
 It's a peculiarity of Python that the quasiquote system is implemented as
 macros, unlike in Lisps, where these are typically special operators built in
@@ -699,9 +708,9 @@ lightly dressed up AST, like Lisps do.
 
 By default, in `mcpyrate`, macros in quasiquoted code are not expanded when the quasiquote itself expands. 
 
-In `mcpyrate`, all quote and unquote operators have single-character names by default: `q`, `u`, `n`, `a`, `s`, `h`. Of these, `q` and `u` are as in `macropy`, the operator `n` corresponds to `name`, `a` to `ast_literal`, and `s` to `ast_list`.
+In `mcpyrate`, all quote and unquote operators have single-character names by default: `q`, `u`, `n`, `a`, `s`, `h`. Of these, `q` and `u` are as in `macropy`, the operator `n` most closely corresponds to `name`, `a` to `ast_literal`, and `s` to `ast_list`.
 
-In `mcpyrate`, there is **just one *quote* operator**, `q[]`, although just like in `macropy`, there are several different *unquote* operators, depending on what you want to do. In `mcpyrate`, there is no `unhygienic`, because there is no separate `hq`.
+In `mcpyrate`, there is **just one *quote* operator**, `q[]`, although just like in `macropy`, there are several different *unquote* operators, depending on what you want to do. In `mcpyrate`, there is no `unhygienic` operator, because there is no separate `hq` quote.
 
 For [macro hygiene](https://en.wikipedia.org/wiki/Hygienic_macro), we provide a **hygienic unquote** operator, `h[]`. So instead of implicitly hygienifying all `Name` nodes inside a `hq[]` like `macropy` does, `mcpyrate` instead expects the user to use the regular `q[]`, and explicitly say which subexpressions to hygienify, by unquoting each of those separately with `h[]`. The hygienic unquote operator captures expressions by snapshotting a value; it does not care about names, except for human-readable output.
 
@@ -715,16 +724,16 @@ In `mcpyrate`, the `n[]` operator is a wrapper for `ast.parse`, so it will lift 
 
 #### In implementation
 
-We have closely followed the impressive, pioneering approach that originally
+We have closely followed the impressive, pioneering work that originally
 appeared in `macropy`. That source code, itself quite short, is full of creative
 ingenuity, although at places could be written more clearly, due to the
 first-generation nature of the system.
 
-Since `mcpyrate` is a third-generation macro expander (and second-generation in
-quasiquote support), we have actively attempted to make the best of lessons
-learned, to make the implementation as readable as reasonably possible. We have
-liberally changed function and class names, and refactored things where this
-makes the code easier to understand.
+Since `mcpyrate` is a third-generation macro expander (and second-generation
+having quasiquote support), we have actively attempted to make the best of
+lessons learned, to make the implementation as readable as reasonably possible.
+We have liberally changed function and class names, and refactored things where
+this makes the code easier to understand.
 
 Our `h` operator is both simpler and more general than `macropy`'s `hq[]`.
 By using uuids in the lookup keys, we avoid the whole-file lexical scan.
