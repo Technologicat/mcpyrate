@@ -67,49 +67,29 @@ Supports Python 3.6, 3.7, 3.8, and PyPy3.
 
 ## Highlights
 
-- **Agile development**.
+- **Agile development tools**.
   - Universal bootstrapper: `macropython`. Import and use macros in your main program.
   - Interactive console: `macropython -i`. Import, define and use macros in a console session.
     - Embeddable à la `code.InteractiveConsole`. See `mcpyrate.repl.console.MacroConsole`.
   - IPython extension `mcpyrate.repl.iconsole`. Import, define and use macros in an IPython session.
+  - See [full documentation of the REPL system](repl.md).
+
 - **Testing and debugging**.
-  - Correct statement coverage from tools such as [`Coverage.py`](https://github.com/nedbat/coveragepy/).
+  - Statement coverage is correctly reported by tools such as [`Coverage.py`](https://github.com/nedbat/coveragepy/).
   - Macro expansion errors are reported at macro expansion time, with use site traceback.
-  - Debug output with a step-by-step expansion breakdown. See macro `mcpyrate.debug.step_expansion`.
+  - Debug output **with a step-by-step expansion breakdown**. See macro [`mcpyrate.debug.step_expansion`](mcpyrate/debug.py).
     - Has both expr and block modes. Use `step_expansion[...]` or `with step_expansion` as appropriate.
     - The output is **syntax-highlighted**, and **line-numbered** based on `lineno` fields from the AST.
       - Also names of macros currently bound in the expander are highlighted by `step_expansion`.
     - The invisible nodes `ast.Module` and `ast.Expr` are shown, since especially `ast.Expr` is a common trap for the unwary.
-  - Manual expand-once. See `expander.visit_once`; get the `expander` as a named argument of your macro. See also the `expand1s` and `expand1r` macros in `mcpyrate.metatools`.
-- **Dialects, i.e. whole-module source and AST transforms**.
-  - Think [Racket's](https://racket-lang.org/) `#lang`, but for Python.
-  - Define languages that use Python's surface syntax, but change the semantics; or plug in a per-module transpiler that (at import time) compiles source code from some other programming language into macro-enabled Python. Also an AST [optimizer](http://compileroptimizations.com/) could be defined as a dialect. (Dialects can be chained.)
-  - Sky's the limit, really. Until we get [`unpythonic`](https://github.com/Technologicat/unpythonic) ported to use `mcpyrate`, see [`pydialect`](https://github.com/Technologicat/pydialect) for old example dialects.
-  - For documentation, see the docstrings in [`mcpyrate.dialects`](mcpyrate/dialects.py).
-  - For debugging, `from mcpyrate.debug import dialects, StepExpansion`.
-  - If writing a full-module AST transformer that splices the whole module into a template, see `mcpyrate.splicing.splice_dialect`.
-- **Advanced quasiquoting**.
-  - Hygienically interpolate both regular values **and macro names**.
-  - Delayed macro expansion inside quasiquoted code.
-    - User-controllable. See the detailed docs on quasiquotes.
-  - Inverse quasiquote operator. See function `mcpyrate.quotes.unastify`.
-    - Convert a quasiquoted AST back into a direct AST, typically for further processing before re-quoting it.
-      - Not an unquote; we have those too, but the purpose of unquotes is to interpolate values into quoted code. The inverse quasiquote, instead, undoes the quasiquote operation itself, after any unquotes have already been applied.
-    - Useful for second-order macros that need to process quasiquoted code at macro expansion time, before the quasiquoted tree has a chance to run.
-- **Macro arguments**.
-  - Opt-in. Declare by using the `@parametricmacro` decorator on your macro function.
-  - Use brackets to invoke, e.g. `macroname[arg0, ...][expr]`. If no args, just leave that part out, e.g. `macroname[expr]`.
-  - The `macroname[arg0, ...]` syntax works in `expr`, `block` and `decorator` macro invocations in place of a bare `macroname`.
-  - The named parameter `args` is a raw `list` of the macro argument ASTs. Empty if no args were sent, or if the macro function is not parametric.
-- **Identifier (a.k.a. name) macros**.
-  - Can be used for creating magic variables that may only appear inside specific macro invocations.
-  - Opt-in. Declare by using the `@namemacro` decorator on your macro function.
-- **Bytecode caching**.
-  - `.pyc` bytecode caches are created and kept up-to-date. This saves the macro
-    expansion cost at startup for modules that have not changed.
+    - To step the expansion of a run-time AST value, see the macro [`mcpyrate.metatools.stepr`](mcpyrate/metatools.py).
+  - Manual expand-once. See `expander.visit_once`; get the `expander` as a named argument of your macro. See also the `expand1s` and `expand1r` macros in [`mcpyrate.metatools`](mcpyrate/metatools.py).
+
+- **Lightning speed**.
+  - Bytecode caches (`.pyc`) are created and kept up-to-date. Saves macro expansion cost at startup for unchanged modules. Makes `mcpyrate` fast [on average](https://en.wikipedia.org/wiki/Amortized_analysis).
 
     Beside a `.py` source file itself, we look at any macro definition files
-    the source file imports macros from, recursively, in a `make`-like fashion.
+    it imports macros from, recursively, in a `make`-like fashion.
 
     The mtime is the latest of those of the source file and its macro-dependencies,
     considered recursively, so that if any macro definition anywhere in the
@@ -117,15 +97,42 @@ Supports Python 3.6, 3.7, 3.8, and PyPy3.
     source file as "changed", thus re-expanding and recompiling it (hence,
     updating the corresponding `.pyc`).
   - **CAUTION**: [PEP 552 - Deterministic pycs](https://www.python.org/dev/peps/pep-0552/) is not supported; we support only the default *mtime* invalidation mode, at least for now.
+
+- **Quasiquotes**, with advanced features.
+  - Hygienically interpolate both regular values **and macro names**.
+  - Delayed macro expansion inside quasiquoted code. User-controllable.
+  - Inverse quasiquote operator. See function [`mcpyrate.quotes.unastify`](mcpyrate/quotes.py).
+    - Convert a quasiquoted AST back into a direct AST, typically for further processing before re-quoting it.
+      - Not an unquote; we have those too, but the purpose of unquotes is to interpolate values into quoted code. The inverse quasiquote, instead, undoes the quasiquote operation itself, after any unquotes have already been applied.
+  - See [full documentation of the quasiquote system](quasiquotes.md).
+
+- **Macro arguments**.
+  - Opt-in. Declare by using the [`@parametricmacro`](mcpyrate/expander.py) decorator on your macro function.
+  - Use brackets to invoke, e.g. `macroname[arg0, ...][expr]`. If no args, just leave that part out, e.g. `macroname[expr]`.
+  - The `macroname[arg0, ...]` syntax works in `expr`, `block` and `decorator` macro invocations in place of a bare `macroname`.
+  - The named parameter `args` is a raw `list` of the macro argument ASTs. Empty if no args were sent, or if the macro function is not parametric.
+
+- **Identifier (a.k.a. name) macros**.
+  - Can be used for creating magic variables that may only appear inside specific macro invocations.
+  - Opt-in. Declare by using the [`@namemacro`](mcpyrate/expander.py) decorator on your macro function.
+
+- **Dialects, i.e. whole-module source and AST transforms**.
+  - Think [Racket's](https://racket-lang.org/) `#lang`, but for Python.
+  - Define languages that use Python's surface syntax, but change the semantics; or plug in a per-module transpiler that (at import time) compiles source code from some other programming language into macro-enabled Python. Also an AST [optimizer](http://compileroptimizations.com/) could be defined as a dialect. Dialects can be chained.
+  - Sky's the limit, really. Until we get [`unpythonic`](https://github.com/Technologicat/unpythonic) ported to use `mcpyrate`, see [`pydialect`](https://github.com/Technologicat/pydialect) for old example dialects.
+  - For documentation, see the docstrings in [`mcpyrate.dialects`](mcpyrate/dialects.py).
+  - For debugging, `from mcpyrate.debug import dialects, StepExpansion`.
+  - If writing a full-module AST transformer that splices the whole module into a template, see [`mcpyrate.splicing.splice_dialect`](mcpyrate/splicing.py).
+
 - **Conveniences**.
   - Relative macro-imports (for code in packages), e.g. `from .other import macros, kittify`.
   - The expander automatically fixes missing `ctx` attributes (and source locations) in the AST, so you don't need to care about those in your macros.
   - Several block macros can be invoked in the same `with` (equivalent to nesting them, with leftmost outermost).
-  - Walker à la `macropy`, to easily context-manage state for subtrees, and collect items across the whole walk.
-  - AST markers (pseudo-nodes) for communication in a set of co-operating macros (and with the expander).
-  - `gensym` to create a fresh, unused lexical identifier.
-  - `unparse` to convert an AST to the corresponding source code, optionally with syntax highlighting (for terminal output).
-  - `dump` to look at an AST representation directly, with (mostly) PEP8-compliant indentation, optionally with syntax highlighting (node types, field names, bare values).
+  - [Walker](mcpyrate/walker.py) à la `macropy`, to easily context-manage state for subtrees, and collect items across the whole walk.
+  - AST [markers](mcpyrate/markers.py) (pseudo-nodes) for communication in a set of co-operating macros (and with the expander).
+  - [`gensym`](mcpyrate/utils.py) to create a fresh, unused lexical identifier.
+  - [`unparse`](mcpyrate/unparser.py) to convert an AST to the corresponding source code, optionally with syntax highlighting (for terminal output).
+  - [`dump`](mcpyrate/astdumper.py) to look at an AST representation directly, with (mostly) PEP8-compliant indentation, optionally with syntax highlighting (node types, field names, bare values).
 
 
 ## Install & uninstall
@@ -383,9 +390,9 @@ Here `q[]` quasiquotes an expression, `u[]` unquotes a simple value, and `a[]` u
 
 By default, in `mcpyrate`, macros in quasiquoted code are not expanded when the quasiquote itself expands. 
 
-In `mcpyrate`, all quote and unquote operators have single-character names by default: `q`, `u`, `n`, `a`, `s`, `h`. Of these, `q` and `u` are as in `macropy`, the operator `n` corresponds to `name`, `a` to `ast_literal`, and `s` to `ast_list`.
+In `mcpyrate`, all quote and unquote operators have single-character names by default: `q`, `u`, `n`, `a`, `s`, `h`. Of these, `q` and `u` are as in `macropy`, the operator `n` most closely corresponds to `name`, `a` to `ast_literal`, and `s` to `ast_list`.
 
-In `mcpyrate`, there is **just one *quote* operator**, `q[]`, although just like in `macropy`, there are several different *unquote* operators, depending on what you want to do. In `mcpyrate`, there is no `unhygienic`, because there is no separate `hq`.
+In `mcpyrate`, there is **just one *quote* operator**, `q[]`, although just like in `macropy`, there are several different *unquote* operators, depending on what you want to do. In `mcpyrate`, there is no `unhygienic` operator, because there is no separate `hq` quote.
 
 For [macro hygiene](https://en.wikipedia.org/wiki/Hygienic_macro), we provide a **hygienic unquote** operator, `h[]`. So instead of implicitly hygienifying all `Name` nodes inside a `hq[]` like `macropy` does, `mcpyrate` instead expects the user to use the regular `q[]`, and explicitly say which subexpressions to hygienify, by unquoting each of those separately with `h[]`. The hygienic unquote operator captures expressions by snapshotting a value; it does not care about names, except for human-readable output.
 
@@ -638,6 +645,8 @@ Obviously, if you want to expand just one layer with the second expander, use it
 
 To troubleshoot your macros, see [`mcpyrate.debug`](mcpyrate/debug.py), particularly the macro `step_expansion`. It is both an `expr` and `block` macro.
 
+To troubleshoot macro expansion of a run-time AST value (such as quoted code), see [`mcpyrate.metatools`](mcpyrate/metatools.py), particularly the macro `stepr`. It is an `expr` macro that takes in a run-time AST value. (In Python, values are always referred to by expressions. Hence no block mode.)
+
 
 ### I just ran my program again and no macro expansion is happening?
 
@@ -678,9 +687,9 @@ As the old saying goes, *it's always five'o'clock **somewhere***. *There is no g
 
 ### `step_expansion` is treating the `expands` family of macros as a single step?
 
-This is a natural consequence of the `expands` macros (see `mcpyrate.metatools`) being macros, and - the `s` meaning *static*, them doing their work at macro expansion time.
+This is a natural consequence of the `expands` macros (see [`mcpyrate.metatools`](mcpyrate/metatools.py)) being macros, and - the `s` meaning *static*, them doing their work at macro expansion time.
 
-For example, in the case of `expands`, when `step_expansion` (see `mcpyrate.debug`) takes one step, by telling the expander to visit the tree once, the expander will (eventually) find the `expands` invocation. So it will invoke that macro.
+For example, in the case of `expands`, when `step_expansion` (see [`mcpyrate.debug`](mcpyrate/debug.py)) takes one step, by telling the expander to visit the tree once, the expander will (eventually) find the `expands` invocation. So it will invoke that macro.
 
 The `expands` macro, by definition, expands whatever is inside the invocation until no macros remain there. So by the time `step_expansion` gets control back, all macro invocations within the `expands` are gone.
 
@@ -841,7 +850,7 @@ The auto-fill of missing location information is done recursively, so e.g. in `E
 
 The rules imply that by default, if a macro does not keep any original nodes from a particular source line in its output, **that line will show as not covered** in the coverage report. (This is as it should be - it's valid for a block macro to delete some statements from its input, in which case those statements won't run.)
 
-So, if your macro generates new nodes based on the original nodes from the unexpanded source, and then discards the original nodes, **make sure to copy source location information manually** as appropriate. (Use `ast.copy_location`, as usual.)
+So, if your macro generates new nodes based on the original nodes from the unexpanded source, and then discards the original nodes, **make sure to copy source location information manually** as appropriate. Use `ast.copy_location` for this, as usual.
 
 
 ### `Coverage.py` says my quasiquoted code block is covered? It's quoted, not running, so why?
@@ -870,7 +879,7 @@ Any AST node that existed in the unexpanded source code will, in the expanded co
 
 Hence, non-monotonicity occurs if a block (or decorator) macro adds new AST nodes *after* existing AST nodes that originate from lines below the macro invocation node itself in the unexpanded source file.
 
-(Note that the non-monotonicity, when present at all, is mild; it's local to each block.)
+Note that the non-monotonicity, when present at all, is mild; it's local to each block.
 
 
 ### My macro needs to fill in `lineno` recursively, any recommendations?
