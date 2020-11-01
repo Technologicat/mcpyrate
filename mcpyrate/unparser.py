@@ -119,9 +119,8 @@ class Unparser:
         self.write("\n")
         if self.debug and isinstance(lineno_node, ast.AST):
             lineno = lineno_node.lineno if hasattr(lineno_node, "lineno") else None
-            # In `mcpyrate.debug.step_expansion`, `textwrap.dedent` will strip
-            # leading space, so it's better to use something else to always
-            # have fixed width.
+            # `mcpyrate.debug.step_expansion` may strip leading space, so
+            # it's better to use something else to always have fixed width.
             #
             # Assume line numbers usually have at most 4 digits, but
             # degrade gracefully for those crazy 5-digit source files.
