@@ -1,5 +1,5 @@
 # -*- coding: utf-8; -*-
-'''Utilities for building REPLs.'''
+"""Utilities for building REPLs."""
 
 __all__ = ["doc", "sourcecode", "get_makemacro_sourcecode"]
 

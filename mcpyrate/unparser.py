@@ -1,7 +1,7 @@
 # -*- coding: utf-8; -*-
 """Back-convert a Python AST into source code. Original formatting is disregarded."""
 
-__all__ = ['UnparserError', 'unparse', 'unparse_with_fallbacks']
+__all__ = ["UnparserError", "unparse", "unparse_with_fallbacks"]
 
 import ast
 import builtins
@@ -690,7 +690,7 @@ class Unparser:
             self.dispatch(e)
         self.write(")")
 
-    boolops = {ast.And: 'and', ast.Or: 'or'}
+    boolops = {ast.And: "and", ast.Or: "or"}
     def _BoolOp(self, t):
         self.write("(")
         s = self.maybe_colorize_python_keyword(self.boolops[t.op.__class__])
@@ -803,7 +803,7 @@ class Unparser:
             self.dispatch(t.step)
 
     def _ExtSlice(self, t):
-        interleave(lambda: self.write(', '), self.dispatch, t.dims)
+        interleave(lambda: self.write(", "), self.dispatch, t.dims)
 
     # argument
     def _arg(self, t):
@@ -845,13 +845,13 @@ class Unparser:
 
         def maybe_separate_positional_only_args():
             if not first:
-                self.write(', /')
+                self.write(", /")
 
         interleave(maybe_separate_positional_only_args,
                    write_arg_default_pairs,
                    zip(args_sets, defaults_sets))
 
-        # varargs, or bare '*' if no varargs but keyword-only arguments present
+        # varargs, or bare "*" if no varargs but keyword-only arguments present
         if t.vararg or t.kwonlyargs:
             if first:
                 first = False

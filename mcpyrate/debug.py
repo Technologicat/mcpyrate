@@ -192,7 +192,7 @@ class SourceLocationInfoValidator(Walker):
     `(subtree, sourcecode, missing_field_names)`. Each `sourcecode` is truncated
     if too long.
     """
-    def __init__(self, ignore={}, n=5, check_fields=['lineno', 'col_offset']):
+    def __init__(self, ignore={}, n=5, check_fields=["lineno", "col_offset"]):
         """Constructor.
 
         Parameters:

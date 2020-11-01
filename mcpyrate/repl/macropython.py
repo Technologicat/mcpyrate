@@ -237,6 +237,6 @@ def main():
 
         import_module_as_main(module_name, script_mode=True)
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     _macropython_module = sys.modules["__macropython__"] = sys.modules["__main__"]
     main()

@@ -60,23 +60,23 @@ def dump(tree, *, include_attributes=False, multiline=True, color=False):
             colorized_fields = [(maybe_colorize(k, ColorScheme.FIELDNAME),
                                  maybe_colorize_value(v))
                                 for k, v in fields]
-            return ''.join([
+            return "".join([
                 maybe_colorize(tree.__class__.__name__, ColorScheme.NODETYPE),
-                '(',
-                separator().join((f'{k}={v}' for k, v in colorized_fields)),
-                ')'])
+                "(",
+                separator().join((f"{k}={v}" for k, v in colorized_fields)),
+                ")"])
 
         elif isinstance(tree, list):
             moreindent = len("[")
             items = [recurse(elt, previndent + moreindent) for elt in tree]
             if items:
-                items[0] = '[' + items[0].lstrip()
-                items[-1] = items[-1] + ']'
+                items[0] = "[" + items[0].lstrip()
+                items[-1] = items[-1] + "]"
                 return separator().join(items)
-            return '[]'
+            return "[]"
 
         return repr(tree)
 
     if not isinstance(tree, (AST, list)):
-        raise TypeError(f'expected AST, got {tree.__class__.__name__!r}')
+        raise TypeError(f"expected AST, got {tree.__class__.__name__!r}")
     return recurse(tree)

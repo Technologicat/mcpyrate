@@ -11,9 +11,9 @@ The `astify` and `unastify` functions are the low-level quasiquote compiler
 and uncompiler, respectively.
 """
 
-__all__ = ['capture_value', 'capture_macro',
-           'astify', 'unastify',
-           'q', 'u', 'n', 'a', 's', 'h']
+__all__ = ["capture_value", "capture_macro",
+           "astify", "unastify",
+           "q", "u", "n", "a", "s", "h"]
 
 import ast
 import pickle
@@ -327,7 +327,7 @@ def astify(x, expander=None):  # like `macropy`'s `ast_repr`
         elif T is LiftSourcecode:  # `n[]`
             # Delay the identifier lifting, so it runs at the use site of `q`,
             # where the actual value of `x.body` becomes available.
-            return ast.Call(_mcpyrate_quotes_attr('lift_sourcecode'),
+            return ast.Call(_mcpyrate_quotes_attr("lift_sourcecode"),
                             [x.body,
                              ast.Constant(value=x.filename)],
                             [])
@@ -335,13 +335,13 @@ def astify(x, expander=None):  # like `macropy`'s `ast_repr`
         elif T is ASTLiteral:  # `a`
             # Pass through this subtree as-is, but apply a run-time typecheck,
             # as well as some special run-time handling for block mode `a`.
-            return ast.Call(_mcpyrate_quotes_attr('ast_literal'),
+            return ast.Call(_mcpyrate_quotes_attr("ast_literal"),
                             [x.body,
                              ast.Constant(value=x.syntax)],
                             [])
 
         elif T is ASTList:  # `s[]`
-            return ast.Call(_mcpyrate_quotes_attr('ast_list'), [x.body], [])
+            return ast.Call(_mcpyrate_quotes_attr("ast_list"), [x.body], [])
 
         elif T is Capture:  # `h[]`
             if expander and type(x.body) is ast.Name:
@@ -362,7 +362,7 @@ def astify(x, expander=None):  # like `macropy`'s `ast_repr`
             # At the use site of q[], this captures the value, and rewrites itself
             # into an AST that represents a lookup. At the use site of the macro
             # that used q[], that code runs, and looks up the captured value.
-            return ast.Call(_mcpyrate_quotes_attr('capture_value'),
+            return ast.Call(_mcpyrate_quotes_attr("capture_value"),
                             [x.body,
                              ast.Constant(value=x.name)],
                             [])
@@ -386,7 +386,7 @@ def astify(x, expander=None):  # like `macropy`'s `ast_repr`
         # coverage dummy nodes and expanded name macros can be astified.
         elif isinstance(x, Done):
             fields = [ast.keyword(a, recurse(b)) for a, b in ast.iter_fields(x)]
-            node = ast.Call(_mcpyrate_quotes_attr('Done'),
+            node = ast.Call(_mcpyrate_quotes_attr("Done"),
                             [],
                             fields)
             return node
@@ -405,7 +405,7 @@ def astify(x, expander=None):  # like `macropy`'s `ast_repr`
             # We refer to the stdlib `ast` module as `mcpyrate.quotes.ast` to avoid
             # name conflicts at the use site of `q[]`.
             fields = [ast.keyword(a, recurse(b)) for a, b in ast.iter_fields(x)]
-            node = ast.Call(ast.Attribute(value=_mcpyrate_quotes_attr('ast'),
+            node = ast.Call(ast.Attribute(value=_mcpyrate_quotes_attr("ast"),
                                           attr=x.__class__.__name__),
                             [],
                             fields)
@@ -600,9 +600,9 @@ def q(tree, *, syntax, expander, **kw):
         if ps:
             assert False, f"QuasiquoteMarker instances remaining in output: {ps}"
 
-        if syntax == 'block':
+        if syntax == "block":
             # Generate AST to perform the assignment for `with q as quoted`.
-            target = kw['optional_vars']  # List, Tuple, Name
+            target = kw["optional_vars"]  # List, Tuple, Name
             if target is None:
                 raise SyntaxError("`q` (block mode) requires an asname to receive the quoted code")
             if type(target) is not ast.Name:
@@ -614,7 +614,7 @@ def q(tree, *, syntax, expander, **kw):
             # Because block mode `a` introduces the need to splice the interpolated
             # ASTs at run time into the surrounding context (which is only available
             # to the surrounding `q`), we inject a handler for that on the RHS here.
-            tree = ast.Assign([target], ast.Call(_mcpyrate_quotes_attr('splice_ast_literal_blocks'),
+            tree = ast.Assign([target], ast.Call(_mcpyrate_quotes_attr("splice_ast_literal_blocks"),
                                                  [tree],
                                                  []))
         return tree

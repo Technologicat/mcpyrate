@@ -1,7 +1,7 @@
 # -*- coding: utf-8; -*-
-'''Fix `ctx` attributes and source location info in an AST.'''
+"""Fix `ctx` attributes and source location info in an AST."""
 
-__all__ = ['fix_ctx', 'fix_locations']
+__all__ = ["fix_ctx", "fix_locations"]
 
 from ast import (Load, Store, Del,
                  Assign, AnnAssign, AugAssign,
@@ -38,7 +38,7 @@ class _CtxFixer(Walker):
         return self.generic_visit(tree)
 
     def _fix_one(self, tree):
-        '''Fix one `ctx` attribute, using the currently active ctx class.'''
+        """Fix one `ctx` attribute, using the currently active ctx class."""
         if "ctx" in type(tree)._fields:
             if self.copy_seen_nodes:
                 # Shallow-copy `tree` if already seen. This mode is used in the
@@ -51,7 +51,7 @@ class _CtxFixer(Walker):
         return tree
 
     def _setup_subtree_contexts(self, tree):
-        '''Autoselect correct `ctx` class for subtrees of `tree`.'''
+        """Autoselect correct `ctx` class for subtrees of `tree`."""
         # The default ctx class is `Load`. We set up any `Store` and `Del`, as
         # well as any `Load` for trees that may appear inside others that are
         # set up as `Store` or `Del` (that mainly concerns expressions).
@@ -99,7 +99,7 @@ class _CtxFixer(Walker):
 
 
 def fix_ctx(tree, *, copy_seen_nodes):
-    '''Fix `ctx` attributes in `tree`.
+    """Fix `ctx` attributes in `tree`.
 
     If `copy_seen_nodes=True`, then, if the same AST node instance appears
     multiple times, and the node requires a `ctx`, shallow-copy it the second
@@ -108,12 +108,12 @@ def fix_ctx(tree, *, copy_seen_nodes):
     different `ctx`.
 
     Modifies `tree` in-place. For convenience, returns the modified `tree`.
-    '''
+    """
     return _CtxFixer(copy_seen_nodes=copy_seen_nodes).visit(tree)
 
 
 def fix_locations(tree, reference_node, *, mode):
-    '''Like `ast.fix_missing_locations`, but customized for a macro expander.
+    """Like `ast.fix_missing_locations`, but customized for a macro expander.
 
     Differences:
 
@@ -147,7 +147,7 @@ def fix_locations(tree, reference_node, *, mode):
         at the use site (because they point to lines in that other file).
 
     Modifies `tree` in-place. For convenience, returns the modified `tree`.
-    '''
+    """
     if not (hasattr(reference_node, "lineno") and hasattr(reference_node, "col_offset")):
         return tree
     def _fix(tree, lineno, col_offset):
@@ -157,19 +157,19 @@ def fix_locations(tree, reference_node, *, mode):
             for elt in tree:
                 _fix(elt, lineno, col_offset)
             return
-        if 'lineno' in tree._attributes:
+        if "lineno" in tree._attributes:
             if mode == "overwrite":
                 tree.lineno = lineno
             else:
-                if not hasattr(tree, 'lineno'):
+                if not hasattr(tree, "lineno"):
                     tree.lineno = lineno
                 elif mode == "update":
                     lineno = tree.lineno
-        if 'col_offset' in tree._attributes:
+        if "col_offset" in tree._attributes:
             if mode == "overwrite":
                 tree.col_offset = col_offset
             else:
-                if not hasattr(tree, 'col_offset'):
+                if not hasattr(tree, "col_offset"):
                     tree.col_offset = col_offset
                 elif mode == "update":
                     col_offset = tree.col_offset

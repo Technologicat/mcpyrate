@@ -1,8 +1,8 @@
 # -*- coding: utf-8; -*-
 '''Utilities related to writing macro expanders and similar meta-metaprogramming tasks.'''
 
-__all__ = ['resolve_package', 'relativize', 'match_syspath',
-           'ismacroimport', 'get_macros']
+__all__ = ["resolve_package", "relativize", "match_syspath",
+           "ismacroimport", "get_macros"]
 
 from ast import ImportFrom
 import importlib
@@ -26,7 +26,7 @@ def resolve_package(filename):  # TODO: for now, `guess_package`, really. Check 
         absolute_filename = str(pathlib.Path(filename).expanduser().resolve())
         resolved = f" (resolved to {absolute_filename})" if absolute_filename != str(filename) else ""
         raise ImportError(f"{filename}{resolved} is not in a package, but at the root level of syspath {str(root_path)}")
-    package_dotted_name = relative_path.replace(os.path.sep, '.')
+    package_dotted_name = relative_path.replace(os.path.sep, ".")
     return package_dotted_name
 
 
@@ -66,14 +66,14 @@ def match_syspath(filename):
 # --------------------------------------------------------------------------------
 
 def ismacroimport(statement, magicname='macros'):
-    '''Return whether `statement` is a macro-import.
+    """Return whether `statement` is a macro-import.
 
     A macro-import is a statement of the form::
 
         from ... import macros, ...
 
     where "macros" is the literal string given as `magicname`.
-    '''
+    """
     if isinstance(statement, ImportFrom):
         firstimport = statement.names[0]
         if firstimport.name == magicname and firstimport.asname is None:
@@ -82,7 +82,7 @@ def ismacroimport(statement, magicname='macros'):
 
 
 def get_macros(macroimport, *, filename, reload=False, allow_asname=True):
-    '''Get absolute module name, macro names and macro functions from a macro-import.
+    """Get absolute module name, macro names and macro functions from a macro-import.
 
     As a side effect, import the macro definition module.
 
@@ -96,7 +96,7 @@ def get_macros(macroimport, *, filename, reload=False, allow_asname=True):
     dialect makes no sense.
 
     This function is meant for implementing actual macro expanders.
-    '''
+    """
     package_absname = None
     if macroimport.level and filename.endswith(".py"):
         try:
@@ -109,7 +109,7 @@ def get_macros(macroimport, *, filename, reload=False, allow_asname=True):
         approx_sourcecode = unparse_with_fallbacks(macroimport)
         loc = format_location(filename, macroimport, approx_sourcecode)
         raise SyntaxError(f"{loc}\nmissing module name in macro-import")
-    module_absname = importlib.util.resolve_name('.' * macroimport.level + macroimport.module, package_absname)
+    module_absname = importlib.util.resolve_name("." * macroimport.level + macroimport.module, package_absname)
 
     try:
         module = importlib.import_module(module_absname)

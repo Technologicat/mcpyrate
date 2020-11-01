@@ -1,5 +1,5 @@
 # -*- coding: utf-8; -*-
-'''Find and expand dialects, i.e. whole-module source and AST transformations.'''
+"""Find and expand dialects, i.e. whole-module source and AST transformations."""
 
 __all__ = ["Dialect",
            "expand_dialects"]
@@ -17,13 +17,13 @@ from .unparser import unparse_with_fallbacks
 
 
 class Dialect:
-    '''Base class for dialects.'''
+    """Base class for dialects."""
     def __init__(self, expander):
         '''`expander`: the `DialectExpander` instance. The expander provides this automatically.'''
         self.expander = expander
 
     def transform_source(self, text):
-        '''Override this to add a whole-module source transformer to your dialect.
+        """Override this to add a whole-module source transformer to your dialect.
 
         If not overridden, the default is to return `NotImplemented`, which
         tells the expander this dialect does not provide a source transformer.
@@ -46,7 +46,7 @@ class Dialect:
         To put it all together, this allows implementing things like::
 
             # -*- coding: utf-8; -*-
-            """See https://en.wikipedia.org/wiki/Brainfuck#Examples"""
+            '''See https://en.wikipedia.org/wiki/Brainfuck#Examples'''
 
             from mylibrary import dialects, Brainfuck
 
@@ -62,11 +62,11 @@ class Dialect:
         Implementing the actual BF->Python transpiler is left as an exercise
         to the reader. Maybe compare how Matthew Butterick did this in Racket:
             https://beautifulracket.com/bf/intro.html
-        '''
+        """
         return NotImplemented
 
     def transform_ast(self, tree):
-        '''Override this to add a whole-module AST transformer to your dialect.
+        """Override this to add a whole-module AST transformer to your dialect.
 
         If not overridden, the default is to return `NotImplemented`, which
         tells the expander this dialect does not provide an AST transformer.
@@ -94,7 +94,7 @@ class Dialect:
         essentially Python with TCO, and implicit `return` in tail position::
 
             # -*- coding: utf-8; -*-
-            """Lispython example."""
+            '''Lispython example.'''
 
             from mylibrary import dialects, Lispython
 
@@ -106,7 +106,7 @@ class Dialect:
                 f(n, acc=1)
             assert fact(4) == 24
             fact(5000)  # no crash
-        '''
+        """
         return NotImplemented
 
 
@@ -142,22 +142,22 @@ class StepExpansion(Dialect):  # actually part of public API of mcpyrate.debug, 
 _dialectimport = re.compile(r"^from\s+([.0-9a-zA-z_]+)\s+import dialects,\s+([^(\\]+)\s*$",
                             flags=re.MULTILINE)
 class DialectExpander:
-    '''The dialect expander.'''
+    """The dialect expander."""
 
     def __init__(self, filename):
-        '''`filename`: full path to `.py` file being expanded, for module name resolution and error messages.'''
+        """`filename`: full path to `.py` file being expanded, for module name resolution and error messages."""
         self.filename = filename
         self.debugmode = False  # to enable, `from mcpyrate.debug import dialects, StepExpansion`
         self._step = 0
         self._seen = set()
 
     def expand(self, data):
-        '''Expand dialects in `data` (bytes) corresponding to `self.filename`. Top-level entrypoint.
+        """Expand dialects in `data` (bytes) corresponding to `self.filename`. Top-level entrypoint.
 
         Dialects are expanded until no dialects remain.
 
         Return value is an AST for the module.
-        '''
+        """
         text = importlib.util.decode_source(data)
         text = self.transform_source(text)
         try:
@@ -167,14 +167,14 @@ class DialectExpander:
         return self.transform_ast(tree)
 
     def transform_source(self, text):
-        '''Apply all whole-module source transformers.'''
+        """Apply all whole-module source transformers."""
         return self._transform(text, kind="source",
                                find_dialectimport=self.find_dialectimport_source,
                                transform="transform_source",
                                format_for_display=lambda text: text)
 
     def transform_ast(self, tree):
-        '''Apply all whole-module AST transformers.'''
+        """Apply all whole-module AST transformers."""
         formatter = functools.partial(unparse_with_fallbacks, debug=True, color=True)
         return self._transform(tree, kind="AST",
                                find_dialectimport=self.find_dialectimport_ast,
@@ -236,7 +236,7 @@ class DialectExpander:
         return content
 
     def find_dialectimport_source(self, text):
-        '''Find the first dialect-import statement by scanning source code `text`.
+        """Find the first dialect-import statement by scanning source code `text`.
 
         As a side effect, import the dialect definition module.
 
@@ -260,7 +260,7 @@ class DialectExpander:
         Return value is a dict `{dialectname: class, ...}` with all collected bindings
         from that one dialect-import. Each binding is a dialect, so usually there is
         just one.
-        '''
+        """
         matches = _dialectimport.finditer(text)
         try:
             while True:
@@ -279,7 +279,7 @@ class DialectExpander:
         return module_absname, bindings
 
     def find_dialectimport_ast(self, tree):
-        '''Find the first dialect-import statement by scanning the AST `tree`.
+        """Find the first dialect-import statement by scanning the AST `tree`.
 
         Transform the dialect-import into `import ...`, where `...` is the absolute
         module name the dialects are being imported from. As a side effect, import
@@ -295,7 +295,7 @@ class DialectExpander:
         Return value is a dict `{dialectname: class, ...}` with all collected bindings
         from that one dialect-import. Each binding is a dialect, so usually there is
         just one.
-        '''
+        """
         for index, statement in enumerate(tree.body):
             if ismacroimport(statement, magicname="dialects"):
                 break
@@ -313,7 +313,7 @@ class DialectExpander:
 # --------------------------------------------------------------------------------
 
 def expand_dialects(data, *, filename):
-    '''Find and expand dialects, i.e. whole-module source and AST transformers.
+    """Find and expand dialects, i.e. whole-module source and AST transformers.
 
     The algorithm works as follows.
 
@@ -350,7 +350,7 @@ def expand_dialects(data, *, filename):
     spirit of PEP8 is::
 
         # -*- coding: utf-8; -*-
-        """Example module using a dialect."""
+        '''Example module using a dialect.'''
 
         __all__ = [...]
 
@@ -359,6 +359,6 @@ def expand_dialects(data, *, filename):
         from ... import macros, ...  # then macro-imports
 
         # then regular imports and the rest of the code
-    '''
+    """
     dexpander = DialectExpander(filename)
     return dexpander.expand(data)

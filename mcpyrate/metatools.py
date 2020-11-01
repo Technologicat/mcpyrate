@@ -32,12 +32,12 @@ If you want to expand a tree using the macro bindings *from your macro's
 definition site*, you should use the `expand` family of macros.
 """
 
-__all__ = ['macro_bindings',
-           'expand1sq', 'expandsq',
-           'expand1s', 'expands',
-           'expand1rq', 'expandrq',
-           'expand1r', 'expandr',
-           'stepr']
+__all__ = ["macro_bindings",
+           "expand1sq", "expandsq",
+           "expand1s", "expands",
+           "expand1rq", "expandrq",
+           "expand1r", "expandr",
+           "stepr"]
 
 import ast
 
@@ -99,7 +99,7 @@ def macro_bindings(tree, *, syntax, expander, **kw):  # tree is unused
 # --------------------------------------------------------------------------------
 
 def expand1sq(tree, *, syntax, **kw):
-    '''[syntax, expr/block] quote-then-expand-once.
+    """[syntax, expr/block] quote-then-expand-once.
 
     Quasiquote `tree`, then expand one layer of macros in it. Return the result
     quasiquoted.
@@ -114,7 +114,7 @@ def expand1sq(tree, *, syntax, **kw):
     applied first, but with the expander outside of it.
 
     If your tree is quasiquoted, use `expands1` instead.
-    '''
+    """
     if syntax not in ("expr", "block"):
         raise SyntaxError("`expand1sq` is an expr and block macro only")
     tree = q(tree, syntax=syntax, **kw)
@@ -125,7 +125,7 @@ def expand1sq(tree, *, syntax, **kw):
 
 
 def expandsq(tree, *, syntax, **kw):
-    '''[syntax, expr/block] quote-then-expand.
+    """[syntax, expr/block] quote-then-expand.
 
     Quasiquote `tree`, then expand it until no macros remain. Return the result
     quasiquoted.
@@ -142,7 +142,7 @@ def expandsq(tree, *, syntax, **kw):
     If your tree is quasiquoted, use `expands` instead.
 
     This operator should produce results closest to those of `macropy`'s `q`.
-    '''
+    """
     if syntax not in ("expr", "block"):
         raise SyntaxError("`expandsq` is an expr and block macro only")
     tree = q(tree, syntax=syntax, **kw)
@@ -153,7 +153,7 @@ def expandsq(tree, *, syntax, **kw):
 
 
 def expand1s(tree, *, syntax, expander, **kw):
-    '''[syntax, expr/block] expand one layer of macros in quasiquoted `tree`.
+    """[syntax, expr/block] expand one layer of macros in quasiquoted `tree`.
 
     The result remains in quasiquoted form.
 
@@ -168,7 +168,7 @@ def expand1s(tree, *, syntax, expander, **kw):
     AST as `tree` raises `TypeError`.
 
     If your `tree` is not quasiquoted, use `expand1sq` instead.
-    '''
+    """
     if syntax not in ("expr", "block"):
         raise SyntaxError("`expand1s` is an expr and block macro only")
     if syntax == "block" and kw['optional_vars'] is not None:
@@ -190,7 +190,7 @@ def expand1s(tree, *, syntax, expander, **kw):
 
 
 def expands(tree, *, syntax, expander, **kw):
-    '''[syntax, expr/block] expand quasiquoted `tree` until no macros remain.
+    """[syntax, expr/block] expand quasiquoted `tree` until no macros remain.
 
     The result remains in quasiquoted form.
 
@@ -205,7 +205,7 @@ def expands(tree, *, syntax, expander, **kw):
     AST as `tree` raises `TypeError`.
 
     If your `tree` is not quasiquoted, use `expandsq` instead.
-    '''
+    """
     if syntax not in ("expr", "block"):
         raise SyntaxError("`expands` is an expr and block macro only")
     if syntax == "block" and kw['optional_vars'] is not None:
@@ -220,7 +220,7 @@ def expands(tree, *, syntax, expander, **kw):
 # --------------------------------------------------------------------------------
 
 def expand1rq(tree, *, syntax, **kw):
-    '''[syntax, expr/block] quote-then-expand-once-at-runtime.
+    """[syntax, expr/block] quote-then-expand-once-at-runtime.
 
     Quasiquote `tree`, then set it up to have one layer of macros expanded
     at run time. At run time, return the resulting AST.
@@ -240,7 +240,7 @@ def expand1rq(tree, *, syntax, **kw):
     an `ast.Assign`. The call to the expander is spliced in around its RHS.
 
     If your tree is quasiquoted, use `expand1r` instead.
-    '''
+    """
     if syntax not in ("expr", "block"):
         raise SyntaxError("`expand1rq` is an expr and block macro only")
     tree = q(tree, syntax=syntax, **kw)
@@ -256,7 +256,7 @@ def expand1rq(tree, *, syntax, **kw):
 
 
 def expandrq(tree, *, syntax, **kw):
-    '''[syntax, expr/block] quote-then-expand-at-runtime.
+    """[syntax, expr/block] quote-then-expand-at-runtime.
 
     Quasiquote `tree`, then set it up to have it expanded, at run time,
     until no macros remain. At run time, return the resulting AST.
@@ -279,7 +279,7 @@ def expandrq(tree, *, syntax, **kw):
 
     The results from this operator resemble those from `macropy`'s `q`,
     except macro expansion is applied inside any unquoted AST snippets, too.
-    '''
+    """
     if syntax not in ("expr", "block"):
         raise SyntaxError("`expandrq` is an expr and block macro only")
     tree = q(tree, syntax=syntax, **kw)
@@ -307,7 +307,7 @@ def expand1r(tree, *, syntax, expander, **kw):
     If you want to quote some code to produce `tree` and then immediately expand it,
     use `expand1rq` instead.
     """
-    if syntax == "block" and kw['optional_vars'] is not None:
+    if syntax == "block" and kw["optional_vars"] is not None:
         raise SyntaxError("`expand1r` (block mode) does not take an asname")
     return _expandr_impl(tree, syntax, expander, macroname="expand1r")
 
@@ -325,7 +325,7 @@ def expandr(tree, *, syntax, expander, **kw):
     If you want to quote some code to produce `tree` and then immediately expand it,
     use `expandrq` instead.
     """
-    if syntax == "block" and kw['optional_vars'] is not None:
+    if syntax == "block" and kw["optional_vars"] is not None:
         raise SyntaxError("`expandr` (block mode) does not take an asname")
     return _expandr_impl(tree, syntax, expander, macroname="expandr")
 

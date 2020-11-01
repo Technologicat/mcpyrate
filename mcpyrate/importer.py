@@ -1,7 +1,7 @@
 # -*- coding: utf-8; -*-
-'''Importer (finder/loader) customizations, to inject the macro expander.'''
+"""Importer (finder/loader) customizations, to inject the macro expander."""
 
-__all__ = ['source_to_xcode', 'path_xstats', 'invalidate_xcaches']
+__all__ = ["source_to_xcode", "path_xstats", "invalidate_xcaches"]
 
 import ast
 import distutils.sysconfig
@@ -22,10 +22,10 @@ from .utils import format_location
 
 
 def source_to_xcode(self, data, path, *, _optimize=-1):
-    '''[mcpyrate] Expand dialects, then expand macros, then compile.
+    """[mcpyrate] Expand dialects, then expand macros, then compile.
 
     Intercepts the source to bytecode transformation.
-    '''
+    """
     tree = expand_dialects(data, filename=path)
 
     module_macro_bindings = find_macros(tree, filename=path)
@@ -35,7 +35,7 @@ def source_to_xcode(self, data, path, *, _optimize=-1):
     if remaining_markers:
         raise MacroExpansionError(f"{path}: AST markers remaining after expansion: {remaining_markers}")
 
-    return compile(expansion, path, 'exec', dont_inherit=True, optimize=_optimize)
+    return compile(expansion, path, "exec", dont_inherit=True, optimize=_optimize)
 
 
 # TODO: Support PEP552 (Deterministic pycs). Need to intercept source file hashing, too.
@@ -43,7 +43,7 @@ def source_to_xcode(self, data, path, *, _optimize=-1):
 _stdlib_path_stats = SourceFileLoader.path_stats
 _xstats_cache = {}
 def path_xstats(self, path):
-    '''[mcpyrate] Compute a `.py` source file's mtime, accounting for macro-imports.
+    """[mcpyrate] Compute a `.py` source file's mtime, accounting for macro-imports.
 
     Beside the source file `path` itself, we look at any macro definition files
     the source file imports macros from, recursively, in a `make`-like fashion.
@@ -56,7 +56,7 @@ def path_xstats(self, path):
 
     If `path` does not end in `.py`, delegate to the standard implementation
     of `SourceFileLoader.path_stats`.
-    '''
+    """
     # Ignore stdlib, it's big and doesn't use macros. Allows faster error
     # exits, because an uncaught exception causes Python to load a ton of
     # .py based stdlib modules. Also makes `macropython -i` start faster.
@@ -147,13 +147,13 @@ def path_xstats(self, path):
         spec = importlib.util.find_spec(module_absname)
         origin = spec.origin
         stats = path_xstats(self, origin)
-        mtimes.append(stats['mtime'])
+        mtimes.append(stats["mtime"])
 
     mtime = stat_result.st_mtime_ns * 1e-9
     # size = stat_result.st_size
     mtimes.append(mtime)
 
-    result = {'mtime': max(mtimes)}  # and sum(sizes)? OTOH, as of Python 3.8, only 'mtime' is mandatory.
+    result = {"mtime": max(mtimes)}  # and sum(sizes)? OTOH, as of Python 3.8, only 'mtime' is mandatory.
     if sys.version_info >= (3, 7, 0):
         # Docs say `size` is optional, and this is correct in 3.6 (and in PyPy3 7.3.0):
         # https://docs.python.org/3/library/importlib.html#importlib.abc.SourceLoader.path_stats
@@ -161,7 +161,7 @@ def path_xstats(self, path):
         # but in 3.7 and later, the implementation is expecting at least a `None` there,
         # if the `size` is not used. See `get_code` in:
         # https://github.com/python/cpython/blob/master/Lib/importlib/_bootstrap_external.py
-        result['size'] = None
+        result["size"] = None
     _xstats_cache[path] = result
     return result
 

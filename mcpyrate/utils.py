@@ -1,9 +1,9 @@
 # -*- coding: utf-8; -*-
-'''General utilities. Can be useful for writing both macros as well as macro expanders.'''
+"""General utilities. Can be useful for writing both macros as well as macro expanders."""
 
-__all__ = ['gensym', 'scrub_uuid', 'flatten', 'rename',
-           'format_location', 'format_macrofunction',
-           'NestingLevelTracker']
+__all__ = ["gensym", "scrub_uuid", "flatten", "rename",
+           "format_location", "format_macrofunction",
+           "NestingLevelTracker"]
 
 import ast
 from contextlib import contextmanager
@@ -23,7 +23,7 @@ def gensym(basename=None):
     """
     basename = basename or "gensym"
     def generate():
-        unique = str(uuid.uuid4()).replace('-', '')
+        unique = str(uuid.uuid4()).replace("-", "")
         return f"{basename}_{unique}"
     sym = generate()
     # The uuid spec does not guarantee no collisions, only a vanishingly small chance.
@@ -125,7 +125,7 @@ def format_location(filename, tree, sourcecode):
     `sourcecode`: source code (typically, to get this, `unparse(tree)`
                   before expanding it), or `None` to omit it.
     '''
-    lineno = tree.lineno if hasattr(tree, 'lineno') else None
+    lineno = tree.lineno if hasattr(tree, "lineno") else None
     if sourcecode:
         sep = " " if "\n" not in sourcecode else "\n"
         source_with_sep = f"{sep}{sourcecode}"

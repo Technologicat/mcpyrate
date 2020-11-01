@@ -40,7 +40,7 @@ class MacroConsole(code.InteractiveConsole):
         if locals is None:
             locals = {}
         # Lucky that both meta-levels speak the same language, eh?
-        locals['__macro_expander__'] = self.expander
+        locals["__macro_expander__"] = self.expander
 
         super().__init__(locals, filename)
 
@@ -88,7 +88,7 @@ class MacroConsole(code.InteractiveConsole):
             return False  # complete input
         elif source.endswith("??"):
             # Use `_internal_execute` instead of `runsource` to prevent expansion of name macros.
-            return self._internal_execute(f'mcpyrate.repl.utils.sourcecode({source[:-2]})')
+            return self._internal_execute(f"mcpyrate.repl.utils.sourcecode({source[:-2]})")
         elif source.endswith("?"):
             return self._internal_execute(f"mcpyrate.repl.utils.doc({source[:-1]})")
 

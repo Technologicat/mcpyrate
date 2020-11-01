@@ -1,6 +1,6 @@
 # -*- coding: utf-8; -*-
 
-__all__ = ['Bunch']
+__all__ = ["Bunch"]
 
 from collections.abc import Mapping, MutableMapping, Container, Iterable, Sized
 

@@ -86,20 +86,20 @@ class AstMagics(Magics):
     def macros(self, line):
         """Print a human-readable list of macros currently imported into the session."""
         # Line magics print an extra `\n` at the end automatically, so remove our final `\n`.
-        print(format_bindings(_instance.macro_transformer.expander, color=True), end='')
+        print(format_bindings(_instance.macro_transformer.expander, color=True), end="")
 
     # I don't know if this is useful - one can use the `mcpyrate.debug.step_expansion`
     # macro also in the REPL - but let's put it in for now.
     # http://alexleone.blogspot.co.uk/2010/01/python-ast-pretty-printer.html
     @magic_arguments.magic_arguments()
     @magic_arguments.argument(
-        '-m', '--mode', default='exec',
+        "-m", "--mode", default="exec",
         help="The mode in which to parse the code. Can be exec (default), "
              "eval or single."
     )
     # TODO: add support for expand-once
     @magic_arguments.argument(
-        '-e', '--expand', default='no',
+        "-e", "--expand", default="no",
         help="Whether to expand macros before dumping the AST. Can be yes "
              "or no (default)."
     )
@@ -149,7 +149,7 @@ class IMcpyrateExtension:
         self.macro_transformer = InteractiveMacroTransformer(extension_instance=self)
         self.shell.ast_transformers.append(self.macro_transformer)  # TODO: last or first?
         # Lucky that both meta-levels speak the same language, eh?
-        shell.user_ns['__macro_expander__'] = self.macro_transformer.expander
+        shell.user_ns["__macro_expander__"] = self.macro_transformer.expander
 
         self.shell.run_cell(get_makemacro_sourcecode(),
                             store_history=False,
@@ -161,12 +161,12 @@ class IMcpyrateExtension:
         # AST transformer before it runs the macro expander.
 
         ipy = self.shell.get_ipython()
-        ipy.events.register('post_run_cell', self._refresh_macro_functions)
+        ipy.events.register("post_run_cell", self._refresh_macro_functions)
 
     def __del__(self):
         ipy = self.shell.get_ipython()
-        ipy.events.unregister('post_run_cell', self._refresh_macro_functions)
-        del self.shell.user_ns['__macro_expander__']
+        ipy.events.unregister("post_run_cell", self._refresh_macro_functions)
+        del self.shell.user_ns["__macro_expander__"]
         self.shell.ast_transformers.remove(self.macro_transformer)
         self.shell.input_transformers_post.remove(self._get_source_code)
 
