@@ -4,6 +4,10 @@ Advanced, third-generation macro expander for Python, after the pioneering [macr
 
 Builds on `mcpy`, with a similar explicit and compact approach, but with a lot of new features - including some excellent ideas from `macropy`. Finally, we provide integrated equivalents of [`imacropy`](https://github.com/Technologicat/imacropy) and [`pydialect`](https://github.com/Technologicat/pydialect).
 
+![100% Python](https://img.shields.io/github/languages/top/Technologicat/mcpyrate) 
+![open issues](https://img.shields.io/github/issues/Technologicat/mcpyrate) 
+[![contributions welcome](https://img.shields.io/badge/contributions-welcome-brightgreen.svg?style=flat)](http://makeapullrequest.com/)
+
 Supports Python 3.6, 3.7, 3.8, and PyPy3.
 
 We use [semantic versioning](https://semver.org/). We're almost-but-not-quite compatible with `mcpy` 2.0.0, hence the initial release of `mcpyrate` is 3.0.0. The named parameters of macros are slightly different; for details, search this document for *differences to mcpy*.
