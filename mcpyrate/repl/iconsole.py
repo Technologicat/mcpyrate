@@ -127,10 +127,10 @@ class InteractiveMacroTransformer(ast.NodeTransformer):
             if bindings:
                 self._ipyextension._macro_bindings_changed = True
                 self.expander.bindings.update(bindings)
-            newtree = self.expander.visit(tree)
-            newtree = global_postprocess(newtree)
+            new_tree = self.expander.visit(tree)
+            new_tree = global_postprocess(new_tree)
             self._ipyextension.src = _placeholder
-            return newtree
+            return new_tree
         except Exception as err:
             # see IPython.core.interactiveshell.InteractiveShell.transform_ast()
             raise InputRejected(*err.args)

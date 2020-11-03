@@ -65,9 +65,9 @@ class BaseMacroExpander(NodeTransformer):
         if tree is None:
             return None
         if isinstance(tree, list):
-            newtree = flatten(self.visit(elt) for elt in tree)
-            if newtree:
-                tree[:] = newtree
+            new_tree = flatten(self.visit(elt) for elt in tree)
+            if new_tree:
+                tree[:] = new_tree
                 return tree
             return None
         return super().visit(tree)

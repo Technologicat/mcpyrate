@@ -59,9 +59,9 @@ class Walker(NodeTransformer, metaclass=ABCMeta):
             self._stack.append(newstate)
         try:
             if isinstance(tree, list):
-                newtree = flatten(self.visit(elt) for elt in tree)
-                if newtree:
-                    tree[:] = newtree
+                new_tree = flatten(self.visit(elt) for elt in tree)
+                if new_tree:
+                    tree[:] = new_tree
                     return tree
                 return None
             return self.transform(tree)
