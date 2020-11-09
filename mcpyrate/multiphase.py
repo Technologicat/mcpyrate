@@ -162,11 +162,11 @@ def phase(tree, syntax, **kw):
     local to each module. Other modules don't need to care in which phase
     a thing was defined when they import that thing.
     """
-    if syntax != "block":
-        raise SyntaxError("`with phase` is a block macro only")
     # This is actually an importer feature; all correctly placed invocations
     # will be gone before the code is macro-expanded. So if we get here, the
     # importer didn't handle this invocation.
+    if syntax != "block":
+        raise SyntaxError("`with phase` is a block macro only")
     raise SyntaxError("Misplaced `with phase`; must appear at the module top level only.")
 
 
