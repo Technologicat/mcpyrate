@@ -95,7 +95,7 @@ def get_macros(macroimport, *, filename, reload=False, allow_asname=True, self_m
     Use the `reload` flag only when implementing a REPL, because it'll refresh modules,
     causing different uses of the same macros to point to different function objects.
 
-    Use `allow_asname` to control whether your expander supports renaming macros
+    Use `allow_asname` to say whether your expander supports renaming macros
     at the use site. Usually it's a good idea to support it; but e.g. renaming a
     dialect makes no sense.
 
