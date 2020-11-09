@@ -588,7 +588,7 @@ By default, `unparse` attempts to render code that can be `eval`'d (expression) 
 
 When debugging macros, it is often useful to see the invisible AST nodes `Expr` and `Module`, which have no surface syntax representation. To show them, as well as display line numbers, pass the named argument `debug=True`. Then the result cannot be `eval`'d or `exec`'d, but it shows much more clearly what is going on.
 
-The line numbers shown in debug mode are taken from *statement* AST nodes, because in Python, a statement typically begins a new line. If you need to see line numbers stored in *expression* AST nodes, then instead of `unparse`, you can use the function `mcpyrate.dump` to view the raw AST. The output will be very verbose, so it is recommended to do this only for a minimally small AST snippet.
+The line numbers shown in debug mode are taken from *statement* AST nodes, because in Python, a statement typically begins a new line. If you need to see line numbers stored in *expression* AST nodes, then instead of `unparse`, you can use the function `mcpyrate.dump` to view the raw AST, with (mostly) PEP8-compliant indentation, optionally with syntax highlighting (node types, field names, bare values). The output will be very verbose, so it is recommended to do this only for a minimally small AST snippet.
 
 #### Syntax highlighting
 
