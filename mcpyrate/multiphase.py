@@ -236,7 +236,11 @@ def multiphase_expand(tree, *, filename, self_module, start_from_phase=None, _op
 
     Return value is the final phase-0 `tree`, after macro expansion.
     """
-    n = start_from_phase or detect_highest_phase(tree)
+    n = start_from_phase if start_from_phase is not None else detect_highest_phase(tree)
+    if not isinstance(n, int):
+        raise TypeError  # TODO: proper error message
+    if n < 0:
+        raise ValueError  # TODO: proper error message
 
     # TODO: preserve ordering of code in the file. Currently we just paste in phase-descending order.
     for k in range(n, -1, -1):  # phase 0 is what a regular compile would do
