@@ -29,6 +29,71 @@ class Done(MacroExpanderMarker):
     from further expansion.
     """
 
+def phase(tree, syntax, **kw):
+    """[syntax, block] Control multi-phase compilation.
+
+    Multi-phase compilation allows a module to use macros defined in that
+    module itself.
+
+    Phases count down from the highest declared, down to an implicit final
+    phase 0. Once the phase-0 code has been macro-expanded and compiled,
+    the module is turned over to the regular import machinery.
+
+    Usage::
+
+        with phase[1]:
+            # macro definitions here
+
+        # everything not inside a `with phase` is implicitly phase 0
+
+        from __self__ import macros, ...
+
+        # then just code as usual
+
+    To run, `macropython app.py`.
+
+    The phase number must be a positive integer literal.
+
+    The syntax `from __self__ import macros, ...` is a *self-macro-import*,
+    which imports macros from any higher-numbered phase of the same module
+    it appears in.
+
+    Self-macro-imports vanish during macro expansion (leaving just a coverage
+    dummy node), because a module does not need to really import itself. This
+    is just a macropythonic syntax to register macro bindings.
+
+    If you need to write helper macros to define your phase 1 macros::
+
+        with phase[2]:
+            # macro definitions for phase 1 here
+
+        with phase[1]:
+            # macro-imports (also self-macro-imports) may appear
+            # at the top level of a `with phase`.
+            from __self__ import macros, ...
+
+            # macro definitions for phase 0 here
+
+        # everything not inside a `with phase` is implicitly phase 0
+
+        from __self__ import macros, ...
+
+        # then just code as usual
+
+    For any `k >= 0`, all code from phase `k + 1` is lifted to phase `k`.
+    This means e.g. that any macros or functions defined in any phase
+    of this module will be available to be imported by another module.
+
+    **NOTE**: Strictly speaking, multi-phase compilation is not a macro;
+    it is actually a feature of the `mcpyrate` importer.
+    """
+    if syntax != "block":
+        raise SyntaxError("`with phase` is a block macro only")
+    # This is actually an importer feature; all correctly placed invocations
+    # will be gone before the code is macro-expanded. So if we get here, the
+    # importer didn't handle this invocation.
+    raise SyntaxError("Misplaced `with phase`; must appear at the module top level only.")
+
 # --------------------------------------------------------------------------------
 
 class BaseMacroExpander(NodeTransformer):
