@@ -81,12 +81,16 @@ def ismacroimport(statement, magicname='macros'):
     return False
 
 
-def get_macros(macroimport, *, filename, reload=False, allow_asname=True):
+def get_macros(macroimport, *, filename, reload=False, allow_asname=True, self_module=None):
     """Get absolute module name, macro names and macro functions from a macro-import.
 
     As a side effect, import the macro definition module.
 
     Return value is `module_absname, {macroname0: macrofunction0, ...}`.
+
+    `filename` is the full path to the `.py` being macroexpanded, for resolving
+    relative macro-imports and for error reporting. In interactive use, can be
+    an arbitrary label.
 
     Use the `reload` flag only when implementing a REPL, because it'll refresh modules,
     causing different uses of the same macros to point to different function objects.
@@ -94,6 +98,10 @@ def get_macros(macroimport, *, filename, reload=False, allow_asname=True):
     Use `allow_asname` to control whether your expander supports renaming macros
     at the use site. Usually it's a good idea to support it; but e.g. renaming a
     dialect makes no sense.
+
+    `self_module` is an optional string, the absolute dotted module name of the
+    module being expanded. Used for supporting `from __self__ import macros, ...`
+    for multi-phase compilation (a.k.a. `with phase`).
 
     This function is meant for implementing actual macro expanders.
     """
@@ -109,17 +117,32 @@ def get_macros(macroimport, *, filename, reload=False, allow_asname=True):
         approx_sourcecode = unparse_with_fallbacks(macroimport)
         loc = format_location(filename, macroimport, approx_sourcecode)
         raise SyntaxError(f"{loc}\nmissing module name in macro-import")
-    module_absname = importlib.util.resolve_name("." * macroimport.level + macroimport.module, package_absname)
 
-    try:
-        module = importlib.import_module(module_absname)
-    except ModuleNotFoundError as err:
-        approx_sourcecode = unparse_with_fallbacks(macroimport)
-        loc = format_location(filename, macroimport, approx_sourcecode)
-        raise ModuleNotFoundError(f"{loc}\nNo module named {module_absname}") from err
+    # macro-import from an earlier phase of a module using `with phase`
+    if macroimport.module == "__self__":
+        if macroimport.level:
+            approx_sourcecode = unparse_with_fallbacks(macroimport)
+            loc = format_location(filename, macroimport, approx_sourcecode)
+            raise SyntaxError(f"{loc}\nself-macro-imports cannot be relative")
+        # When we get here, the module, as compiled up to the previous phase,
+        # is already in `sys.modules`, because the importer temporarily places
+        # it there. That way we can load macro bindings from it, while the
+        # current phase is being compiled.
+        module_absname = self_module
+        module = sys.modules[module_absname]
 
-    if reload:
-        module = importlib.reload(module)
+    else:  # regular macro-import
+        module_absname = importlib.util.resolve_name("." * macroimport.level + macroimport.module, package_absname)
+
+        try:
+            module = importlib.import_module(module_absname)
+        except ModuleNotFoundError as err:
+            approx_sourcecode = unparse_with_fallbacks(macroimport)
+            loc = format_location(filename, macroimport, approx_sourcecode)
+            raise ModuleNotFoundError(f"{loc}\nNo module named {module_absname}") from err
+
+        if reload:
+            module = importlib.reload(module)
 
     bindings = {}
     for name in macroimport.names[1:]:

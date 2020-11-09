@@ -516,13 +516,14 @@ def expand_macros(tree, bindings, *, filename):
     return expansion
 
 
-def find_macros(tree, *, filename, reload=False):
+def find_macros(tree, *, filename, reload=False, self_module=None, transform=True):
     """Establish macro bindings from `tree`. Top-level entrypoint.
 
     Collect bindings from each macro-import statement (`from ... import macros, ...`)
-    at the top level of `tree.body`. Transform each macro-import into `import ...`,
-    where `...` is the absolute module name the macros are being imported from.
-    As a side effect, import the macro definition modules.
+    at the top level of `tree.body`.
+
+    As a side effect, import the macro definition modules. (We must do this in order
+    to load the macro function definitions, so that we can bind to them.)
 
     Primarily meant to be called with `tree` the AST of a module that
     uses macros, but works with any `tree` that has a `body` attribute.
@@ -531,18 +532,44 @@ def find_macros(tree, *, filename, reload=False):
                 relative macro-imports and for error reporting. In interactive
                 use, can be an arbitrary label.
 
-    `reload`:   enable only if implementing a REPL. Will refresh modules, causing
-                different uses of the same macros to point to different function objects.
+    `reload`:   If enabled, refresh modules, causing different uses of the same macros
+                to point to different function objects. Enable only if implementing a REPL.
+
+    `self_module`: str, optional, absolute dotted module name of the module being
+                   expanded. Used for supporting `from __self__ import macros, ...`
+                   for multi-phase compilation (a.k.a. `with phase`).
+
+    `transform`: If enabled, transform each macro-import into `import ...`,
+                 where `...` is the absolute module name the macros are being
+                 imported from. Usually this is the Right Thing to do, to honor
+                 the unhygienic expose API guarantee.
+
+                 The notable exception is multi-phase compilation, which needs
+                 to produce two versions of the code: one to run immediately
+                 (to produce the temporary module for the current phase), and
+                 another to be lifted into the next phase. The code for the
+                 next phase needs to have the original macro-imports so we can
+                 establish the same bindings again in that phase; but in the code
+                 to run immediately, macro-imports should be transformed away so
+                 that the temporary module works as expected.
 
     Return value is a dict `{macroname: function, ...}` with all collected bindings.
     """
     bindings = {}
     for index, statement in enumerate(tree.body):
         if ismacroimport(statement):
-            module_absname, more_bindings = get_macros(statement, filename=filename, reload=reload)
+            module_absname, more_bindings = get_macros(statement, filename=filename, reload=reload, self_module=self_module)
             bindings.update(more_bindings)
-            # Remove all names to prevent macros being used as regular run-time objects.
-            # Always use an absolute import, for the unhygienic expose API guarantee.
-            tree.body[index] = copy_location(Import(names=[alias(name=module_absname, asname=None)]),
-                                             statement)
+            if transform:
+                if self_module and module_absname == self_module:
+                    # Remove self-macro-imports after establishing bindings.
+                    # No need to import a module at run time; the importer lifts all
+                    # the higher-phase code also into the code of the current phase.
+                    dummies = _insert_coverage_dummy_stmt(None, statement, "<self-macro-import>", filename)
+                    tree.body[index] = dummies[0]
+                else:
+                    # Remove all names to prevent macros being used as regular run-time objects.
+                    # Always use an absolute import, for the unhygienic expose API guarantee.
+                    tree.body[index] = copy_location(Import(names=[alias(name=module_absname, asname=None)]),
+                                                     statement)
     return bindings

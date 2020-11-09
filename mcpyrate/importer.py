@@ -4,6 +4,7 @@
 __all__ = ["source_to_xcode", "path_xstats", "invalidate_xcaches"]
 
 import ast
+from copy import copy, deepcopy
 import distutils.sysconfig
 import importlib.util
 from importlib.machinery import FileFinder, SourceFileLoader
@@ -11,15 +12,96 @@ import tokenize
 import os
 import pickle
 import sys
+from types import ModuleType
 
 from .core import MacroExpansionError
 from .dialects import expand_dialects
-from .expander import find_macros, expand_macros
+from .expander import find_macros, expand_macros, destructure_candidate, global_postprocess
 from .coreutils import resolve_package, ismacroimport
 from .markers import get_markers
 from .unparser import unparse_with_fallbacks
 from .utils import format_location
 
+
+# --------------------------------------------------------------------------------
+# multi-phase compilation support (so a module can define macros it uses itself)
+
+# TODO: add a `phase` "macro" to `mcpyrate.core` (it should always error out, this is an importer feature)
+
+def iswithphase(stmt):
+    """Detect `with phase[n]`, where `n >= 1` is an integer.
+
+    Return `n`, or `False`.
+    """
+    if type(stmt) is not ast.With:
+        return False
+    if len(stmt.items) != 1:
+        return False
+    item = stmt.items[0]
+    if item.optional_vars is not None:  # no as-part allowed
+        return False
+    candidate = item.context_expr
+    if type(candidate) is not ast.Subscript:
+        return False
+    macroname, macroargs = destructure_candidate(candidate)
+    if macroname != "phase":
+        return False
+    if not macroargs or len(macroargs) != 1:  # exactly one macro-argument
+        return False
+    arg = macroargs[0]
+    if type(arg) is ast.Constant:
+        n = arg.value
+    elif type(arg) is ast.Num:  # TODO: remove ast.Num once we bump minimum language version to Python 3.8
+        n = arg.n
+    else:
+        return False
+    if not isinstance(n, int) or n < 1:
+        return False
+    return n
+
+
+def detect_highest_phase(tree):
+    """Scan a module body for `with phase[n]` statements and return highest `n`, or `None`.
+
+    Primarily meant to be called with `tree` the AST of a module that
+    uses macros, but works with any `tree` that has a `body` attribute.
+
+    Used for initializing the phase countdown in multi-phase compilation.
+    """
+    maxn = None
+    for stmt in tree.body:
+        n = iswithphase(stmt)
+        if maxn is None or (n is not None and n > maxn):
+            maxn = n
+    return maxn
+
+
+def split_multiphase_module_ast(tree, *, phase=0):
+    """Split `ast.Module` `tree` into given phase and remaining parts.
+
+    The statements belonging to this phase are returned as a new `ast.Module`,
+    and the `body` attribute of the original `tree` is overwritten with the
+    remaining statements.
+    """
+    if not isinstance(phase, int):
+        raise TypeError  # TODO: proper error message
+    if phase < 0:
+        raise ValueError  # TODO: proper error message
+    if phase == 0:
+        return tree
+    remaining = []
+    thisphase = []
+    for stmt in tree.body:
+        if iswithphase(stmt) == phase:
+            thisphase.extend(stmt.body)
+        else:
+            remaining.append(stmt)
+    tree.body[:] = remaining
+    out = copy(tree)
+    out.body = thisphase
+    return out
+
+# --------------------------------------------------------------------------------
 
 def source_to_xcode(self, data, path, *, _optimize=-1):
     """[mcpyrate] Expand dialects, then expand macros, then compile.
@@ -28,12 +110,68 @@ def source_to_xcode(self, data, path, *, _optimize=-1):
     """
     tree = expand_dialects(data, filename=path)
 
-    module_macro_bindings = find_macros(tree, filename=path)
-    expansion = expand_macros(tree, bindings=module_macro_bindings, filename=path)
+    def check_no_markers_remaining(tree):
+        remaining_markers = get_markers(tree)
+        if remaining_markers:
+            # print(unparse_with_fallbacks(expansion, debug=True, color=True))
+            raise MacroExpansionError(f"{path}: AST markers remaining after expansion: {remaining_markers}")
 
-    remaining_markers = get_markers(expansion)
-    if remaining_markers:
-        raise MacroExpansionError(f"{path}: AST markers remaining after expansion: {remaining_markers}")
+    n = detect_highest_phase(tree)
+    if not n:  # no `with phase[n]` invocations; regular one-phase compilation
+        module_macro_bindings = find_macros(tree, filename=path)
+        expansion = expand_macros(tree, bindings=module_macro_bindings, filename=path)
+        check_no_markers_remaining(expansion)
+
+    else:  # multi-phase compilation
+        # TODO: preserve ordering of code in the file. Currently we just paste in phase-descending order.
+        for k in range(n, -1, -1):  # phase 0 is what a regular compile would do
+            print(f"***** PHASE {k} for '{self.name}' ({path})")  # TODO: add proper debug tools
+            phase_k_tree = split_multiphase_module_ast(tree, phase=k)
+            if phase_k_tree:
+                # Establish macro bindings, but don't transform macro-imports yet; we need to
+                # keep them in the code to be spliced into the next phase.
+                #
+                # `self.name` is absolute dotted module name, see `importlib.machinery.FileLoader`.
+                # This allows us to support `from __self__ import macros, ...` for multi-phase
+                # compilation (a.k.a. `with phase`).
+                module_macro_bindings = find_macros(phase_k_tree, filename=path, self_module=self.name, transform=False)
+
+                # Expand macros as usual.
+                expansion = expand_macros(phase_k_tree, bindings=module_macro_bindings, filename=path)
+
+                # # TODO: add proper debug tools
+                # from .unparser import unparse
+                # print(unparse(expansion.body, debug=True, color=True))
+
+                # Lift macro-expanded code from phase `k` into phase `k - 1`.
+                if k > 0:
+                    tree.body[:] = deepcopy(expansion.body) + tree.body
+
+                # Transform the macro-imports in the code we actually intend to run at phase k.
+                find_macros(expansion, filename=path, self_module=self.name, transform=True)
+
+                # We must postprocess again, because we transformed the macro-imports *after*
+                # `expand_macros` (which postprocesses), and self-macro-imports insert dummy
+                # coverage nodes (which have a `Done` marker around them).
+                expansion = global_postprocess(expansion)
+
+                check_no_markers_remaining(expansion)
+
+                # Once we hit the final phase, no more temporary modules - let the import system take over.
+                if k == 0:
+                    break
+
+                # Compile temporary module, and inject it into `sys.modules`,
+                # so we can compile the next phase.
+                #
+                # We don't bother with hifi stuff, such as attributes usually set by the importer,
+                # or even the module docstring. We essentially just need the functions for the macro bindings.
+                temporary_code = compile(expansion, path, "exec", dont_inherit=True, optimize=_optimize)
+                temporary_module = ModuleType(self.name)
+                sys.modules[self.name] = temporary_module
+                exec(temporary_code, temporary_module.__dict__)
+        if self.name in sys.modules:  # delete temporary module
+            del sys.modules[self.name]
 
     return compile(expansion, path, "exec", dont_inherit=True, optimize=_optimize)
 
@@ -145,9 +283,10 @@ def path_xstats(self, path):
         module_absname = importlib.util.resolve_name('.' * macroimport.level + macroimport.module, package_absname)
 
         spec = importlib.util.find_spec(module_absname)
-        origin = spec.origin
-        stats = path_xstats(self, origin)
-        mtimes.append(stats["mtime"])
+        if spec:  # self-macro-imports have no `spec`, and that's fine.
+            origin = spec.origin
+            stats = path_xstats(self, origin)
+            mtimes.append(stats["mtime"])
 
     mtime = stat_result.st_mtime_ns * 1e-9
     # size = stat_result.st_size
