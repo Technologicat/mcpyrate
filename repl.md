@@ -173,4 +173,4 @@ Welcome to the through-the-looking-glass world of the REPL, where every time a c
 
 The `@macro` utility hooks into the REPL session's macro expander. The same trick does not work in a source file, because that `macro(f)` call is technically a run-time thing. When a module reaches run-time, the macro expander has already exited, and no more macro invocations remain.
 
-Allowing to invoke a macro in the same module where it is defined would require a more complex multi-pass import strategy, which `mcpyrate` doesn't currently have.
+Allowing to invoke a macro in the same module where it is defined requires a multi-pass compilation strategy. See `with phase`.

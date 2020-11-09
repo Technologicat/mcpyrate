@@ -129,14 +129,14 @@ def phase(tree, syntax, **kw):
     If you need to write helper macros to define your phase 1 macros::
 
         with phase[2]:
-            # macro definitions for phase 1 here
+            # define macros used by phase 1 here
 
         with phase[1]:
             # macro-imports (also self-macro-imports) may appear
             # at the top level of a `with phase`.
             from __self__ import macros, ...
 
-            # macro definitions for phase 0 here
+            # define macros used by phase 0 here
 
         # everything not inside a `with phase` is implicitly phase 0
 
