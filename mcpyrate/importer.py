@@ -16,7 +16,7 @@ from .dialects import expand_dialects
 from .expander import find_macros, expand_macros
 from .coreutils import resolve_package, ismacroimport
 from .markers import check_no_markers_remaining
-from .multiphase import detect_highest_phase, multiphase_expand
+from .multiphase import ismultiphase, multiphase_expand
 from .unparser import unparse_with_fallbacks
 from .utils import format_location
 
@@ -28,8 +28,7 @@ def source_to_xcode(self, data, path, *, _optimize=-1):
     """
     tree = expand_dialects(data, filename=path)
 
-    n = detect_highest_phase(tree)
-    if not n:  # no `with phase[n]`; regular one-phase compilation
+    if not ismultiphase(tree):
         module_macro_bindings = find_macros(tree, filename=path)
         expansion = expand_macros(tree, bindings=module_macro_bindings, filename=path)
         check_no_markers_remaining(expansion, filename=path)
@@ -37,8 +36,7 @@ def source_to_xcode(self, data, path, *, _optimize=-1):
     else:  # multi-phase compilation
         # `self.name` is absolute dotted module name, see `importlib.machinery.FileLoader`.
         # This is used to resolve `__self__` in `from __self__ import macros, ...`.
-        expansion = multiphase_expand(tree, filename=path, self_module=self.name,
-                                      start_from_phase=n, _optimize=_optimize)
+        expansion = multiphase_expand(tree, filename=path, self_module=self.name, _optimize=_optimize)
 
     return compile(expansion, path, "exec", dont_inherit=True, optimize=_optimize)
 

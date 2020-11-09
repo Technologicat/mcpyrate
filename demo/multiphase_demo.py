@@ -5,8 +5,8 @@
 #
 # Actually `with phase` is an importer feature, not really a regular macro,
 # but we need a place to put the docstring, and it's nice if `flake8` is happy.
-# So there's a `phase` "macro" in `mcpyrate.multiphase`. It'll actually catch
-# any misplaced invocations, so it's a good idea to import it.
+# So there's a `phase` "macro" in `mcpyrate.multiphase`. Macro-importing it
+# enables the multi-phase compiler for this module.
 #
 from mcpyrate.multiphase import macros, phase
 

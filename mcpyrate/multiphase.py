@@ -7,13 +7,14 @@ Note `__main__` is a module, too, so if `app.py` uses `with phase`,
 running as `macropython app.py` is fine.
 """
 
-__all__ = ["phase", "detect_highest_phase", "multiphase_expand"]
+__all__ = ["phase", "ismultiphase", "detect_highest_phase", "multiphase_expand"]
 
 import ast
 from copy import copy, deepcopy
 import sys
 from types import ModuleType
 
+from .coreutils import ismacroimport
 from .expander import find_macros, expand_macros, destructure_candidate, global_postprocess
 from .markers import check_no_markers_remaining
 
@@ -169,6 +170,26 @@ def phase(tree, syntax, **kw):
     raise SyntaxError("Misplaced `with phase`; must appear at the module top level only.")
 
 
+def ismultiphase(tree):
+    """Scan a module body to determine whether it requests multi-phase compilation.
+
+    Primarily meant to be called with `tree` the AST of a module that
+    uses macros, but works with any `tree` that has a `body` attribute.
+
+    To request multi-phase compilation, place this macro-import somewhere in the
+    top level of the module body::
+
+        from mcpyrate.multiphase import macros, phase
+    """
+    for stmt in tree.body:
+        if not (ismacroimport(stmt) and stmt.module == "mcpyrate.multiphase" and stmt.level == 0):
+            continue
+        for name in stmt.names[1:]:
+            if name.name == "phase":
+                return True
+    return False
+
+
 def detect_highest_phase(tree):
     """Scan a module body for `with phase[n]` statements and return highest `n`, or `None`.
 
@@ -206,11 +227,9 @@ def multiphase_expand(tree, *, filename, self_module, start_from_phase=None, _op
     `start_from_phase`: Optional int, >= 0. If `None`, will be scanned automatically
                         from `tree`, using `detect_highest_phase`.
 
-                        This parameter exists only so that if you have already
-                        scanned `tree` to determine the highest phase (e.g. in
-                        order to detect whether `tree` needs multi-phase
-                        compilation), you can provide the value, so this
-                        function doesn't need to scan `tree` again.
+                        This parameter exists only so that if you have already scanned
+                        `tree` to determine the highest phase, you can provide the value,
+                        so this function doesn't need to scan `tree` again.
 
     `_optimize`:        Passed on to Python's built-in `compile` function, when compiling
                         the temporary higher-phase modules. Has no effect on the final result.
