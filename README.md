@@ -860,6 +860,8 @@ Any macros that `mymacro` invokes in its output AST are just data, to be spliced
 
 As the old saying goes, *it's always five'o'clock **somewhere***. *There is no global macro expansion time* - the "time" must be considered separately for each source file.
 
+(And if you use [multi-phase compilation](#multi-phase-compilation) (a.k.a. `with phase`), each phase will have its own macro-expansion time as well as its own run time. For any `k >= 0`, the run time of phase `k + 1` is the macro expansion time of phase `k`.)
+
 
 ### `step_expansion` is treating the `expands` family of macros as a single step?
 
