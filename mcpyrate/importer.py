@@ -33,7 +33,7 @@ def source_to_xcode(self, data, path, *, _optimize=-1):
         expansion = expand_macros(tree, bindings=module_macro_bindings, filename=path)
         check_no_markers_remaining(expansion, filename=path)
 
-    else:  # multi-phase compilation
+    else:
         # `self.name` is absolute dotted module name, see `importlib.machinery.FileLoader`.
         # This is used to resolve `__self__` in `from __self__ import macros, ...`.
         expansion = multiphase_expand(tree, filename=path, self_module=self.name, _optimize=_optimize)
