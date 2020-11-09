@@ -79,6 +79,7 @@ We use [semantic versioning](https://semver.org/). We're almost-but-not-quite co
     - Embeddable à la `code.InteractiveConsole`. See `mcpyrate.repl.console.MacroConsole`.
   - IPython extension `mcpyrate.repl.iconsole`. Import, define and use macros in an IPython session.
   - See [full documentation of the REPL system](repl.md).
+  - Multi-phase compilation. Define and use macros in the same module.
 
 - **Testing and debugging**.
   - Statement coverage is correctly reported by tools such as [`Coverage.py`](https://github.com/nedbat/coveragepy/).
@@ -164,7 +165,7 @@ but first, make sure you're not in a folder that has an `mcpyrate` subfolder - `
 
 Just like earlier macro expanders for Python, `mcpyrate` must be explicitly enabled before importing any module that uses macros. Macros must be defined in a separate module.
 
-The following classical 3-file setup works fine:
+The following classical **3-file setup** works fine:
 
 ```python
 # run.py
@@ -183,7 +184,7 @@ echo[6 * 7]
 
 To run, `python -m run`.
 
-In `mcpyrate`, the wrapper `run.py` is optional. The following 2-file setup works fine, too:
+In `mcpyrate`, the wrapper `run.py` is optional. The following **2-file setup** works fine, too:
 
 ```python
 # mymacros.py with your macro definitions
@@ -201,6 +202,22 @@ To run, `macropython -m application`.
 This will import `application`, making that module believe it's `__main__`. In a sense, it really is: if you look at `sys.modules["__main__"]`, you'll find the `application` module. The conditional main idiom works, too.
 
 `macropython` is installed as a [console script](https://python-packaging.readthedocs.io/en/latest/command-line-scripts.html#the-console-scripts-entry-point). Thus it will use the `python` interpreter that is currently active according to `/usr/bin/env`. So if you e.g. set up a venv with PyPy3 and activate the venv, `macropython` will use that.
+
+Finally, the following **1-file setup** works, via multi-phase compilation:
+
+```python
+from mcpyrate.multiphase import macros, phase
+
+with phase[1]:
+    def echo(expr, **kw):
+        print('Echo')
+        return expr
+
+from __self__ import macros, echo
+echo[6 * 7]
+```
+
+Then `macropython -m application`.
 
 
 ### Interactive use
