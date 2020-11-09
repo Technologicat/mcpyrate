@@ -92,7 +92,7 @@ We use [semantic versioning](https://semver.org/). We're almost-but-not-quite co
     - The output is **syntax-highlighted**, and **line-numbered** based on `lineno` fields from the AST.
       - Also names of macros currently bound in the expander are highlighted by `step_expansion`.
     - The invisible nodes `ast.Module` and `ast.Expr` are shown, since especially `ast.Expr` is a common trap for the unwary.
-    - To step the expansion of a run-time AST value, see the macro [`mcpyrate.metatools.stepr`](mcpyrate/metatools.py).
+    - To step the expansion of a run-time AST value, see the macro [`mcpyrate.metatools.stepr`](mcpyrate/metatools.py). [Documentation](quasiquotes.md#the-expand-family-of-macros).
   - Manual expand-once. See `expander.visit_once`; get the `expander` as a named argument of your macro. See also the `expand1s` and `expand1r` macros in [`mcpyrate.metatools`](mcpyrate/metatools.py).
 
 - **Lightning speed**.
@@ -638,7 +638,9 @@ Full list as of v3.0.0, in alphabetical order:
 
 No named parameter `to_source`. Use the function `mcpyrate.unparse`.
 
-No named parameter `expand_macros`. Use the named parameter `expander`, which grants access to the macro expander instance. Call `expander.visit(tree)`. You might also want to see the `expand` family of macros in [`mcpyrate.metatools`](mcpyrate/metatools.py).
+No named parameter `expand_macros`. Use the named parameter `expander`, which grants access to the macro expander instance. Call `expander.visit(tree)`.
+
+You might also want to see the `expand` family of macros in [`mcpyrate.metatools`](mcpyrate/metatools.py). [Documentation](quasiquotes.md#the-expand-family-of-macros).
 
 The named parameters `args` and `invocation` are new.
 
