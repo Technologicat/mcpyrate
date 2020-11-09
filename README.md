@@ -517,13 +517,13 @@ Furthermore, identifier macros are an opt-in feature. The value of the `syntax` 
 
 Let us call all descendants of `ast.expr` (note lowercase `e`) *expression AST nodes*, and all descendants of `ast.stmt` *statement AST nodes*. The different invocation types behave as follows:
 
- - If `syntax == 'expr'`, then `tree` is a single expression AST node.
+ - If `syntax == 'expr'`, then `tree` is a single **expression** AST node.
 
- - If `syntax == 'block'`, then `tree` is always a `list` of statement AST nodes. If several block macros appear in the same `with`, they are popped one by one, left-to-right; the `with` goes away when (if) all its context managers have been popped. As long as the `with` is there, it appears as the only top-level statement in the list `tree`.
+ - If `syntax == 'block'`, then `tree` is always a `list` of **statement** AST nodes. If several block macros appear in the same `with`, they are popped one by one, left-to-right; the `with` goes away when (if) all its context managers have been popped. As long as the `with` is there, it appears as the only top-level statement in the list `tree`.
 
- - If `syntax == 'decorator'`, then `tree` is the decorated node itself, which is a statement AST node (a class definition, function definition, or async function definition). If several decorator macros decorate the same node, they are popped one by one, innermost-to-outermost. This is the same processing order as Python uses for regular decorators.
+ - If `syntax == 'decorator'`, then `tree` is the decorated node itself, which is a **statement** AST node (a class definition, function definition, or async function definition). If several decorator macros decorate the same node, they are popped one by one, innermost-to-outermost. This is the same processing order as Python uses for regular decorators.
 
- - If `syntax == 'name'`, then `tree` is the `Name` node itself. It is an expression AST node.
+ - If `syntax == 'name'`, then `tree` is the `Name` node itself. It is an **expression** AST node.
 
 Valid return values from a macro are as follows:
 
