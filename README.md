@@ -401,7 +401,7 @@ do it manually, because the machinery may need to do something else, too, and
 the absence from `sys.modules` may act as a trigger.)
 
 All code from phase `k + 1` is automatically lifted into the code for phase `k`.
-Phase `k` then lifts them to phase `k - 1`, and the chain continues all the way
+Phase `k` then lifts it to phase `k - 1`, and the chain continues all the way
 down to the implicit phase `0`.
 
 This means e.g. that another module that wants to import macros from this one
