@@ -10,7 +10,7 @@
     - [`macropython`, the universal bootstrapper](#macropython-the-universal-bootstrapper)
         - [Starting a macro-enabled REPL from the shell](#starting-a-macro-enabled-repl-from-the-shell)
         - [Running a macro-enabled main program](#running-a-macro-enabled-main-program)
-    - [FAQ](#faq)
+    - [Questions & Answers](#questions--answers)
         - [`@macro` is convenient, why is it only available in the REPL?](#macro-is-convenient-why-is-it-only-available-in-the-repl)
 
 <!-- markdown-toc end -->
@@ -35,9 +35,9 @@ The line magic `%macros` shows the current macro bindings in the session.
 
 The cell magic `%%dump_ast` shows the AST representation of a whole input cell.
 
-The magic function `macro(f)` binds function `f` as a macro in the current REPL session, so you can interactively develop macros right there in the REPL. It works also as a decorator. The new macro will be available from the **next** REPL input onward.
+The magic function `macro(f)` binds function `f` as a macro in the current REPL session, so you can interactively develop macros right there in the REPL. It works also as a decorator. The new macro will be available from the **next** REPL input onward. You can also use the *self-macro-import* syntax, `from __self__ import macros, f`, to achieve the same effect.
 
-Each time a ``from module import macros, ...`` is executed in the REPL, just before invoking the macro expander, the system reloads ``module``, to always import the latest macro definitions.
+Each time a ``from module import macros, ...`` (when `module` is anything other than the literal `__self__`) is executed in the REPL, just before invoking the macro expander, the system reloads ``module``, to always import the latest macro definitions.
 
 Hence, semi-live updates to macro definitions are possible: hack on your macros, re-import the macros, and try out the new version in the REPL. No need to restart the REPL session in between.
 
@@ -86,9 +86,9 @@ Similarly to IPython, `obj?` shows obj's docstring, and `obj??` shows its source
 
 The command `macros?` shows the current macro bindings in the session. This shadows the `obj?` docstring lookup syntax if you happen to define anything called `macros` (`mcpyrate` itself doesn't), but that's likely not needed. That can still be invoked manually, using `mcpyrate.repl.utils.doc(macros)`.
 
-The magic function `macro(f)` binds function `f` as a macro in the current REPL session, so you can interactively develop macros right there in the REPL. It works also as a decorator. The new macro will be available from the **next** REPL input onward.
+The magic function `macro(f)` binds function `f` as a macro in the current REPL session, so you can interactively develop macros right there in the REPL. It works also as a decorator. The new macro will be available from the **next** REPL input onward. You can also use the *self-macro-import* syntax, `from __self__ import macros, f`, to achieve the same effect.
 
-Each time a ``from module import macros, ...`` is executed in the REPL, just before invoking the macro expander, the system reloads ``module``, to always import the latest macro definitions.
+Each time a ``from module import macros, ...`` (when `module` is anything other than the literal `__self__`) is executed in the REPL, just before invoking the macro expander, the system reloads ``module``, to always import the latest macro definitions.
 
 Hence, semi-live updates to macro definitions are possible: hack on your macros, re-import the macros, and try out the new version in the REPL. No need to restart the REPL session in between.
 
@@ -165,12 +165,68 @@ python3 <your options here> $(which macropython) -m example
 This way the rest of the options go to the Python interpreter itself, and the ``-m example`` to the ``macropython`` bootstrapper.
 
 
-## FAQ
+## Questions & Answers
 
 ### `@macro` is convenient, why is it only available in the REPL?
 
-Welcome to the through-the-looking-glass world of the REPL, where every time a complete input is entered is macro-expansion time.
+The answer is twofold:
 
-The `@macro` utility hooks into the REPL session's macro expander. The same trick does not work in a source file, because that `macro(f)` call is technically a run-time thing. When a module reaches run-time, the macro expander has already exited, and no more macro invocations remain.
+ 1. Welcome to the through-the-looking-glass world of the REPL, where every time
+    a complete input is entered is macro-expansion time.
 
-Allowing to invoke a macro in the same module where it is defined requires a multi-pass compilation strategy. See `with phase`.
+    The `@macro` utility hooks into the REPL session's macro expander. The same
+    simple trick does not work in a source file, because that `macro(f)` call is
+    technically a run-time thing. When a module reaches run-time, the macro
+    expander has already exited, and no more macro invocations remain.
+
+    Allowing to invoke a macro in the same source file where it is defined
+    requires a multi-phase compilation strategy. `mcpyrate` **does** support
+    this, but the syntax is a bit different; see [multi-phase
+    compilation](README.md#multi-phase-compilation) (a.k.a. `with phase`).
+
+    The *self-macro-import* syntax, `from __self__ import macros, ...`,
+    which is used by `with phase`, is also available in the REPL, but that's
+    a bit long to type in an interactive session.
+
+    So in the spirit of *practicality beats purity* - just as
+    `from ... import *` is considered ok for interactive use - the `@macro`
+    decorator is a shorthand that achieves the effect of a self-macro-import
+    (via a different mechanism, but that's an implementation detail).
+
+ 2. Syntactic conventions. It is a macropythonic tradition, started by the
+    original `macropy`, that in macro-enabled Python, macros must be explicitly
+    imported at the use site. In Python, *explicit is better than implicit*,
+    so it was very pythonic to make the design choice this way.
+
+    `mcpy` took the idea further, by making macro definitions into regular
+    functions - so that the definition site has no indication for a function
+    actually being a macro (other than its slightly curious choice of
+    parameters). This has a number of advantages; the bare syntax transformer
+    becomes easily accessible (it's simply the function itself!), and
+    importantly, a hiding place for magic vanishes. In `mcpy`, **there is no
+    macro registry**; there are only the current expander instance's macro
+    bindings. Upon a closer look, that's just a `dict` that maps strings (the
+    macro names) to regular functions (the macro definitions).
+
+    At the macro definition site, the absence of a special marker itself very
+    strongly suggests there is no magic going on. *What you see is what you
+    get.* `mcpyrate` has chosen to follow this tradition.
+
+    Hence a `@macro` decorator is not really an appropriate solution, because
+    that's a *definition-site* thing; and in `mcpyrate`, just like in `mcpy`, a
+    function actually being a macro is a *use-site* thing. So, what we actually
+    need is a syntax to indicate - at the use site - that we want to bind a
+    specific function as a macro. In `mcpyrate`, the *macro-import* fulfills
+    this role, just like it does in `macropy` and in `mcpy`.
+
+    There's the minor problem that in the REPL, there is no module name that
+    represents the session itself. So from which module to import macros defined
+    in the REPL? We recognize this situation from multi-phase compilation:
+    it is completely analogous with a source file importing macros from itself,
+    with the collection of already entered REPL inputs playing the role of the
+    previous phase. This is a general solution that fits the macropythonic
+    tradition.
+
+    So rather than add a `@macro` decorator to the rest of the system, we have
+    made the REPL support the *self-macro-import* syntax, and provided `@macro`
+    as a convenient shorthand for interactive use.
