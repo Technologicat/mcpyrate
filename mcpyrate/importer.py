@@ -1,10 +1,9 @@
 # -*- coding: utf-8; -*-
-"""Importer (finder/loader) customizations, to inject the macro expander."""
+"""Importer (finder/loader) customizations, to inject the dialect and macro expanders."""
 
 __all__ = ["source_to_xcode", "path_xstats", "invalidate_xcaches"]
 
 import ast
-from copy import copy, deepcopy
 import distutils.sysconfig
 import importlib.util
 from importlib.machinery import FileFinder, SourceFileLoader
@@ -12,179 +11,15 @@ import tokenize
 import os
 import pickle
 import sys
-from types import ModuleType
 
 from .dialects import expand_dialects
-from .expander import find_macros, expand_macros, destructure_candidate, global_postprocess
+from .expander import find_macros, expand_macros
 from .coreutils import resolve_package, ismacroimport
 from .markers import check_no_markers_remaining
+from .multiphase import detect_highest_phase, multiphase_expand
 from .unparser import unparse_with_fallbacks
 from .utils import format_location
 
-
-# --------------------------------------------------------------------------------
-# multi-phase compilation support (so a module can define macros it uses itself)
-
-# TODO: add a `phase` "macro" to `mcpyrate.core` (it should always error out, this is an importer feature)
-
-def iswithphase(stmt):
-    """Detect `with phase[n]`, where `n >= 1` is an integer.
-
-    Return `n`, or `False`.
-    """
-    if type(stmt) is not ast.With:
-        return False
-    if len(stmt.items) != 1:
-        return False
-    item = stmt.items[0]
-    if item.optional_vars is not None:  # no as-part allowed
-        return False
-    candidate = item.context_expr
-    if type(candidate) is not ast.Subscript:
-        return False
-    macroname, macroargs = destructure_candidate(candidate)
-    if macroname != "phase":
-        return False
-    if not macroargs or len(macroargs) != 1:  # exactly one macro-argument
-        return False
-    arg = macroargs[0]
-    if type(arg) is ast.Constant:
-        n = arg.value
-    elif type(arg) is ast.Num:  # TODO: remove ast.Num once we bump minimum language version to Python 3.8
-        n = arg.n
-    else:
-        return False
-    if not isinstance(n, int) or n < 1:
-        return False
-    return n
-
-
-def detect_highest_phase(tree):
-    """Scan a module body for `with phase[n]` statements and return highest `n`, or `None`.
-
-    Primarily meant to be called with `tree` the AST of a module that
-    uses macros, but works with any `tree` that has a `body` attribute.
-
-    Used for initializing the phase countdown in multi-phase compilation.
-    """
-    maxn = None
-    for stmt in tree.body:
-        n = iswithphase(stmt)
-        if maxn is None or (n is not None and n > maxn):
-            maxn = n
-    return maxn
-
-
-def split_multiphase_module_ast(tree, *, phase=0):
-    """Split `ast.Module` `tree` into given phase and remaining parts.
-
-    The statements belonging to this phase are returned as a new `ast.Module`,
-    and the `body` attribute of the original `tree` is overwritten with the
-    remaining statements.
-    """
-    if not isinstance(phase, int):
-        raise TypeError  # TODO: proper error message
-    if phase < 0:
-        raise ValueError  # TODO: proper error message
-    if phase == 0:
-        return tree
-    remaining = []
-    thisphase = []
-    for stmt in tree.body:
-        if iswithphase(stmt) == phase:
-            thisphase.extend(stmt.body)
-        else:
-            remaining.append(stmt)
-    tree.body[:] = remaining
-    out = copy(tree)
-    out.body = thisphase
-    return out
-
-
-def multiphase_compile(tree, *, filename, self_module, start_from_phase=None, _optimize=-1):
-    """Compile an AST in multiple phases, controlled by `with phase[n]`.
-
-    Primarily meant to be called with `tree` the AST of a module that
-    uses macros, but works with any `tree` that has a `body` attribute.
-
-    At each phase `k >= 1`, a temporary module is injected to `sys.modules`,
-    so that the next phase can import macros from it (using a self-macro-import).
-    Once phase `k = 0` is reached and the code is compiled, the temporary entry
-    in `sys.modules` is deleted.
-
-    `filename`:         Full path to the `.py` file being compiled.
-
-    `self_module`:      Absolute dotted module name of the module being compiled.
-                        Will be used to temporarily inject the temporary,
-                        higher-phase modules into `sys.modules`.
-
-    `start_from_phase`: Optional int, >= 0. If not provided, will be scanned
-                        automatically from `tree`, using `detect_highest_phase`.
-
-                        This parameter exists only so that if you have already
-                        scanned `tree` to determine the highest phase (e.g. in
-                        order to detect whether the module needs multi-phase
-                        compilation), you can provide the value, so this
-                        function doesn't need to scan `tree` again.
-
-    `_optimize`:        Passed on to Python's built-in `compile` function, when compiling
-                        the temporary higher-phase modules.
-
-    Return value is the final phase-0 `tree`, after macro expansion.
-    """
-    n = start_from_phase or detect_highest_phase(tree)
-
-    # TODO: preserve ordering of code in the file. Currently we just paste in phase-descending order.
-    for k in range(n, -1, -1):  # phase 0 is what a regular compile would do
-        print(f"***** PHASE {k} for '{self_module}' ({filename})")  # TODO: add proper debug tools
-        phase_k_tree = split_multiphase_module_ast(tree, phase=k)
-        if phase_k_tree:
-            # Establish macro bindings, but don't transform macro-imports yet; we need to
-            # keep them in the code to be spliced into the next phase.
-            module_macro_bindings = find_macros(phase_k_tree, filename=filename,
-                                                self_module=self_module, transform=False)
-
-            # Expand macros as usual.
-            expansion = expand_macros(phase_k_tree, bindings=module_macro_bindings, filename=filename)
-
-            # # TODO: add proper debug tools
-            # from .unparser import unparse
-            # print(unparse(expansion.body, debug=True, color=True))
-
-            # Lift macro-expanded code from phase `k` into phase `k - 1`.
-            if k > 0:
-                tree.body[:] = deepcopy(expansion.body) + tree.body
-
-            # Transform the macro-imports in the code we actually intend to run at phase k.
-            find_macros(expansion, filename=filename, self_module=self_module, transform=True)
-
-            # We must postprocess again, because we transformed the macro-imports *after*
-            # `expand_macros` (which postprocesses), and self-macro-imports insert dummy
-            # coverage nodes (which have a `Done` marker around them).
-            expansion = global_postprocess(expansion)
-
-            check_no_markers_remaining(expansion, filename=filename)
-
-            # Once we hit the final phase, no more temporary modules - let the import system take over.
-            if k == 0:
-                break
-
-            # Compile temporary module, and inject it into `sys.modules`,
-            # so we can compile the next phase.
-            #
-            # We don't bother with hifi stuff, such as attributes usually set by the importer,
-            # or even the module docstring. We essentially just need the functions for the macro bindings.
-            temporary_code = compile(expansion, filename, "exec", dont_inherit=True, optimize=_optimize)
-            temporary_module = ModuleType(self_module)
-            sys.modules[self_module] = temporary_module
-            exec(temporary_code, temporary_module.__dict__)
-
-    if self_module in sys.modules:  # delete temporary module
-        del sys.modules[self_module]
-
-    return expansion
-
-# --------------------------------------------------------------------------------
 
 def source_to_xcode(self, data, path, *, _optimize=-1):
     """[mcpyrate] Expand dialects, then expand macros, then compile.
@@ -199,12 +34,11 @@ def source_to_xcode(self, data, path, *, _optimize=-1):
         expansion = expand_macros(tree, bindings=module_macro_bindings, filename=path)
         check_no_markers_remaining(expansion, filename=path)
 
-    else:
+    else:  # multi-phase compilation
         # `self.name` is absolute dotted module name, see `importlib.machinery.FileLoader`.
-        # This allows us to support `from __self__ import macros, ...` for multi-phase
-        # compilation (a.k.a. `with phase`).
-        expansion = multiphase_compile(tree, filename=path, self_module=self.name,
-                                       start_from_phase=n, _optimize=_optimize)
+        # This is used to resolve `__self__` in `from __self__ import macros, ...`.
+        expansion = multiphase_expand(tree, filename=path, self_module=self.name,
+                                      start_from_phase=n, _optimize=_optimize)
 
     return compile(expansion, path, "exec", dont_inherit=True, optimize=_optimize)
 
