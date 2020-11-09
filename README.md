@@ -406,7 +406,7 @@ down to the implicit phase `0`.
 
 This means e.g. that another module that wants to import macros from this one
 doesn't need to care which phase the macros were defined in here. They'll be
-present in the final phase-0 module. The phase is important only for invoking
+present in the final phase-`0` module. The phase is important only for invoking
 those macros inside this module itself.
 
 **TODO**: Order preservation is not yet implemented. Code will be pasted in phase-descending order.
