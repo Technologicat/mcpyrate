@@ -561,7 +561,7 @@ def find_macros(tree, *, filename, reload=False, self_module=None, transform=Tru
             module_absname, more_bindings = get_macros(statement, filename=filename, reload=reload, self_module=self_module)
             bindings.update(more_bindings)
             if transform:
-                if self_module and module_absname == self_module:
+                if self_module and statement.module == "__self__":
                     # Remove self-macro-imports after establishing bindings.
                     # No need to import a module at run time; the importer lifts all
                     # the higher-phase code also into the code of the current phase.
