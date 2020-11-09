@@ -23,6 +23,8 @@ line magic.
 
 import ast
 from functools import partial
+import sys
+from types import ModuleType
 
 from IPython.core import magic_arguments
 from IPython.core.error import InputRejected
@@ -38,6 +40,7 @@ from .utils import get_makemacro_sourcecode
 # Despite the meta-levels, there's just one global importer for the Python process.
 from .. import activate  # noqa: F401
 
+_magic_module_name = "__repl_self__"
 _placeholder = "<ipython-session>"
 _instance = None
 
@@ -123,7 +126,10 @@ class InteractiveMacroTransformer(ast.NodeTransformer):
 
     def visit(self, tree):
         try:
-            bindings = find_macros(tree, filename=self.expander.filename, reload=True)  # macro-imports (this will import the modules)
+            sys.modules[_magic_module_name].__dict__.update(self._ipyextension.shell.user_ns)  # for self-macro-imports
+            # macro-imports (this will import the modules)
+            bindings = find_macros(tree, filename=self.expander.filename,
+                                   reload=True, self_module=_magic_module_name)
             if bindings:
                 self._ipyextension._macro_bindings_changed = True
                 self.expander.bindings.update(bindings)
@@ -150,6 +156,10 @@ class IMcpyrateExtension:
         self.shell.ast_transformers.append(self.macro_transformer)  # TODO: last or first?
         # Lucky that both meta-levels speak the same language, eh?
         shell.user_ns["__macro_expander__"] = self.macro_transformer.expander
+
+        # support `from __self__ import macros, ...`
+        magic_module = ModuleType(_magic_module_name)
+        sys.modules[_magic_module_name] = magic_module
 
         self.shell.run_cell(get_makemacro_sourcecode(),
                             store_history=False,

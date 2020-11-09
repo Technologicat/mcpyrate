@@ -19,7 +19,9 @@ __all__ = ["MacroConsole"]
 
 import ast
 import code
+import sys
 import textwrap
+from types import ModuleType
 
 from .. import __version__ as mcpyrate_version
 from ..core import MacroExpansionError
@@ -31,6 +33,8 @@ from .utils import get_makemacro_sourcecode
 # Despite the meta-levels, there's just one global importer for the Python process.
 from .. import activate  # noqa: F401
 
+_magic_module_name = "__repl_self__"
+
 class MacroConsole(code.InteractiveConsole):
     def __init__(self, locals=None, filename="<interactive input>"):
         """Parameters like in `code.InteractiveConsole`."""
@@ -41,6 +45,10 @@ class MacroConsole(code.InteractiveConsole):
             locals = {}
         # Lucky that both meta-levels speak the same language, eh?
         locals["__macro_expander__"] = self.expander
+
+        # support `from __self__ import macros, ...`
+        magic_module = ModuleType(_magic_module_name)
+        sys.modules[_magic_module_name] = magic_module
 
         super().__init__(locals, filename)
 
@@ -103,7 +111,10 @@ class MacroConsole(code.InteractiveConsole):
             # TODO: If we want to support dialects in the REPL, this is where to do it.
             tree = ast.parse(source)
 
-            bindings = find_macros(tree, filename=self.expander.filename, reload=True)  # macro-imports (this will import the modules)
+            # macro-imports (this will import the modules)
+            sys.modules[_magic_module_name].__dict__.update(self.locals)  # for self-macro-imports
+            bindings = find_macros(tree, filename=self.expander.filename,
+                                   reload=True, self_module=_magic_module_name)
             if bindings:
                 self._macro_bindings_changed = True
                 self.expander.bindings.update(bindings)
