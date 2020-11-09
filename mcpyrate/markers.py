@@ -5,10 +5,11 @@
 macros may use them to work together.
 """
 
-__all__ = ["ASTMarker", "get_markers", "delete_markers"]
+__all__ = ["ASTMarker", "get_markers", "delete_markers", "check_no_markers_remaining"]
 
 import ast
 
+from . import core
 from .walker import Walker
 
 
@@ -51,6 +52,7 @@ def get_markers(tree, cls=ASTMarker):
     w.visit(tree)
     return w.collected
 
+
 def delete_markers(tree, cls=ASTMarker):
     """Delete any `cls` ASTMarker instances found in `tree`.
 
@@ -63,3 +65,19 @@ def delete_markers(tree, cls=ASTMarker):
                 tree = tree.body
             return self.generic_visit(tree)
     return ASTMarkerDeleter().visit(tree)
+
+
+def check_no_markers_remaining(tree, *, filename):
+    """Check that `tree` has no AST markers remaining.
+
+    If there are any, raise `MacroExpansionError`.
+    No return value.
+
+    `filename` is the full path to the `.py` file, for error reporting.
+
+    Convenience function.
+    """
+    remaining_markers = get_markers(tree)
+    if remaining_markers:
+        # print(unparse_with_fallbacks(expansion, debug=True, color=True))
+        raise core.MacroExpansionError(f"{filename}: AST markers remaining after expansion: {remaining_markers}")
