@@ -43,8 +43,8 @@ import ast
 
 # Note we import some macros as regular functions. We just want their syntax transformers.
 from .debug import step_expansion  # noqa: F401, used in macro output.
-from .expander import MacroExpander, namemacro
-from .quotes import q, unastify, capture_value
+from .expander import MacroExpander, namemacro, parametricmacro
+from .quotes import q, astify, unastify, capture_value
 
 
 def _mcpyrate_metatools_attr(attr):
@@ -355,12 +355,16 @@ def _expandr_impl(tree, syntax, expander, macroname):
 
 # --------------------------------------------------------------------------------
 
-def stepr(tree, *, syntax, expander, **kw):
+@parametricmacro
+def stepr(tree, *, args, syntax, expander, **kw):
     """[syntax, expr] Like `mcpyrate.debug.step_expansion`, but at run time.
 
     This macro shows the steps `expandr` takes for a run-time AST value,
     by using `step_expansion` with macro bindings captured from the use site
     as in `expandr`.
+
+    Macro arguments are passed to `step_expansion`. For example, to use the
+    `"dump"` mode, `stepr["dump"][tree]`.
 
     The run-time return value is the same as `expandr[tree]`.
 
@@ -374,9 +378,9 @@ def stepr(tree, *, syntax, expander, **kw):
     expander_node = ast.Call(_mcpyrate_metatools_attr("MacroExpander"),
                              [],
                              [ast.keyword("bindings", macro_bindings(None, syntax="name", expander=expander)),
-                              ast.keyword("filename", ast.Constant(value=expander.filename))])
+                              ast.keyword("filename", astify(expander.filename))])
     return ast.Call(_mcpyrate_metatools_attr("step_expansion"),
                     [tree],
-                    [ast.keyword("args", ast.List(elts=[])),
-                     ast.keyword("syntax", ast.Constant(value=syntax)),
+                    [ast.keyword("args", astify(args)),
+                     ast.keyword("syntax", astify(syntax)),
                      ast.keyword("expander", expander_node)])
