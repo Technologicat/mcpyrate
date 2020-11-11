@@ -286,7 +286,8 @@ class DialectExpander:
         the dialect definition module.
 
         Primarily meant to be called with `tree` the AST of a module that
-        uses dialects, but works with any `tree` that has a `body` attribute.
+        uses dialects, but works with any `tree` that has a `body` attribute,
+        where that `body` is a `list` of statement AST nodes.
 
         A dialect-import is a statement of the form::
 

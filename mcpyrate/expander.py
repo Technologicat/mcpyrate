@@ -526,7 +526,8 @@ def find_macros(tree, *, filename, reload=False, self_module=None, transform=Tru
     to load the macro function definitions, so that we can bind to them.)
 
     Primarily meant to be called with `tree` the AST of a module that
-    uses macros, but works with any `tree` that has a `body` attribute.
+    uses macros, but works with any `tree` that has a `body` attribute,
+    where that `body` is a `list` of statement AST nodes.
 
     `filename`: str, full path to the `.py` being macroexpanded, for resolving
                 relative macro-imports and for error reporting. In interactive

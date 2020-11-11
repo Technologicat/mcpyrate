@@ -72,7 +72,8 @@ def extract_phase(tree, *, phase=0):
     """Split `tree` into given `phase` and remaining parts.
 
     Primarily meant to be called with `tree` the AST of a module that
-    uses macros, but works with any `tree` that has a `body` attribute.
+    uses macros, but works with any `tree` that has a `body` attribute,
+    where that `body` is a `list` of statement AST nodes.
 
     If `phase == 0`, just return `tree` as-is.
 
@@ -215,7 +216,8 @@ def ismultiphase(tree):
     """Scan a module body to determine whether it requests multi-phase compilation.
 
     Primarily meant to be called with `tree` the AST of a module that
-    uses macros, but works with any `tree` that has a `body` attribute.
+    uses macros, but works with any `tree` that has a `body` attribute,
+    where that `body` is a `list` of statement AST nodes.
 
     To request multi-phase compilation, place this macro-import somewhere in the
     top level of the module body::
@@ -235,7 +237,8 @@ def detect_highest_phase(tree):
     """Scan a module body for `with phase[n]` statements and return highest `n`, or `None`.
 
     Primarily meant to be called with `tree` the AST of a module that
-    uses macros, but works with any `tree` that has a `body` attribute.
+    uses macros, but works with any `tree` that has a `body` attribute,
+    where that `body` is a `list` of statement AST nodes.
 
     Used for initializing the phase countdown in multi-phase compilation.
     """
@@ -279,7 +282,8 @@ def isdebug(tree):
     """Scan a module body to determine whether it requests debug mode for multi-phase compilation.
 
     Primarily meant to be called with `tree` the AST of a module that
-    uses macros, but works with any `tree` that has a `body` attribute.
+    uses macros, but works with any `tree` that has a `body` attribute,
+    where that `body` is a `list` of statement AST nodes.
 
     To request debug mode for multi-phase compilation, place this macro-import
     somewhere in the top level of the module body::
@@ -304,7 +308,8 @@ def multiphase_expand(tree, *, filename, self_module, _optimize=-1):
     """Macro-expand an AST in multiple phases, controlled by `with phase[n]`.
 
     Primarily meant to be called with `tree` the AST of a module that
-    uses macros, but works with any `tree` that has a `body` attribute.
+    uses macros, but works with any `tree` that has a `body` attribute,
+    where that `body` is a `list` of statement AST nodes.
 
     At each phase `k >= 1`, we inject a temporary module into `sys.modules`, so that
     the next phase can import macros from it, using the self-macro-import syntax.
