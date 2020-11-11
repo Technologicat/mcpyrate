@@ -14,7 +14,7 @@ implementation details. We provide `isdebug` and `detect_highest_phase`
 for convenient introspection.
 """
 
-__all__ = ["phase", "ismultiphase", "isdebug", "multiphase_expand", "detect_highest_phase"]
+__all__ = ["phase", "ismultiphase", "detect_highest_phase", "isdebug", "multiphase_expand"]
 
 import ast
 from copy import copy, deepcopy
