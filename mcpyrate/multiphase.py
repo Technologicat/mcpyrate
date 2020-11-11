@@ -296,7 +296,7 @@ def isdebug(tree):
 # --------------------------------------------------------------------------------
 # The multi-phase compiler.
 
-def multiphase_expand(tree, *, filename, self_module, start_from_phase=None, _optimize=-1):
+def multiphase_expand(tree, *, filename, self_module, _optimize=-1):
     """Macro-expand an AST in multiple phases, controlled by `with phase[n]`.
 
     Primarily meant to be called with `tree` the AST of a module that
@@ -314,25 +314,12 @@ def multiphase_expand(tree, *, filename, self_module, start_from_phase=None, _op
                         Will be used to temporarily inject the temporary,
                         higher-phase modules into `sys.modules`.
 
-    `start_from_phase`: Optional int, >= 0. If `None`, will be scanned automatically
-                        from `tree`, using `detect_highest_phase`.
-
-                        This parameter exists only so that if you have already scanned
-                        `tree` to determine the highest phase, you can provide the value,
-                        so this function doesn't need to scan `tree` again.
-
     `_optimize`:        Passed on to Python's built-in `compile` function, when compiling
                         the temporary higher-phase modules. Has no effect on the final result.
 
     Return value is the final phase-0 `tree`, after macro expansion.
     """
-    # TODO: maybe remove the argument
-    n = start_from_phase if start_from_phase is not None else detect_highest_phase(tree)
-    if not isinstance(n, int):
-        raise TypeError(f"`start_from_phase` must be `int`, got {type(start_from_phase)} with value {repr(start_from_phase)}")
-    if n < 0:
-        raise ValueError(f"`start_from_phase` must be a positive integer, got {repr(start_from_phase)}")
-
+    n = detect_highest_phase(tree)
     debug = isdebug(tree)
     c, CS = setcolor, ColorScheme
 
