@@ -28,6 +28,7 @@ from .markers import check_no_markers_remaining
 from .unparser import unparse_with_fallbacks
 
 # --------------------------------------------------------------------------------
+# Private utilities.
 
 def iswithphase(stmt):
     """Detect `with phase[n]`, where `n >= 1` is an integer.
@@ -125,6 +126,7 @@ def extract_phase(tree, *, phase=0):
     return newmodule
 
 # --------------------------------------------------------------------------------
+# Public utilities.
 
 def phase(tree, syntax, **kw):
     """[syntax, block] Control multi-phase compilation.
@@ -290,6 +292,10 @@ def isdebug(tree):
             if name.name == "step_phases":
                 return True
     return False
+
+# --------------------------------------------------------------------------------
+# The multi-phase compiler.
+
 def multiphase_expand(tree, *, filename, self_module, start_from_phase=None, _optimize=-1):
     """Macro-expand an AST in multiple phases, controlled by `with phase[n]`.
 
