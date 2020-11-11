@@ -272,8 +272,8 @@ def step_phases(tree, **kw):
     Note the macro expander is not yet running when this happens, so macro
     names will not be highlighted.
 
-    The macro expansion itself will not be stepped; this tool is orthogonal to that.
-    If you need to step the expansion, use the `step_expansion` macro, as usual.
+    The macro expansion itself will **not** be stepped; this debug tool is
+    orthogonal to that. For that, use the `step_expansion` macro, as usual.
     """
     raise SyntaxError("`step_phases` may only appear in its macro-import.")
 
