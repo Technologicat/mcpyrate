@@ -268,6 +268,7 @@ def multiphase_expand(tree, *, filename, self_module, start_from_phase=None, _op
 
     Return value is the final phase-0 `tree`, after macro expansion.
     """
+    # TODO: maybe remove the argument
     n = start_from_phase if start_from_phase is not None else detect_highest_phase(tree)
     if not isinstance(n, int):
         raise TypeError(f"`start_from_phase` must be `int`, got {type(start_from_phase)} with value {repr(start_from_phase)}")
