@@ -245,6 +245,8 @@ Useful when the program is so small that a second module is just bureaucracy; or
 
 For interactive macro-enabled sessions, we provide an macro-enabled equivalent for `code.InteractiveConsole` (also available from the shell, as `macropython -i`), as well as an IPython extension (`mcpyrate.repl.iconsole`).
 
+Interactive sessions support not only importing and using macros, but also defining them, for quick experiments in the REPL.
+
 
 ### Macro invocation syntax
 
