@@ -23,7 +23,7 @@ from types import ModuleType
 
 from .colorizer import setcolor, ColorScheme
 from .coreutils import ismacroimport
-from .expander import find_macros, expand_macros, destructure_candidate, namemacro
+from .expander import find_macros, expand_macros, destructure_candidate, namemacro, parametricmacro
 from .markers import check_no_markers_remaining
 from .unparser import unparse_with_fallbacks
 
@@ -128,6 +128,7 @@ def extract_phase(tree, *, phase=0):
 # --------------------------------------------------------------------------------
 # Public utilities.
 
+@parametricmacro
 def phase(tree, syntax, **kw):
     """[syntax, block] Control multi-phase compilation.
 
