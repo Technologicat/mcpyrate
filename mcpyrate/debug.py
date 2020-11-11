@@ -56,6 +56,10 @@ def step_expansion(tree, *, args, syntax, expander, **kw):
     It must be one of the strings `"unparse"` (default) or `"dump"`.
     If `"unparse"`, then at each step, the AST will be shown as source code.
     If `"dump"`, then at each step, the AST will be shown as a raw AST dump.
+
+    This macro steps the expansion at macro expansion time. If you have a
+    run-time AST value (such as a quasiquoted tree), and want to step the
+    expansion of that at run time, see the `stepr` macro in `mcpyrate.metatools`.
     """
     if syntax not in ("expr", "block"):
         raise SyntaxError("`step_expansion` is an expr and block macro only")
@@ -113,14 +117,17 @@ def show_bindings(tree, *, syntax, expander, **kw):
 
         show_bindings
 
-    This can appear in any expression position, and at run-time evaluates to `None`.
+    This can appear in any expression position, and at run time evaluates to `None`.
+    If you instead want to programmatically examine, at run time, the bindings
+    the expander had at macro expansion time, see the `macro_bindings` macro
+    in `mcpyrate.metatools`.
 
     At macro expansion time, when the macro expander reaches the `show_bindings`
     expression, bindings *that are in effect at that point in time* are shown.
 
     (That disclaimer is important, because hygienically unquoted macros may add
      new bindings as those expressions are reached, and true to the dynamic nature
-     of Python, when a macro runs, it is allowed to edit the expander's bindings.)
+     of Python, when any macro runs, it is allowed to edit the expander's bindings.)
 
     For each macro binding, we print to `sys.stderr` the macro name, and the
     fully qualified name of the corresponding macro function.
