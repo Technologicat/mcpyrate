@@ -263,6 +263,9 @@ def step_phases(tree, **kw):
     debug mode of the multi-phase compiler for the module where that macro-import
     appears in. `step_phases` may only appear in its macro-import.
 
+    `step_phases` only has an effect if also the `phase` macro from
+    `mcpyrate.multiphase` is imported (thus enabling multi-phase compilation).
+
     When in debug mode, the unparsed source code for the AST of each phase,
     before macro expansion, is printed to stderr, with syntax highlighting.
     Note the macro expander is not yet running when this happens, so macro
@@ -284,6 +287,9 @@ def isdebug(tree):
     somewhere in the top level of the module body::
 
         from mcpyrate.debug import macros, step_phases
+
+    `step_phases` only has an effect if also the `phase` macro from
+    `mcpyrate.multiphase` is imported (thus enabling multi-phase compilation).
     """
     for stmt in tree.body:
         if not (ismacroimport(stmt) and stmt.module == "mcpyrate.debug" and stmt.level == 0):
