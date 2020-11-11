@@ -305,8 +305,7 @@ Note this implies that, when writing your own macros, if one of them needs to an
 ### Multi-phase compilation
 
 *Multi-phase compilation*, a.k.a. `with phase`, allows to use macros in the
-same module where they are defined. It was inspired by Racket's [phase level
-tower](https://docs.racket-lang.org/guide/phases.html).
+same module where they are defined.
 
 To tell `mcpyrate` to enable the multi-phase compiler for your module,
 add the following macro-import somewhere in the top level of the module body:
@@ -437,6 +436,8 @@ earlier (higher-number) phase.
 
 Multi-phase compilation is applied **after** dialect AST transformations.
 
+This feature was inspired by Racket's [phase level
+tower](https://docs.racket-lang.org/guide/phases.html), but is much simpler.
 Racketeers should observe that in `mcpyrate`, phase separation is not strict;
 code from **all** phases will be available in the final phase-0 module. This is
 a design decision; it's more pythonic that macros don't "disappear" from the
