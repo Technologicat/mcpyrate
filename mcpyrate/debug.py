@@ -1,7 +1,7 @@
 # -*- coding: utf-8; -*-
 """Macro debugging utilities."""
 
-__all__ = ["step_expansion", "StepExpansion",
+__all__ = ["step_expansion", "StepExpansion", "step_phases",
            "show_bindings", "format_bindings",
            "SourceLocationInfoValidator"]
 
@@ -15,6 +15,7 @@ from .astdumper import dump
 from .colorizer import setcolor, colorize, ColorScheme
 from .dialects import StepExpansion  # re-export for discoverability, it's a debug feature
 from .expander import MacroCollector, namemacro, parametricmacro
+from .multiphase import step_phases  # re-export for discoverability, it's a debug feature
 from .unparser import unparse_with_fallbacks
 from .utils import NestingLevelTracker, format_macrofunction
 from .walker import Walker

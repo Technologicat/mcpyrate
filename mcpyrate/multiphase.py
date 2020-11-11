@@ -7,16 +7,18 @@ Note `__main__` is a module, too, so if `app.py` uses `with phase`,
 running as `macropython app.py` is fine.
 """
 
-__all__ = ["phase", "ismultiphase", "detect_highest_phase", "multiphase_expand"]
+__all__ = ["phase", "ismultiphase", "isdebug", "multiphase_expand", "detect_highest_phase"]
 
 import ast
 from copy import copy, deepcopy
 import sys
 from types import ModuleType
 
+from .colorizer import setcolor, ColorScheme
 from .coreutils import ismacroimport
 from .expander import find_macros, expand_macros, destructure_candidate, global_postprocess
 from .markers import check_no_markers_remaining
+from .unparser import unparse_with_fallbacks
 
 # --------------------------------------------------------------------------------
 
@@ -238,6 +240,26 @@ def detect_highest_phase(tree):
     return maxn
 
 
+
+
+def isdebug(tree):
+    """Scan a module body to determine whether it requests debug mode for multi-phase compilation.
+
+    Primarily meant to be called with `tree` the AST of a module that
+    uses macros, but works with any `tree` that has a `body` attribute.
+
+    To request debug mode for multi-phase compilation, place this macro-import
+    somewhere in the top level of the module body::
+
+        from mcpyrate.debug import macros, step_phases
+    """
+    for stmt in tree.body:
+        if not (ismacroimport(stmt) and stmt.module == "mcpyrate.debug" and stmt.level == 0):
+            continue
+        for name in stmt.names[1:]:
+            if name.name == "step_phases":
+                return True
+    return False
 def multiphase_expand(tree, *, filename, self_module, start_from_phase=None, _optimize=-1):
     """Macro-expand an AST in multiple phases, controlled by `with phase[n]`.
 
@@ -275,15 +297,20 @@ def multiphase_expand(tree, *, filename, self_module, start_from_phase=None, _op
     if n < 0:
         raise ValueError(f"`start_from_phase` must be a positive integer, got {repr(start_from_phase)}")
 
-            # # TODO: add proper debug tools to the multi-phase compiler
-            # from .unparser import unparse
-            # print(unparse(expansion.body, debug=True, color=True))
+    debug = isdebug(tree)
+    c, CS = setcolor, ColorScheme
 
+    if debug:
+        print(f"{c(CS.HEADING)}**Multi-phase compiling module {c(CS.TREEID)}'{self_module}' {c(CS.SOURCEFILENAME)}({filename}){c()}", file=sys.stderr)
 
     for k in range(n, -1, -1):  # phase 0 is what a regular compile would do
+        if debug:
+            print(f"{c(CS.HEADING)}**AST for {c(CS.ATTENTION)}PHASE {k}{c(CS.HEADING)} of module {c(CS.TREEID)}'{self_module}' {c(CS.SOURCEFILENAME)}({filename}){c()}", file=sys.stderr)
 
         phase_k_tree = extract_phase(tree, phase=k)
         if phase_k_tree:
+            if debug:
+                print(unparse_with_fallbacks(phase_k_tree, debug=True, color=True), file=sys.stderr)
 
             module_macro_bindings = find_macros(phase_k_tree, filename=filename, self_module=self_module)
             expansion = expand_macros(phase_k_tree, bindings=module_macro_bindings, filename=filename)
