@@ -126,6 +126,7 @@ class InteractiveMacroTransformer(ast.NodeTransformer):
 
     def visit(self, tree):
         try:
+            sys.modules[_magic_module_name].__dict__.clear()
             sys.modules[_magic_module_name].__dict__.update(self._ipyextension.shell.user_ns)  # for self-macro-imports
             # macro-imports (this will import the modules)
             bindings = find_macros(tree, filename=self.expander.filename,

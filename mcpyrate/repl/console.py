@@ -112,6 +112,7 @@ class MacroConsole(code.InteractiveConsole):
             tree = ast.parse(source)
 
             # macro-imports (this will import the modules)
+            sys.modules[_magic_module_name].__dict__.clear()
             sys.modules[_magic_module_name].__dict__.update(self.locals)  # for self-macro-imports
             bindings = find_macros(tree, filename=self.expander.filename,
                                    reload=True, self_module=_magic_module_name)
