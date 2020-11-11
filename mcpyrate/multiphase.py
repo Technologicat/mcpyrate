@@ -367,7 +367,9 @@ def multiphase_expand(tree, *, filename, self_module, start_from_phase=None, _op
             exec(temporary_code, temporary_module.__dict__)
 
     # delete temporary module
-    if self_module in sys.modules:
+    try:
         del sys.modules[self_module]
+    except KeyError:
+        pass
 
     return expansion
