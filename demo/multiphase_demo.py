@@ -3,6 +3,11 @@
 # Enable the multi-phase compiler for this module.
 from mcpyrate.multiphase import macros, phase
 
+# Enable debug mode for multi-phase compiler.
+# Debug mode prints unparsed source code for the AST of each phase, before macro expansion.
+from mcpyrate.debug import macros, step_phases  # noqa: F401, F811
+
+
 with phase[1]:  # The phase number must be a positive integer literal.
     # Macro-imports may appear at the top level of a phase.
     # The macro-imports are lifted into the next phase, too.

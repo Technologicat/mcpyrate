@@ -5,6 +5,13 @@ See the `with phase[n]` construct.
 
 Note `__main__` is a module, too, so if `app.py` uses `with phase`,
 running as `macropython app.py` is fine.
+
+As a user, see the macros `phase` and `step_phases`. The latter is actually
+part of the public API of `mcpyrate.debug`, because it's a debugging utility.
+
+As a developer, see `ismultiphase` and `multiphase_expand`; the rest are
+implementation details. We provide `isdebug` and `detect_highest_phase`
+for convenient introspection.
 """
 
 __all__ = ["phase", "ismultiphase", "isdebug", "multiphase_expand", "detect_highest_phase"]
@@ -16,7 +23,7 @@ from types import ModuleType
 
 from .colorizer import setcolor, ColorScheme
 from .coreutils import ismacroimport
-from .expander import find_macros, expand_macros, destructure_candidate, global_postprocess
+from .expander import find_macros, expand_macros, destructure_candidate, namemacro
 from .markers import check_no_markers_remaining
 from .unparser import unparse_with_fallbacks
 
@@ -240,6 +247,29 @@ def detect_highest_phase(tree):
     return maxn
 
 
+# This is actually part of the public API of `mcpyrate.debug`. We make this a name macro
+# so it will error out on any mention of the name (except the macro-import, which is compiled away).
+@namemacro
+def step_phases(tree, **kw):
+    """[syntax, special] Enable the multi-phase compiler's debug mode.
+
+    Usage::
+
+        from mcpyrate.debug import macros, step_phases
+
+    Strictly speaking, `step_phases` is not a macro, but a flag that enables the
+    debug mode of the multi-phase compiler for the module where that macro-import
+    appears in. `step_phases` may only appear in its macro-import.
+
+    When in debug mode, the unparsed source code for the AST of each phase,
+    before macro expansion, is printed to stderr, with syntax highlighting.
+    Note the macro expander is not yet running when this happens, so macro
+    names will not be highlighted.
+
+    The macro expansion itself will not be stepped; this tool is orthogonal to that.
+    If you need to step the expansion, use the `step_expansion` macro, as usual.
+    """
+    raise SyntaxError("`step_phases` may only appear in its macro-import.")
 
 
 def isdebug(tree):

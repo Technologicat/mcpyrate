@@ -314,18 +314,29 @@ add the following macro-import somewhere in the top level of the module body:
 from mcpyrate.multiphase import macros, phase
 ```
 
-Actually `with phase` is a feature of `mcpyrate`'s importer, not really a
-regular macro, but its docstring must live somewhere, and it's nice if `flake8`
-is happy.
-
-Then, use the `with phase[n]` syntactic construct to define which parts of your
-module should be compiled before which other ones. The phase number must be a
-positive integer literal. **Phases count down**, run time is phase `0`. The run
-time of phase `k + 1` is the macro-expansion time of phase `k`. Phase `0` is
-defined implicitly. All code that is **not** inside any `with phase` block
-belongs to phase `0`.
+If you want to see the unparsed source code for the AST of each phase before
+macro expansion, enable the multi-phase compiler's debug mode, with this
+additional macro-import (somewhere in the top level of the module body):
 
 ```python
+from mcpyrate.debug import macros, step_phases
+```
+
+Actually `with phase` is a feature of `mcpyrate`'s importer, not really a
+regular macro, but its docstring must live somewhere, and it's nice if `flake8`
+is happy. Similarly, `step_phases` is not really a macro at all; the presence
+of that macro-import acts as a flag for the multi-phase compiler.
+
+When multi-phase compilation is enabled, use the `with phase[n]` syntactic
+construct to define which parts of your module should be compiled before which
+other ones. The phase number must be a positive integer literal. **Phases count
+down**, run time is phase `0`. The run time of phase `k + 1` is the
+macro-expansion time of phase `k`. Phase `0` is defined implicitly. All code
+that is **not** inside any `with phase` block belongs to phase `0`.
+
+```python
+from mcpyrate.multiphase import macros, phase
+
 with phase[1]:
     # macro definitions here
 
@@ -360,6 +371,8 @@ If you need to write helper macros to define your phase 1 macros, you can define
 them in phase 2 (and so on):
 
 ```python
+from mcpyrate.multiphase import macros, phase
+
 with phase[2]:
     # define macros used by phase 1 here
 
