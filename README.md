@@ -408,13 +408,10 @@ doesn't need to care which phase the macros were defined in here. They'll be
 present in the final phase-`0` module. The phase is important only for invoking
 those macros inside this module itself.
 
-**TODO**: Order preservation is not yet implemented. Code will be pasted in phase-descending order.
-
-~Original ordering of the code blocks is preserved. Once a phase is compiled,
-the body of its `with phase` block (after macro expansion) is spliced into
-the surrounding context. Thus, like a receding tide, each phase will "reveal"
-increasing subsets of the original source file, until (at the implicit phase
-`0`) all of the file is processed.~
+The **ordering** of the `with phase` code blocks **is preserved**. The code will
+always execute at the point where it appears in the source file. Like a receding
+tide, each phase will reveal increasing subsets of the original source file,
+until (at the implicit phase `0`) all of the file is processed.
 
 **Mutable state, if any, is not preserved** between phases, because each phase
 starts as a new module instance. There is no way to transmit information to a

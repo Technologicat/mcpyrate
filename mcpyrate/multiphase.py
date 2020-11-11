@@ -58,12 +58,25 @@ def iswithphase(stmt):
     return n
 
 
-def split_multiphase_module_ast(tree, *, phase=0):
-    """Split `ast.Module` `tree` into given phase and remaining parts.
+# TODO: convenience: support `with phase` inside `with step_expansion`,
+# to easily allow stepping a whole module (or a part of it that has multiple
+# phases), even if it uses `with phase`.
+def extract_phase(tree, *, phase=0):
+    """Split `tree` into given `phase` and remaining parts.
 
-    The statements belonging to this phase are returned as a new `ast.Module`,
-    and the `body` attribute of the original `tree` is overwritten with the
-    remaining statements.
+    Primarily meant to be called with `tree` the AST of a module that
+    uses macros, but works with any `tree` that has a `body` attribute.
+
+    If `phase == 0`, just return `tree` as-is.
+
+    If `phase >= 1`, return the statements belonging to this phase as a new
+    `ast.Module`, and overwrite the `body` attribute of the original `tree`
+    with the code for `phase - 1`, also performing code lifting from `phase`
+    to `phase - 1`.
+
+    The lifted AST is deep-copied to minimize confusion, since it may get
+    edited by macros during macro expansion. (This guarantees that
+    macro-expanding it, in either phase, gives the same result.)
     """
     if not isinstance(phase, int):
         raise TypeError  # TODO: proper error message
@@ -71,17 +84,36 @@ def split_multiphase_module_ast(tree, *, phase=0):
         raise ValueError  # TODO: proper error message
     if phase == 0:
         return tree
+
     remaining = []
+    def lift(withphase):  # Lift a `with phase[n]` code block to phase `n - 1`.
+        original_phase = iswithphase(withphase)
+        assert original_phase
+        if original_phase == 1:
+            # Lifting to phase 0. Drop the `with phase` wrapper.
+            remaining.extend(deepcopy(withphase.body))
+        else:
+            # Lifting to phase >= 1. Decrease the `n` in `with phase[n]`
+            # by one, so the block gets processed again in the next phase.
+            macroarg = withphase.items[0].context_expr.slice
+            if type(macroarg) is ast.Constant:
+                macroarg.value -= 1
+            elif type(macroarg) is ast.Num:  # TODO: Python 3.8: remove ast.Num
+                macroarg.n -= 1
+            remaining.append(deepcopy(withphase))
+
     thisphase = []
     for stmt in tree.body:
         if iswithphase(stmt) == phase:
             thisphase.extend(stmt.body)
+            lift(stmt)
         else:
             remaining.append(stmt)
     tree.body[:] = remaining
-    out = copy(tree)
-    out.body = thisphase
-    return out
+
+    newmodule = copy(tree)
+    newmodule.body = thisphase
+    return newmodule
 
 # --------------------------------------------------------------------------------
 
@@ -242,35 +274,19 @@ def multiphase_expand(tree, *, filename, self_module, start_from_phase=None, _op
     if n < 0:
         raise ValueError  # TODO: proper error message
 
-    # TODO: preserve ordering of code in the file. Currently we just paste in phase-descending order.
-    for k in range(n, -1, -1):  # phase 0 is what a regular compile would do
-        print(f"***** PHASE {k} for '{self_module}' ({filename})")  # TODO: add proper debug tools
-        phase_k_tree = split_multiphase_module_ast(tree, phase=k)
-        if phase_k_tree:
-            # Establish macro bindings, but don't transform macro-imports yet; we need to
-            # keep them in the code to be spliced into the next phase.
-            module_macro_bindings = find_macros(phase_k_tree, filename=filename,
-                                                self_module=self_module, transform=False)
-
-            # Expand macros as usual.
-            expansion = expand_macros(phase_k_tree, bindings=module_macro_bindings, filename=filename)
 
             # # TODO: add proper debug tools to the multi-phase compiler
             # from .unparser import unparse
             # print(unparse(expansion.body, debug=True, color=True))
 
-            # Lift macro-expanded code from phase `k` into phase `k - 1`.
-            if k > 0:
-                tree.body[:] = deepcopy(expansion.body) + tree.body
 
-            # Transform the macro-imports in the code we actually intend to run at phase k.
-            find_macros(expansion, filename=filename, self_module=self_module, transform=True)
+    for k in range(n, -1, -1):  # phase 0 is what a regular compile would do
 
-            # We must postprocess again, because we transformed the macro-imports *after*
-            # `expand_macros` (which postprocesses), and self-macro-imports insert dummy
-            # coverage nodes (which have a `Done` marker around them).
-            expansion = global_postprocess(expansion)
+        phase_k_tree = extract_phase(tree, phase=k)
+        if phase_k_tree:
 
+            module_macro_bindings = find_macros(phase_k_tree, filename=filename, self_module=self_module)
+            expansion = expand_macros(phase_k_tree, bindings=module_macro_bindings, filename=filename)
             check_no_markers_remaining(expansion, filename=filename)
 
             # Once we hit the final phase, no more temporary modules - let the import system take over.
