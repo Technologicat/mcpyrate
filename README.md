@@ -348,7 +348,7 @@ from __self__ import macros, ...
 # then just code as usual
 ```
 
-To run, just `macropython app.py`. For a concrete example, see [`demo/multiphase_demo.py`](demo/multiphase_demo.py).
+To run, just `macropython app.py`. For a full example, see [`demo/multiphase_demo.py`](demo/multiphase_demo.py).
 
 The `with phase` construct may only appear at the top level of the module body.
 Appearing anywhere else, it is a syntax error. It is a block macro only; using
@@ -426,7 +426,7 @@ always execute at the point where it appears in the source file. Like a receding
 tide, each phase will reveal increasing subsets of the original source file,
 until (at the implicit phase `0`) all of the file is processed.
 
-**Mutable state, if any, is not preserved** between phases, because each phase
+**Mutable state**, if any, **is not preserved** between phases, because each phase
 starts as a new module instance. There is no way to transmit information to a
 future phase, except by encoding it in macro output (so it becomes part of the
 next phase's AST, before that phase reaches run time).
@@ -449,10 +449,10 @@ Multi-phase compilation is applied **after** dialect AST transformations.
 This feature was inspired by Racket's [phase level
 tower](https://docs.racket-lang.org/guide/phases.html), but is much simpler.
 Racketeers should observe that in `mcpyrate`, phase separation is not strict;
-code from **all** phases will be available in the final phase-0 module. This is
-a design decision; it's more pythonic that macros don't "disappear" from the
-final module just because they were defined in a higher phase. (This way, `with
-phase` doesn't interfere with Python's usual scoping rules.)
+code from **all** phases will be available in the final phase-0 module. This
+is a design decision; it's more pythonic that macros don't "disappear" from
+the final module just because they were defined in a higher phase. (This way,
+`with phase` doesn't interfere with Python's usual scoping rules.)
 
 This makes `mcpyrate`'s phase level into a module initialization detail that is
 local to each module. Other modules don't need to care in which phase a thing
