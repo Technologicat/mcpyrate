@@ -31,7 +31,7 @@ from .unparser import unparse_with_fallbacks
 # Private utilities.
 
 def iswithphase(stmt):
-    """Detect `with phase[n]`, where `n >= 1` is an integer.
+    """Check if AST node `stmt` is a `with phase[n]`, where `n >= 1` is an integer.
 
     Return `n`, or `False`.
     """
@@ -57,7 +57,7 @@ def iswithphase(stmt):
     arg = macroargs[0]
     if type(arg) is ast.Constant:
         n = arg.value
-    elif type(arg) is ast.Num:  # TODO: remove ast.Num once we bump minimum language version to Python 3.8
+    elif type(arg) is ast.Num:  # TODO: Python 3.8: remove ast.Num
         n = arg.n
     else:
         return False
@@ -206,8 +206,8 @@ def phase(tree, syntax, **kw):
     a thing was defined when they import that thing.
     """
     # This is actually an importer feature; all correctly placed invocations
-    # will be gone before the code is macro-expanded. So if we get here, the
-    # importer didn't handle this invocation.
+    # will be gone before the macro expander runs. So if we get here, the
+    # importer didn't compile away this invocation.
     if syntax != "block":
         raise SyntaxError("`with phase` is a block macro only")
     raise SyntaxError("Misplaced `with phase`; must appear at the module top level only.")
