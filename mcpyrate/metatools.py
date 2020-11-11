@@ -370,6 +370,7 @@ def stepr(tree, *, syntax, expander, **kw):
     if syntax != "expr":
         raise SyntaxError("`stepr` is an expr macro only")
 
+    # Note the `macro_bindings` macro is called now, whereas everything else is delayed until run time.
     expander_node = ast.Call(_mcpyrate_metatools_attr("MacroExpander"),
                              [],
                              [ast.keyword("bindings", macro_bindings(None, syntax="name", expander=expander)),
