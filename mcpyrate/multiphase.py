@@ -79,9 +79,9 @@ def extract_phase(tree, *, phase=0):
     macro-expanding it, in either phase, gives the same result.)
     """
     if not isinstance(phase, int):
-        raise TypeError  # TODO: proper error message
+        raise TypeError(f"`phase` must be `int`, got {type(phase)} with value {repr(phase)}")
     if phase < 0:
-        raise ValueError  # TODO: proper error message
+        raise ValueError(f"`phase` must be a positive integer, got {repr(phase)}")
     if phase == 0:
         return tree
 
@@ -270,10 +270,9 @@ def multiphase_expand(tree, *, filename, self_module, start_from_phase=None, _op
     """
     n = start_from_phase if start_from_phase is not None else detect_highest_phase(tree)
     if not isinstance(n, int):
-        raise TypeError  # TODO: proper error message
+        raise TypeError(f"`start_from_phase` must be `int`, got {type(start_from_phase)} with value {repr(start_from_phase)}")
     if n < 0:
-        raise ValueError  # TODO: proper error message
-
+        raise ValueError(f"`start_from_phase` must be a positive integer, got {repr(start_from_phase)}")
 
             # # TODO: add proper debug tools to the multi-phase compiler
             # from .unparser import unparse
