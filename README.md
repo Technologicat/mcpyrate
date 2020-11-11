@@ -554,7 +554,7 @@ For **source location information**, the recommendation is:
  - If you generate a new AST node based on an existing one from the input AST, and then discard the original node, **be sure to `ast.copy_location` the original node's source location information to your new node**.
    - For such edits, **it is the macro's responsibility** to ensure correct source location information in the output AST, so that coverage reporting works. There is no general rule that could generate source location information for arbitrary AST edits correctly.
 
- - If you just edit an existing AST node (without adding new nodes inside it), just leave its source location information as-is.
+ - If you just edit an existing AST node, just leave its source location information as-is.
 
 (What we can do automatically, and what `mcpyrate` indeed does, is to make sure that *the line with the macro invocation* shows as covered, on the condition that the macro was actually invoked.)
 
