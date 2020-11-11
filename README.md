@@ -19,10 +19,14 @@ We use [semantic versioning](https://semver.org/). We're almost-but-not-quite co
     - [Highlights](#highlights)
     - [Install & uninstall](#install--uninstall)
     - [Using macros](#using-macros)
+        - [3-file setup](#3-file-setup)
+        - [2-file setup](#2-file-setup)
+        - [1-file setup](#1-file-setup)
         - [Interactive use](#interactive-use)
         - [Macro invocation syntax](#macro-invocation-syntax)
         - [Importing macros](#importing-macros)
         - [Multi-phase compilation](#multi-phase-compilation)
+            - [Displaying the source code for each phase](#displaying-the-source-code-for-each-phase)
             - [The phase level countdown](#the-phase-level-countdown)
             - [Notes](#notes)
     - [Writing macros](#writing-macros)
@@ -44,6 +48,7 @@ We use [semantic versioning](https://semver.org/). We're almost-but-not-quite co
         - [Expand macros inside-out](#expand-macros-inside-out)
         - [Expand macros inside-out, but only those in a given set](#expand-macros-inside-out-but-only-those-in-a-given-set)
     - [Questions & Answers](#questions--answers)
+        - [How to debug macro-enabled code?](#how-to-debug-macro-enabled-code)
         - [I just ran my program again and no macro expansion is happening?](#i-just-ran-my-program-again-and-no-macro-expansion-is-happening)
         - [My own macros are working, but I'm not seeing any output from `step_expansion` (or `show_bindings`)?](#my-own-macros-are-working-but-im-not-seeing-any-output-from-stepexpansion-or-showbindings)
         - [Macro expansion time where exactly?](#macro-expansion-time-where-exactly)
@@ -166,9 +171,13 @@ but first, make sure you're not in a folder that has an `mcpyrate` subfolder - `
 
 ## Using macros
 
-Just like earlier macro expanders for Python, `mcpyrate` must be explicitly enabled before importing any module that uses macros. Macros must be defined in a separate module.
+As usual for a macro expander for Python, `mcpyrate` must be explicitly enabled before importing any module that uses macros. There are two ways to enable it: `import mcpyrate.activate`, or by running your script or module via the `macropython` command-line wrapper.
 
-The following classical **3-file setup** works fine:
+Macros are often defined in a separate module; but in `mcpyrate`, it is also possible to define macros in the same module that uses them.
+
+### 3-file setup
+
+The following classical **3-file setup**, familiar from `macropy` and `mcpy`, works fine:
 
 ```python
 # run.py
@@ -187,7 +196,9 @@ echo[6 * 7]
 
 To run, `python -m run`.
 
-In `mcpyrate`, the wrapper `run.py` is optional. The following **2-file setup** works fine, too:
+### 2-file setup
+
+In `mcpyrate`, the wrapper `run.py` is optional. The following **2-file setup** works fine:
 
 ```python
 # mymacros.py with your macro definitions
@@ -206,28 +217,33 @@ This will import `application`, making that module believe it's `__main__`. In a
 
 `macropython` is installed as a [console script](https://python-packaging.readthedocs.io/en/latest/command-line-scripts.html#the-console-scripts-entry-point). Thus it will use the `python` interpreter that is currently active according to `/usr/bin/env`. So if you e.g. set up a venv with PyPy3 and activate the venv, `macropython` will use that.
 
-Finally, the following **1-file setup** works, via [multi-phase compilation](#multi-phase-compilation):
+### 1-file setup
+
+By telling `mcpyrate` to use [multi-phase compilation](#multi-phase-compilation), the following **1-file setup** works fine:
 
 ```python
-from mcpyrate.multiphase import macros, phase
+# application.py
+from mcpyrate.multiphase import macros, phase  # enable multi-phase compiler
 
 with phase[1]:
     def echo(expr, **kw):
         print('Echo')
         return expr
 
-from __self__ import macros, echo
+from __self__ import macros, echo  # magic self-macro-import from a higher phase
 echo[6 * 7]
 ```
 
-Then `macropython -m application`.
+To run, `macropython -m application`.
+
+Useful when the program is so small that a second module is just bureaucracy; or when a quick, small macro can shave lots of boilerplate.
 
 
 ### Interactive use
 
 [[full documentation](repl.md)]
 
-For interactive macro-enabled sessions, we provide an macro-enabled equivalent for `code.InteractiveConsole` (also available from the shell, as `macropython -i`), as well as an IPython extension.
+For interactive macro-enabled sessions, we provide an macro-enabled equivalent for `code.InteractiveConsole` (also available from the shell, as `macropython -i`), as well as an IPython extension (`mcpyrate.repl.iconsole`).
 
 
 ### Macro invocation syntax
@@ -257,7 +273,7 @@ The expander will replace the macro invocation with the expanded content. By def
 
 ### Importing macros
 
-Just like in `mcpy`, in `mcpyrate` macros are just functions. To use functions from `module` as macros, use a *macro-import statement*:
+In the tradition of `mcpy`, in `mcpyrate` macros are just functions. To use functions from `module` as macros, use a *macro-import statement*:
 
 ```python
 from module import macros, ...
@@ -265,7 +281,7 @@ from module import macros, ...
 
 replacing `...` with the macros you want to use. Importing all via `*` won't work. You must declare the macros you want explicitly. This syntax tells the macro expander to register macro bindings. The macro bindings are in scope for the module in which the macro-import statement appears.
 
-All macro-import statements must appear at the top level of a module.
+All macro-import statements must appear at the top level of a module. (The sole exception is with [multi-phase compilation](#multi-phase-compilation), where macro-imports may appear at the top level of a `with phase`, which itself must appear at the top level of the module.)
 
 `mcpyrate` prevents you from accidentally using macros as regular functions in your code by transforming the macro-import into:
 
@@ -299,42 +315,35 @@ from module import macros, macroname as alias
 
 This will register the macro binding under the name `alias`.
 
-Note this implies that, when writing your own macros, if one of them needs to analyze whether the tree it's expanding is going to invoke specific other macros, then in `expander.bindings`, you **must look at the values** (whether they are the function objects you expect), not at the names (since names can be aliased to anything at the use site).
+Note this implies that, when writing your own macros, if one of them needs to analyze whether the tree it's expanding is going to invoke specific other macros, then in `expander.bindings`, you **must look at the values** (whether they are the function objects you expect), not at the names - since names can be aliased to anything at the use site.
 
 
 ### Multi-phase compilation
 
 *Multi-phase compilation*, a.k.a. `with phase`, allows to use macros in the
-same module where they are defined.
-
-To tell `mcpyrate` to enable the multi-phase compiler for your module,
-add the following macro-import somewhere in the top level of the module body:
+same module where they are defined. To tell `mcpyrate` to enable the multi-phase
+compiler for your module, add the following macro-import somewhere in the top
+level of the module body:
 
 ```python
 from mcpyrate.multiphase import macros, phase
 ```
 
-If you want to see the unparsed source code for the AST of each phase before
-macro expansion, enable the multi-phase compiler's debug mode, with this
-additional macro-import (somewhere in the top level of the module body):
-
-```python
-from mcpyrate.debug import macros, step_phases
-```
-
-Actually `with phase` is a feature of `mcpyrate`'s importer, not really a
-regular macro, but its docstring must live somewhere, and it's nice if `flake8`
-is happy. Similarly, `step_phases` is not really a macro at all; the presence
-of that macro-import acts as a flag for the multi-phase compiler.
+Actually `with phase` is a feature of `mcpyrate`'s importer, not really
+a regular macro, but its docstring must live somewhere, and it's nice if
+`flake8` is happy. This macro-import mainly acts as a flag for the importer,
+but it does also import a dummy macro that will trigger a syntax error if the
+`with phase` construct is used improperly.
 
 When multi-phase compilation is enabled, use the `with phase[n]` syntactic
 construct to define which parts of your module should be compiled before which
-other ones. The phase number must be a positive integer literal. **Phases count
-down**, run time is phase `0`. The run time of phase `k + 1` is the
-macro-expansion time of phase `k`. Phase `0` is defined implicitly. All code
+other ones. The phase number `n` must be a positive integer literal. **Phases count
+down**, run time is phase `0`. For any `k >= 0`, the run time of phase `k + 1` is
+the macro-expansion time of phase `k`. Phase `0` is defined implicitly. All code
 that is **not** inside any `with phase` block belongs to phase `0`.
 
 ```python
+# application.py
 from mcpyrate.multiphase import macros, phase
 
 with phase[1]:
@@ -348,13 +357,13 @@ from __self__ import macros, ...
 # then just code as usual
 ```
 
-To run, just `macropython app.py`. For a full example, see [`demo/multiphase_demo.py`](demo/multiphase_demo.py).
+To run, `macropython application.py` or `macropython -m application`. For a full example, see [`demo/multiphase_demo.py`](demo/multiphase_demo.py).
 
 The `with phase` construct may only appear at the top level of the module body.
 Appearing anywhere else, it is a syntax error. It is a block macro only; using
 any other invocation type for it is a syntax error. It is basically just data
 for the importer that is compiled away before the macro expander runs. Thus,
-currently macros cannot inject `with phase` invocations.
+macros cannot inject `with phase` invocations.
 
 Multiple `with phase` blocks with the same phase number **are** allowed; the code
 from each of them is considered part of that phase.
@@ -365,7 +374,10 @@ Self-macro-imports vanish during macro expansion (leaving just a [coverage dummy
 node](#why-do-my-block-and-decorator-macros-generate-extra-do-nothing-nodes)),
 because a module does not need to really import itself. This is just the closest
 possible adaptation of the traditional macropythonic syntax to register macro
-bindings.
+bindings, when the macros come from the same module. The `__self__` as a module
+name in a from-import just tells `mcpyrate`'s importer that we want to refer to
+*this module*, whatever its absolute dotted name happens to be; there is no
+run-time object named `__self__`.
 
 If you need to write helper macros to define your phase 1 macros, you can define
 them in phase 2 (and so on):
@@ -391,11 +403,54 @@ from __self__ import macros, ...
 # then just code as usual
 ```
 
+Macro-imports usually appear at the top level of the module body. That causes
+the macros to be imported at phase `0`. If you need to import some macros
+earlier, it is allowed to place macro-imports at the top level of the body of a
+`with phase[n]`. This will make those macros available at phase `n` and at any
+later (lower-numbered) phases, including at the implicit phase `0`.
+
+#### Displaying the source code for each phase
+
+To display the unparsed source code for the AST of each phase before macro
+expansion, you can enable the multi-phase compiler's debug mode, with this
+additional macro-import (somewhere in the top level of the module body):
+
+```python
+from mcpyrate.debug import macros, step_phases
+```
+
+This allows to easily see whether the definition of each phase looks the way
+you intended.
+
+Similarly to `with phase`, `step_phases` is not really a macro at all; the
+presence of that macro-import acts as a flag for the multi-phase compiler.
+Trying to actually use the imported `step_phases` macro is considered
+a syntax error. (It's a `@namemacro`, so even accessing the bare name
+will trigger the syntax error.)
+
+The macro expansion itself will **not** be stepped; this debug tool is
+orthogonal to that. For that, use the `step_expansion` macro, as usual.
+
+There is a limitation, to keep the implementation reasonably simple: because
+`with_phase` must appear at the top level of the module body, it is not
+conveniently possible to `with step_expansion` across multiple phase
+definitions.
+
+You must macro-import `step_expansion` inside the earliest (highest-number)
+phase where you need it, and then `with step_expansion` separately inside each
+`with phase` whose expansion you want to step. Be careful to leave the phase's
+macro-imports, if any, *outside* the `with step_expansion`. The debug mode of
+the multi-phase compiler does **not** need to be enabled to use `step_expansion`
+like this.
+
 #### The phase level countdown
 
 Phases higher than `0` only exist during module initialization, locally for each
 module. Once a module finishes importing, it has reached phase `0`, and that's
-all that remains.
+all that the rest of the program sees. This means that another module that wants
+to import macros from `mymodule` doesn't need to care which phase the macros
+were defined in `mymodule.py`. The macros will be present in the final phase-`0`
+module. Phase is important only for invoking those macros inside `mymodule` itself.
 
 During module initialization, for `k >= 1`, each phase `k` is reified into a
 temporary module, placed in `sys.modules`, with **the same absolute dotted name**
@@ -405,21 +460,17 @@ self-macro-import syntax.
 When the macro expander and bytecode compiler are done with phase `k`, that
 phase is reified, completely overwriting the module from phase `k + 1`.
 
+All code from phase `k + 1` is automatically lifted into the code for phase `k`.
+Phase `k` then lifts it to phase `k - 1`, and the chain continues all the way
+down to the implicit phase `0`. So `with phase[n]` actually means that code is
+present *starting from phase `n`*.
+
 Once phase `0` has been macro-expanded, the temporary module is removed from
 `sys.modules`. The resulting final phase-`0` module is handed over to Python's
 import machinery. Thus Python will perform any remaining steps of module
 initialization, such as placing the final module into `sys.modules`. (We don't
 do it manually, because the machinery may need to do something else, too, and
 the absence from `sys.modules` may act as a trigger.)
-
-All code from phase `k + 1` is automatically lifted into the code for phase `k`.
-Phase `k` then lifts it to phase `k - 1`, and the chain continues all the way
-down to the implicit phase `0`.
-
-This means e.g. that another module that wants to import macros from this one
-doesn't need to care which phase the macros were defined in here. They'll be
-present in the final phase-`0` module. The phase is important only for invoking
-those macros inside this module itself.
 
 The **ordering** of the `with phase` code blocks **is preserved**. The code will
 always execute at the point where it appears in the source file. Like a receding
@@ -437,27 +488,29 @@ phase, you could define a `@namemacro` that expands into an AST for the data you
 want to transmit. (Then maybe use `q[u[...]]` in its implementation, to generate
 the expansion easily.)
 
-Each phase may import macros from any earlier phase, by using the magic
-*self-macro-import* syntax `from __self__ import macros, ...`. It doesn't
-matter which phase the macro is defined in, as long as it is in *some*
-earlier (higher-number) phase.
-
 #### Notes
 
-Multi-phase compilation is applied **after** dialect AST transformations.
+Multi-phase compilation is applied **after** dialect AST transformations,
+**before** the macro expander runs. The macro expander runs independently
+at each phase.
 
-This feature was inspired by Racket's [phase level
+Multi-phase compilation was inspired by Racket's [phase level
 tower](https://docs.racket-lang.org/guide/phases.html), but is much simpler.
-Racketeers should observe that in `mcpyrate`, phase separation is not strict;
-code from **all** phases will be available in the final phase-0 module. This
-is a design decision; it's more pythonic that macros don't "disappear" from
-the final module just because they were defined in a higher phase. (This way,
-`with phase` doesn't interfere with Python's usual scoping rules.)
+Racketeers should observe that in `mcpyrate`, phase separation is not strict.
+Code from **all** phases will be available in the final phase-`0` module. Also,
+due to the automatic code lifting, it is not possible to have different definitions
+for the same name in different phases; the original definition will "cascade down"
+via the lifting process, at the point in the source file where it appears.
 
-This makes `mcpyrate`'s phase level into a module initialization detail that is
-local to each module. Other modules don't need to care in which phase a thing
-was defined when they import that thing - for them, all of the code exists in
-phase `0`.
+This makes `mcpyrate`'s phase level into a module initialization detail,
+local to each module. Other modules don't need to care at which phase a thing was
+defined when they import that thing - for them, all definitions exist at phase `0`.
+
+This is a design decision; it's more pythonic that macros don't "disappear" from
+the final module just because they were defined in a higher phase. The resulting
+system is simple, and `with phase` affects Python's usual scoping rules as
+little as possible. This is a minimal extension of the Python language, to make
+it possible to use macros in the same source file where they are defined.
 
 
 ## Writing macros
@@ -484,22 +537,24 @@ Although you don't strictly have to import anything to write macros, there are s
 
 Other modules contain utilities for writing macros:
 
- - [`mcpyrate.quotes`](mcpyrate/quotes.py) provides [quasiquote syntax](quasiquotes.md) as macros, to easily build ASTs in your macros.
- - [`mcpyrate.metatools`](mcpyrate/metatools.py) provides utilities to e.g. expand macros in run-time AST values, while using the macro bindings from your macro's definition site (vs. its use site like `expander.visit` does). [Documentation](quasiquotes.md#the-expand-family-of-macros).
+ - [`mcpyrate.quotes`](mcpyrate/quotes.py) provides [quasiquote syntax](quasiquotes.md) as macros, to easily build ASTs in your macros, using syntax that mostly looks like regular code.
+ - [`mcpyrate.metatools`](mcpyrate/metatools.py) provides utilities; particularly, to expand macros in run-time AST values, while using the macro bindings from your macro's *definition* site (vs. its *use* site like `expander.visit` does). Useful for quoted trees. [Documentation](quasiquotes.md#the-expand-family-of-macros).
  - [`mcpyrate.utils`](mcpyrate/utils.py) provides some macro-writing utilities that are too specific to warrant a spot in the top-level namespace; of these, at least `rename` and `flatten` (for statement suites) solve problems that come up relatively often.
  - [`mcpyrate.walker`](mcpyrate/walker.py) provides an AST walker that can context-manage its state for different subtrees, while optionally collecting items across the whole walk. It's an `ast.NodeTransformer`, but with functionality equivalent to `macropy.core.walkers.Walker`.
  - [`mcpyrate.splicing`](mcpyrate/splicing.py) helps splice statements (or even a complete module body) into a code template. Note in quasiquoted code you can locally splice statements with the block mode `a` (AST-literal) unquote.
  - [`mcpyrate.debug`](mcpyrate/debug.py) may be useful if something in your macro is not working. **See especially the macro `step_expansion`.**
 
-Any missing source locations and `ctx` fields are fixed automatically in a postprocessing step, so you don't need to care about those when writing your AST.
+Any missing `ctx` fields are fixed automatically in a postprocessing step, so you don't need to care about those when writing your AST.
 
-For source location information, the recommendation is:
+For **source location information**, the recommendation is:
 
  - If you generate new AST nodes that do not correspond to any line in the original unexpanded source code, **do not fill in their source location information**.
    - For any node whose source location information is missing, the expander will auto-fill it. This auto-fill copies the source location from the macro invocation node. This makes it easy to pinpoint in `unparse` output in debug mode (e.g. for a block macro) which lines originate in the unexpanded source code and which lines were added by the macro invocation.
 
- - If you edit an AST node that already exists in the input AST, or generate a new node based on an existing one and then discard the original, **be sure to `ast.copy_location` the original node's source location information to your new node**.
+ - If you generate a new AST node based on an existing one from the input AST, and then discard the original node, **be sure to `ast.copy_location` the original node's source location information to your new node**.
    - For such edits, **it is the macro's responsibility** to ensure correct source location information in the output AST, so that coverage reporting works. There is no general rule that could generate source location information for arbitrary AST edits correctly.
+
+ - If you just edit an existing AST node (without adding new nodes inside it), just leave its source location information as-is.
 
 (What we can do automatically, and what `mcpyrate` indeed does, is to make sure that *the line with the macro invocation* shows as covered, on the condition that the macro was actually invoked.)
 
@@ -820,7 +875,7 @@ The recipe is as follows:
  1. Add the import `from mcpyrate.expander import MacroExpander`.
  2. In your macro, on your primary `expander`, consult `expander.bindings` to grab the macro functions you need.
     - Note you **must look at the values** (whether they are the function objects you expect), not at the names. Names can be aliased to anything at the use site - and that very use site also gives you the `tree` that uses those possibly aliased names.
-    - If you need to do the same on the expander from the macro expansion time of your macro definition (not the expander of your macro's *use site*, which is what the `expander` named argument refers to), see [`mcpyrate.metatools`](mcpyrate/metatools.py), particularly the name macro `macro_bindings`. That will evaluate, at your macro's run time, to a snapshot of the bindings from macro expansion time.
+    - If you need to do the same on the expander from the macro expansion time of your macro definition (not the expander of your macro's *use site*, which is what the `expander` named argument refers to), see [`mcpyrate.metatools`](mcpyrate/metatools.py), particularly the name macro `macro_bindings`. That will evaluate, at your macro's run time, to a snapshot of the bindings from the time its implementation was macro-expanded.
  3. In your macro, call `MacroExpander(modified_bindings, expander.filename).visit(tree)` to invoke a new expander instance with the modified bindings.
 
 The implementation of the quasiquote system has an example of this.
@@ -830,9 +885,21 @@ Obviously, if you want to expand just one layer with the second expander, use it
 
 ## Questions & Answers
 
-To troubleshoot your macros, see [`mcpyrate.debug`](mcpyrate/debug.py), particularly the macro `step_expansion`. It is both an `expr` and `block` macro.
+### How to debug macro-enabled code?
 
-To troubleshoot macro expansion of a run-time AST value (such as quoted code), see [`mcpyrate.metatools`](mcpyrate/metatools.py), particularly the macro `stepr`. It is an `expr` macro that takes in a run-time AST value. (In Python, values are always referred to by expressions. Hence no block mode.)
+At run time, just debug as usual. At compile time:
+
+In whichever way the program is editing the source code, looking at the steps of that transformation often helps. We provide several utilities:
+
+ - To troubleshoot regular macro expansion, see the module [`mcpyrate.debug`](mcpyrate/debug.py), particularly the macro `step_expansion`. It is both an `expr` and `block` macro. This is the one that is needed most often.
+
+ - To troubleshoot macro expansion of a run-time AST value (such as quasiquoted code), see [`mcpyrate.metatools`](mcpyrate/metatools.py), particularly the macro `stepr`. It is an `expr` macro that takes in a run-time AST value. (In Python, values are always referred to by expressions. Hence no block mode.)
+
+   Also, use `print(unparse(tree, debug=True, color=True))` if there's a particular `tree` whose source code representation you'd like to look at, or even `print(dump(tree, color=True))`. Look at the docstrings of those functions for other possibly useful parameters.
+
+ - To troubleshoot multi-phase compilation, see `step_phases` in `mcpyrate.debug`. Just macro-import it (`from mcpyrate.debug import macros, step_phases`).
+
+ - To troubleshoot dialect transformations, see the dialect `StepExpansion` in `mcpyrate.debug`; dialect-import it (`from mcpyrate.debug import dialects, StepExpansion`). It will step both source and AST transformations in the dialect compiler, one step per dialect.
 
 
 ### I just ran my program again and no macro expansion is happening?
@@ -852,11 +919,11 @@ This can be a problem, because hygienic value storage uses `pickle`, which in or
 
 ### My own macros are working, but I'm not seeing any output from `step_expansion` (or `show_bindings`)?
 
-The most likely cause is that the bytecode cache for your `.py` source file is up to date. Hence, the macro expander was skipped.
+The most likely cause is that the bytecode cache (`.pyc`) for your `.py` source file is up to date. Hence, the macro expander was skipped.
 
 Unlike most macros, the whole point of `step_expansion` and `show_bindings` are their side effects - which occur at macro expansion time. So you'll get output from them only if the expander runs.
 
-Your own macros "work", because Python is loading the bytecode, which was macro-expanded during an earlier run. Your macros didn't run this time, but the expanded code from the previous run is still there in the bytecode cache.
+Your own macros "work", because Python is loading the bytecode, which was macro-expanded during an earlier run. Your macros didn't run this time, but the expanded code from the previous run is still there in the bytecode cache (and, since it is up to date, it matches the output the macros would have, were they to run again).
 
 Force an *mtime* update on your source file (`touch` it, or just save it again in a text editor), so the expander will then run again (seeing that the source file has been modified).
 
@@ -871,7 +938,7 @@ Any macros that `mymacro` invokes in its output AST are just data, to be spliced
 
 As the old saying goes, *it's always five'o'clock **somewhere***. *There is no global macro expansion time* - the "time" must be considered separately for each source file.
 
-(And if you use [multi-phase compilation](#multi-phase-compilation) (a.k.a. `with phase`), each phase will have its own macro-expansion time as well as its own run time. For any `k >= 0`, the run time of phase `k + 1` is the macro expansion time of phase `k`.)
+And if you use [multi-phase compilation](#multi-phase-compilation) (a.k.a. `with phase`), then in a particular source file, each phase will have its own macro-expansion time as well as its own run time. For any `k >= 0`, the run time of phase `k + 1` is the macro expansion time of phase `k`.
 
 
 ### `step_expansion` is treating the `expands` family of macros as a single step?
@@ -915,7 +982,7 @@ In general, **they should**, because:
  - `mcpyrate.debug.step_expansion` hooks into the expander at macro expansion time,
  - `mcpyrate.metatools.stepr` captures the expander's macro bindings at macro expansion time, but delays expansion (of the run-time AST value provided as its argument) until run time.
 
-For example, with the usual macro-imports,
+To look at this more closely, let's fire up a REPL with `macropython -i`. With the macro-imports:
 
 ```python
 from mcpyrate.quotes import macros, q
@@ -933,9 +1000,9 @@ on Python 3.6, the invocation `step_expansion[q[42]]` produces:
 **Tree 0x7f515e2454e0 (<ipython-session>) macro expansion complete after 1 step.
 ```
 
-Keep in mind each piece of source code shown is actually the unparse of an AST. So the `q[42]` is actually an `ast.Subscript`, while the expanded result is an `ast.Call` that, once compiled and run, will call `ast.Num`.
+Keep in mind each piece of source code shown is actually the unparse of an AST. So the source code `q[42]` actually stands for an `ast.Subscript`, while the expanded result is an `ast.Call` that, **once it is compiled and run**, will call `ast.Num`. (If you're not convinced, try `step_expansion["dump"][q[42]]`, which pretty-prints the raw AST instead of unparsed source code.)
 
-The invocation `stepr[q[42]]` produces:
+The invocation `stepr[q[42]]`, on the other hand, produces:
 
 ```
 **Tree 0x7f515e00aac8 (<ipython-session>) before macro expansion:
@@ -943,27 +1010,26 @@ The invocation `stepr[q[42]]` produces:
 **Tree 0x7f515e00aac8 (<ipython-session>) macro expansion complete after 0 steps.
 ```
 
-or in other words, an `ast.Num` object.
+or in other words, an `ast.Num` object. (Again, if not convinced, try `stepr["dump"][q[42]]`.)
 
-So at run time, both invocations will result in an `ast.Num` object (or `ast.Constant`, if running on Python 3.8+). But they see the expansion differently, because one operates at macro expansion time, while the other operates at run time.
+So the **run-time result** of both invocations is an `ast.Num` object (or `ast.Constant`, if running on Python 3.8+). But they see the expansion differently, because `step_expansion` operates at macro expansion time, while `stepr` operates at run time.
 
-While unquotes are processed at run time of the use site of `q` (see [the quasiquote system docs](quasiquotes.md)), the `q` itself is processed at macro expansion time. Hence expanding at run time, it will already be gone.
-
+Whereas unquotes are processed at run time of the use site of `q` (see [the quasiquote system docs](quasiquotes.md)), the `q` itself is processed at macro expansion time. Hence, `step_expansion` will see the `q`, but when `stepr` expands the tree at run time, it will already be gone. (And the expression mode of `q` itself does not have a run-time part, so it just vanishes.)
 
 
 ### Error in `compile`, an AST node is missing the required field `lineno`?
 
-Welcome to the club. It is likely not much of an exaggeration to say all Python macro authors (regardless of which expander you pick) have seen this error at some point.
+Welcome to the club. It is likely not much of an exaggeration that all Python macro authors (regardless of which expander you pick) have seen this error at some point.
 
 It is overwhelmingly likely the actual error is something else, because all macro expanders for Python automatically fill in source location information for any AST nodes that don't have it. (There are differences in what exact line numbers are filled in by `mcpyrate`/`mcpy`/`macropy`, but they all do this in some form.)
 
-The misleading error message is due to an unfortunate lack of input validation in Python's compiler, because Python wasn't designed for an environment where AST editing is part of the daily programming experience.
+The misleading error message is due to an unfortunate lack of input validation in Python's compiler. Python wasn't designed for an environment where AST editing is part of the daily programming experience.
 
 So let's look at the likely causes.
 
 #### Unexpected bare value
 
-Is your macro placing AST nodes where the compiler expects those, and not accidentally using bare run-time values?
+Is your macro placing AST nodes where the compiler expects those, and not accidentally using bare run-time values? (This gets tricky if you're delaying something until run time. You might need a `mcpyrate.quotes.astify` there.)
 
 #### Wrong type of list
 
@@ -982,6 +1048,8 @@ There is no easy way to check this automatically, because Python's AST format do
 The "expression statement" node `ast.Expr` is a very common cause of mysterious compile errors. It is an implicit AST node with no surface syntax representation.
 
 Python's grammar requires that whenever, in the source code, an expression appears in a position where a statement is expected, then in the AST, the expression node must be wrapped in an `ast.Expr` statement node. The purpose of that statement is to run the expression, and discard the resulting value. (This is useful mainly for a bare function call, if the function is called for its side effects; consider e.g. `list.append` or `set.add`.)
+
+(Note `ast.Expr` should not be confused with `ast.expr`, which is the base class for expression AST nodes.)
 
 When manually building an AST, the common problem is an accidentally omitted `ast.Expr`.
 
