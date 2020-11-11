@@ -68,9 +68,6 @@ def iswithphase(stmt):
     return n
 
 
-# TODO: convenience: support `with phase` inside `with step_expansion`,
-# to easily allow stepping a whole module (or a part of it that has multiple
-# phases), even if it uses `with phase`.
 def extract_phase(tree, *, phase=0):
     """Split `tree` into given `phase` and remaining parts.
 
