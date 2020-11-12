@@ -143,7 +143,7 @@ We use [semantic versioning](https://semver.org/). We're almost-but-not-quite co
   - Relative macro-imports (for code in packages), e.g. `from .other import macros, kittify`.
   - The expander automatically fixes missing `ctx` attributes (and source locations) in the AST, so you don't need to care about those in your macros.
   - Several block macros can be invoked in the same `with` (equivalent to nesting them, with leftmost outermost).
-  - [Walker](mcpyrate/walker.py) à la `macropy`, to easily context-manage state for subtrees, and collect items across the whole walk.
+  - [ASTTransformer](mcpyrate/walker.py) à la `macropy`'s `Walker`, to easily context-manage state for subtrees, and collect items across the whole walk.
   - AST [markers](mcpyrate/markers.py) (pseudo-nodes) for communication in a set of co-operating macros (and with the expander).
   - [`gensym`](mcpyrate/utils.py) to create a fresh, unused lexical identifier.
   - [`unparse`](mcpyrate/unparser.py) to convert an AST to the corresponding source code, optionally with syntax highlighting (for terminal output).
@@ -681,7 +681,7 @@ And when using the `mcpyrate.debug.StepExpansion` debugging dialect, then during
 
 [[full documentation](walker.md)]
 
-To bridge the feature gap between [`ast.NodeTransformer`](https://docs.python.org/3/library/ast.html#ast.NodeTransformer) and `macropy`'s `Walker`, we provide [`mcpyrate.walker.Walker`](mcpyrate/walker.py), a zen-minimalistic AST walker base class based on `ast.NodeTransformer`, that can context-manage its state for different subtrees, while optionally collecting items across the whole walk.
+To bridge the feature gap between [`ast.NodeTransformer`](https://docs.python.org/3/library/ast.html#ast.NodeTransformer) and `macropy`'s `Walker`, we provide [`mcpyrate.walker.ASTTransformer`](mcpyrate/walker.py), a zen-minimalistic AST walker base class based on `ast.NodeTransformer`, that can context-manage its state for different subtrees, while optionally collecting items across the whole walk.
 
 
 ### The named parameters

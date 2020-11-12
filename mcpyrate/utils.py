@@ -84,7 +84,7 @@ def rename(oldname, newname, tree):
         tree = q[lambda _: ...]
         tree = rename("_", gensym(), tree)
     """
-    class Renamer(walker.Walker):
+    class Renamer(walker.ASTTransformer):
         def transform(self, tree):
             T = type(tree)
             if T is ast.Name:

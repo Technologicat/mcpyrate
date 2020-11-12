@@ -1,6 +1,6 @@
 # -*- coding: utf-8; -*-
 
-__all__ = ["Walker"]
+__all__ = ["ASTTransformer"]
 
 from abc import ABCMeta, abstractmethod
 from ast import NodeTransformer
@@ -11,7 +11,7 @@ from .utils import flatten
 
 # TODO: add ast.NodeVisitor derivative (experience shows `return tree` is too much to remember when not editing)
 
-class Walker(NodeTransformer, metaclass=ABCMeta):
+class ASTTransformer(NodeTransformer, metaclass=ABCMeta):
     """AST walker base class, providing a state stack and a node collector."""
     def __init__(self, **bindings):
         """Bindings are loaded into the initial `self.state` as attributes."""

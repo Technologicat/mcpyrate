@@ -13,7 +13,7 @@ from ast import (Load, Store, Del,
                  iter_child_nodes)
 from copy import copy
 
-from .walker import Walker
+from .walker import ASTTransformer
 
 try:  # Python 3.8+
     from ast import NamedExpr
@@ -23,7 +23,7 @@ except ImportError:
     NamedExpr = _NoSuchNodeType
 
 
-class _CtxFixer(Walker):
+class _CtxFixer(ASTTransformer):
     def __init__(self, *, copy_seen_nodes):
         super().__init__(ctxclass=Load)
         self.copy_seen_nodes = copy_seen_nodes

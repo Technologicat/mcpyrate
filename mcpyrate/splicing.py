@@ -8,7 +8,7 @@ from copy import deepcopy
 
 from .astfixers import fix_locations
 from .coreutils import ismacroimport
-from .walker import Walker
+from .walker import ASTTransformer
 
 
 def splice_statements(body, template, tag="__paste_here__"):
@@ -77,7 +77,7 @@ def splice_statements(body, template, tag="__paste_here__"):
     def ispastehere(tree):
         return type(tree) is ast.Expr and type(tree.value) is ast.Name and tree.value.id == tag
 
-    class StatementSplicer(Walker):
+    class StatementSplicer(ASTTransformer):
         def __init__(self):
             self.first = True
             super().__init__()
@@ -160,7 +160,7 @@ def splice_dialect(body, template, tag="__paste_here__"):
                 return False
             target = tree.targets[0]
             return type(target) is ast.Name and target.id == "__all__"
-        class MagicAllExtractor(Walker):
+        class MagicAllExtractor(ASTTransformer):
             def transform(self, tree):
                 if ismagicall(tree):
                     self.collect(tree)
@@ -173,7 +173,7 @@ def splice_dialect(body, template, tag="__paste_here__"):
     body, user_magic_all = extract_magic_all(body)
 
     def extract_macroimports(tree, *, magicname="macros"):
-        class MacroImportExtractor(Walker):
+        class MacroImportExtractor(ASTTransformer):
             def transform(self, tree):
                 if ismacroimport(tree, magicname):
                     self.collect(tree)

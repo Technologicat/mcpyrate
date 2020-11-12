@@ -2,7 +2,7 @@
 
 ```python
     def kittify(mytree):
-        class Kittifier(Walker):
+        class Kittifier(ASTTransformer):
             def transform(self, tree):
                 if type(tree) is ast.Constant:
                     self.collect(tree.value)
@@ -17,7 +17,7 @@
 
 To bridge the feature gap between
 [`ast.NodeTransformer`](https://docs.python.org/3/library/ast.html#ast.NodeTransformer)
-and `macropy`'s `Walker`, we provide `mcpyrate.walker.Walker`, a zen-minimalistic
+and `macropy`'s `Walker`, we provide `mcpyrate.walker.ASTTransformer`, a zen-minimalistic
 AST walker base class based on `ast.NodeTransformer`, that can context-manage
 its state for different subtrees, while optionally collecting items across the
 whole walk.
@@ -144,4 +144,4 @@ For a realistic example, see [`mcpyrate.astfixers`](mcpyrate/astfixers.py).
    Load the given bindings into the new, otherwise blank initial state. 
 
    Use this to prepare for walking another unrelated tree, if you want to
-   reuse the same `Walker` instance.
+   reuse the same `ASTTransformer` instance.
