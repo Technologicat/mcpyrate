@@ -18,7 +18,7 @@ from .expander import MacroCollector, namemacro, parametricmacro
 from .multiphase import step_phases  # re-export for discoverability, it's a debug feature
 from .unparser import unparse_with_fallbacks
 from .utils import NestingLevelTracker, format_macrofunction
-from .walker import ASTTransformer
+from .walker import ASTVisitor
 
 
 _step_expansion_level = NestingLevelTracker()
@@ -175,7 +175,7 @@ def format_bindings(expander, *, globals_too=False, color=False):
         return output.getvalue()
 
 
-class SourceLocationInfoValidator(ASTTransformer):
+class SourceLocationInfoValidator(ASTVisitor):
     """Collect nodes that are missing `lineno` and/or `col_offset`.
 
     Usage::
@@ -231,4 +231,4 @@ class SourceLocationInfoValidator(ASTTransformer):
                 self.collect((tree,
                               code,
                               [fieldname for fieldname, p in zip(self.check_fields, present) if not p]))
-        return self.generic_visit(tree)
+        self.generic_visit(tree)

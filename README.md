@@ -143,7 +143,7 @@ We use [semantic versioning](https://semver.org/). We're almost-but-not-quite co
   - Relative macro-imports (for code in packages), e.g. `from .other import macros, kittify`.
   - The expander automatically fixes missing `ctx` attributes (and source locations) in the AST, so you don't need to care about those in your macros.
   - Several block macros can be invoked in the same `with` (equivalent to nesting them, with leftmost outermost).
-  - [ASTTransformer](mcpyrate/walker.py) à la `macropy`'s `Walker`, to easily context-manage state for subtrees, and collect items across the whole walk.
+  - [AST visitor and transformer](mcpyrate/walker.py) à la `macropy`'s `Walker`, to easily context-manage state for subtrees, and collect items across the whole walk.
   - AST [markers](mcpyrate/markers.py) (pseudo-nodes) for communication in a set of co-operating macros (and with the expander).
   - [`gensym`](mcpyrate/utils.py) to create a fresh, unused lexical identifier.
   - [`unparse`](mcpyrate/unparser.py) to convert an AST to the corresponding source code, optionally with syntax highlighting (for terminal output).
@@ -542,7 +542,7 @@ Other modules contain utilities for writing macros:
  - [`mcpyrate.quotes`](mcpyrate/quotes.py) provides [quasiquote syntax](quasiquotes.md) as macros, to easily build ASTs in your macros, using syntax that mostly looks like regular code.
  - [`mcpyrate.metatools`](mcpyrate/metatools.py) provides utilities; particularly, to expand macros in run-time AST values, while using the macro bindings from your macro's *definition* site (vs. its *use* site like `expander.visit` does). Useful for quoted trees. [Documentation](quasiquotes.md#the-expand-family-of-macros).
  - [`mcpyrate.utils`](mcpyrate/utils.py) provides some macro-writing utilities that are too specific to warrant a spot in the top-level namespace; of these, at least `rename` and `flatten` (for statement suites) solve problems that come up relatively often.
- - [`mcpyrate.walker`](mcpyrate/walker.py) provides an AST walker that can context-manage its state for different subtrees, while optionally collecting items across the whole walk. It's an `ast.NodeTransformer`, but with functionality equivalent to `macropy.core.walkers.Walker`.
+ - [`mcpyrate.walker`](mcpyrate/walker.py) provides AST walkers (both visitor and transformer variants) that can context-manage their state for different subtrees, while optionally collecting items across the whole walk. They are based on `ast.NodeVisitor` and `ast.NodeTransformer`, respectively, but with functionality equivalent to `macropy.core.walkers.Walker`.
  - [`mcpyrate.splicing`](mcpyrate/splicing.py) helps splice statements (or even a complete module body) into a code template. Note in quasiquoted code you can locally splice statements with the block mode `a` (AST-literal) unquote.
  - [`mcpyrate.debug`](mcpyrate/debug.py) may be useful if something in your macro is not working. **See especially the macro `step_expansion`.**
 
@@ -681,7 +681,7 @@ And when using the `mcpyrate.debug.StepExpansion` debugging dialect, then during
 
 [[full documentation](walker.md)]
 
-To bridge the feature gap between [`ast.NodeTransformer`](https://docs.python.org/3/library/ast.html#ast.NodeTransformer) and `macropy`'s `Walker`, we provide [`mcpyrate.walker.ASTTransformer`](mcpyrate/walker.py), a zen-minimalistic AST walker base class based on `ast.NodeTransformer`, that can context-manage its state for different subtrees, while optionally collecting items across the whole walk.
+To bridge the feature gap between [`ast.NodeVisitor`](https://docs.python.org/3/library/ast.html#ast.NodeVisitor)/  [`ast.NodeTransformer`](https://docs.python.org/3/library/ast.html#ast.NodeTransformer) and `macropy`'s `Walker`, in [`mcpyrate.walker`](mcpyrate/walker.py) we provide `ASTVisitor` and `ASTTransformer` that can context-manage their state for different subtrees, while optionally collecting items across the whole walk. They are based on `ast.NodeVisitor` and `ast.NodeTransformer`, respectively.
 
 
 ### The named parameters

@@ -1,18 +1,16 @@
 # -*- coding: utf-8; -*-
 
-__all__ = ["ASTTransformer"]
+__all__ = ["ASTVisitor", "ASTTransformer"]
 
 from abc import ABCMeta, abstractmethod
-from ast import NodeTransformer
+from ast import NodeVisitor, NodeTransformer
 
 from .bunch import Bunch
 from .utils import flatten
 
 
-# TODO: add ast.NodeVisitor derivative (experience shows `return tree` is too much to remember when not editing)
-
-class ASTTransformer(NodeTransformer, metaclass=ABCMeta):
-    """AST transformer base class, providing a state stack and a node collector."""
+class BaseASTWalker:
+    """AST walker base class, providing a state stack and a node collector."""
     def __init__(self, **bindings):
         """Bindings are loaded into the initial `self.state` as attributes."""
         self.reset(**bindings)
@@ -54,8 +52,54 @@ class ASTTransformer(NodeTransformer, metaclass=ABCMeta):
         self.collected.append(value)
         return value
 
+
+class ASTVisitor(BaseASTWalker, NodeVisitor, metaclass=ABCMeta):
+    """AST visitor, like `ast.NodeVisitor`, but with the features of `BaseASTWalker`.
+
+    (Because `return tree`, or `return self.generic_visit(tree)`, is too much
+    to remember when not editing.)
+    """
+
     def visit(self, tree):
-        """Start walking `tree`. **Do not override this method; see `transform` instead.**"""
+        """Start visiting `tree`. **Do not override this method; see `examine` instead.**"""
+        newstate = self._subtree_overrides.pop(id(tree), False)
+        if newstate:
+            self._stack.append(newstate)
+        try:
+            if isinstance(tree, list):
+                for elt in tree:
+                    self.visit(elt)
+                return
+            return self.examine(tree)
+        finally:
+            if newstate:
+                self._stack.pop()
+
+    @abstractmethod
+    def examine(self, tree):
+        """Examine one node. **Abstract method, override this.**
+
+        There is only one `examine` method. To detect node type, use `type(tree)`.
+
+        This method must recurse explicitly where needed. Use:
+
+          - `self.generic_visit(tree)` to visit all children of `tree`.
+          - `self.visit(tree.something)` to selectively visit only some children.
+            Visiting a statement suite with `self.visit` is also ok; it is treated
+            like a `generic_visit`.
+
+        As in `ast.NodeVisitor`:
+
+          - Return value of `examine` is forwarded by `visit`.
+          - `generic_visit` always returns `None`.
+        """
+
+
+class ASTTransformer(BaseASTWalker, NodeTransformer, metaclass=ABCMeta):
+    """AST transformer, like `ast.NodeTransformer`, but with the features of `BaseASTWalker`."""
+
+    def visit(self, tree):
+        """Start transforming `tree`. **Do not override this method; see `transform` instead.**"""
         newstate = self._subtree_overrides.pop(id(tree), False)
         if newstate:
             self._stack.append(newstate)
@@ -73,13 +117,13 @@ class ASTTransformer(NodeTransformer, metaclass=ABCMeta):
 
     @abstractmethod
     def transform(self, tree):
-        """Examine and/or transform one node. **Abstract method, override this.**
+        """Transform one node. **Abstract method, override this.**
 
         There is only one `transform` method. To detect node type, use `type(tree)`.
 
         This method must recurse explicitly where needed. Use:
 
-          - `tree = self.generic_visit(tree)` to visit all children of `tree`
+          - `tree = self.generic_visit(tree)` to visit all children of `tree`.
           - `tree.something = self.visit(tree.something)` to selectively visit
             only some children. Visiting a statement suite with `self.visit`
             is also ok.
