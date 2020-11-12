@@ -1148,7 +1148,7 @@ Note that the non-monotonicity, when present at all, is mild; it's local to each
 
 See [`mcpyrate.astfixers.fix_locations`](mcpyrate/astfixers.py), which is essentially an improved `ast.fix_missing_locations`. You'll likely want either `mode="overwrite"` or `mode="reference"`, depending on what your macro does.
 
-There's also the stdlib solution:
+There's also the stdlib barebones solution:
 
 ```python
 from ast import walk, copy_location
