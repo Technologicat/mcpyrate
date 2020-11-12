@@ -703,11 +703,12 @@ level of the module body:
 from mcpyrate.multiphase import macros, phase
 ```
 
-Actually `with phase` is a feature of `mcpyrate`'s importer, not really
-a regular macro, but its docstring must live somewhere, and it's nice if
-`flake8` is happy. This macro-import mainly acts as a flag for the importer,
-but it does also import a dummy macro that will trigger a syntax error if the
-`with phase` construct is used improperly.
+Actually `with phase` is a feature of `mcpyrate`'s importer, not really a
+regular macro, but its docstring must live somewhere, and it's nice if `flake8`
+is happy. This macro-import mainly acts as a flag for the importer, but it does
+also import a dummy macro that will trigger a syntax error if the `with phase`
+construct is used improperly (i.e. in a position where it is not compiled away
+by the importer, and slips through to the macro expander).
 
 When multi-phase compilation is enabled, use the `with phase[n]` syntactic
 construct to define which parts of your module should be compiled before which
