@@ -542,7 +542,7 @@ Other modules contain utilities for writing macros:
  - [`mcpyrate.quotes`](mcpyrate/quotes.py) provides [quasiquote syntax](quasiquotes.md) as macros, to easily build ASTs in your macros, using syntax that mostly looks like regular code.
  - [`mcpyrate.metatools`](mcpyrate/metatools.py) provides utilities; particularly, to expand macros in run-time AST values, while using the macro bindings from your macro's *definition* site (vs. its *use* site like `expander.visit` does). Useful for quoted trees. [Documentation](quasiquotes.md#the-expand-family-of-macros).
  - [`mcpyrate.utils`](mcpyrate/utils.py) provides some macro-writing utilities that are too specific to warrant a spot in the top-level namespace; of these, at least `rename` and `flatten` (for statement suites) solve problems that come up relatively often.
- - [`mcpyrate.walkers`](mcpyrate/walkers.py) provides AST walkers (both visitor and transformer variants) that can context-manage their state for different subtrees, while optionally collecting items across the whole walk. They are based on `ast.NodeVisitor` and `ast.NodeTransformer`, respectively, but with functionality equivalent to `macropy.core.walkers.Walker`. [Documentation](walker.md).
+ - [`mcpyrate.walkers`](mcpyrate/walkers.py) provides AST walkers (both visitor and transformer variants) that can context-manage their state for different subtrees, while optionally collecting items across the whole walk. They are based on `ast.NodeVisitor` and `ast.NodeTransformer`, respectively, but with functionality equivalent to `macropy.core.walkers.Walker`. [Documentation](walkers.md).
  - [`mcpyrate.splicing`](mcpyrate/splicing.py) helps splice statements (or even a complete module body) into a code template. Note in quasiquoted code you can locally splice statements with the block mode `a` (AST-literal) unquote.
  - [`mcpyrate.debug`](mcpyrate/debug.py) may be useful if something in your macro is not working. **See especially the macro `step_expansion`.**
 
@@ -679,7 +679,7 @@ And when using the `mcpyrate.debug.StepExpansion` debugging dialect, then during
 
 ### Walk an AST
 
-[[full documentation](walker.md)]
+[[full documentation](walkers.md)]
 
 [Omitted long matching line]
 
