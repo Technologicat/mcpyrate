@@ -9,7 +9,7 @@ import ast
 from contextlib import contextmanager
 import uuid
 
-from . import walker
+from . import walkers
 
 
 _previous_gensyms = set()
@@ -84,7 +84,7 @@ def rename(oldname, newname, tree):
         tree = q[lambda _: ...]
         tree = rename("_", gensym(), tree)
     """
-    class Renamer(walker.ASTTransformer):
+    class Renamer(walkers.ASTTransformer):
         def transform(self, tree):
             T = type(tree)
             if T is ast.Name:

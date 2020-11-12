@@ -10,7 +10,7 @@ __all__ = ["ASTMarker", "get_markers", "delete_markers", "check_no_markers_remai
 import ast
 
 from . import core
-from .walker import ASTVisitor, ASTTransformer
+from .walkers import ASTVisitor, ASTTransformer
 
 
 class ASTMarker(ast.AST):

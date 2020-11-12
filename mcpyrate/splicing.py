@@ -8,7 +8,7 @@ from copy import deepcopy
 
 from .astfixers import fix_locations
 from .coreutils import ismacroimport
-from .walker import ASTTransformer
+from .walkers import ASTTransformer
 
 
 def splice_statements(body, template, tag="__paste_here__"):

@@ -18,7 +18,7 @@ from .expander import MacroCollector, namemacro, parametricmacro
 from .multiphase import step_phases  # re-export for discoverability, it's a debug feature
 from .unparser import unparse_with_fallbacks
 from .utils import NestingLevelTracker, format_macrofunction
-from .walker import ASTVisitor
+from .walkers import ASTVisitor
 
 
 _step_expansion_level = NestingLevelTracker()

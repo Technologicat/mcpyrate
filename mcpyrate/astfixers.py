@@ -13,7 +13,7 @@ from ast import (Load, Store, Del,
                  iter_child_nodes)
 from copy import copy
 
-from .walker import ASTTransformer
+from .walkers import ASTTransformer
 
 try:  # Python 3.8+
     from ast import NamedExpr
