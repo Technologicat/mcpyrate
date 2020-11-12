@@ -681,7 +681,9 @@ And when using the `mcpyrate.debug.StepExpansion` debugging dialect, then during
 
 [[full documentation](walkers.md)]
 
-[Omitted long matching line]
+To bridge the feature gap between [`ast.NodeVisitor`](https://docs.python.org/3/library/ast.html#ast.NodeVisitor)/  [`ast.NodeTransformer`](https://docs.python.org/3/library/ast.html#ast.NodeTransformer) and `macropy`'s `Walker`, we provide `ASTVisitor` and `ASTTransformer` that can context-manage their state for different subtrees, while optionally collecting items across the whole walk. These can be found in the module [`mcpyrate.walkers`](mcpyrate/walkers.py).
+
+The walkers are based on `ast.NodeVisitor` and `ast.NodeTransformer`, respectively. So `ASTVisitor` only looks at the tree, gathering information from it, while `ASTTransformer` may perform edits.
 
 
 ### The named parameters
