@@ -25,10 +25,6 @@ We use [semantic versioning](https://semver.org/). We're almost-but-not-quite co
         - [Interactive use](#interactive-use)
         - [Macro invocation syntax](#macro-invocation-syntax)
         - [Importing macros](#importing-macros)
-        - [Multi-phase compilation](#multi-phase-compilation)
-            - [Displaying the source code for each phase](#displaying-the-source-code-for-each-phase)
-            - [The phase level countdown](#the-phase-level-countdown)
-            - [Notes](#notes)
     - [Writing macros](#writing-macros)
         - [Macro invocation types](#macro-invocation-types)
         - [Quasiquotes](#quasiquotes)
@@ -47,6 +43,10 @@ We use [semantic versioning](https://semver.org/). We're almost-but-not-quite co
             - [Syntax limitations](#syntax-limitations)
         - [Expand macros inside-out](#expand-macros-inside-out)
         - [Expand macros inside-out, but only those in a given set](#expand-macros-inside-out-but-only-those-in-a-given-set)
+        - [Multi-phase compilation](#multi-phase-compilation)
+            - [Displaying the source code for each phase](#displaying-the-source-code-for-each-phase)
+            - [The phase level countdown](#the-phase-level-countdown)
+            - [Notes](#notes)
     - [Questions & Answers](#questions--answers)
         - [How to debug macro-enabled code?](#how-to-debug-macro-enabled-code)
         - [I just ran my program again and no macro expansion is happening?](#i-just-ran-my-program-again-and-no-macro-expansion-is-happening)
@@ -318,201 +318,6 @@ from module import macros, macroname as alias
 This will register the macro binding under the name `alias`.
 
 Note this implies that, when writing your own macros, if one of them needs to analyze whether the tree it's expanding is going to invoke specific other macros, then in `expander.bindings`, you **must look at the values** (whether they are the function objects you expect), not at the names - since names can be aliased to anything at the use site.
-
-
-### Multi-phase compilation
-
-*Multi-phase compilation*, a.k.a. `with phase`, allows to use macros in the
-same module where they are defined. To tell `mcpyrate` to enable the multi-phase
-compiler for your module, add the following macro-import somewhere in the top
-level of the module body:
-
-```python
-from mcpyrate.multiphase import macros, phase
-```
-
-Actually `with phase` is a feature of `mcpyrate`'s importer, not really
-a regular macro, but its docstring must live somewhere, and it's nice if
-`flake8` is happy. This macro-import mainly acts as a flag for the importer,
-but it does also import a dummy macro that will trigger a syntax error if the
-`with phase` construct is used improperly.
-
-When multi-phase compilation is enabled, use the `with phase[n]` syntactic
-construct to define which parts of your module should be compiled before which
-other ones. The phase number `n` must be a positive integer literal. **Phases count
-down**, run time is phase `0`. For any `k >= 0`, the run time of phase `k + 1` is
-the macro-expansion time of phase `k`. Phase `0` is defined implicitly. All code
-that is **not** inside any `with phase` block belongs to phase `0`.
-
-```python
-# application.py
-from mcpyrate.multiphase import macros, phase
-
-with phase[1]:
-    # macro definitions here
-
-# everything not inside a `with phase` is implicitly phase 0
-
-# use the magic module name __self__ to import macros from a higher phase of the same module
-from __self__ import macros, ...
-
-# then just code as usual
-```
-
-To run, `macropython application.py` or `macropython -m application`. For a full example, see [`demo/multiphase_demo.py`](demo/multiphase_demo.py).
-
-The `with phase` construct may only appear at the top level of the module body.
-Appearing anywhere else, it is a syntax error. It is a block macro only; using
-any other invocation type for it is a syntax error. It is basically just data
-for the importer that is compiled away before the macro expander runs. Thus,
-macros cannot inject `with phase` invocations.
-
-Multiple `with phase` blocks with the same phase number **are** allowed; the code
-from each of them is considered part of that phase.
-
-The syntax `from __self__ import macros, ...` is a *self-macro-import*, which
-imports macros from any higher-numbered phase of the same module it appears in.
-Self-macro-imports vanish during macro expansion (leaving just a [coverage dummy
-node](#why-do-my-block-and-decorator-macros-generate-extra-do-nothing-nodes)),
-because a module does not need to really import itself. This is just the closest
-possible adaptation of the traditional macropythonic syntax to register macro
-bindings, when the macros come from the same module. The `__self__` as a module
-name in a from-import just tells `mcpyrate`'s importer that we want to refer to
-*this module*, whatever its absolute dotted name happens to be; there is no
-run-time object named `__self__`.
-
-If you need to write helper macros to define your phase 1 macros, you can define
-them in phase 2 (and so on):
-
-```python
-from mcpyrate.multiphase import macros, phase
-
-with phase[2]:
-    # define macros used by phase 1 here
-
-with phase[1]:
-    # macro-imports (also self-macro-imports) may appear
-    # at the top level of a `with phase`.
-    from __self__ import macros, ...
-
-    # define macros used by phase 0 here
-
-# everything not inside a `with phase` is implicitly phase 0
-
-# you can import macros from any higher phase, not just phase 1
-from __self__ import macros, ...
-
-# then just code as usual
-```
-
-Macro-imports usually appear at the top level of the module body. That causes
-the macros to be imported at phase `0`. If you need to import some macros
-earlier, it is allowed to place macro-imports at the top level of the body of a
-`with phase[n]`. This will make those macros available at phase `n` and at any
-later (lower-numbered) phases, including at the implicit phase `0`.
-
-#### Displaying the source code for each phase
-
-To display the unparsed source code for the AST of each phase before macro
-expansion, you can enable the multi-phase compiler's debug mode, with this
-additional macro-import (somewhere in the top level of the module body):
-
-```python
-from mcpyrate.debug import macros, step_phases
-```
-
-This allows to easily see whether the definition of each phase looks the way
-you intended.
-
-Similarly to `with phase`, `step_phases` is not really a macro at all; the
-presence of that macro-import acts as a flag for the multi-phase compiler.
-Trying to actually use the imported `step_phases` macro is considered
-a syntax error. (It's a `@namemacro`, so even accessing the bare name
-will trigger the syntax error.)
-
-The macro expansion itself will **not** be stepped; this debug tool is
-orthogonal to that. For that, use the `step_expansion` macro, as usual.
-
-There is a limitation, to keep the implementation reasonably simple: because
-`with_phase` must appear at the top level of the module body, it is not
-conveniently possible to `with step_expansion` across multiple phase
-definitions.
-
-You must macro-import `step_expansion` inside the earliest (highest-number)
-phase where you need it, and then `with step_expansion` separately inside each
-`with phase` whose expansion you want to step. Be careful to leave the phase's
-macro-imports, if any, *outside* the `with step_expansion`. The debug mode of
-the multi-phase compiler does **not** need to be enabled to use `step_expansion`
-like this.
-
-#### The phase level countdown
-
-Phases higher than `0` only exist during module initialization, locally for each
-module. Once a module finishes importing, it has reached phase `0`, and that's
-all that the rest of the program sees. This means that another module that wants
-to import macros from `mymodule` doesn't need to care which phase the macros
-were defined in `mymodule.py`. The macros will be present in the final phase-`0`
-module. Phase is important only for invoking those macros inside `mymodule` itself.
-
-During module initialization, for `k >= 1`, each phase `k` is reified into a
-temporary module, placed in `sys.modules`, with **the same absolute dotted name**
-as the final one. This allows the next phase to import macros from it, using the
-self-macro-import syntax.
-
-When the macro expander and bytecode compiler are done with phase `k`, that
-phase is reified, completely overwriting the module from phase `k + 1`.
-
-All code from phase `k + 1` is automatically lifted into the code for phase `k`.
-Phase `k` then lifts it to phase `k - 1`, and the chain continues all the way
-down to the implicit phase `0`. So `with phase[n]` actually means that code is
-present *starting from phase `n`*.
-
-Once phase `0` has been macro-expanded, the temporary module is removed from
-`sys.modules`. The resulting final phase-`0` module is handed over to Python's
-import machinery. Thus Python will perform any remaining steps of module
-initialization, such as placing the final module into `sys.modules`. (We don't
-do it manually, because the machinery may need to do something else, too, and
-the absence from `sys.modules` may act as a trigger.)
-
-The **ordering** of the `with phase` code blocks **is preserved**. The code will
-always execute at the point where it appears in the source file. Like a receding
-tide, each phase will reveal increasing subsets of the original source file,
-until (at the implicit phase `0`) all of the file is processed.
-
-**Mutable state**, if any, **is not preserved** between phases, because each phase
-starts as a new module instance. There is no way to transmit information to a
-future phase, except by encoding it in macro output (so it becomes part of the
-next phase's AST, before that phase reaches run time).
-
-Phases are mainly a convenience feature to allow using macros defined in the
-same module, but if your use case requires to transmit information to a future
-phase, you could define a `@namemacro` that expands into an AST for the data you
-want to transmit. (Then maybe use `q[u[...]]` in its implementation, to generate
-the expansion easily.)
-
-#### Notes
-
-Multi-phase compilation is applied **after** dialect AST transformations,
-**before** the macro expander runs. The macro expander runs independently
-at each phase.
-
-Multi-phase compilation was inspired by Racket's [phase level
-tower](https://docs.racket-lang.org/guide/phases.html), but is much simpler.
-Racketeers should observe that in `mcpyrate`, phase separation is not strict.
-Code from **all** phases will be available in the final phase-`0` module. Also,
-due to the automatic code lifting, it is not possible to have different definitions
-for the same name in different phases; the original definition will "cascade down"
-via the lifting process, at the point in the source file where it appears.
-
-This makes `mcpyrate`'s phase level into a module initialization detail,
-local to each module. Other modules don't need to care at which phase a thing was
-defined when they import that thing - for them, all definitions exist at phase `0`.
-
-This is a design decision; it's more pythonic that macros don't "disappear" from
-the final module just because they were defined in a higher phase. The resulting
-system is simple, and `with phase` affects Python's usual scoping rules as
-little as possible. This is a minimal extension of the Python language, to make
-it possible to use macros in the same source file where they are defined.
 
 
 ## Writing macros
@@ -885,6 +690,201 @@ The recipe is as follows:
 The implementation of the quasiquote system has an example of this.
 
 Obviously, if you want to expand just one layer with the second expander, use its `visit_once` method instead of `visit`. (And if you do that, you'll need to decide if you should keep the `Done` marker - to prevent further expansion in that subtree - or discard it and grab the real AST from its `body` attribute.)
+
+
+### Multi-phase compilation
+
+*Multi-phase compilation*, a.k.a. `with phase`, allows to use macros in the
+same module where they are defined. To tell `mcpyrate` to enable the multi-phase
+compiler for your module, add the following macro-import somewhere in the top
+level of the module body:
+
+```python
+from mcpyrate.multiphase import macros, phase
+```
+
+Actually `with phase` is a feature of `mcpyrate`'s importer, not really
+a regular macro, but its docstring must live somewhere, and it's nice if
+`flake8` is happy. This macro-import mainly acts as a flag for the importer,
+but it does also import a dummy macro that will trigger a syntax error if the
+`with phase` construct is used improperly.
+
+When multi-phase compilation is enabled, use the `with phase[n]` syntactic
+construct to define which parts of your module should be compiled before which
+other ones. The phase number `n` must be a positive integer literal. **Phases count
+down**, run time is phase `0`. For any `k >= 0`, the run time of phase `k + 1` is
+the macro-expansion time of phase `k`. Phase `0` is defined implicitly. All code
+that is **not** inside any `with phase` block belongs to phase `0`.
+
+```python
+# application.py
+from mcpyrate.multiphase import macros, phase
+
+with phase[1]:
+    # macro definitions here
+
+# everything not inside a `with phase` is implicitly phase 0
+
+# use the magic module name __self__ to import macros from a higher phase of the same module
+from __self__ import macros, ...
+
+# then just code as usual
+```
+
+To run, `macropython application.py` or `macropython -m application`. For a full example, see [`demo/multiphase_demo.py`](demo/multiphase_demo.py).
+
+The `with phase` construct may only appear at the top level of the module body.
+Appearing anywhere else, it is a syntax error. It is a block macro only; using
+any other invocation type for it is a syntax error. It is basically just data
+for the importer that is compiled away before the macro expander runs. Thus,
+macros cannot inject `with phase` invocations.
+
+Multiple `with phase` blocks with the same phase number **are** allowed; the code
+from each of them is considered part of that phase.
+
+The syntax `from __self__ import macros, ...` is a *self-macro-import*, which
+imports macros from any higher-numbered phase of the same module it appears in.
+Self-macro-imports vanish during macro expansion (leaving just a [coverage dummy
+node](#why-do-my-block-and-decorator-macros-generate-extra-do-nothing-nodes)),
+because a module does not need to really import itself. This is just the closest
+possible adaptation of the traditional macropythonic syntax to register macro
+bindings, when the macros come from the same module. The `__self__` as a module
+name in a from-import just tells `mcpyrate`'s importer that we want to refer to
+*this module*, whatever its absolute dotted name happens to be; there is no
+run-time object named `__self__`.
+
+If you need to write helper macros to define your phase 1 macros, you can define
+them in phase 2 (and so on):
+
+```python
+from mcpyrate.multiphase import macros, phase
+
+with phase[2]:
+    # define macros used by phase 1 here
+
+with phase[1]:
+    # macro-imports (also self-macro-imports) may appear
+    # at the top level of a `with phase`.
+    from __self__ import macros, ...
+
+    # define macros used by phase 0 here
+
+# everything not inside a `with phase` is implicitly phase 0
+
+# you can import macros from any higher phase, not just phase 1
+from __self__ import macros, ...
+
+# then just code as usual
+```
+
+Macro-imports usually appear at the top level of the module body. That causes
+the macros to be imported at phase `0`. If you need to import some macros
+earlier, it is allowed to place macro-imports at the top level of the body of a
+`with phase[n]`. This will make those macros available at phase `n` and at any
+later (lower-numbered) phases, including at the implicit phase `0`.
+
+#### Displaying the source code for each phase
+
+To display the unparsed source code for the AST of each phase before macro
+expansion, you can enable the multi-phase compiler's debug mode, with this
+additional macro-import (somewhere in the top level of the module body):
+
+```python
+from mcpyrate.debug import macros, step_phases
+```
+
+This allows to easily see whether the definition of each phase looks the way
+you intended.
+
+Similarly to `with phase`, `step_phases` is not really a macro at all; the
+presence of that macro-import acts as a flag for the multi-phase compiler.
+Trying to actually use the imported `step_phases` macro is considered
+a syntax error. (It's a `@namemacro`, so even accessing the bare name
+will trigger the syntax error.)
+
+The macro expansion itself will **not** be stepped; this debug tool is
+orthogonal to that. For that, use the `step_expansion` macro, as usual.
+
+There is a limitation, to keep the implementation reasonably simple: because
+`with_phase` must appear at the top level of the module body, it is not
+conveniently possible to `with step_expansion` across multiple phase
+definitions.
+
+You must macro-import `step_expansion` inside the earliest (highest-number)
+phase where you need it, and then `with step_expansion` separately inside each
+`with phase` whose expansion you want to step. Be careful to leave the phase's
+macro-imports, if any, *outside* the `with step_expansion`. The debug mode of
+the multi-phase compiler does **not** need to be enabled to use `step_expansion`
+like this.
+
+#### The phase level countdown
+
+Phases higher than `0` only exist during module initialization, locally for each
+module. Once a module finishes importing, it has reached phase `0`, and that's
+all that the rest of the program sees. This means that another module that wants
+to import macros from `mymodule` doesn't need to care which phase the macros
+were defined in `mymodule.py`. The macros will be present in the final phase-`0`
+module. Phase is important only for invoking those macros inside `mymodule` itself.
+
+During module initialization, for `k >= 1`, each phase `k` is reified into a
+temporary module, placed in `sys.modules`, with **the same absolute dotted name**
+as the final one. This allows the next phase to import macros from it, using the
+self-macro-import syntax.
+
+When the macro expander and bytecode compiler are done with phase `k`, that
+phase is reified, completely overwriting the module from phase `k + 1`.
+
+All code from phase `k + 1` is automatically lifted into the code for phase `k`.
+Phase `k` then lifts it to phase `k - 1`, and the chain continues all the way
+down to the implicit phase `0`. So `with phase[n]` actually means that code is
+present *starting from phase `n`*.
+
+Once phase `0` has been macro-expanded, the temporary module is removed from
+`sys.modules`. The resulting final phase-`0` module is handed over to Python's
+import machinery. Thus Python will perform any remaining steps of module
+initialization, such as placing the final module into `sys.modules`. (We don't
+do it manually, because the machinery may need to do something else, too, and
+the absence from `sys.modules` may act as a trigger.)
+
+The **ordering** of the `with phase` code blocks **is preserved**. The code will
+always execute at the point where it appears in the source file. Like a receding
+tide, each phase will reveal increasing subsets of the original source file,
+until (at the implicit phase `0`) all of the file is processed.
+
+**Mutable state**, if any, **is not preserved** between phases, because each phase
+starts as a new module instance. There is no way to transmit information to a
+future phase, except by encoding it in macro output (so it becomes part of the
+next phase's AST, before that phase reaches run time).
+
+Phases are mainly a convenience feature to allow using macros defined in the
+same module, but if your use case requires to transmit information to a future
+phase, you could define a `@namemacro` that expands into an AST for the data you
+want to transmit. (Then maybe use `q[u[...]]` in its implementation, to generate
+the expansion easily.)
+
+#### Notes
+
+Multi-phase compilation is applied **after** dialect AST transformations,
+**before** the macro expander runs. The macro expander runs independently
+at each phase.
+
+Multi-phase compilation was inspired by Racket's [phase level
+tower](https://docs.racket-lang.org/guide/phases.html), but is much simpler.
+Racketeers should observe that in `mcpyrate`, phase separation is not strict.
+Code from **all** phases will be available in the final phase-`0` module. Also,
+due to the automatic code lifting, it is not possible to have different definitions
+for the same name in different phases; the original definition will "cascade down"
+via the lifting process, at the point in the source file where it appears.
+
+This makes `mcpyrate`'s phase level into a module initialization detail,
+local to each module. Other modules don't need to care at which phase a thing was
+defined when they import that thing - for them, all definitions exist at phase `0`.
+
+This is a design decision; it's more pythonic that macros don't "disappear" from
+the final module just because they were defined in a higher phase. The resulting
+system is simple, and `with phase` affects Python's usual scoping rules as
+little as possible. This is a minimal extension of the Python language, to make
+it possible to use macros in the same source file where they are defined.
 
 
 ## Questions & Answers
