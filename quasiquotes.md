@@ -321,10 +321,9 @@ Essentially, `n[code]` is defined as `a[ast.parse(code, mode="eval").body]`,
 but it will also automatically set the `filename` argument of `ast.parse`
 to the `.py` filename the invocation of `n[]` appears in.
 
-Finally, observe that `n["x"]`, appearing inside a `q[]`, is the name `x` at the
-macro use site. It's the same as just `x` inside the same `q[]`. This is a
-useless use of `n[]`. The reason `n[]` exists at all is that its argument
-can be the result of a computation.
+Finally, observe that `q[n["x"]]` is the name `x` at the macro use site. It's
+the same as just `q[x]`. This is a useless use of `n[]`. The reason `n[]` exists
+at all is that its argument can be the result of a computation.
 
 Using `n[]` to name-unquote a string literal does shut up flake8 concerning
 the "undefined" name `x`, but for that use case, we recommend `# noqa: F821`.
