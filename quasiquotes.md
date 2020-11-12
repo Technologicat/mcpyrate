@@ -260,13 +260,13 @@ Typical use is like:
 
 ```python
 sourcecode = unparse(tree)
-logging_call = q[h[log_value_with_sourcecode](tree, u[sourcecode])]
+logging_call = q[h[log_value_with_sourcecode](a[tree], u[sourcecode])]
 ```
 
 If you don't need the extra line for clearer stack traces, the temporary variable is not needed:
 
 ```python
-logging_call = q[h[log_value_with_sourcecode](tree, u[unparse(tree)])]
+logging_call = q[h[log_value_with_sourcecode](a[tree], u[unparse(tree)])]
 ```
 
 
