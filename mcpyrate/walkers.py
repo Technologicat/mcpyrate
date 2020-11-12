@@ -58,6 +58,8 @@ class ASTVisitor(BaseASTWalker, NodeVisitor, metaclass=ABCMeta):
 
     (Because `return tree`, or `return self.generic_visit(tree)`, is too much
     to remember when not editing.)
+
+    If you want to edit the tree, use `ASTTransformer` instead.
     """
 
     def visit(self, tree):
@@ -96,7 +98,10 @@ class ASTVisitor(BaseASTWalker, NodeVisitor, metaclass=ABCMeta):
 
 
 class ASTTransformer(BaseASTWalker, NodeTransformer, metaclass=ABCMeta):
-    """AST transformer, like `ast.NodeTransformer`, but with the features of `BaseASTWalker`."""
+    """AST transformer, like `ast.NodeTransformer`, but with the features of `BaseASTWalker`.
+
+    If you only want to examine the tree, not edit it, consider `ASTVisitor` instead.
+    """
 
     def visit(self, tree):
         """Start transforming `tree`. **Do not override this method; see `transform` instead.**"""
@@ -129,5 +134,5 @@ class ASTTransformer(BaseASTWalker, NodeTransformer, metaclass=ABCMeta):
             is also ok.
 
         Return value as in `ast.NodeTransformer`. If you don't want to make changes,
-        you must `return tree`. (If you return `None`, the subtree is removed.)
+        you must `return tree`. If you return `None`, the subtree is removed.
         """
