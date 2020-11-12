@@ -12,7 +12,7 @@ from .utils import flatten
 # TODO: add ast.NodeVisitor derivative (experience shows `return tree` is too much to remember when not editing)
 
 class ASTTransformer(NodeTransformer, metaclass=ABCMeta):
-    """AST walker base class, providing a state stack and a node collector."""
+    """AST transformer base class, providing a state stack and a node collector."""
     def __init__(self, **bindings):
         """Bindings are loaded into the initial `self.state` as attributes."""
         self.reset(**bindings)
