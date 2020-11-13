@@ -118,13 +118,13 @@ def rename(oldname, newname, tree):
 # --------------------------------------------------------------------------------
 
 def format_location(filename, tree, sourcecode):
-    '''Format a source code location in a standard way, for error messages.
+    """Format a source code location in a standard way, for error messages.
 
     `filename`: full path to `.py` file.
     `tree`: AST node to get source line number from.
     `sourcecode`: source code (typically, to get this, `unparse(tree)`
                   before expanding it), or `None` to omit it.
-    '''
+    """
     lineno = tree.lineno if hasattr(tree, "lineno") else None
     if sourcecode:
         sep = " " if "\n" not in sourcecode else "\n"
@@ -135,7 +135,7 @@ def format_location(filename, tree, sourcecode):
 
 
 def format_macrofunction(function):
-    '''Format the fully qualified name of a macro function, for error messages.'''
+    """Format the fully qualified name of a macro function, for error messages."""
     if not function.__module__:  # Macros defined in the REPL have `__module__=None`.
         return function.__qualname__
     return f"{function.__module__}.{function.__qualname__}"
