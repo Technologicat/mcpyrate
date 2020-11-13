@@ -12,7 +12,7 @@ import os
 import pickle
 import sys
 
-from .dialects import expand_dialects
+from .dialects import DialectExpander
 from .expander import find_macros, expand_macros
 from .coreutils import resolve_package, ismacroimport
 from .markers import check_no_markers_remaining
@@ -26,17 +26,29 @@ def source_to_xcode(self, data, path, *, _optimize=-1):
 
     Intercepts the source to bytecode transformation.
     """
-    tree = expand_dialects(data, filename=path)
+    text = importlib.util.decode_source(data)
+
+    # dialect source transforms (transpilers, surface syntax extensions, etc.)
+    dexpander = DialectExpander(filename=path)
+    text = dexpander.transform_source(text)
+
+    # produce initial AST
+    try:
+        tree = ast.parse(text, filename=path, mode="exec")
+    except Exception as err:
+        raise ImportError(f"Failed to parse {path} as Python after applying all dialect source transformers.") from err
 
     if not ismultiphase(tree):
+        tree, dialect_instances = dexpander.transform_ast(tree)
         module_macro_bindings = find_macros(tree, filename=path)
         expansion = expand_macros(tree, bindings=module_macro_bindings, filename=path)
+        expansion = dexpander.postprocess_ast(expansion, dialect_instances)
         check_no_markers_remaining(expansion, filename=path)
 
     else:
         # `self.name` is absolute dotted module name, see `importlib.machinery.FileLoader`.
         # This is used to resolve `__self__` in `from __self__ import macros, ...`.
-        expansion = multiphase_expand(tree, filename=path, self_module=self.name, _optimize=_optimize)
+        expansion = multiphase_expand(tree, dexpander, filename=path, self_module=self.name, _optimize=_optimize)
 
     return compile(expansion, path, "exec", dont_inherit=True, optimize=_optimize)
 

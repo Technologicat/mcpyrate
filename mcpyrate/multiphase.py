@@ -304,7 +304,7 @@ def isdebug(tree):
 # --------------------------------------------------------------------------------
 # The multi-phase compiler.
 
-def multiphase_expand(tree, *, filename, self_module, _optimize=-1):
+def multiphase_expand(tree, dexpander, *, filename, self_module, _optimize=-1):
     """Macro-expand an AST in multiple phases, controlled by `with phase[n]`.
 
     Primarily meant to be called with `tree` the AST of a module that
@@ -316,6 +316,8 @@ def multiphase_expand(tree, *, filename, self_module, _optimize=-1):
 
     Once phase `k = 0` is reached and the code has been macro-expanded, the temporary
     entry is deleted from `sys.modules`.
+
+    `dexpander`:        The `DialectExpander` instance to use for dialect AST transforms.
 
     `filename`:         Full path to the `.py` file being compiled.
 
@@ -344,8 +346,10 @@ def multiphase_expand(tree, *, filename, self_module, _optimize=-1):
             if debug:
                 print(unparse_with_fallbacks(phase_k_tree, debug=True, color=True), file=sys.stderr)
 
+            phase_k_tree, dialect_instances = dexpander.transform_ast(phase_k_tree)
             module_macro_bindings = find_macros(phase_k_tree, filename=filename, self_module=self_module)
             expansion = expand_macros(phase_k_tree, bindings=module_macro_bindings, filename=filename)
+            expansion = dexpander.postprocess_ast(expansion, dialect_instances)
             check_no_markers_remaining(expansion, filename=filename)
 
             # Once we hit the final phase, no more temporary modules - let the import system take over.

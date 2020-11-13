@@ -1,19 +1,17 @@
 # -*- coding: utf-8; -*-
 """Find and expand dialects, i.e. whole-module source and AST transformations."""
 
-__all__ = ["Dialect",
-           "expand_dialects"]
+__all__ = ["Dialect", "DialectExpander"]
 
 import ast
 import functools
-import importlib
-import importlib.util
 import re
 from sys import stderr
 
 from .colorizer import setcolor, colorize, ColorScheme
 from .coreutils import ismacroimport, get_macros
 from .unparser import unparse_with_fallbacks
+from .utils import format_macrofunction
 
 
 class Dialect:
@@ -68,6 +66,8 @@ class Dialect:
     def transform_ast(self, tree):
         """Override this to add a whole-module AST transformer to your dialect.
 
+        Dialect AST transformers run before the macro expander.
+
         If not overridden, the default is to return `NotImplemented`, which
         tells the expander this dialect does not provide an AST transformer.
 
@@ -109,6 +109,10 @@ class Dialect:
         """
         return NotImplemented
 
+    def postprocess_ast(self, tree):
+        """Like `transform_ast`, but runs after the macro expander."""
+        return NotImplemented
+
 
 _message_header = colorize("**StepExpansion: ", ColorScheme.HEADING)
 class StepExpansion(Dialect):  # actually part of public API of mcpyrate.debug, for discoverability
@@ -142,7 +146,20 @@ class StepExpansion(Dialect):  # actually part of public API of mcpyrate.debug, 
 _dialectimport = re.compile(r"^from\s+([.0-9a-zA-z_]+)\s+import dialects,\s+([^(\\]+)\s*$",
                             flags=re.MULTILINE)
 class DialectExpander:
-    """The dialect expander."""
+    """The dialect expander.
+
+    Due to modularity requirements introduced by `mcpyrate`'s support for
+    multi-phase compilation (see the module `mcpyrate.multiphase`), this
+    class is a bit technical to use. See `mcpyrate.importer`. Roughly,
+    for a single-phase compile::
+
+        dexpander = DialectExpander(filename=...)
+        text = dexpander.transform_source(text)
+        ... # parse `text` into an AST `tree` here
+        tree, dialect_instances = dexpander.transform_ast(tree)
+        ... # macro-expand `tree` here
+        tree = dexpander.postprocess_ast(tree, dialect_instances)
+    """
 
     def __init__(self, filename):
         """`filename`: full path to `.py` file being expanded, for module name resolution and error messages."""
@@ -151,30 +168,26 @@ class DialectExpander:
         self._step = 0
         self._seen = set()
 
-    def expand(self, data):
-        """Expand dialects in `data` (bytes) corresponding to `self.filename`. Top-level entrypoint.
-
-        Dialects are expanded until no dialects remain.
-
-        Return value is an AST for the module.
-        """
-        text = importlib.util.decode_source(data)
-        text = self.transform_source(text)
-        try:
-            tree = ast.parse(text, filename=self.filename, mode="exec")
-        except Exception as err:
-            raise ImportError(f"Failed to parse {self.filename} as Python after applying all dialect source transformers.") from err
-        return self.transform_ast(tree)
-
     def transform_source(self, text):
-        """Apply all whole-module source transformers."""
-        return self._transform(text, kind="source",
-                               find_dialectimport=self.find_dialectimport_source,
-                               transform="transform_source",
-                               format_for_display=lambda text: text)
+        """Apply all whole-module source transformers.
+
+        Return value is the transformed text.
+        """
+        new_text, _ = self._transform(text, kind="source",
+                                      find_dialectimport=self.find_dialectimport_source,
+                                      transform="transform_source",
+                                      format_for_display=lambda text: text)
+        return new_text
 
     def transform_ast(self, tree):
-        """Apply all whole-module AST transformers."""
+        """Apply all whole-module AST transformers.
+
+        Return value is `transformed_tree, dialect_instances`.
+
+        `dialect_instances` is a `list` of the `Dialect` instances that ran,
+        in the order in which they ran. That list can be passed to `postprocess_ast`
+        to run their AST postprocessors.
+        """
         formatter = functools.partial(unparse_with_fallbacks, debug=True, color=True)
         return self._transform(tree, kind="AST",
                                find_dialectimport=self.find_dialectimport_ast,
@@ -189,6 +202,15 @@ class DialectExpander:
             print(_message_header + msg, file=stderr)
             print(format_for_display(content), file=stderr)
 
+        # We collect and return the dialect object instances so that both
+        # `transform_ast` and `postprocess_ast` can use the same instances. The
+        # dialect-imports vanish at `transform_ast`, so the information about
+        # which dialects ran (and hence should have their postprocessors run)
+        # must be preserved separately from `tree` itself.
+        #
+        # We could store this data in `self`, but keeping nontrivial mutable
+        # state is so last decade.
+        dialect_instances = []
         while True:
             module_absname, bindings = find_dialectimport(content)
             if not module_absname:  # no more dialects
@@ -215,6 +237,10 @@ class DialectExpander:
                 except Exception as err:
                     raise ImportError(f"Unexpected exception in dialect transformer `{module_absname}.{dialectname}.{transform}`") from err
 
+                # We should run the corresponding `postprocess_ast` even if the
+                # dialect doesn't use `transform_ast`.
+                dialect_instances.append(dialect)
+
                 if result is NotImplemented:
                     continue  # no step taken; proceed to next binding
 
@@ -231,6 +257,52 @@ class DialectExpander:
         if self.debugmode:
             plural = "s" if self._step != 1 else ""
             msg = f"{c(CS.SOURCEFILENAME)}{self.filename} {c(CS.HEADING)}completed all dialect {c(CS.TRANSFORMERKIND)}{kind} {c(CS.HEADING)}transforms ({self._step} step{plural} total).{c()}"
+            print(_message_header + msg, file=stderr)
+
+        return content, dialect_instances
+
+    def postprocess_ast(self, tree, dialect_instances):
+        """Apply AST postprocessors of dialect objects in `dialect_instances`.
+
+        Return value is the postprocessed tree.
+        """
+        format_for_display = functools.partial(unparse_with_fallbacks, debug=True, color=True)
+
+        c, CS = setcolor, ColorScheme
+        if self.debugmode:
+            plural = "s" if self._step != 1 else ""
+            msg = f"{c(CS.SOURCEFILENAME)}{self.filename} {c(CS.HEADING)}before dialect {c(CS.TRANSFORMERKIND)}AST postprocessors {c(CS.HEADING)}({self._step} step{plural} total):{c()}\n"
+            print(_message_header + msg, file=stderr)
+            print(format_for_display(tree), file=stderr)
+
+        content = tree
+        for dialect in dialect_instances:
+            try:
+                transformer_method = dialect.postprocess_ast
+            except AttributeError as err:
+                raise ImportError(f"Dialect `{format_macrofunction(dialect)}` missing required transformer method `postprocess_ast`") from err
+
+            try:
+                result = transformer_method(content)
+            except Exception as err:
+                raise ImportError(f"Unexpected exception in dialect transformer `{format_macrofunction(dialect)}.postprocess_ast`") from err
+
+            if result is NotImplemented:
+                continue  # no step taken; proceed to next dialect
+
+            if not result:
+                raise ImportError(f"Dialect transformer `{format_macrofunction(dialect)}.postprocess_ast` returned an empty result.")
+            content = result
+            self._step += 1
+
+            if self.debugmode:
+                msg = f"{c(CS.SOURCEFILENAME)}{self.filename} {c(CS.HEADING)}after {c(CS.DIALECTTRANSFORMERNAME)}{format_macrofunction(dialect)}.postprocess_ast {c(CS.HEADING)}(step {self._step}):{c()}\n"
+                print(_message_header + msg, file=stderr)
+                print(format_for_display(content), file=stderr)
+
+        if self.debugmode:
+            plural = "s" if self._step != 1 else ""
+            msg = f"{c(CS.SOURCEFILENAME)}{self.filename} {c(CS.HEADING)}completed all dialect {c(CS.TRANSFORMERKIND)}AST postprocessors {c(CS.HEADING)}({self._step} step{plural} total).{c()}"
             print(_message_header + msg, file=stderr)
 
         return content
@@ -310,56 +382,3 @@ class DialectExpander:
         tree.body[index] = ast.copy_location(ast.Import(names=[ast.alias(name=module_absname, asname=None)]),
                                              statement)
         return module_absname, bindings
-
-# --------------------------------------------------------------------------------
-
-def expand_dialects(data, *, filename):
-    """Find and expand dialects, i.e. whole-module source and AST transformers.
-
-    The algorithm works as follows.
-
-    We take the first not-yet-seen dialect-import statement (by literal string
-    content), apply its source transformers left-to-right, and repeat (each
-    time rescanning the text from the beginning) until the source transformers
-    of all dialect-imports have been applied.
-
-    Then, we take the first dialect-import statement at the top level of the
-    module, transform it away (into a module import), and apply its AST
-    transformers left-to-right. We then repeat (each time rescanning the AST
-    from the beginning) until the AST transformers of all dialect-imports have
-    been applied.
-
-    Then we return `tree`; it may still have macros, but no more dialects.
-
-    Each dialect class is instantiated separately for the source and AST
-    transform phases.
-
-    Note that a source transformer may edit the full source, including any
-    dialect-imports. This will change which dialects get applied. If it removes
-    its own dialect-import, that will cause it to skip its AST transformer.
-    If it adds any new dialect-imports, those will get processed as encountered.
-
-    Similarly, an AST transformer may edit the full module AST, including any
-    remaining dialect-imports. If it removes any, those AST transformers will
-    be skipped. If it adds any, those will get processed as encountered.
-
-    **CAUTION**: Dialect-imports always apply to the whole module. They
-    essentially specify which language the module is written in. Hence,
-    it is heavily encouraged to put all dialect-imports near the top.
-
-    If the dialect looks mostly like Python, the recommended layout in the
-    spirit of PEP8 is::
-
-        # -*- coding: utf-8; -*-
-        '''Example module using a dialect.'''
-
-        __all__ = [...]
-
-        from ... import dialects, ...  # dialect-imports
-
-        from ... import macros, ...  # then macro-imports
-
-        # then regular imports and the rest of the code
-    """
-    dexpander = DialectExpander(filename)
-    return dexpander.expand(data)
