@@ -161,7 +161,7 @@ class DialectExpander:
         text = importlib.util.decode_source(data)
         text = self.transform_source(text)
         try:
-            tree = ast.parse(data, filename=self.filename, mode="exec")
+            tree = ast.parse(text, filename=self.filename, mode="exec")
         except Exception as err:
             raise ImportError(f"Failed to parse {self.filename} as Python after applying all dialect source transformers.") from err
         return self.transform_ast(tree)
