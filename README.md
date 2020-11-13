@@ -173,6 +173,8 @@ but first, make sure you're not in a folder that has an `mcpyrate` subfolder - `
 
 As usual for a macro expander for Python, `mcpyrate` must be explicitly enabled before importing any module that uses macros. There are two ways to enable it: `import mcpyrate.activate`, or by running your script or module via the `macropython` command-line wrapper.
 
+If you want to enable the macro expander only temporarily, the module `mcpyrate.activate`, beside initially enabling the macro expander, also exports two functions: `activate` and `deactivate`. Calling the `deactivate` function disables the macro expander; then calling `activate` enables it again.
+
 Macros are often defined in a separate module; but in `mcpyrate`, it is also possible to define macros in the same module that uses them.
 
 ### 3-file setup
