@@ -76,6 +76,7 @@ We use [semantic versioning](https://semver.org/). We're almost-but-not-quite co
         - [Differences to `macropy`](#differences-to-macropy-2)
     - [Examples](#examples)
     - [Understanding the code](#understanding-the-code)
+    - [Why macros?](#why-macros)
 
 <!-- markdown-toc end -->
 
@@ -1220,3 +1221,30 @@ import run
 ## Understanding the code
 
 See [`CONTRIBUTING.md`](CONTRIBUTING.md).
+
+
+## Why macros?
+
+Despite their [fearsome](http://www.greghendershott.com/fear-of-macros/) reputation, [syntactic](https://en.wikipedia.org/wiki/Macro_(computer_science)#Syntactic_macros) macros are a clean solution to certain classes of problems. Main use cases of macros fall into a few (not necessarily completely orthogonal) categories:
+
+  1. **Patterns** that cannot be extracted as regular run-time functions. Regular function definitions are a tool for extracting certain kinds of patterns; macros are another such tool. Both these tools aim at eliminating boilerplate.
+
+     [Macros can replace design patterns](http://wiki.c2.com/?AreDesignPatternsMissingLanguageFeatures), especially ones that work around a language's limitations. For a concrete example, see [Seibel](http://www.gigamonkeys.com/book/practical-building-a-unit-test-framework.html).
+
+  2. **Source code**. Any operation that needs to see the source code of an expression (or of a code block) is a prime candidate for a macro. This is useful for implementing tooling for e.g. debug-logging and testing.
+
+  3. **Evaluation order**. By editing code, macros can change the order in which it gets evaluated, as well as decide whether a particular expression or statement runs at all.
+
+     As an example, macros allow properly abstracting [`delay`/`force`](https://docs.racket-lang.org/reference/Delayed_Evaluation.html) in a [strict](https://en.wikipedia.org/wiki/Evaluation_strategy#Strict_evaluation) language. `force` is just a regular function, but `delay` needs to be a macro.
+
+  4. **Language-level features** inspired by other programming languages. For example, [`unpythonic`](https://github.com/Technologicat/unpythonic) provides expression-local variables, auto-TCO, autocurry, lazy functions, and multi-shot continuations.
+
+  5. **[*Embedded* domain-specific languages (DSLs)](https://en.wikipedia.org/wiki/Domain-specific_language#External_and_Embedded_Domain_Specific_Languages)**.
+
+     Here *embedded* means the DSL seamlessly integrates into the surrounding programming language (the host language). For example, there is usually no need to implement a whole new parser, and many operations can be borrowed from the host language. This approach significantly decreases the effort needed to implement a DSL, thus making small DSLs an attractive solution for a class of design problems.
+
+  6. **[Mobile code](https://macropy3.readthedocs.io/en/latest/discussion.html#mobile-code)**, as pioneered by `macropy`. Shuttle code between domains, while still allowing it to be written together in a single code base.
+
+That said, [*macros are the 'nuclear option' of software development*](https://www.factual.com/blog/thinking-in-clojure-for-java-programmers-part-2/). Often a good strategy is to implement as much as regular functions as reasonably possible, and then a small macro on top, for the parts that would not be possible (or overly verbose, or overly complex, or just overly hacky) otherwise. The macro-enabled test framework [`unpythonic.test.fixtures`](https://github.com/Technologicat/unpythonic/blob/master/doc/macros.md#testing-and-debugging) is an example of this strategy, as are [`let` constructs](https://github.com/Technologicat/unpythonic/blob/master/doc/macros.md#bindings) (though in that case the macros are rather complex, to integrate with Python's lexical scoping).
+
+For examples of borrowing language features, look at [Graham](http://paulgraham.com/onlisp.html), [Python's `with` in Clojure](http://eigenhombre.com/macro-writing-macros.html), [`unpythonic.syntax`](https://github.com/Technologicat/unpythonic/blob/master/doc/macros.md), and these creations from the Racket community [[1]](https://lexi-lambda.github.io/blog/2017/08/12/user-programmable-infix-operators-in-racket/) [[2]](https://lexi-lambda.github.io/blog/2015/12/21/adts-in-typed-racket-with-macros/) [[3]](https://github.com/tonyg/racket-monad). But observe also that macros are not always needed for this: [pattern matching](https://github.com/santinic/pampy), [resumable exceptions](https://github.com/Technologicat/unpythonic/blob/master/doc/features.md#handlers-restarts-conditions-and-restarts), [multiple dispatch](https://github.com/Technologicat/unpythonic/blob/master/doc/features.md#generic-typed-isoftype-multiple-dispatch).
