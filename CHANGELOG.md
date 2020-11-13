@@ -65,6 +65,7 @@ We build on `mcpy` 2.0.0, but add a lot of new features.
   - For documentation, see the docstrings in [`mcpyrate.dialects`](mcpyrate/dialects.py).
   - For debugging, `from mcpyrate.debug import dialects, StepExpansion`.
   - If writing a full-module AST transformer that splices the whole module into a template, see [`mcpyrate.splicing.splice_dialect`](mcpyrate/splicing.py).
+  - See [full documentation of the dialect system](dialects.md).
 
 - **Conveniences**.
   - Relative macro-imports (for code in packages), e.g. `from .other import macros, kittify`.

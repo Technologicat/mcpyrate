@@ -139,6 +139,7 @@ We use [semantic versioning](https://semver.org/). We're almost-but-not-quite co
   - For documentation, see the docstrings in [`mcpyrate.dialects`](mcpyrate/dialects.py).
   - For debugging, `from mcpyrate.debug import dialects, StepExpansion`.
   - If writing a full-module AST transformer that splices the whole module into a template, see [`mcpyrate.splicing.splice_dialect`](mcpyrate/splicing.py).
+  - See [full documentation of the dialect system](dialects.md).
 
 - **Conveniences**.
   - Relative macro-imports (for code in packages), e.g. `from .other import macros, kittify`.
@@ -868,9 +869,8 @@ the expansion easily.)
 
 #### Notes
 
-Multi-phase compilation is applied **after** dialect AST transformations,
-**before** the macro expander runs. The macro expander runs independently
-at each phase.
+Multi-phase compilation is applied interleaved with dialect AST transformations.
+For details, see the [dialect system documentation](dialects.md),
 
 Multi-phase compilation was inspired by Racket's [phase level
 tower](https://docs.racket-lang.org/guide/phases.html), but is much simpler.
@@ -907,7 +907,7 @@ In whichever way the program is editing the source code, looking at the steps of
 
  - To troubleshoot multi-phase compilation, see `step_phases` in `mcpyrate.debug`. Just macro-import it (`from mcpyrate.debug import macros, step_phases`).
 
- - To troubleshoot dialect transformations, see the dialect `StepExpansion` in `mcpyrate.debug`; dialect-import it (`from mcpyrate.debug import dialects, StepExpansion`). It will step both source and AST transformations in the dialect compiler, one step per dialect.
+ - To troubleshoot dialect transformations, see the dialect `StepExpansion` in `mcpyrate.debug`; dialect-import it (`from mcpyrate.debug import dialects, StepExpansion`). It will step both source and AST transformations in the dialect compiler, one step per dialect. See [dialect system documentation](dialects.md) for more details.
 
 
 ### I just ran my program again and no macro expansion is happening?
