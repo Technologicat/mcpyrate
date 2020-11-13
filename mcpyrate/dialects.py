@@ -102,7 +102,7 @@ class Dialect:
                 def f(k, acc):
                     if k == 1:
                         return acc
-                    f(k - 1, k*acc)
+                    f(k - 1, k * acc)
                 f(n, acc=1)
             assert fact(4) == 24
             fact(5000)  # no crash
