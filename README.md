@@ -48,7 +48,7 @@ We use [semantic versioning](https://semver.org/). We're almost-but-not-quite co
         - [The phase level countdown](#the-phase-level-countdown)
         - [Notes](#notes)
     - [Dialects](#dialects)
-    - [`mcpyrate`'s import algorithm](#mcpyrates-import-algorithm)
+    - [The import algorithm](#the-import-algorithm)
     - [Questions & Answers](#questions--answers)
         - [How to debug macro-enabled code?](#how-to-debug-macro-enabled-code)
         - [I just ran my program again and no macro expansion is happening?](#i-just-ran-my-program-again-and-no-macro-expansion-is-happening)
@@ -877,7 +877,7 @@ the expansion easily.)
 
 Multi-phase compilation is applied interleaved with dialect AST transformers,
 so that modules that need multi-phase compilation can be written using a dialect.
-For details, see [`mcpyrate`'s import algorithm](#mcpyrates-import-algorithm).
+For details, see [`mcpyrate`'s import algorithm](#the-import-algorithm).
 
 In the REPL, explicit multi-phase compilation is neither needed nor supported.
 Conceptually, just consider the most recent state of the REPL (i.e. its state
@@ -916,9 +916,9 @@ Dialects allow you to define languages that use Python's surface syntax, but cha
 `mcpyrate`'s dialect system is a more advanced development based on the prototype that appeared as [`pydialect`](https://github.com/Technologicat/pydialect).
 
 
-## `mcpyrate`'s import algorithm
+## The import algorithm
 
-When a module is imported with `mcpyrate` enabled, the source code is transformed as follows:
+When a module is imported with `mcpyrate` enabled, here's what the importer does to the source code:
 
  1. Decode the content of the `.py` source file into a unicode string (i.e. `str`).
     - Character encoding is detected the same way Python itself does. That is, the importer reads the magic comment at the top of the source file (such as `# -*- coding: utf-8; -*-`), and assumes `utf-8` if this magic comment is not present.
@@ -945,17 +945,19 @@ In practice this is not a major limitation. If the code injected by your dialect
 
 At run time, just debug as usual. At compile time:
 
-In whichever way the program is editing the source code, looking at the steps of that transformation often helps. We provide several utilities:
+In whichever way the program is editing the source code, looking at the steps of that transformation often helps. We provide several utilities for this purpose:
 
- - To troubleshoot regular macro expansion, see the module [`mcpyrate.debug`](mcpyrate/debug.py), particularly the macro `step_expansion`. It is both an `expr` and `block` macro. This is the one that is needed most often.
+ - To troubleshoot regular macro expansion, see the module [`mcpyrate.debug`](mcpyrate/debug.py), particularly the macro `step_expansion`. It is both an `expr` and `block` macro. This is the one you'll likely need most often.
 
- - To troubleshoot macro expansion of a run-time AST value (such as quasiquoted code), see [`mcpyrate.metatools`](mcpyrate/metatools.py), particularly the macro `stepr`. It is an `expr` macro that takes in a run-time AST value. (In Python, values are always referred to by expressions. Hence no block mode.)
+ - To troubleshoot macro expansion of a run-time AST value (such as quasiquoted code), see [`mcpyrate.metatools`](mcpyrate/metatools.py), particularly the macro `stepr`. It is an `expr` macro that takes in a run-time AST value. (In Python, values are always referred to by expressions. Hence no block mode.) This one you'll likely need second-most often.
 
    Also, use `print(unparse(tree, debug=True, color=True))` if there's a particular `tree` whose source code representation you'd like to look at, or even `print(dump(tree, color=True))`. Look at the docstrings of those functions for other possibly useful parameters.
 
- - To troubleshoot multi-phase compilation, see `step_phases` in `mcpyrate.debug`. Just macro-import it (`from mcpyrate.debug import macros, step_phases`).
+ - To troubleshoot multi-phase compilation, see `step_phases` in `mcpyrate.debug`. Just macro-import it (`from mcpyrate.debug import macros, step_phases`). It will show you the unparsed source code of each phase just after AST extraction.
 
- - To troubleshoot dialect transformations, see the dialect `StepExpansion` in `mcpyrate.debug`; dialect-import it (`from mcpyrate.debug import dialects, StepExpansion`). It will step source and AST transformers as well as AST postprocessors in the dialect compiler, one step per transformer. See [dialect system documentation](dialects.md) for more details.
+ - To troubleshoot dialect transformations, see the dialect `StepExpansion` in `mcpyrate.debug`; just dialect-import it (`from mcpyrate.debug import dialects, StepExpansion`). It will step source and AST transformers as well as AST postprocessors in the dialect compiler, one step per transformer.
+ 
+When interpreting the output, keep in mind [the import algorithm](#the-import-algorithm) as outlined above.
 
 
 ### I just ran my program again and no macro expansion is happening?
@@ -1247,14 +1249,18 @@ The use site source location is reported in a chained exception (`raise from`), 
 We recommend raising:
 
  - `SyntaxError` with a descriptive message, if there's something wrong with how the macro was invoked, or with the AST layout of the `tree` (or `args`) it got vs. what it was expecting.
- - `TypeError` or a `ValueError`, as appropriate if there is a problem in the macro arguments meant for the macro itself. (As opposed to macro arguments such as in the `let` example, where it's just another place to send in an AST to be transformed.)
+ - `TypeError` or a `ValueError`, as appropriate if there is a problem in the macro arguments meant for the macro itself. (As opposed to macro arguments such as in the `let` example, where `args` is just another place to send in an AST to be transformed.)
+
+In general, you can use any exception type as appropriate, except do **not** raise `mcpyrate.core.MacroExpansionError` directly. This one type gets automatically telescoped (i.e. intermediate stack traces of causes are omitted); it is used internally for generating the use site report.
 
 
 ### Differences to `macropy`
 
-In `mcpyrate`, `AssertionError` is not treated specially; all exceptions get the same treatment.
+In `mcpyrate`, `AssertionError` is **not** treated specially; any exception (except `mcpyrate.core.MacroExpansionError`) raised while expanding a macro gets the same treatment.
 
-In `mcpyrate`, all macro-expansion errors are reported immediately.
+In `mcpyrate`, all macro-expansion errors are reported immediately at macro expansion time.
+
+The [quasiquote system](quasiquotes.md) **does** report some errors at run time, but it does so only when that's the earliest time possible, e.g. due to needing an unquoted value to become available before its validity can be checked. Note the error is still usually reported at the macro expansion time *of your macro*, which contains the use site of `q`. But it does mean *your macro* must be invoked before such an error can be triggered.
 
 
 ## Examples
@@ -1275,24 +1281,24 @@ See [`CONTRIBUTING.md`](CONTRIBUTING.md).
 
 Despite their [fearsome](http://www.greghendershott.com/fear-of-macros/) reputation, [syntactic](https://en.wikipedia.org/wiki/Macro_(computer_science)#Syntactic_macros) macros are a clean solution to certain classes of problems. Main use cases of macros fall into a few (not necessarily completely orthogonal) categories:
 
-  1. **Patterns** that cannot be extracted as regular run-time functions. Regular function definitions are a tool for extracting certain kinds of patterns; macros are another such tool. Both these tools aim at eliminating boilerplate.
+  1. **Syntactic abstraction**, to extract a pattern that cannot be extracted as a regular run-time function. Regular function definitions are a tool for extracting certain kinds of patterns; macros are another such tool. Both these tools aim at eliminating boilerplate, by allowing the definition of reusable abstractions.
 
-     [Macros can replace design patterns](http://wiki.c2.com/?AreDesignPatternsMissingLanguageFeatures), especially ones that work around a language's limitations. For a concrete example, see [Seibel](http://www.gigamonkeys.com/book/practical-building-a-unit-test-framework.html).
+     [Macros can replace design patterns](http://wiki.c2.com/?AreDesignPatternsMissingLanguageFeatures), especially patterns that work around a language's limitations. For a concrete example, see [Seibel](http://www.gigamonkeys.com/book/practical-building-a-unit-test-framework.html).
 
-  2. **Source code**. Any operation that needs to see the source code of an expression (or of a code block) is a prime candidate for a macro. This is useful for implementing tooling for e.g. debug-logging and testing.
+  2. **Source code access**. Any operation that needs to get a copy of the source code of an expression (or of a code block) as well as run that same code is a prime candidate for a macro. This is useful for implementing tooling for e.g. debug-logging and testing.
 
-  3. **Evaluation order**. By editing code, macros can change the order in which it gets evaluated, as well as decide whether a particular expression or statement runs at all.
+  3. **Evaluation order manipulation**. By editing code, macros can change the order in which it gets evaluated, as well as decide whether a particular expression or statement runs at all.
 
      As an example, macros allow properly abstracting [`delay`/`force`](https://docs.racket-lang.org/reference/Delayed_Evaluation.html) in a [strict](https://en.wikipedia.org/wiki/Evaluation_strategy#Strict_evaluation) language. `force` is just a regular function, but `delay` needs to be a macro.
 
-  4. **Language-level features** inspired by other programming languages. For example, [`unpythonic`](https://github.com/Technologicat/unpythonic) provides expression-local variables, auto-TCO, autocurry, lazy functions, and multi-shot continuations.
+  4. **Language-level features** inspired by other programming languages. For example, [`unpythonic`](https://github.com/Technologicat/unpythonic) provides expression-local variables (`let`), automatic tail call optimization (TCO), autocurry, lazy functions, and multi-shot continuations.
 
-  5. **[*Embedded* domain-specific languages (DSLs)](https://en.wikipedia.org/wiki/Domain-specific_language#External_and_Embedded_Domain_Specific_Languages)**.
+  5. **[Embedded domain-specific languages (eDSLs)](https://en.wikipedia.org/wiki/Domain-specific_language#External_and_Embedded_Domain_Specific_Languages)**.
 
-     Here *embedded* means the DSL seamlessly integrates into the surrounding programming language (the host language). For example, there is usually no need to implement a whole new parser, and many operations can be borrowed from the host language. This approach significantly decreases the effort needed to implement a DSL, thus making small DSLs an attractive solution for a class of design problems.
+     Here *embedded* means the DSL seamlessly integrates into the surrounding programming language (the host language). With embedded DSLs, there is no need to implement a whole new parser for the DSL, and many operations can be borrowed from the host language. This approach significantly decreases the effort needed to implement a DSL, thus making small DSLs an attractive solution for a class of design problems.
 
   6. **[Mobile code](https://macropy3.readthedocs.io/en/latest/discussion.html#mobile-code)**, as pioneered by `macropy`. Shuttle code between domains, while still allowing it to be written together in a single code base.
 
 That said, [*macros are the 'nuclear option' of software development*](https://www.factual.com/blog/thinking-in-clojure-for-java-programmers-part-2/). Often a good strategy is to implement as much as regular functions as reasonably possible, and then a small macro on top, for the parts that would not be possible (or overly verbose, or overly complex, or just overly hacky) otherwise. The macro-enabled test framework [`unpythonic.test.fixtures`](https://github.com/Technologicat/unpythonic/blob/master/doc/macros.md#testing-and-debugging) is an example of this strategy, as are [`let` constructs](https://github.com/Technologicat/unpythonic/blob/master/doc/macros.md#bindings) (though in that case the macros are rather complex, to integrate with Python's lexical scoping).
 
-For examples of borrowing language features, look at [Graham](http://paulgraham.com/onlisp.html), [Python's `with` in Clojure](http://eigenhombre.com/macro-writing-macros.html), [`unpythonic.syntax`](https://github.com/Technologicat/unpythonic/blob/master/doc/macros.md), and these creations from the Racket community [[1]](https://lexi-lambda.github.io/blog/2017/08/12/user-programmable-infix-operators-in-racket/) [[2]](https://lexi-lambda.github.io/blog/2015/12/21/adts-in-typed-racket-with-macros/) [[3]](https://github.com/tonyg/racket-monad). But observe also that macros are not always needed for this: [pattern matching](https://github.com/santinic/pampy), [resumable exceptions](https://github.com/Technologicat/unpythonic/blob/master/doc/features.md#handlers-restarts-conditions-and-restarts), [multiple dispatch](https://github.com/Technologicat/unpythonic/blob/master/doc/features.md#generic-typed-isoftype-multiple-dispatch).
+For examples of borrowing language features, look at [Graham](http://paulgraham.com/onlisp.html), [Python's `with` in Clojure](http://eigenhombre.com/macro-writing-macros.html), [`unpythonic.syntax`](https://github.com/Technologicat/unpythonic/blob/master/doc/macros.md), and these creations from the Racket community [[1]](https://lexi-lambda.github.io/blog/2017/08/12/user-programmable-infix-operators-in-racket/) [[2]](https://lexi-lambda.github.io/blog/2015/12/21/adts-in-typed-racket-with-macros/) [[3]](https://github.com/tonyg/racket-monad). But observe also that macros are not always needed for this: [pattern matching](https://github.com/santinic/pampy), [resumable exceptions](https://github.com/Technologicat/unpythonic/blob/master/doc/features.md#handlers-restarts-conditions-and-restarts), multiple dispatch [[1]](https://github.com/mrocklin/multipledispatch) [[2]](https://github.com/Technologicat/unpythonic/blob/master/doc/features.md#generic-typed-isoftype-multiple-dispatch).
