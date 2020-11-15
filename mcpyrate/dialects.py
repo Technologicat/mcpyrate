@@ -1,5 +1,5 @@
 # -*- coding: utf-8; -*-
-"""Find and expand dialects, i.e. whole-module source and AST transformations."""
+"""Find and expand dialects, i.e. whole-module source and AST transformers."""
 
 __all__ = ["Dialect", "DialectExpander"]
 
@@ -124,7 +124,7 @@ class StepExpansion(Dialect):  # actually part of public API of mcpyrate.debug, 
 
     When the dialect expander invokes the source transformer of this dialect,
     it causes the expander to enter debug mode from that point on. It will show
-    the source code (or unparsed AST, as appropriate) after each transformation.
+    the source code (or unparsed AST, as appropriate) after each transformer.
     So, to see the whole chain, place the import for this dialect first.
 
     This dialect has no other effects.

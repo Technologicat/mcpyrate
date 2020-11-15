@@ -43,10 +43,12 @@ We use [semantic versioning](https://semver.org/). We're almost-but-not-quite co
             - [Syntax limitations](#syntax-limitations)
         - [Expand macros inside-out](#expand-macros-inside-out)
         - [Expand macros inside-out, but only those in a given set](#expand-macros-inside-out-but-only-those-in-a-given-set)
-        - [Multi-phase compilation](#multi-phase-compilation)
-            - [Displaying the source code for each phase](#displaying-the-source-code-for-each-phase)
-            - [The phase level countdown](#the-phase-level-countdown)
-            - [Notes](#notes)
+    - [Multi-phase compilation](#multi-phase-compilation)
+        - [Displaying the source code for each phase](#displaying-the-source-code-for-each-phase)
+        - [The phase level countdown](#the-phase-level-countdown)
+        - [Notes](#notes)
+    - [Dialects](#dialects)
+    - [`mcpyrate`'s import algorithm](#mcpyrates-import-algorithm)
     - [Questions & Answers](#questions--answers)
         - [How to debug macro-enabled code?](#how-to-debug-macro-enabled-code)
         - [I just ran my program again and no macro expansion is happening?](#i-just-ran-my-program-again-and-no-macro-expansion-is-happening)
@@ -134,9 +136,8 @@ We use [semantic versioning](https://semver.org/). We're almost-but-not-quite co
 
 - **Dialects, i.e. whole-module source and AST transforms**.
   - Think [Racket's](https://racket-lang.org/) `#lang`, but for Python.
-  - Define languages that use Python's surface syntax, but change the semantics; or plug in a per-module transpiler that (at import time) compiles source code from some other programming language into macro-enabled Python. Also an AST [optimizer](http://compileroptimizations.com/) could be defined as a dialect. Dialects can be chained.
+  - Define languages that use Python's surface syntax, but change the semantics; or let you plug in a per-module transpiler that (at import time) compiles source code from some other programming language into macro-enabled Python. Also an AST [optimizer](http://compileroptimizations.com/) could be defined as a dialect. Dialects can be chained.
   - Sky's the limit, really. Until we get [`unpythonic`](https://github.com/Technologicat/unpythonic) ported to use `mcpyrate`, see [`pydialect`](https://github.com/Technologicat/pydialect) for old example dialects.
-  - For documentation, see the docstrings in [`mcpyrate.dialects`](mcpyrate/dialects.py).
   - For debugging, `from mcpyrate.debug import dialects, StepExpansion`.
   - If writing a full-module AST transformer that splices the whole module into a template, see [`mcpyrate.splicing.splice_dialect`](mcpyrate/splicing.py).
   - See [full documentation of the dialect system](dialects.md).
@@ -247,9 +248,11 @@ Useful when the program is so small that a second module is just bureaucracy; or
 
 [[full documentation](repl.md)]
 
-For interactive macro-enabled sessions, we provide an macro-enabled equivalent for `code.InteractiveConsole` (also available from the shell, as `macropython -i`), as well as an IPython extension (`mcpyrate.repl.iconsole`).
+For interactive macro-enabled sessions, we provide a macro-enabled equivalent for `code.InteractiveConsole` (also available from the shell, as `macropython -i`), as well as an IPython extension (`mcpyrate.repl.iconsole`).
 
 Interactive sessions support not only importing and using macros, but also defining them, for quick experiments in the REPL.
+
+`mcpyrate`'s REPL system is a more advanced development based on the prototype that appeared as [`imacropy`](https://github.com/Technologicat/imacropy).
 
 
 ### Macro invocation syntax
@@ -696,7 +699,7 @@ The implementation of the quasiquote system has an example of this.
 Obviously, if you want to expand just one layer with the second expander, use its `visit_once` method instead of `visit`. (And if you do that, you'll need to decide if you should keep the `Done` marker - to prevent further expansion in that subtree - or discard it and grab the real AST from its `body` attribute.)
 
 
-### Multi-phase compilation
+## Multi-phase compilation
 
 *Multi-phase compilation*, a.k.a. `with phase`, allows to use macros in the
 same module where they are defined. To tell `mcpyrate` to enable the multi-phase
@@ -788,7 +791,8 @@ earlier, it is allowed to place macro-imports at the top level of the body of a
 `with phase[n]`. This will make those macros available at phase `n` and at any
 later (lower-numbered) phases, including at the implicit phase `0`.
 
-#### Displaying the source code for each phase
+
+### Displaying the source code for each phase
 
 To display the unparsed source code for the AST of each phase before macro
 expansion, you can enable the multi-phase compiler's debug mode, with this
@@ -822,7 +826,8 @@ macro-imports, if any, *outside* the `with step_expansion`. The debug mode of
 the multi-phase compiler does **not** need to be enabled to use `step_expansion`
 like this.
 
-#### The phase level countdown
+
+### The phase level countdown
 
 Phases higher than `0` only exist during module initialization, locally for each
 module. Once a module finishes importing, it has reached phase `0`, and that's
@@ -867,10 +872,19 @@ phase, you could define a `@namemacro` that expands into an AST for the data you
 want to transmit. (Then maybe use `q[u[...]]` in its implementation, to generate
 the expansion easily.)
 
-#### Notes
 
-Multi-phase compilation is applied interleaved with dialect AST transformations.
-For details, see the [dialect system documentation](dialects.md),
+### Notes
+
+Multi-phase compilation is applied interleaved with dialect AST transformers,
+so that modules that need multi-phase compilation can be written using a dialect.
+For details, see [`mcpyrate`'s import algorithm](#mcpyrates-import-algorithm).
+
+In the REPL, explicit multi-phase compilation is neither needed nor supported.
+Conceptually, just consider the most recent state of the REPL (i.e. its state
+after the last completed REPL input) as the content of *the previous phase*.
+You can `from __self__ import macros, ...` in the REPL, and it'll just work.
+There's also a REPL-only shorthand to declare a function as a macro, namely
+the `@macro` decorator.
 
 Multi-phase compilation was inspired by Racket's [phase level
 tower](https://docs.racket-lang.org/guide/phases.html), but is much simpler.
@@ -891,6 +905,40 @@ little as possible. This is a minimal extension of the Python language, to make
 it possible to use macros in the same source file where they are defined.
 
 
+## Dialects
+
+[[full documentation](dialects.md)]
+
+Dialects are essentially *whole-module source and AST transformers*. Think [Racket's](https://racket-lang.org/) `#lang`, but for Python. Source transformers are akin to *reader macros* in the Lisp family.
+
+Dialects allow you to define languages that use Python's surface syntax, but change the semantics; or let you plug in a per-module transpiler that (at import time) compiles source code from some other programming language into macro-enabled Python. Also an AST [optimizer](http://compileroptimizations.com/) could be defined as a dialect.
+
+`mcpyrate`'s dialect system is a more advanced development based on the prototype that appeared as [`pydialect`](https://github.com/Technologicat/pydialect).
+
+
+## `mcpyrate`'s import algorithm
+
+When a module is imported with `mcpyrate` enabled, the source code is transformed as follows:
+
+ 1. Decode the content of the `.py` source file into a unicode string (i.e. `str`).
+    - Character encoding is detected the same way Python itself does. That is, the importer reads the magic comment at the top of the source file (such as `# -*- coding: utf-8; -*-`), and assumes `utf-8` if this magic comment is not present.
+ 2. Apply [dialect](dialects.md) **source** transformers to the source text.
+ 3. Parse the source text into a (macro-enabled) Python AST, using `ast.parse`.
+ 4. Detect the number of [phases](#multi-phase-compilation) by scanning the top level of the module body AST.
+    - If the AST does **not** request multi-phase compilation, there is just one phase, namely phase `0`.
+ 5. Extract the AST for the highest-numbered remaining phase. Then, for the extracted AST:
+    1. Apply dialect **AST** transformers.
+    2. Apply the macro expander.
+    3. Apply dialect **AST postprocessors**.
+ 6. If the phase that was just compiled was not phase `0`, reify the current temporary module into `sys.modules`, and jump back to step 5.
+ 7. Delete the temporary module, if any, from `sys.modules`.
+ 8. Apply the builtin `compile` function to the resulting AST. Hand the result over to Python's standard import system.
+
+**CAUTION**: As of `mcpyrate` 3.0.0, *code injected by dialect AST transformers cannot itself use multi-phase compilation*. The client code can; just the dialect code template AST cannot.
+
+In practice this is not a major limitation. If the code injected by your dialect definition needs macros, just define them somewhere outside that injected code, and make the injected code import them in the usual way. The macros can even live in the module that provides the dialect definition, and that module can also use multi-phase compilation if you want; the only place the macros can't be defined in is the code template itself.
+
+
 ## Questions & Answers
 
 ### How to debug macro-enabled code?
@@ -907,7 +955,7 @@ In whichever way the program is editing the source code, looking at the steps of
 
  - To troubleshoot multi-phase compilation, see `step_phases` in `mcpyrate.debug`. Just macro-import it (`from mcpyrate.debug import macros, step_phases`).
 
- - To troubleshoot dialect transformations, see the dialect `StepExpansion` in `mcpyrate.debug`; dialect-import it (`from mcpyrate.debug import dialects, StepExpansion`). It will step both source and AST transformations in the dialect compiler, one step per dialect. See [dialect system documentation](dialects.md) for more details.
+ - To troubleshoot dialect transformations, see the dialect `StepExpansion` in `mcpyrate.debug`; dialect-import it (`from mcpyrate.debug import dialects, StepExpansion`). It will step source and AST transformers as well as AST postprocessors in the dialect compiler, one step per transformer. See [dialect system documentation](dialects.md) for more details.
 
 
 ### I just ran my program again and no macro expansion is happening?
@@ -931,7 +979,7 @@ The most likely cause is that the bytecode cache (`.pyc`) for your `.py` source 
 
 Unlike most macros, the whole point of `step_expansion` and `show_bindings` are their side effects - which occur at macro expansion time. So you'll get output from them only if the expander runs.
 
-Your own macros "work", because Python is loading the bytecode, which was macro-expanded during an earlier run. Your macros didn't run this time, but the expanded code from the previous run is still there in the bytecode cache (and, since it is up to date, it matches the output the macros would have, were they to run again).
+Your own macros do indeed work; but Python is loading the bytecode, which was macro-expanded during an earlier run. Your macros didn't run this time, but the expanded code from the previous run is still there in the bytecode cache (and, since it is up to date, it matches the output the macros would have, were they to run again).
 
 Force an *mtime* update on your source file (`touch` it, or just save it again in a text editor), so the expander will then run again (seeing that the source file has been modified).
 

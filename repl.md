@@ -1,5 +1,7 @@
 # REPL system for mcpyrate
 
+`mcpyrate`'s REPL system is a more advanced development based on the prototype that appeared as [`imacropy`](https://github.com/Technologicat/imacropy).
+
 <!-- markdown-toc start - Don't edit this section. Run M-x markdown-toc-refresh-toc -->
 **Table of Contents**
 
