@@ -90,7 +90,7 @@ We use [semantic versioning](https://semver.org/). We're almost-but-not-quite co
   - Interactive console: `macropython -i`. Import, define and use macros in a console session.
     - Embeddable à la `code.InteractiveConsole`. See `mcpyrate.repl.console.MacroConsole`.
   - IPython extension `mcpyrate.repl.iconsole`. Import, define and use macros in an IPython session.
-  - See [full documentation of the REPL system](repl.md).
+  - See [full documentation of the REPL system](doc/repl.md).
 
 - **Testing and debugging**.
   - Statement coverage is correctly reported by tools such as [`Coverage.py`](https://github.com/nedbat/coveragepy/).
@@ -100,7 +100,7 @@ We use [semantic versioning](https://semver.org/). We're almost-but-not-quite co
     - The output is **syntax-highlighted**, and **line-numbered** based on `lineno` fields from the AST.
       - Also names of macros currently bound in the expander are highlighted by `step_expansion`.
     - The invisible nodes `ast.Module` and `ast.Expr` are shown, since especially `ast.Expr` is a common trap for the unwary.
-    - To step the expansion of a run-time AST value, see the macro [`mcpyrate.metatools.stepr`](mcpyrate/metatools.py). [Documentation](quasiquotes.md#the-expand-family-of-macros).
+    - To step the expansion of a run-time AST value, see the macro [`mcpyrate.metatools.stepr`](mcpyrate/metatools.py). [Documentation](doc/quasiquotes.md#the-expand-family-of-macros).
   - Manual expand-once. See `expander.visit_once`; get the `expander` as a named argument of your macro. See also the `expand1s` and `expand1r` macros in [`mcpyrate.metatools`](mcpyrate/metatools.py).
 
 - **Lightning speed**.
@@ -122,7 +122,7 @@ We use [semantic versioning](https://semver.org/). We're almost-but-not-quite co
   - Inverse quasiquote operator. See function [`mcpyrate.quotes.unastify`](mcpyrate/quotes.py).
     - Convert a quasiquoted AST back into a direct AST, typically for further processing before re-quoting it.
       - Not an unquote; we have those too, but the purpose of unquotes is to interpolate values into quoted code. The inverse quasiquote, instead, undoes the quasiquote operation itself, after any unquotes have already been applied.
-  - See [full documentation of the quasiquote system](quasiquotes.md).
+  - See [full documentation of the quasiquote system](doc/quasiquotes.md).
 
 - **Macro arguments**.
   - Opt-in. Declare by using the [`@parametricmacro`](mcpyrate/expander.py) decorator on your macro function.
@@ -140,13 +140,13 @@ We use [semantic versioning](https://semver.org/). We're almost-but-not-quite co
   - Sky's the limit, really. Until we get [`unpythonic`](https://github.com/Technologicat/unpythonic) ported to use `mcpyrate`, see [`pydialect`](https://github.com/Technologicat/pydialect) for old example dialects.
   - For debugging, `from mcpyrate.debug import dialects, StepExpansion`.
   - If writing a full-module AST transformer that splices the whole module into a template, see [`mcpyrate.splicing.splice_dialect`](mcpyrate/splicing.py).
-  - See [full documentation of the dialect system](dialects.md).
+  - See [full documentation of the dialect system](doc/dialects.md).
 
 - **Conveniences**.
   - Relative macro-imports (for code in packages), e.g. `from .other import macros, kittify`.
   - The expander automatically fixes missing `ctx` attributes (and source locations) in the AST, so you don't need to care about those in your macros.
   - Several block macros can be invoked in the same `with` (equivalent to nesting them, with leftmost outermost).
-  - [AST visitor and transformer](mcpyrate/walkers.py) à la `macropy`'s `Walker`, to easily context-manage state for subtrees, and collect items across the whole walk. [Full documentation](walkers.md).
+  - [AST visitor and transformer](mcpyrate/walkers.py) à la `macropy`'s `Walker`, to easily context-manage state for subtrees, and collect items across the whole walk. [Full documentation](doc/walkers.md).
   - AST [markers](mcpyrate/markers.py) (pseudo-nodes) for communication in a set of co-operating macros (and with the expander).
   - [`gensym`](mcpyrate/utils.py) to create a fresh, unused lexical identifier.
   - [`unparse`](mcpyrate/unparser.py) to convert an AST to the corresponding source code, optionally with syntax highlighting (for terminal output).
@@ -246,7 +246,7 @@ Useful when the program is so small that a second module is just bureaucracy; or
 
 ### Interactive use
 
-[[full documentation](repl.md)]
+[[full documentation](doc/repl.md)]
 
 For interactive macro-enabled sessions, we provide a macro-enabled equivalent for `code.InteractiveConsole` (also available from the shell, as `macropython -i`), as well as an IPython extension (`mcpyrate.repl.iconsole`).
 
@@ -302,7 +302,7 @@ Even if the original macro-import was relative, the transformed import is always
 
 This macro-import transformation is part of the public API. If the expanded form of your macro needs to refer to `thing` that exists in (whether is defined in, or has been imported to) the global, top-level scope of the module where the macro definition lives, you can just refer to `module.thing` in your expanded code. This is the `mcpyrate` equivalent of `macropy`'s `expose_unhygienic` mechanism.
 
-If your expansion needs to refer to some other value from the macro definition site (including local and nonlocal variables, and imported macros), see [the quasiquote system](quasiquotes.md), specifically the `h[]` (hygienic-unquote) operator.
+If your expansion needs to refer to some other value from the macro definition site (including local and nonlocal variables, and imported macros), see [the quasiquote system](doc/quasiquotes.md), specifically the `h[]` (hygienic-unquote) operator.
 
 If you want to use some of your macros as regular functions, simply use:
 
@@ -351,10 +351,10 @@ Although you don't strictly have to import anything to write macros, there are s
 
 Other modules contain utilities for writing macros:
 
- - [`mcpyrate.quotes`](mcpyrate/quotes.py) provides [quasiquote syntax](quasiquotes.md) as macros, to easily build ASTs in your macros, using syntax that mostly looks like regular code.
- - [`mcpyrate.metatools`](mcpyrate/metatools.py) provides utilities; particularly, to expand macros in run-time AST values, while using the macro bindings from your macro's *definition* site (vs. its *use* site like `expander.visit` does). Useful for quoted trees. [Documentation](quasiquotes.md#the-expand-family-of-macros).
+ - [`mcpyrate.quotes`](mcpyrate/quotes.py) provides [quasiquote syntax](doc/quasiquotes.md) as macros, to easily build ASTs in your macros, using syntax that mostly looks like regular code.
+ - [`mcpyrate.metatools`](mcpyrate/metatools.py) provides utilities; particularly, to expand macros in run-time AST values, while using the macro bindings from your macro's *definition* site (vs. its *use* site like `expander.visit` does). Useful for quoted trees. [Documentation](doc/quasiquotes.md#the-expand-family-of-macros).
  - [`mcpyrate.utils`](mcpyrate/utils.py) provides some macro-writing utilities that are too specific to warrant a spot in the top-level namespace; of these, at least `rename` and `flatten` (for statement suites) solve problems that come up relatively often.
- - [`mcpyrate.walkers`](mcpyrate/walkers.py) provides AST walkers (both visitor and transformer variants) that can context-manage their state for different subtrees, while optionally collecting items across the whole walk. They are based on `ast.NodeVisitor` and `ast.NodeTransformer`, respectively, but with functionality equivalent to `macropy.core.walkers.Walker`. [Documentation](walkers.md).
+ - [`mcpyrate.walkers`](mcpyrate/walkers.py) provides AST walkers (both visitor and transformer variants) that can context-manage their state for different subtrees, while optionally collecting items across the whole walk. They are based on `ast.NodeVisitor` and `ast.NodeTransformer`, respectively, but with functionality equivalent to `macropy.core.walkers.Walker`. [Documentation](doc/walkers.md).
  - [`mcpyrate.splicing`](mcpyrate/splicing.py) helps splice statements (or even a complete module body) into a code template. Note in quasiquoted code you can locally splice statements with the block mode `a` (AST-literal) unquote.
  - [`mcpyrate.debug`](mcpyrate/debug.py) may be useful if something in your macro is not working. **See especially the macro `step_expansion`.**
 
@@ -423,7 +423,7 @@ Valid return values from a macro are as follows:
 
 ### Quasiquotes
 
-[[full documentation](quasiquotes.md)]
+[[full documentation](doc/quasiquotes.md)]
 
 We provide a [quasiquote system](https://en.wikipedia.org/wiki/Lisp_(programming_language)#Self-evaluating_forms_and_quoting) (both classical and hygienic) to make macro code both much more readable and simpler to write. Rewriting the above example, note the `ast` import is gone:
 
@@ -491,7 +491,7 @@ And when using the `mcpyrate.debug.StepExpansion` debugging dialect, then during
 
 ### Walk an AST
 
-[[full documentation](walkers.md)]
+[[full documentation](doc/walkers.md)]
 
 To bridge the feature gap between [`ast.NodeVisitor`](https://docs.python.org/3/library/ast.html#ast.NodeVisitor)/  [`ast.NodeTransformer`](https://docs.python.org/3/library/ast.html#ast.NodeTransformer) and `macropy`'s `Walker`, we provide `ASTVisitor` and `ASTTransformer` that can context-manage their state for different subtrees, while optionally collecting items across the whole walk. These can be found in the module [`mcpyrate.walkers`](mcpyrate/walkers.py).
 
@@ -506,7 +506,7 @@ Full list as of v3.0.0, in alphabetical order:
    - A macro function only accepts macro arguments if declared `@parametricmacro`. For non-parametric macros (default), `args=[]`.
  - `expander`: the macro expander instance.
    - To expand macro invocations inside the current one, use `expander.visit(tree)`, or in special use cases (when you know why), `expander.visit_recursively(tree)` or `expander.visit_once(tree)`.
-     - These methods will use the macro bindings *from the use site of your macro*. If you instead need to use the macro bindings *from the definition site of your macro*, see the `expand` family of macros in [`mcpyrate.metatools`](mcpyrate/metatools.py). [Full documentation](quasiquotes.md#the-expand-family-of-macros).
+     - These methods will use the macro bindings *from the use site of your macro*. If you instead need to use the macro bindings *from the definition site of your macro*, see the `expand` family of macros in [`mcpyrate.metatools`](mcpyrate/metatools.py). [Full documentation](doc/quasiquotes.md#the-expand-family-of-macros).
    - Also potentially useful are `expander.bindings` and `expander.filename`.
    - See [`mcpyrate.core.BaseMacroExpander`](mcpyrate/core.py) and [`mcpyrate.expander.MacroExpander`](mcpyrate/expander.py) for the expander API; it's just a few methods and attributes.
 - `invocation`: the whole macro invocation AST node as-is, not only `tree`. For introspection.
@@ -522,7 +522,7 @@ No named parameter `to_source`. Use the function `mcpyrate.unparse`.
 
 No named parameter `expand_macros`. Use the named parameter `expander`, which grants access to the macro expander instance. Call `expander.visit(tree)`.
 
-You might also want to see the `expand` family of macros in [`mcpyrate.metatools`](mcpyrate/metatools.py). [Documentation](quasiquotes.md#the-expand-family-of-macros).
+You might also want to see the `expand` family of macros in [`mcpyrate.metatools`](mcpyrate/metatools.py). [Documentation](doc/quasiquotes.md#the-expand-family-of-macros).
 
 The named parameters `args` and `invocation` are new.
 
@@ -679,7 +679,7 @@ If you want to expand only one layer of macro invocations (even when inside the 
 
 If you need to temporarily expand one layer, but let the expander continue expanding your AST later (when your macro returns), observe that `visit_once` will return a `Done` AST marker, which is the thing whose sole purpose is to tell the expander not to expand further in that subtree. It is a wrapper with the actual AST stored in its `body` attribute. So if you need to ignore the `Done`, you can grab the actual AST from there, and discard the wrapper.
 
-All of the above will use the macro bindings *from your macro's use site*. This is almost always The Right Thing. But if you need to use the macro bindings *from your macro's definition site* instead, see the `expand` family of macros in [`mcpyrate.metatools`](mcpyrate/metatools.py). [Full documentation](quasiquotes.md#the-expand-family-of-macros).
+All of the above will use the macro bindings *from your macro's use site*. This is almost always The Right Thing. But if you need to use the macro bindings *from your macro's definition site* instead, see the `expand` family of macros in [`mcpyrate.metatools`](mcpyrate/metatools.py). [Full documentation](doc/quasiquotes.md#the-expand-family-of-macros).
 
 
 ### Expand macros inside-out, but only those in a given set
@@ -907,7 +907,7 @@ it possible to use macros in the same source file where they are defined.
 
 ## Dialects
 
-[[full documentation](dialects.md)]
+[[full documentation](doc/dialects.md)]
 
 Dialects are essentially *whole-module source and AST transformers*. Think [Racket's](https://racket-lang.org/) `#lang`, but for Python. Source transformers are akin to *reader macros* in the Lisp family.
 
@@ -922,7 +922,7 @@ When a module is imported with `mcpyrate` enabled, here's what the importer does
 
  1. Decode the content of the `.py` source file into a unicode string (i.e. `str`).
     - Character encoding is detected the same way Python itself does. That is, the importer reads the magic comment at the top of the source file (such as `# -*- coding: utf-8; -*-`), and assumes `utf-8` if this magic comment is not present.
- 2. Apply [dialect](dialects.md) **source** transformers to the source text.
+ 2. Apply [dialect](doc/dialects.md) **source** transformers to the source text.
  3. Parse the source text into a (macro-enabled) Python AST, using `ast.parse`.
  4. Detect the number of [phases](#multi-phase-compilation) by scanning the top level of the module body AST.
     - If the AST does **not** request multi-phase compilation, there is just one phase, namely phase `0`.
@@ -988,7 +988,7 @@ Force an *mtime* update on your source file (`touch` it, or just save it again i
 
 ### Macro expansion time where exactly?
 
-This is mainly something to keep in mind when developing macros where the macro implementation itself is macro-enabled code (vs. just emitting macro invocations in the output AST). Since the [quasiquote system](quasiquotes.md) is built on macros, this includes any macros that use `q`.
+This is mainly something to keep in mind when developing macros where the macro implementation itself is macro-enabled code (vs. just emitting macro invocations in the output AST). Since the [quasiquote system](doc/quasiquotes.md) is built on macros, this includes any macros that use `q`.
 
 As an example, consider a macro `mymacro`, which uses `q` to define an AST using the quasiquote notation. When `mymacro` reaches run time, any macro invocations used as part of its own implementation (such as the `q`) are already long gone. On the other hand, the use site of `mymacro` has not yet reached run time - for that use site, it is still macro expansion time.
 
@@ -1072,7 +1072,7 @@ or in other words, an `ast.Num` object. (Again, if not convinced, try `stepr["du
 
 So the **run-time result** of both invocations is an `ast.Num` object (or `ast.Constant`, if running on Python 3.8+). But they see the expansion differently, because `step_expansion` operates at macro expansion time, while `stepr` operates at run time.
 
-Whereas unquotes are processed at run time of the use site of `q` (see [the quasiquote system docs](quasiquotes.md)), the `q` itself is processed at macro expansion time. Hence, `step_expansion` will see the `q`, but when `stepr` expands the tree at run time, it will already be gone. (And the expression mode of `q` itself does not have a run-time part, so it just vanishes.)
+Whereas unquotes are processed at run time of the use site of `q` (see [the quasiquote system docs](doc/quasiquotes.md)), the `q` itself is processed at macro expansion time. Hence, `step_expansion` will see the `q`, but when `stepr` expands the tree at run time, it will already be gone. (And the expression mode of `q` itself does not have a run-time part, so it just vanishes.)
 
 
 ### Error in `compile`, an AST node is missing the required field `lineno`?
@@ -1130,7 +1130,7 @@ Use `git diff` liberally. Most likely whatever the issue is, it's something in t
 
 This may happen in two cases: trying to `u[]` something that operator doesn't support, or trying to quasiquote a tree after advanced hackery on it. (Astification is the internal mechanism that produces a quasiquoted AST; if curious, see [`mcpyrate.quotes.astify`](mcpyrate/quotes.py).)
 
-If it's the former, check that what you have is listed among the supported value types for `u[]` in [the quasiquote docs](quasiquotes.md). If the value type is not supported for `u[]`, use `h[]` instead.
+If it's the former, check that what you have is listed among the supported value types for `u[]` in [the quasiquote docs](doc/quasiquotes.md). If the value type is not supported for `u[]`, use `h[]` instead.
 
 If it's the latter, and the expander is complaining specifically about an AST marker, those indeed can't currently be astified (except `mcpyrate.core.Done`, which is supported specifically to allow astification of coverage dummy nodes and expanded name macros). To remove AST markers from your tree recursively, you can use [`mcpyrate.markers.delete_markers`](mcpyrate/markers.py).
 
@@ -1260,7 +1260,7 @@ In `mcpyrate`, `AssertionError` is **not** treated specially; any exception (exc
 
 In `mcpyrate`, all macro-expansion errors are reported immediately at macro expansion time.
 
-The [quasiquote system](quasiquotes.md) **does** report some errors at run time, but it does so only when that's the earliest time possible, e.g. due to needing an unquoted value to become available before its validity can be checked. Note the error is still usually reported at the macro expansion time *of your macro*, which contains the use site of `q`. But it does mean *your macro* must be invoked before such an error can be triggered.
+The [quasiquote system](doc/quasiquotes.md) **does** report some errors at run time, but it does so only when that's the earliest time possible, e.g. due to needing an unquoted value to become available before its validity can be checked. Note the error is still usually reported at the macro expansion time *of your macro*, which contains the use site of `q`. But it does mean *your macro* must be invoked before such an error can be triggered.
 
 
 ## Examples

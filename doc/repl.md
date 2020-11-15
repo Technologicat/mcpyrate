@@ -184,7 +184,7 @@ The answer is twofold:
     Allowing to invoke a macro in the same source file where it is defined
     requires a multi-phase compilation strategy. `mcpyrate` **does** support
     this, but the syntax is a bit different; see [multi-phase
-    compilation](README.md#multi-phase-compilation) (a.k.a. `with phase`).
+    compilation](../README.md#multi-phase-compilation) (a.k.a. `with phase`).
 
     The *self-macro-import* syntax, `from __self__ import macros, ...`,
     which is used by `with phase`, is also available in the REPL, but that's

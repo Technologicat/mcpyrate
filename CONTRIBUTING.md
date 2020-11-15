@@ -23,7 +23,7 @@ For a clean overview of the core design, look at [mcpy](https://github.com/delap
 
 Then see our [`importer`](mcpyrate/importer.py). After [`mcpyrate.activate`](mcpyrate/activate.py) has been imported, the importer becomes the top-level entry point whenever a module is imported.
 
-See also [Understanding the quasiquote system](quasiquotes.md#understanding-the-quasiquote-system).
+See also [Understanding the quasiquote system](doc/quasiquotes.md#understanding-the-quasiquote-system).
 
 
 ## Code style

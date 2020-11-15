@@ -14,7 +14,7 @@ We build on `mcpy` 2.0.0, but add a lot of new features.
   - Interactive console: `macropython -i`. Import, define and use macros in a console session.
     - Embeddable à la `code.InteractiveConsole`. See `mcpyrate.repl.console.MacroConsole`.
   - IPython extension `mcpyrate.repl.iconsole`. Import, define and use macros in an IPython session.
-  - See [full documentation of the REPL system](repl.md).
+  - See [full documentation of the REPL system](doc/repl.md).
 
 - **Testing and debugging**.
   - Statement coverage is correctly reported by tools such as [`Coverage.py`](https://github.com/nedbat/coveragepy/).
@@ -46,7 +46,7 @@ We build on `mcpy` 2.0.0, but add a lot of new features.
   - Inverse quasiquote operator. See function [`mcpyrate.quotes.unastify`](mcpyrate/quotes.py).
     - Convert a quasiquoted AST back into a direct AST, typically for further processing before re-quoting it.
       - Not an unquote; we have those too, but the purpose of unquotes is to interpolate values into quoted code. The inverse quasiquote, instead, undoes the quasiquote operation itself, after any unquotes have already been applied.
-  - See [full documentation of the quasiquote system](quasiquotes.md).
+  - See [full documentation of the quasiquote system](doc/quasiquotes.md).
 
 - **Macro arguments**.
   - Opt-in. Declare by using the [`@parametricmacro`](mcpyrate/expander.py) decorator on your macro function.
@@ -64,13 +64,13 @@ We build on `mcpy` 2.0.0, but add a lot of new features.
   - Sky's the limit, really. Until we get [`unpythonic`](https://github.com/Technologicat/unpythonic) ported to use `mcpyrate`, see [`pydialect`](https://github.com/Technologicat/pydialect) for old example dialects.
   - For debugging, `from mcpyrate.debug import dialects, StepExpansion`.
   - If writing a full-module AST transformer that splices the whole module into a template, see [`mcpyrate.splicing.splice_dialect`](mcpyrate/splicing.py).
-  - See [full documentation of the dialect system](dialects.md).
+  - See [full documentation of the dialect system](doc/dialects.md).
 
 - **Conveniences**.
   - Relative macro-imports (for code in packages), e.g. `from .other import macros, kittify`.
   - The expander automatically fixes missing `ctx` attributes (and source locations) in the AST, so you don't need to care about those in your macros.
   - Several block macros can be invoked in the same `with` (equivalent to nesting them, with leftmost outermost).
-  - [AST visitor and transformer](mcpyrate/walkers.py) à la `macropy`'s `Walker`, to easily context-manage state for subtrees, and collect items across the whole walk. [Full documentation](walkers.md).
+  - [AST visitor and transformer](mcpyrate/walkers.py) à la `macropy`'s `Walker`, to easily context-manage state for subtrees, and collect items across the whole walk. [Full documentation](doc/walkers.md).
   - AST [markers](mcpyrate/markers.py) (pseudo-nodes) for communication in a set of co-operating macros (and with the expander).
   - [`gensym`](mcpyrate/utils.py) to create a fresh, unused lexical identifier.
   - [`unparse`](mcpyrate/unparser.py) to convert an AST to the corresponding source code, optionally with syntax highlighting (for terminal output).
