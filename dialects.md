@@ -1,9 +1,9 @@
-# Dialects
+# Dialect system for mcpyrate
 
 <!-- markdown-toc start - Don't edit this section. Run M-x markdown-toc-refresh-toc -->
 **Table of Contents**
 
-- [Dialects](#dialects)
+- [Dialect system for mcpyrate](#dialect-system-for-mcpyrate)
     - [Overview](#overview)
     - [Using dialects](#using-dialects)
         - [Code layout (style guidelines)](#code-layout-style-guidelines)
@@ -15,6 +15,8 @@
         - [Notes](#notes)
     - [Debugging dialect transformations](#debugging-dialect-transformations)
         - [Automatic syntax highlighting](#automatic-syntax-highlighting)
+    - [Why dialects?](#why-dialects)
+        - [When to make a dialect](#when-to-make-a-dialect)
 
 <!-- markdown-toc end -->
 
@@ -213,3 +215,60 @@ During **source** transformations, syntax highlighting is **not** available, bec
 During **AST** transformations, we have a (macro-enabled) Python AST, and syntax highlighting for the unparsed source code is enabled, but macro names are not highlighted, because the *macro* expander is not yet running.
 
 During **AST postprocessing**, syntax highlighting is enabled for the unparsed source code; no macro invocations remain.
+
+
+## Why dialects?
+
+An extension to the Python language doesn't need to make it into the Python core,
+*or even be desirable for inclusion* into the Python core, in order to be useful.
+
+Building on functions and syntactic macros, customization of the language itself
+is one more tool to extract patterns, at a yet higher level. Beside language
+experimentation, such language extensions can be used as a framework that allows
+shorter and/or more readable programs. With dialects, [there is no need to hack
+Python
+itself](http://stupidpythonideas.blogspot.com/2015/06/hacking-python-without-hacking-python.html),
+or implement from scratch a custom language (like
+[Hy](http://docs.hylang.org/en/stable/) or
+[Dogelang](https://pyos.github.io/dg/)) that compiles to Python AST or bytecode.
+
+
+### When to make a dialect
+
+Often *explicit is better than implicit*. So, most often, don't.
+
+There is however a tipping point with regard to complexity, and/or simply
+length, after which implicit becomes better. This already applies to functions
+and macros; code in a `with continuations` block (from
+[`unpythonic.syntax`](https://github.com/Technologicat/unpythonic/blob/master/doc/macros.md))
+is much more readable and maintainable than code manually converted to
+[continuation-passing style
+(CPS)](https://en.wikipedia.org/wiki/Continuation-passing_style). Such a
+code-walking block macro abstracts away the details of that conversion,
+allowing us to see the forest for the trees.
+
+There is obviously a tradeoff; as Paul Graham reminds in [On
+Lisp](http://paulgraham.com/onlisp.html), each abstraction is another entity for
+the reader to learn and remember, so it must save several times its own length
+to become an overall win.
+
+So, when to make a dialect depends on how much it will save - in a project or
+across several - and on the other hand on how important it is to have a shared
+central definition that specifies a *language-level common ground* for some
+set of code.
+
+Since you're reading this, you probably already know, but be aware that, unlike
+how it was envisioned during the *extensible languages* movement in the 1960s-70s,
+language extension is hardly an exercise requiring only *modest amounts of labor
+by unsophisticated users* (as quoted and discussed in [[1]](http://fexpr.blogspot.com/2013/12/abstractive-power.html)).
+Especially the interaction between different macros needs a lot of thought,
+and as the number of language features grows, the complexity skyrockets.
+
+Seams between parts of the user program that use or do not use some particular
+feature (or a combination of features) also require special attention. This is
+a language-extension consideration that does not even come into play if you're
+designing a new language from scratch.
+
+That said, long live [language-oriented
+programming](https://en.wikipedia.org/wiki/Language-oriented_programming),
+and have fun!
