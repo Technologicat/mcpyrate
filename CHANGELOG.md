@@ -23,6 +23,7 @@ We build on `mcpy` 2.0.0, but add a lot of new features.
     - Has both expr and block modes. Use `step_expansion[...]` or `with step_expansion` as appropriate.
     - The output is **syntax-highlighted**, and **line-numbered** based on `lineno` fields from the AST.
       - Also names of macros currently bound in the expander are highlighted by `step_expansion`.
+      - Line numbers are taken from *statement* AST nodes.
     - The invisible nodes `ast.Module` and `ast.Expr` are shown, since especially `ast.Expr` is a common trap for the unwary.
     - To step the expansion of a run-time AST value, see the macro [`mcpyrate.metatools.stepr`](mcpyrate/metatools.py).
   - Manual expand-once. See `expander.visit_once`; get the `expander` as a named argument of your macro. See also the `expand1s` and `expand1r` macros in [`mcpyrate.metatools`](mcpyrate/metatools.py).
