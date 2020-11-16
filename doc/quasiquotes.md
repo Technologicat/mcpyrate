@@ -72,7 +72,7 @@ For example, it is not possible to directly interpolate a name for a function
 parameter in quasiquote notation, because parameter definitions must use literal
 strings, not expressions. In this case, the technique is to first use a
 placeholder name, such as `_`, and then manually assign a new name for the
-parameter in the AST that was returned by the quasiquote operation. See [`mcpyrate.utils.rename`](mcpyrate/utils.py), which can do this editing for
+parameter in the AST that was returned by the quasiquote operation. See [`mcpyrate.utils.rename`](../mcpyrate/utils.py), which can do this editing for
 you.
 
 You'll still need to keep [Green Tree
@@ -236,7 +236,7 @@ present at the macro use site. If you want to hygienify, see the `h[]` unquote.
 Like `macropy`'s `q`, except macro invocations within the quoted code are not
 expanded by default.
 
-The macro [`mcpyrate.metatools.expandsq`](mcpyrate/metatools.py) produces results closest to `macropy`'s `q`.
+The macro [`mcpyrate.metatools.expandsq`](../mcpyrate/metatools.py) produces results closest to `macropy`'s `q`.
 
 
 ### `u`: unquote
@@ -312,7 +312,7 @@ The first example, on the other hand, cannot (in general) be written using
 `setattr`, since it is assigning *to a lexical variable with a computed name*,
 which is not supported by Python.
 
-As an alternative to `n[]`, see also [`mcpyrate.utils.rename`](mcpyrate/utils.py),
+As an alternative to `n[]`, see also [`mcpyrate.utils.rename`](../mcpyrate/utils.py),
 which can replace a literal dummy name (e.g. `_`) by a computed name in all places
 in a given AST where name-like things appear (e.g. function parameters, call keywords,
 except-as, imports, ...).
@@ -571,15 +571,15 @@ Of the `expand` macros, you'll most likely want `expandr` or `expand1r`, which d
 
 ### Stepping a run-time macro expansion with `stepr`
 
-If you need to see the steps of macro expansion of a run-time AST value, see [`mcpyrate.metatools.stepr`](mcpyrate/metatools.py).
+If you need to see the steps of macro expansion of a run-time AST value, see [`mcpyrate.metatools.stepr`](../mcpyrate/metatools.py).
 
 Note `stepr` is an expr macro only, because it takes as its input a run-time AST value, and in Python, values are always referred to by expressions. So if you use quasiquotes, create your quoted tree first, as usual, and then `quoted = stepr[quoted]`, where `quoted` is the variable you stored it in. It doesn't matter whether the quoted snippet itself is an expression or a block of statements.
 
-The usual tool [`mcpyrate.debug.step_expansion`](mcpyrate/debug.py) does not work for debugging run-time macro expansion, because it operates at the macro expansion time of its use site. The `stepr` macro is otherwise the same, but it delays the stepping until the run time of its use site - and uses the same macro bindings `expandr` would.
+The usual tool [`mcpyrate.debug.step_expansion`](../mcpyrate/debug.py) does not work for debugging run-time macro expansion, because it operates at the macro expansion time of its use site. The `stepr` macro is otherwise the same, but it delays the stepping until the run time of its use site - and uses the same macro bindings `expandr` would.
 
 ### Using the `expand` macros
 
-Let's look at the `expand` macros in more detail. The [`mcpyrate.metatools`](mcpyrate/metatools.py) module provides a family of macros to expand macros, all named `expand` plus a suffix of up to three characters in the order `1Xq`, where `X` is one of `s` or `r`. All of the `expand` macros have both expr and block modes.
+Let's look at the `expand` macros in more detail. The [`mcpyrate.metatools`](../mcpyrate/metatools.py) module provides a family of macros to expand macros, all named `expand` plus a suffix of up to three characters in the order `1Xq`, where `X` is one of `s` or `r`. All of the `expand` macros have both expr and block modes.
 
 These macros are convenient when working with quasiquoted code, and with run-time AST values in general. Run-time AST values are exactly the kind of thing macros operate on: the macro expansion time of the use site is the run time of the macro implementation itself.
 

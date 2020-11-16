@@ -26,13 +26,13 @@ def getmeows(mytree):
     return w.collected
 ```
 
-To bridge the feature gap between [`ast.NodeVisitor`](https://docs.python.org/3/library/ast.html#ast.NodeVisitor)/  [`ast.NodeTransformer`](https://docs.python.org/3/library/ast.html#ast.NodeTransformer) and `macropy`'s `Walker`, we provide `ASTVisitor` and `ASTTransformer` that can context-manage their state for different subtrees, while optionally collecting items across the whole walk. These can be found in the module [`mcpyrate.walkers`](mcpyrate/walkers.py).
+To bridge the feature gap between [`ast.NodeVisitor`](https://docs.python.org/3/library/ast.html#ast.NodeVisitor)/  [`ast.NodeTransformer`](https://docs.python.org/3/library/ast.html#ast.NodeTransformer) and `macropy`'s `Walker`, we provide `ASTVisitor` and `ASTTransformer` that can context-manage their state for different subtrees, while optionally collecting items across the whole walk. These can be found in the module [`mcpyrate.walkers`](../mcpyrate/walkers.py).
 
 The walkers are based on `ast.NodeVisitor` and `ast.NodeTransformer`, respectively. So `ASTVisitor` only looks at the tree, gathering information from it, while `ASTTransformer` may perform edits.
 
 The selling points of both are `withstate`, `state`, `collect`, `collected`, which see below.
 
-For a realistic example, see [`mcpyrate.astfixers`](mcpyrate/astfixers.py), or grep the `mcpyrate` codebase for other uses of `ASTVisitor` and `ASTTransformer` (there are a few).
+For a realistic example, see [`mcpyrate.astfixers`](../mcpyrate/astfixers.py), or grep the `mcpyrate` codebase for other uses of `ASTVisitor` and `ASTTransformer` (there are a few).
 
 <!-- markdown-toc start - Don't edit this section. Run M-x markdown-toc-refresh-toc -->
 **Table of Contents**
@@ -49,7 +49,7 @@ For a realistic example, see [`mcpyrate.astfixers`](mcpyrate/astfixers.py), or g
 
 Unless otherwise stated, each attribute is present in both `ASTVisitor` and `ASTTransformer`.
 
- - `state`: [`mcpyrate.bunch.Bunch`](mcpyrate/bunch.py): stores named values as its attributes.
+ - `state`: [`mcpyrate.bunch.Bunch`](../mcpyrate/bunch.py): stores named values as its attributes.
 
    Mutable. The whole `state` can also be replaced by simply rebinding it
    (`self.state = ...`).

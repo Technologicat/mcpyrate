@@ -81,7 +81,7 @@ Technically speaking, a dialect is a class that inherits from `mcpyrate.dialects
 
 It may implement just one of these methods, if the others are not needed. The default implementation for each returns the value `NotImplemented`, which means that the dialect does not need that kind of transformation.
 
-See the docstrings in [`mcpyrate.dialects`](mcpyrate/dialects.py) for details.
+See the docstrings in [`mcpyrate.dialects`](../mcpyrate/dialects.py) for details.
 
 
 ### Source transformers
@@ -133,7 +133,7 @@ Input to a dialect AST transformer is the full AST of the module (in standard Py
 
 Injecting code that invokes macros, and injecting macro-imports, **is** allowed.
 
-To easily splice `tree.body` (the module body) into your dialect code template AST, see the utility [`mcpyrate.splicing.splice_dialect`](mcpyrate/splicing.py). It lets you specify where to paste the code in your template, while automatically lifting macro-imports, dialect-imports, the magic `__all__`, and the module docstring (from the input module body) into the appropriate places in the transformed module body.
+To easily splice `tree.body` (the module body) into your dialect code template AST, see the utility [`mcpyrate.splicing.splice_dialect`](../mcpyrate/splicing.py). It lets you specify where to paste the code in your template, while automatically lifting macro-imports, dialect-imports, the magic `__all__`, and the module docstring (from the input module body) into the appropriate places in the transformed module body.
 
 As an example, for now, until we get [`unpythonic`](https://github.com/Technologicat/unpythonic) ported to use `mcpyrate`, see the example dialects in [`pydialect`](https://github.com/Technologicat/pydialect), which are implemented using this exact strategy, but with the older `macropy` macro expander, the older `pydialect` dialect system, and `unpythonic`.
 
