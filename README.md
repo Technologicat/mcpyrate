@@ -2,7 +2,7 @@
 
 Advanced, third-generation macro expander for Python, after the pioneering [macropy](https://github.com/lihaoyi/macropy), and the compact, pythonic [mcpy](https://github.com/delapuente/mcpy). The focus is on correctness, feature-completeness for serious macro-enabled work, and simplicity, in that order.
 
-We aim at developer-friendliness. `mcpyrate` yields correct [coverage](https://github.com/nedbat/coveragepy/) for macro-enabled code, reports errors as early as possible, and makes it easy to display the steps of any expansion - with syntax highlighting and source line numbers.
+We aim at developer-friendliness. `mcpyrate` yields correct [coverage](https://github.com/nedbat/coveragepy/) for macro-enabled code, reports errors as early as possible, and makes it easy to display the steps of any expansion - with syntax highlighting, use site filename, and source line numbers.
 
 `mcpyrate` builds on `mcpy`, with a similar explicit and compact approach, but with a lot of new features. Some of our features are strongly inspired by `macropy`, such as quasiquotes, macro arguments, and expansion tracing. We provide an integrated REPL system (including an IPython extension) and support for dialects, in a more advanced development based on the prototypes [`imacropy`](https://github.com/Technologicat/imacropy) and [`pydialect`](https://github.com/Technologicat/pydialect).
 
