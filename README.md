@@ -42,7 +42,7 @@ from mymacros import macros, echo
 echo[6 * 7]
 ```
 
-Or even with just one:
+Or even with just one source file:
 
 ```python
 # application.py
@@ -57,7 +57,7 @@ from __self__ import macros, echo
 echo[6 * 7]
 ```
 
-To run either example, `macropython -m application`. For more examples, see the [`demo/`](demo/) subfolder.
+To run either example, `macropython -m application`, or `macropython application.py`. For more examples, see the [`demo/`](demo/) subfolder.
 
 
 ## Highlights
