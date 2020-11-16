@@ -111,7 +111,7 @@ while having that source code in a file ending in `.py`, executable by `macropyt
 
 Implementing the actual BF to Python transpiler is left as an exercise to the reader. Maybe compare [how Matthew Butterick did this in Racket](https://beautifulracket.com/bf/intro.html).
 
-If you want to just extend Python's surface syntax slightly, then as a starting point, maybe look at the implementation of the `tokenize` module in Python's standard library. For implementing new languages that compile to Python, maybe look at the [`pyparsing`](https://github.com/pyparsing/pyparsing) library.
+If you want to just extend Python's surface syntax slightly, then as a starting point, maybe look at the implementation of the [`tokenize`](https://docs.python.org/3/library/tokenize.html) module in Python's standard library. For implementing new languages that compile to Python, maybe look at the [`pyparsing`](https://github.com/pyparsing/pyparsing) library.
 
 Note a source transformer will have to produce *Python source code*, not an AST. But if you can generate a standard (macro-enabled) Python AST, then the `unparse` function of `mcpyrate` may be able to bridge the gap.
 
