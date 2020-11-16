@@ -257,12 +257,12 @@ across several - and on the other hand on how important it is to have a shared
 central definition that specifies a *language-level common ground* for some
 set of code.
 
-Since you're reading this, you probably already know, but be aware that, unlike
-how it was envisioned during the *extensible languages* movement in the 1960s-70s,
-language extension is hardly an exercise requiring only *modest amounts of labor
-by unsophisticated users* (as quoted and discussed in [[1]](http://fexpr.blogspot.com/2013/12/abstractive-power.html)).
-Especially the interaction between different macros needs a lot of thought,
-and as the number of language features grows, the complexity skyrockets.
+Be aware that, unlike how it was envisioned during the *extensible languages*
+movement in the 1960s-70s, language extension is hardly an exercise requiring
+only *modest amounts of labor by unsophisticated users* (as quoted and discussed
+in [[1]](http://fexpr.blogspot.com/2013/12/abstractive-power.html)). Especially
+the interaction between different macros needs a lot of thought, and as the
+number of language features grows, the complexity skyrockets.
 
 Seams between parts of the user program that use or do not use some particular
 feature (or a combination of features) also require special attention. This is
