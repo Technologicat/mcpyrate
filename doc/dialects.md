@@ -1,36 +1,31 @@
-# Dialect system for mcpyrate
-
 <!-- markdown-toc start - Don't edit this section. Run M-x markdown-toc-refresh-toc -->
 **Table of Contents**
 
-- [Dialect system for mcpyrate](#dialect-system-for-mcpyrate)
-    - [Overview](#overview)
-    - [Using dialects](#using-dialects)
-        - [Code layout (style guidelines)](#code-layout-style-guidelines)
-    - [Writing dialects](#writing-dialects)
-        - [Source transformers](#source-transformers)
-        - [AST transformers](#ast-transformers)
-        - [AST postprocessors](#ast-postprocessors)
-    - [Dialect import algorithm](#dialect-import-algorithm)
-        - [Notes](#notes)
-    - [Debugging dialect transformations](#debugging-dialect-transformations)
-        - [Automatic syntax highlighting](#automatic-syntax-highlighting)
-    - [Why dialects?](#why-dialects)
-        - [When to make a dialect](#when-to-make-a-dialect)
+- [Introduction](#introduction)
+- [Using dialects](#using-dialects)
+    - [Code layout (style guidelines)](#code-layout-style-guidelines)
+- [Writing dialects](#writing-dialects)
+    - [Source transformers](#source-transformers)
+    - [AST transformers](#ast-transformers)
+    - [AST postprocessors](#ast-postprocessors)
+- [Dialect import algorithm](#dialect-import-algorithm)
+    - [Notes](#notes)
+- [Debugging dialect transformations](#debugging-dialect-transformations)
+    - [Automatic syntax highlighting](#automatic-syntax-highlighting)
+- [Why dialects?](#why-dialects)
+    - [When to make a dialect](#when-to-make-a-dialect)
 
 <!-- markdown-toc end -->
 
 
-## Overview
+# Introduction
 
 Dialects are essentially *whole-module source and AST transformers*. Think [Racket's](https://racket-lang.org/) `#lang`, but for Python. Source transformers are akin to *reader macros* in the Lisp family.
 
 Dialects allow you to define languages that use Python's surface syntax, but change the semantics; or let you plug in a per-module transpiler that (at import time) compiles source code from some other programming language into macro-enabled Python. Also an AST [optimizer](http://compileroptimizations.com/) could be defined as a dialect.
 
-`mcpyrate`'s dialect system is a more advanced development based on the prototype that appeared as [`pydialect`](https://github.com/Technologicat/pydialect).
 
-
-## Using dialects
+# Using dialects
 
 Dialects are compiled into macro-enabled Python, by `mcpyrate`'s importer. So just like when using macros, `mcpyrate` must first be enabled. This is done in exactly the same way as when using macros: import the module `mcpyrate.activate` (and then import your module that uses dialects), or run your program through the `macropython` bootstrapper.
 
@@ -57,7 +52,7 @@ When the **AST** transformers run, each dialect-import is transformed into `impo
 Until we get [`unpythonic`](https://github.com/Technologicat/unpythonic) ported to use `mcpyrate`, see [`pydialect`](https://github.com/Technologicat/pydialect) for old example dialects.
 
 
-### Code layout (style guidelines)
+## Code layout (style guidelines)
 
 For dialects that look mostly like Python, the recommended code layout in the spirit of PEP8 is:
 
@@ -75,7 +70,7 @@ from ... import macros, ...  # then macro-imports
 ```
 
 
-## Writing dialects
+# Writing dialects
 
 Technically speaking, a dialect is a class that inherits from `mcpyrate.dialects.Dialect`, and has the methods `transform_source`, `transform_ast`, and `postprocess_ast`.
 
@@ -84,7 +79,7 @@ It may implement just one of these methods, if the others are not needed. The de
 See the docstrings in [`mcpyrate.dialects`](../mcpyrate/dialects.py) for details.
 
 
-### Source transformers
+## Source transformers
 
 In your dialect, implement the method `transform_source` to add a whole-module source transformer.
 
@@ -116,7 +111,7 @@ If you want to just extend Python's surface syntax slightly, then as a starting 
 Note a source transformer will have to produce *Python source code*, not an AST. But if you can generate a standard (macro-enabled) Python AST, then the `unparse` function of `mcpyrate` may be able to bridge the gap.
 
 
-### AST transformers
+## AST transformers
 
 In your dialect, implement the method `transform_ast` to add a whole-module AST transformer. It runs **before** the macro expander.
 
@@ -158,7 +153,7 @@ fact(5000)  # no crash
 The dialect works by automatically invoking the `autoreturn` and `tco` code-walking block macros from `unpythonic.syntax`. TCO, in turn, is implemented on top of a layer of regular functions.
 
 
-### AST postprocessors
+## AST postprocessors
 
 A dialect can also provide the method `postprocess_ast`. It works the same as `transform_ast`, but it runs **after** the macro expander.
 
@@ -167,7 +162,7 @@ This is provided separately, because changes in language semantics are best done
 Note that `postprocess_ast` receives, and must return, an AST consisting of **regular Python only** (no macro invocations, no dialect-imports!), since by that point macro expansion (and indeed everything but regular Python compilation) has already completed for the tree being compiled.
 
 
-## Dialect import algorithm
+# Dialect import algorithm
 
 Keep in mind the overall context of [`mcpyrate`'s import algorithm](../README.md#the-import-algorithm).
 
@@ -183,7 +178,7 @@ The expander then repeats (each time rescanning the AST of the module body from 
 
 In the **AST postprocessing** step, the dialect expander runs the AST postprocessors for all dialect instances the AST transformation step recorded, in the same order their AST transformers ran.
 
-### Notes
+## Notes
 
 A source transformer may edit the full source text of the module being compiled, *including any dialect-imports*. Editing those will change which dialects get applied. If a dialect source transformer removes its own dialect-import, that will cause the dialect expander to skip the AST transformers of any dialects in that dialect-import. If it adds any new dialect-imports, those will get processed in the order they are encountered by the dialect import algorithm.
 
@@ -192,7 +187,7 @@ Similarly, an AST transformer may edit the full module AST, including any remain
 No coverage dummy nodes are added, because each dialect-import becomes a regular absolute module import, which executes normally at run time.
 
 
-## Debugging dialect transformations
+# Debugging dialect transformations
 
 To enable debug mode, dialect-import the `StepExpansion` dialect, provided by `mcpyrate.debug`:
 
@@ -208,7 +203,7 @@ In debug mode, the dialect expander will show the source code (or unparsed AST, 
 
 So, to see the whole chain, place the import for the `StepExpansion` dialect first; its source transformer, after enabling debug mode, just returns the original source, so you'll see the original source code as the first step.
 
-### Automatic syntax highlighting
+## Automatic syntax highlighting
 
 During **source** transformations, syntax highlighting is **not** available, because the surface syntax could mean anything; strictly speaking, it does not even need to look like Python at all.
 
@@ -217,7 +212,7 @@ During **AST** transformations, we have a (macro-enabled) Python AST, and syntax
 During **AST postprocessing**, syntax highlighting is enabled for the unparsed source code; no macro invocations remain.
 
 
-## Why dialects?
+# Why dialects?
 
 An extension to the Python language doesn't need to make it into the Python core,
 *or even be desirable for inclusion* into the Python core, in order to be useful.
@@ -233,7 +228,7 @@ or implement from scratch a custom language (like
 [Dogelang](https://pyos.github.io/dg/)) that compiles to Python AST or bytecode.
 
 
-### When to make a dialect
+## When to make a dialect
 
 Often *explicit is better than implicit*. So, most often, don't.
 

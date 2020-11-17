@@ -1,24 +1,19 @@
-# REPL system for mcpyrate
-
-`mcpyrate`'s REPL system is a more advanced development based on the prototype that appeared as [`imacropy`](https://github.com/Technologicat/imacropy).
-
 <!-- markdown-toc start - Don't edit this section. Run M-x markdown-toc-refresh-toc -->
 **Table of Contents**
 
-- [REPL system for mcpyrate](#repl-system-for-mcpyrate)
-    - [`mcpyrate.repl.iconsole`, the IPython extension](#mcpyraterepliconsole-the-ipython-extension)
-        - [Loading the extension](#loading-the-extension)
-    - [`mcpyrate.repl.console.MacroConsole`, the macro-enabled embeddable REPL](#mcpyratereplconsolemacroconsole-the-macro-enabled-embeddable-repl)
-    - [`macropython`, the universal bootstrapper](#macropython-the-universal-bootstrapper)
-        - [Starting a macro-enabled REPL from the shell](#starting-a-macro-enabled-repl-from-the-shell)
-        - [Running a macro-enabled main program](#running-a-macro-enabled-main-program)
-    - [Questions & Answers](#questions--answers)
-        - [`@macro` is convenient, why is it only available in the REPL?](#macro-is-convenient-why-is-it-only-available-in-the-repl)
+- [`mcpyrate.repl.iconsole`, the IPython extension](#mcpyraterepliconsole-the-ipython-extension)
+    - [Loading the extension](#loading-the-extension)
+- [`mcpyrate.repl.console.MacroConsole`, the macro-enabled embeddable REPL](#mcpyratereplconsolemacroconsole-the-macro-enabled-embeddable-repl)
+- [`macropython`, the universal bootstrapper](#macropython-the-universal-bootstrapper)
+    - [Starting a macro-enabled REPL from the shell](#starting-a-macro-enabled-repl-from-the-shell)
+    - [Running a macro-enabled main program](#running-a-macro-enabled-main-program)
+- [Questions & Answers](#questions--answers)
+    - [`@macro` is convenient, why is it only available in the REPL?](#macro-is-convenient-why-is-it-only-available-in-the-repl)
 
 <!-- markdown-toc end -->
 
 
-## `mcpyrate.repl.iconsole`, the IPython extension
+# `mcpyrate.repl.iconsole`, the IPython extension
 
 The extension **macro-enables the IPython REPL**.
 
@@ -52,7 +47,7 @@ The intention is to allow viewing macro docstrings and source code easily in the
 This does not affect using the macros in the intended way, as macros.
 
 
-### Loading the extension
+## Loading the extension
 
 To load the extension once, ``%load_ext mcpyrate.repl.iconsole``.
 
@@ -63,7 +58,7 @@ In your IPython configuration, make sure `c.TerminalInteractiveShell.autocall = 
 Currently **no startup banner is printed**, because extension loading occurs after IPython has already printed its own banner. We cannot manually print a banner, because some tools (notably ``importmagic.el`` for Emacs, included in [Spacemacs](http://spacemacs.org/)) treat the situation as a fatal error in Python interpreter startup if anything is printed.
 
 
-## `mcpyrate.repl.console.MacroConsole`, the macro-enabled embeddable REPL
+# `mcpyrate.repl.console.MacroConsole`, the macro-enabled embeddable REPL
 
 This is a derivative of, and drop-in replacement for, ``code.InteractiveConsole``, which allows you to **embed a REPL that supports macros**. This offers the same semantics as the IPython extension.
 
@@ -106,7 +101,7 @@ REPL session, using ``some_macro?``, ``some_macro??``.
 This does not affect using the macros in the intended way, as macros.
 
 
-## `macropython`, the universal bootstrapper
+# `macropython`, the universal bootstrapper
 
 The bootstrapper has two roles:
 
@@ -114,7 +109,7 @@ The bootstrapper has two roles:
  - It **allows your main program to use macros**.
 
 
-### Starting a macro-enabled REPL from the shell
+## Starting a macro-enabled REPL from the shell
 
 Interactive mode (`macropython -i`) starts a **macro-enabled interactive Python interpreter**, using `mcpyrate.repl.console.MacroConsole`. The [readline](https://docs.python.org/3/library/readline.html) and [rlcompleter](https://docs.python.org/3/library/rlcompleter.html) modules are automatically activated and connected to the REPL session, so the command history and tab completion features work as expected, pretty much like in the standard interactive Python interpreter.
 
@@ -125,7 +120,7 @@ If `-p` is given in addition to `-i`, as in `macropython -pi`, the REPL starts i
 Command history of `macropython -i` is saved in the folder `~/.config/mcpyrate/`, in a file named `macropython_history`.
 
 
-### Running a macro-enabled main program
+## Running a macro-enabled main program
 
 In this mode, the bootstrapper imports the specified file or module, pretending its ``__name__`` is ``"__main__"``. **This allows your main program to use macros**.
 
@@ -167,9 +162,9 @@ python3 <your options here> $(which macropython) -m example
 This way the rest of the options go to the Python interpreter itself, and the ``-m example`` to the ``macropython`` bootstrapper.
 
 
-## Questions & Answers
+# Questions & Answers
 
-### `@macro` is convenient, why is it only available in the REPL?
+## `@macro` is convenient, why is it only available in the REPL?
 
 The answer is twofold:
 

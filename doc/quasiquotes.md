@@ -1,8 +1,46 @@
-# Quasiquotes
+<!-- markdown-toc start - Don't edit this section. Run M-x markdown-toc-refresh-toc -->
+**Table of Contents**
 
-Build ASTs in your macros, using syntax that mostly looks like regular code.
+- [Introduction](#introduction)
+- [Avoiding name conflicts at the macro use site](#avoiding-name-conflicts-at-the-macro-use-site)
+    - [`gensym`](#gensym)
+    - [Macro hygiene](#macro-hygiene)
+    - [Macro hygiene without quasiquotes](#macro-hygiene-without-quasiquotes)
+    - [Advanced uses of non-hygienic quasiquoting](#advanced-uses-of-non-hygienic-quasiquoting)
+- [Reference manual](#reference-manual)
+    - [`q`: quasiquote](#q-quasiquote)
+    - [`u`: unquote](#u-unquote)
+    - [`n`: name-unquote](#n-name-unquote)
+    - [`a`: ast-unquote](#a-ast-unquote)
+        - [Expression mode](#expression-mode)
+        - [Block mode](#block-mode)
+        - [Notes](#notes)
+    - [`s`: ast-list-unquote](#s-ast-list-unquote)
+    - [`h`: hygienic-unquote](#h-hygienic-unquote)
+        - [Hygienically captured run-time values](#hygienically-captured-run-time-values)
+        - [Hygienically captured macros](#hygienically-captured-macros)
+    - [Syntactically allowed positions for unquotes](#syntactically-allowed-positions-for-unquotes)
+    - [Quotes, unquotes, and macro expansion](#quotes-unquotes-and-macro-expansion)
+- [The `expand` family of macros](#the-expand-family-of-macros)
+    - [When to use](#when-to-use)
+    - [Stepping a run-time macro expansion with `stepr`](#stepping-a-run-time-macro-expansion-with-stepr)
+    - [Using the `expand` macros](#using-the-expand-macros)
+- [Understanding the quasiquote system](#understanding-the-quasiquote-system)
+    - [How `q` arranges hygienic captures](#how-q-arranges-hygienic-captures)
+- [Notes](#notes-1)
+    - [Difference between `h[]` and `u[]`](#difference-between-h-and-u)
+    - [Differences to Common Lisp](#differences-to-common-lisp)
+    - [Differences to `macropy`](#differences-to-macropy)
+        - [In usage](#in-usage)
+        - [In implementation](#in-implementation)
+    - [Etymology](#etymology)
 
-For example, here's a complete implementation of `delay`/`force`, with memoization and plain-value passthrough:
+<!-- markdown-toc end -->
+
+
+# Introduction
+
+Here's a complete implementation of `delay`/`force`, with memoization and plain-value passthrough. Spot the macro!
 
 ```python
 __all__ = ["delay", "force"]
@@ -28,50 +66,6 @@ def force(promise):
     """Evaluate a delayed expression, at most once."""
     return promise.force() if isinstance(promise, Promise) else promise
 ```
-
-Based on quasiquotation [as popularized by the Lisp family](https://en.wikipedia.org/wiki/Lisp_(programming_language)#Self-evaluating_forms_and_quoting) of languages, in turn based on [Quine's linguistic device](https://en.wikipedia.org/wiki/Quasi-quotation) of the same name. Similar in flavor to [`macropy`'s quasiquote system](https://macropy3.readthedocs.io/en/latest/reference.html#quasiquotes), but with some important differences.
-
-<!-- markdown-toc start - Don't edit this section. Run M-x markdown-toc-refresh-toc -->
-**Table of Contents**
-
-- [Quasiquotes](#quasiquotes)
-    - [Introduction to quasiquoting](#introduction-to-quasiquoting)
-    - [Avoiding name conflicts at the macro use site](#avoiding-name-conflicts-at-the-macro-use-site)
-        - [`gensym`](#gensym)
-        - [Macro hygiene](#macro-hygiene)
-        - [Macro hygiene without quasiquotes](#macro-hygiene-without-quasiquotes)
-        - [Advanced uses of non-hygienic quasiquoting](#advanced-uses-of-non-hygienic-quasiquoting)
-    - [Reference manual](#reference-manual)
-        - [`q`: quasiquote](#q-quasiquote)
-        - [`u`: unquote](#u-unquote)
-        - [`n`: name-unquote](#n-name-unquote)
-        - [`a`: ast-unquote](#a-ast-unquote)
-            - [Expression mode](#expression-mode)
-            - [Block mode](#block-mode)
-            - [Notes](#notes)
-        - [`s`: ast-list-unquote](#s-ast-list-unquote)
-        - [`h`: hygienic-unquote](#h-hygienic-unquote)
-            - [Hygienically captured run-time values](#hygienically-captured-run-time-values)
-            - [Hygienically captured macros](#hygienically-captured-macros)
-        - [Syntactically allowed positions for unquotes](#syntactically-allowed-positions-for-unquotes)
-        - [Quotes, unquotes, and macro expansion](#quotes-unquotes-and-macro-expansion)
-    - [The `expand` family of macros](#the-expand-family-of-macros)
-        - [When to use](#when-to-use)
-        - [Stepping a run-time macro expansion with `stepr`](#stepping-a-run-time-macro-expansion-with-stepr)
-        - [Using the `expand` macros](#using-the-expand-macros)
-    - [Understanding the quasiquote system](#understanding-the-quasiquote-system)
-        - [How `q` arranges hygienic captures](#how-q-arranges-hygienic-captures)
-    - [Notes](#notes-1)
-        - [Difference between `h[]` and `u[]`](#difference-between-h-and-u)
-        - [Differences to Common Lisp](#differences-to-common-lisp)
-        - [Differences to `macropy`](#differences-to-macropy)
-            - [In usage](#in-usage)
-            - [In implementation](#in-implementation)
-
-<!-- markdown-toc end -->
-
-
-## Introduction to quasiquoting
 
 Quasiquoting is a way to build ASTs in notation that mostly looks like regular
 code. Classically, in Lisps, the quasiquote operator doesn't need to do much,
@@ -103,8 +97,10 @@ familiar with Common Lisp's `defmacro` (or if you've been reading
 [Seibel](http://www.gigamonkeys.com/book/) or
 [Graham](http://paulgraham.com/onlisp.html)), you'll feel almost right at home.
 
+The system is similar in flavor to [`macropy`'s quasiquote system](https://macropy3.readthedocs.io/en/latest/reference.html#quasiquotes), but with some important differences.
 
-## Avoiding name conflicts at the macro use site
+
+# Avoiding name conflicts at the macro use site
 
 Classical (non-hygienic) quasiquoting passes through identifiers as-is. This
 may lead to name conflicts, because the macro definition site has no control
@@ -122,7 +118,7 @@ into the global scope of your macro definition module, to be able to call that
 function in the code generated by your macro.
 
 
-### `gensym`
+## `gensym`
 
 Short for *generate symbol*, `gensym` provides fresh, unused identifiers.
 
@@ -131,7 +127,7 @@ When your macro needs to generate code that establishes new bindings, see
 `mcpyrate.utils.rename` where needed) judiciously.
 
 
-### Macro hygiene
+## Macro hygiene
 
 *Macro hygiene* refers to preserving the meaning of an identifier, from the
 macro definition site, to the macro use site. This is a highly desirable
@@ -183,7 +179,7 @@ value will be pickled** and that pickled copy becomes the thing the `h[]`
 refers to.
 
 
-### Macro hygiene without quasiquotes
+## Macro hygiene without quasiquotes
 
 If you want to capture values or macro names hygienically in an old-school macro
 that does not use the quasiquote notation, this is also possible. The machinery
@@ -194,7 +190,7 @@ perform the actual capture. The return value is the AST snippet for the hygienic
 reference. You can call these functions directly in your macro implementation.
 
 
-### Advanced uses of non-hygienic quasiquoting
+## Advanced uses of non-hygienic quasiquoting
 
 Macro hygiene has its place, but non-hygienic quoting leads to two advanced
 techniques that are sometimes useful:
@@ -230,7 +226,7 @@ needed, they are discouraged. When used, good documentation is absolutely
 critical.
 
 
-## Reference manual
+# Reference manual
 
 Here *macro definition site* and *macro use site* refer to those sites for the
 macro in whose implementation `q` is used to construct (part of) the output AST.
@@ -239,7 +235,7 @@ The AST for the quoted code becomes fully available at the run time of the use
 site of `q`, i.e. when your macro reaches run time.
 
 
-### `q`: quasiquote
+## `q`: quasiquote
 
 `q[expr]` lifts the expression `expr` into an AST. E.g. `q[42]` becomes
 `ast.Constant(value=42)`.
@@ -260,7 +256,7 @@ expanded by default.
 The macro [`mcpyrate.metatools.expandsq`](../mcpyrate/metatools.py) produces results closest to `macropy`'s `q`.
 
 
-### `u`: unquote
+## `u`: unquote
 
 `u[expr]` unquotes `expr`. It evaluates the value of the expression `expr`
 at the macro definition site, and lifts the result into an AST that is
@@ -291,7 +287,7 @@ logging_call = q[h[log_value_with_sourcecode](a[tree], u[unparse(tree)])]
 ```
 
 
-### `n`: name-unquote
+## `n`: name-unquote
 
 `n[code]` parses the expression `code` as Python source code at the macro
 definition site, and splices the resulting AST into the quoted code.
@@ -352,11 +348,11 @@ the "undefined" name `x`, but for that use case, we recommend `# noqa: F821`.
 Generalized from `macropy`'s `name`, which converts a string into a lexical variable access.
 
 
-### `a`: ast-unquote
+## `a`: ast-unquote
 
 Splice an existing AST into quoted code. This unquote supports both expr and block modes.
 
-#### Expression mode
+### Expression mode
 
 ```python
 a[expr]
@@ -376,7 +372,7 @@ The `a[]` operator will type-check at run time, at the use site of the
 surrounding `q`, that the value of `expr` is an *expression* AST node
 (or an `ASTMarker`, with an expression AST node in its `body`).
 
-#### Block mode
+### Block mode
 
 ```python
 with a:
@@ -399,7 +395,7 @@ surrounding `q`, once each `stmts` has been resolved to a value, that each node
 it got is a *statement* AST node (or an `ASTMarker`, with such valid data in its
 `body`).
 
-#### Notes
+### Notes
 
 **Very important**: *If `mymacro` uses `q`, run time for the use site of `q`
 is typically macro expansion time for an invocation of `mymacro`.*
@@ -450,7 +446,7 @@ affected by the `a`.
 The expression mode is equivalent to `macropy`'s `ast_literal`.
 
 
-### `s`: ast-list-unquote
+## `s`: ast-list-unquote
 
 `s[lst]` takes a `list`, and into the quoted code, splices an `ast.List` node,
 with the original list as its `elts` attribute. Note the list is **not** copied.
@@ -475,7 +471,7 @@ the function `mcpyrate.splicing.splice_statements`.
 Equivalent to `macropy`'s `ast_list`.
 
 
-### `h`: hygienic-unquote
+## `h`: hygienic-unquote
 
 `h[expr]` captures the value of the expression `expr` at the macro *definition*
 site, and makes the expansion use the captured value.
@@ -547,7 +543,7 @@ process boundaries; that is, the hygienically captured thing can be looked up
 even in another Python process later. This allows bytecode caching of use sites
 of macros that use `q[h[...]]`.
 
-#### Hygienically captured run-time values
+### Hygienically captured run-time values
 
 The result of evaluating `expr` can be any run-time value, as long as it is
 picklable.
@@ -564,7 +560,7 @@ Further activations of any particular use site refer to the same object
 instance the unpickling during that site's first activation (in the current
 process) produced.
 
-#### Hygienically captured macros
+### Hygienically captured macros
 
 Hygienic macro capture must be asked for explicitly, and it is not
 recursive. Only the macro explicitly tagged `h[macroname][...]` will be
@@ -575,7 +571,7 @@ invocations in its output to be hygienified. This is a feature, to keep
 things explicit.
 
 
-### Syntactically allowed positions for unquotes
+## Syntactically allowed positions for unquotes
 
 Unquote operators may only appear inside quasiquoted code. This is checked at
 macro expansion time. Otherwise, they may appear anywhere a subscript expression
@@ -605,7 +601,7 @@ with q as quoted:
 ```
 
 
-### Quotes, unquotes, and macro expansion
+## Quotes, unquotes, and macro expansion
 
 **In an unquote expression** inside quoted code, regardless of how many levels of
 quoting are present, macros are always fully expanded, because the purpose of
@@ -622,7 +618,7 @@ Depending on what you want, you can:
    no macro invocations remaining.
 
 
-## The `expand` family of macros
+# The `expand` family of macros
 
 In the simple case, when no quasiquotes are used and macros never return a tree containing further macro invocations, then `expander.visit` is always sufficient. But otherwise, more fine-grained control is needed, to tell the expander which macro bindings to use, so that the tree expands correctly.
 
@@ -630,7 +626,7 @@ Generally, considering the source code, it is always the site that built a parti
 
 When `mymacro` needs to invoke other macros in its output, one possibility is to use the `h[]` unquote to hygienically transmit the correct binding from `mymacro`'s definition site to its use site (where the expander's recursive mode will automatically kick in). Another possibility is to expand the macros explicitly, before returning the tree. This section is about how to do the latter.
 
-### When to use
+## When to use
 
 There are two main ways to explicitly expand macros in run-time AST values (such as `tree` in a macro, or a quoted code snippet stored in a variable): the `expander.visit` method with its sisters (`visit_once`, `visit_recursively`), and the `expand` family of macros defined in `mcpyrate.metatools`.
 
@@ -640,7 +636,7 @@ If you want to expand a tree using the macro bindings *from your macro's definit
 
 Of the `expand` macros, you'll most likely want `expandr` or `expand1r`, which delay expansion until your macro's run time.
 
-### Stepping a run-time macro expansion with `stepr`
+## Stepping a run-time macro expansion with `stepr`
 
 If you need to see the steps of macro expansion of a run-time AST value, see [`mcpyrate.metatools.stepr`](../mcpyrate/metatools.py).
 
@@ -648,7 +644,7 @@ Note `stepr` is an expr macro only, because it takes as its input a run-time AST
 
 The usual tool [`mcpyrate.debug.step_expansion`](../mcpyrate/debug.py) does not work for debugging run-time macro expansion, because it operates at the macro expansion time of its use site. The `stepr` macro is otherwise the same, but it delays the stepping until the run time of its use site - and uses the same macro bindings `expandr` would.
 
-### Using the `expand` macros
+## Using the `expand` macros
 
 Let's look at the `expand` macros in more detail. The [`mcpyrate.metatools`](../mcpyrate/metatools.py) module provides a family of macros to expand macros, all named `expand` plus a suffix of up to three characters in the order `1Xq`, where `X` is one of `s` or `r`. All of the `expand` macros have both expr and block modes.
 
@@ -670,7 +666,7 @@ Thus, `expandr[tree]` (as well as `expand1r[tree]`) will do the expected thing -
 When working with quasiquoted code, run-time expansion also has the benefit that any unquoted values will have been spliced in. Unquotes operate partly at run time of the use site of `q`. They must; the only context that has the user-provided names (where the unquoted data comes from) in scope is each particular use site of `q`, at its run time. The quasiquoted tree is only fully ready at run time of the use site of `q`.
 
 
-## Understanding the quasiquote system
+# Understanding the quasiquote system
 
 This section is intended for both users and developers. The quasiquote system is probably the most complex part of `mcpyrate`. In the words of Matthew Might, [*to understand is to implement*](http://matt.might.net/articles/parsing-with-derivatives/). So let's talk about the implementation.
 
@@ -701,7 +697,7 @@ The code generated by `q` is mostly an "astified" AST consisting of calls to var
 So when the run-time value is evaluated, at run time of the use site of `q`, both the "astified" `ast.Call` function calls as well as the run-time parts of the operators run to construct the final AST. This final result is a plain AST, with no more function calls into the quasiquote system, and no extra `ast.Call` layer. **This final AST only becomes available at run time of the use site of `q`.** 
 
 
-### How `q` arranges hygienic captures
+## How `q` arranges hygienic captures
 
 Regular macros that want to use hygienic capture, without using quasiquotes, can just call the API functions `capture_value` or `capture_macro`.
 
@@ -716,9 +712,9 @@ This is better than delaying the macro capture until run time of the use site, b
 Also, there might not be an `expander` at the use site, if the use site is not in a macro. But even if it's in a macro and there happens to be a name `expander` in scope *at run time*, that points to the wrong expander - namely, the one expanding *the use site of your macro* (which is in a different file, that has different macro bindings). At that point, your macro has reached run time, so the `expander` that processed it is already gone.
 
 
-## Notes
+# Notes
 
-### Difference between `h[]` and `u[]`
+## Difference between `h[]` and `u[]`
 
 The `h[]` operator accepts any picklable run-time value, including those that
 have no meaningful `repr`. Via pickling the captured value, to be stored with
@@ -734,7 +730,7 @@ the value apart, and generates an AST that will re-construct it. It is cheaper,
 but only works for expressions that evaluate to certain built-in types.
 
 
-### Differences to Common Lisp
+## Differences to Common Lisp
 
 In `mcpyrate`, the Common Lisp macro-implementation pattern, where one gensyms
 a new name, `let`-binds that to the current value of the old name, and then
@@ -772,9 +768,9 @@ Python has a surface syntax, instead of representing source code directly as a
 lightly dressed up AST, like Lisps do.
 
 
-### Differences to `macropy`
+## Differences to `macropy`
 
-#### In usage
+### In usage
 
 By default, in `mcpyrate`, macros in quasiquoted code are not expanded when the quasiquote itself expands. 
 
@@ -792,7 +788,7 @@ The `expose_unhygienic` mechanism is not needed, because in `mcpyrate`, each mac
 
 In `mcpyrate`, the `n[]` operator is a wrapper for `ast.parse`, so it will lift any source code that represents an expression, not only lexical variable references.
 
-#### In implementation
+### In implementation
 
 We have closely followed the impressive, pioneering work that originally
 appeared in `macropy`. That source code, itself quite short, is full of creative
@@ -823,3 +819,8 @@ We allow capturing the value of any expr, not just identifiers. However, we also
 take a somewhat different approach, in that we don't even pretend to capture
 names; our `h[]` is an *unquote* operator that captures *values*, not a *quote*
 operator that walks the tree and changes names.
+
+
+## Etymology
+
+Based on quasiquotation [as popularized by the Lisp family](https://en.wikipedia.org/wiki/Lisp_(programming_language)#Self-evaluating_forms_and_quoting) of languages, in turn based on [Quine's linguistic device](https://en.wikipedia.org/wiki/Quasi-quotation) of the same name.

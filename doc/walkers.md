@@ -1,4 +1,15 @@
-# AST walkers
+<!-- markdown-toc start - Don't edit this section. Run M-x markdown-toc-refresh-toc -->
+**Table of Contents**
+
+- [Introduction](#introduction)
+- [Attributes](#attributes)
+- [Methods](#methods)
+- [Terminating an ongoing visit](#terminating-an-ongoing-visit)
+
+<!-- markdown-toc end -->
+
+
+# Introduction
 
 ```python
 def kittify(mytree):
@@ -34,18 +45,8 @@ The selling points of both are `withstate`, `state`, `collect`, `collected`, whi
 
 For a realistic example, see [`mcpyrate.astfixers`](../mcpyrate/astfixers.py), or grep the `mcpyrate` codebase for other uses of `ASTVisitor` and `ASTTransformer` (there are a few).
 
-<!-- markdown-toc start - Don't edit this section. Run M-x markdown-toc-refresh-toc -->
-**Table of Contents**
 
-- [AST walkers](#ast-walkers)
-    - [Attributes](#attributes)
-    - [Methods](#methods)
-    - [Terminating an ongoing visit](#terminating-an-ongoing-visit)
-
-<!-- markdown-toc end -->
-
-
-## Attributes
+# Attributes
 
 Unless otherwise stated, each attribute is present in both `ASTVisitor` and `ASTTransformer`.
 
@@ -65,7 +66,7 @@ Unless otherwise stated, each attribute is present in both `ASTVisitor` and `AST
  - `collected`: a `list` of collected values, in the order collected.
 
 
-## Methods
+# Methods
 
 Unless otherwise stated, each method is present in both `ASTVisitor` and `ASTTransformer`.
 
@@ -185,7 +186,7 @@ Unless otherwise stated, each method is present in both `ASTVisitor` and `ASTTra
    reuse the same `ASTVisitor` or `ASTTransformer` instance.
 
 
-## Terminating an ongoing visit
+# Terminating an ongoing visit
 
 There are two ways to terminate an ongoing visit:
 
