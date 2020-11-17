@@ -244,7 +244,7 @@ Although you don't strictly have to import anything to write macros, there are s
 
 Other modules contain utilities for writing macros:
 
- - [`mcpyrate.quotes`](../mcpyrate/quotes.py) provides quasiquote syntax as macros, to easily build ASTs in your macros, using syntax that mostly looks like regular code. [Documentation](quasiquotes.md).
+ - [`mcpyrate.quotes`](../mcpyrate/quotes.py) provides [quasiquote](https://en.wikipedia.org/wiki/Lisp_(programming_language)#Self-evaluating_forms_and_quoting) syntax as macros, to easily build ASTs in your macros, using syntax that mostly looks like regular code. [Documentation](quasiquotes.md).
  - [`mcpyrate.metatools`](../mcpyrate/metatools.py) provides utilities; particularly, to expand macros in run-time AST values, while using the macro bindings from your macro's *definition* site (vs. its *use* site like `expander.visit` does). Useful for quoted trees. [Documentation](quasiquotes.md#the-expand-family-of-macros).
  - [`mcpyrate.utils`](../mcpyrate/utils.py) provides some macro-writing utilities that are too specific to warrant a spot in the top-level namespace; of these, at least `rename` and `flatten` (for statement suites) solve problems that come up relatively often.
  - [`mcpyrate.walkers`](../mcpyrate/walkers.py) provides AST walkers (both visitor and transformer variants) that can context-manage their state for different subtrees, while optionally collecting items across the whole walk. They are based on `ast.NodeVisitor` and `ast.NodeTransformer`, respectively, but with functionality equivalent to `macropy.core.walkers.Walker`. [Documentation](walkers.md).
