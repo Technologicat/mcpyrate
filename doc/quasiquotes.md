@@ -21,11 +21,11 @@ Based on quasiquotation [as popularized by the Lisp family](https://en.wikipedia
 
 - [Quasiquotes](#quasiquotes)
     - [Introduction to quasiquoting](#introduction-to-quasiquoting)
-        - [Avoiding name conflicts at the macro use site](#avoiding-name-conflicts-at-the-macro-use-site)
-            - [`gensym`](#gensym)
-            - [Macro hygiene](#macro-hygiene)
-            - [Macro hygiene without quasiquotes](#macro-hygiene-without-quasiquotes)
-            - [Advanced uses of non-hygienic quasiquoting](#advanced-uses-of-non-hygienic-quasiquoting)
+    - [Avoiding name conflicts at the macro use site](#avoiding-name-conflicts-at-the-macro-use-site)
+        - [`gensym`](#gensym)
+        - [Macro hygiene](#macro-hygiene)
+        - [Macro hygiene without quasiquotes](#macro-hygiene-without-quasiquotes)
+        - [Advanced uses of non-hygienic quasiquoting](#advanced-uses-of-non-hygienic-quasiquoting)
     - [Reference manual](#reference-manual)
         - [`q`: quasiquote](#q-quasiquote)
         - [`u`: unquote](#u-unquote)
@@ -89,7 +89,7 @@ familiar with Common Lisp's `defmacro` (or if you've been reading
 [Graham](http://paulgraham.com/onlisp.html)), you'll feel almost right at home.
 
 
-### Avoiding name conflicts at the macro use site
+## Avoiding name conflicts at the macro use site
 
 Classical quasiquoting passes through identifiers as-is. This leads to name
 conflict issues, because the macro definition site has no control over what
@@ -106,7 +106,7 @@ scope of your macro definition module, so it could be called by your macro
 expansion), that's where *macro hygiene* comes in.
 
 
-#### `gensym`
+### `gensym`
 
 Short for *generate symbol*, `gensym` provides fresh, unused identifiers.
 
@@ -115,7 +115,7 @@ When your macro needs to generate code that establishes new bindings, see
 `mcpyrate.utils.rename` where needed) judiciously.
 
 
-#### Macro hygiene
+### Macro hygiene
 
 *Macro hygiene* refers to preserving the meaning of an identifier, from the
 macro definition site, to the macro use site. This is a highly desirable
@@ -166,7 +166,7 @@ value will be pickled** and that pickled copy becomes the thing the `h[]`
 refers to.
 
 
-#### Macro hygiene without quasiquotes
+### Macro hygiene without quasiquotes
 
 If you want to capture values or macro names hygienically in an old-school macro
 that does not use the quasiquote notation, this is also possible. The machinery
@@ -177,7 +177,7 @@ perform the actual capture. The return value is the AST snippet for the hygienic
 reference. You can call them directly in your macro implementation.
 
 
-#### Advanced uses of non-hygienic quasiquoting
+### Advanced uses of non-hygienic quasiquoting
 
 Macro hygiene has its place, but non-hygienic quoting leads to two advanced
 techniques that are sometimes useful:
