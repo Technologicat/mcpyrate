@@ -14,6 +14,8 @@ Build ASTs in your macros, using syntax that mostly looks like regular code.
         return promise()
 ```
 
+Based on quasiquotation [as popularized by the Lisp family](https://en.wikipedia.org/wiki/Lisp_(programming_language)#Self-evaluating_forms_and_quoting) of languages, in turn based on [Quine's linguistic device](https://en.wikipedia.org/wiki/Quasi-quotation) of the same name. Similar in flavor to [`macropy`'s quasiquote system](https://macropy3.readthedocs.io/en/latest/reference.html#quasiquotes), but with some important differences.
+
 <!-- markdown-toc start - Don't edit this section. Run M-x markdown-toc-refresh-toc -->
 **Table of Contents**
 
