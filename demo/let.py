@@ -1,6 +1,7 @@
 # -*- coding: utf-8; -*-
 from mcpyrate.multiphase import macros, phase
 from mcpyrate.debug import macros, step_expansion  # noqa: F811
+# from mcpyrate.debug import macros, step_phases  # uncomment this line to see the multiphase compilation
 
 with phase[2]:
     from mcpyrate.quotes import macros, q, a, s, h  # noqa: F811, F401
