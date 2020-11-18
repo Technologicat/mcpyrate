@@ -65,7 +65,7 @@ with phase[1]:
         return q[h[let][a[first]][a[letseq(tree, args=rest, syntax=syntax)]]]
 
         # We could as well call `let` as a function, to expand it immediately.
-        # let(letseq(tree, rest), args=[first, ], syntax=syntax)
+        # let(letseq(tree, args=rest, syntax=syntax), args=[first, ], syntax=syntax)
 
 from __self__ import macros, letseq  # noqa: F811, F401
 
