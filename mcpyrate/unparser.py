@@ -863,7 +863,7 @@ class Unparser:
             self.write("*")
             if t.vararg:
                 self.write(t.vararg.arg)
-                if t.vararg.annotation:
+                if hasattr(t.vararg, "annotation") and t.vararg.annotation:
                     self.write(": ")
                     self.dispatch(t.vararg.annotation)
 
@@ -886,7 +886,7 @@ class Unparser:
             else:
                 self.write(", ")
             self.write("**" + t.kwarg.arg)
-            if t.kwarg.annotation:
+            if hasattr(t.kwarg, "annotation") and t.kwarg.annotation:
                 self.write(": ")
                 self.dispatch(t.kwarg.annotation)
 
