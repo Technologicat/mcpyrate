@@ -33,10 +33,31 @@ with phase[2]:
         values = [v for _, v in (a.elts for a in args)]
         if len(set(names)) < len(names):
             raise SyntaxError("binding names must be unique in the same `let`")  # pragma: no cover
+
+        # Create the lambda, injecting the parameters with an oldschool AST edit.
+        # Note we can't really put any sensible placeholder there, since parameter names must be literals,
+        # and "..." - which would best suggest we're going to replace it - is not a valid name in Python.
         lam = q[lambda: a[tree]]
         lam.args.args = [arg(arg=x) for x in names]
-        # TODO: in `macropy`, we could just  q[a[lam](a[values])]  because it doesn't typecheck. Fix this?
-        return q[a[lam](*s[values])]
+
+        # In `macropy`, we could just  q[a[lam](a[values])]  because it doesn't typecheck, but just injects
+        # whatever we gave it into the AST.
+        #
+        # Because that approach can lead to mysterious compile errors with careless use, in `mcpyrate`,
+        # `a` has a run-time part that typechecks the input. But the very fact that our `a` writes a call
+        # to that run-time part means that we can't just let it evaluate to a list of nodes. The `a[values]`
+        # part itself (which, at run time, is a call to `mcpyrate.quotes.ast_literal`) always appears as
+        # a single argument to the surrounding `Call` that calls our lambda.
+        #
+        # In `mcpyrate`, we could use `s` and splat the list at (final, use-site) run time:
+        #     return q[a[lam](*s[values])]
+        #
+        # but it's preferable to use a placeholder for the arguments (or just omit them), and replace
+        # the `args` attribute of the `Call` node with an oldschool AST edit. Here the ... is just a
+        # convenient placeholder that makes it explicit that we're going to do something to that part.
+        thecall = q[a[lam](...)]
+        thecall.args = values
+        return thecall
 
 with phase[1]:
     from __self__ import macros, let  # noqa: F811, F401
