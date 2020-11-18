@@ -63,10 +63,11 @@ with phase[1]:
         if not args:
             return tree
         first, *rest = args
-        return q[h[let][a[first]][a[letseq(tree, args=rest, syntax=syntax)]]]
+        body = letseq(tree, args=rest, syntax=syntax)
+        return q[h[let][a[first]][a[body]]]
 
         # We could as well call `let` as a function, to expand it immediately.
-        # let(letseq(tree, args=rest, syntax=syntax), args=[first, ], syntax=syntax)
+        # let(body, args=[first, ], syntax=syntax)
 
 from __self__ import macros, letseq  # noqa: F811, F401
 
