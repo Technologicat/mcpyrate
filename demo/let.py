@@ -44,6 +44,10 @@ with phase[1]:
     def letseq(tree, *, args, syntax, **kw):
         """[syntax, expr] Sequential let, like `let*` in Scheme.
 
+        Usage::
+
+            letseq[[k0, v0], ...][expr]
+
         The difference to `let` is that in `letseq`, on the RHS
         of each new binding, the previous bindings are in scope.
 
