@@ -1,3 +1,4 @@
+# -*- coding: utf-8; -*-
 """Dump an AST into a string, with pythonic indentation.
 
 Based on Alex Leone's `astpp.py`, with changes to indentation logic.

@@ -1,3 +1,4 @@
+# -*- coding: utf-8; -*-
 # Multi-phase compiler demo.
 
 # Enable the multi-phase compiler for this module.
