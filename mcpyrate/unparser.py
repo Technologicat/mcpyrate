@@ -397,12 +397,14 @@ class Unparser:
         for deco in t.decorator_list:
             self.fill(self.maybe_colorize("@", ColorScheme.DECORATOR),
                       lineno_node=deco)
-            self.write(setcolor(ColorScheme.DECORATOR))
+            if self.color:
+                self.write(setcolor(ColorScheme.DECORATOR))
             try:
                 with self.nocolor():
                     self.dispatch(deco)
             finally:
-                self.write(setcolor())
+                if self.color:
+                    self.write(setcolor())
 
         class_str = (self.maybe_colorize_python_keyword("class ") +
                      self.maybe_colorize(t.name, ColorScheme.DEFNAME))
@@ -439,12 +441,14 @@ class Unparser:
         for deco in t.decorator_list:
             self.fill(self.maybe_colorize("@", ColorScheme.DECORATOR),
                       lineno_node=deco)
-            self.write(setcolor(ColorScheme.DECORATOR))
+            if self.color:
+                self.write(setcolor(ColorScheme.DECORATOR))
             try:
                 with self.nocolor():
                     self.dispatch(deco)
             finally:
-                self.write(setcolor())
+                if self.color:
+                    self.write(setcolor())
 
         def_str = (self.maybe_colorize_python_keyword(fill_suffix) +
                    " " + self.maybe_colorize(t.name, ColorScheme.DEFNAME) + "(")
