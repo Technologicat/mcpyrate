@@ -807,7 +807,7 @@ class Unparser:
     # argument
     def _arg(self, t):
         self.write(t.arg)
-        if t.annotation:
+        if hasattr(t, "annotation") and t.annotation:  # macro-generated nodes might not have it
             self.write(": ")
             self.dispatch(t.annotation)
 
