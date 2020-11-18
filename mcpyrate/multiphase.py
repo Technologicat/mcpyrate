@@ -352,9 +352,9 @@ def multiphase_expand(tree, dexpander, *, filename, self_module, _optimize=-1):
             expansion = dexpander.postprocess_ast(expansion, dialect_instances)
             check_no_markers_remaining(expansion, filename=filename)
 
-            # Once we hit the final phase, no more temporary modules - let the import system take over.
-            if k == 0:
-                break
+            # # Once we hit the final phase, no more temporary modules - let the import system take over.
+            # if k == 0:
+            #     break
 
             # Compile temporary module, and inject it into `sys.modules`, so we can compile the next phase.
             #
@@ -366,10 +366,10 @@ def multiphase_expand(tree, dexpander, *, filename, self_module, _optimize=-1):
             sys.modules[self_module] = temporary_module
             exec(temporary_code, temporary_module.__dict__)
 
-    # delete temporary module
-    try:
-        del sys.modules[self_module]
-    except KeyError:
-        pass
+    # # delete temporary module
+    # try:
+    #     del sys.modules[self_module]
+    # except KeyError:
+    #     pass
 
     return expansion
