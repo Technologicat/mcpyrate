@@ -567,6 +567,9 @@ This way any invalid, stray mentions of the magic variable `it` trigger an error
 
 If you want to expand only `it` inside an invocation of `mymacro[...]` (thus checking that the mentions are valid), leaving other nested macro invocations untouched, that's also possible. See below how to expand only macros in a given set (from which you can omit everything but `it`).
 
+The above explanation is slightly simplified; look at [`demo/anaphoric_if.py`](../demo/anaphoric_if.py) for actual working code.
+
+
 ## Expand macros inside-out
 
 Use the named parameter `expander` to access the macro expander. This is useful for making inner macro invocations expand first.
