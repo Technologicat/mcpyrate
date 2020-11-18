@@ -137,16 +137,16 @@ To run either example, `macropython -m application`, or `macropython application
 
 The full documentation of `mcpyrate` lives in the [`doc/`](doc/) subfolder. Some quick links:
 
-- [The main user manual](doc/main.md) - start here
+- [Main user manual](doc/main.md) - start here
   - [Using macros](doc/main.md#using-macros)
   - [Writing macros](doc/main.md#writing-macros) - starting with a short tour of useful modules in `mcpyrate`.
   - [Multi-phase compilation](doc/main.md#multi-phase-compilation)
   - [The import algorithm](doc/main.md#the-import-algorithm) - how macros, dialects and multi-phase compilation interact.
   - [Questions & Answers](doc/main.md#questions--answers) - for troubleshooting, look here first.
-- [Quasiquote system](doc/quasiquotes.md) (and `mcpyrate.metatools`)
-- [REPL system](doc/repl.md) (and the `macropython` bootstrapper)
+- [Quasiquotes and `mcpyrate.metatools`](doc/quasiquotes.md)
+- [REPL and `macropython`](doc/repl.md)
 - [AST walkers](doc/walkers.md)
-- [Dialect system](doc/dialects.md)
+- [Dialects](doc/dialects.md)
 
 *We aim at complete documentation.* If you find something is missing, please [file an issue](https://github.com/Technologicat/mcpyrate/issues/new) to ask a question.
 

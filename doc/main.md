@@ -1,3 +1,11 @@
+**Navigation**
+
+- **Main user manual**
+- [Quasiquotes and `mcpyrate.metatools`](quasiquotes.md)
+- [REPL and `macropython`](repl.md)
+- [AST walkers](walkers.md)
+- [Dialects](dialects.md)
+
 <!-- markdown-toc start - Don't edit this section. Run M-x markdown-toc-refresh-toc -->
 **Table of Contents**
 
