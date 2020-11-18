@@ -24,9 +24,9 @@ with phase[2]:
             # --> (lambda x, y: print(x, y))(1, 2)
         """
         if syntax != "expr":
-            raise SyntaxError("Sorry, `let` is an expr macro only.")  # pragma: no cover
+            raise SyntaxError("`let` is an expr macro only")  # pragma: no cover
         if not args:
-            raise SyntaxError("Expected at least one binding")  # pragma: no cover
+            raise SyntaxError("expected at least one binding")  # pragma: no cover
 
         # args: `list` of `ast.List`. Each sublist is [ast.Name, expr].
         names = [k.id for k, _ in (a.elts for a in args)]
@@ -80,7 +80,7 @@ with phase[1]:
             letseq[[x, 21], [x, 2 * x]][x]  # --> 42
         """
         if syntax != "expr":
-            raise SyntaxError("Sorry, `letseq` is an expr macro only.")  # pragma: no cover
+            raise SyntaxError("`letseq` is an expr macro only")  # pragma: no cover
         if not args:
             return tree
         first, *rest = args
