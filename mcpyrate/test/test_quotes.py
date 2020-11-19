@@ -84,10 +84,10 @@ def test():
     assert unparse(q[first[42]]) == "first[42]"
 
     # TODO: Python 3.8: remove ast.Num
-    assert unparse(q[q[42]]) in ("mcpyrate.quotes.ast.Num(n=42)",
-                                 "mcpyrate.quotes.ast.Constant(value=42)")
-    assert unparse(expand1rq[h[q][42]]) in ("mcpyrate.quotes.ast.Num(n=42)",
-                                            "mcpyrate.quotes.ast.Constant(value=42)")
+    assert unparse(q[q[42]]) in ("mcpyrate.quotes.splice_ast_literals(mcpyrate.quotes.ast.Num(n=42))",
+                                 "mcpyrate.quotes.splice_ast_literals(mcpyrate.quotes.ast.Constant(value=42))")
+    assert unparse(expand1rq[h[q][42]]) in ("mcpyrate.quotes.splice_ast_literals(mcpyrate.quotes.ast.Num(n=42))",
+                                            "mcpyrate.quotes.splice_ast_literals(mcpyrate.quotes.ast.Constant(value=42))")
 
     # Macro names can be hygienically captured, too. The name becomes "originalname_uuid".
     assert unparse(q[h[first][42]]).startswith("first_")
