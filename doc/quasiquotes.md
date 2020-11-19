@@ -367,8 +367,18 @@ a[expr]
 ```
 
 The expression `expr` must evaluate, at run time at the use site of the
-surrounding `q`, to an *expression* AST node. Typically, it is the name of a
-variable that holds such a node, but any kind of expression is fine.
+surrounding `q`, to an *expression* AST node, an AST marker containing
+an *expression* AST node, or in certain contexts where that is valid
+in the AST, a `list` of such values.
+
+Typically, `expr` is the name of a variable that holds such data, but it
+doesn't have to be; any expression that evaluates to acceptable data is fine.
+
+An example of a context that accepts a `list` of expression nodes is the
+positional arguments of a function call. `q[myfunc(a[args])]` will splice
+the `list` `args` into the positional arguments of the `Call`. Of course,
+ast-unquoting single positional arguments such as `q[myfunc(a[arg1], a[arg2])]`
+is also fine.
 
 The result is an *expression* AST, replacing the invocation of `a[]`. Note that
 if `a[]` appears in a statement position (inside a block mode `q`), it actually
@@ -377,8 +387,7 @@ node. If you want to inject a tree to the raw statement position without a
 surrounding `ast.Expr`, use the block mode of `a`.
 
 The `a[]` operator will type-check at run time, at the use site of the
-surrounding `q`, that the value of `expr` is an *expression* AST node
-(or an `ASTMarker`, with an expression AST node in its `body`).
+surrounding `q`, that the value of `expr` is of the correct type.
 
 ### Block mode
 
@@ -389,8 +398,11 @@ with a:
 ```
 
 Each `stmts` must evaluate, at run time at the use site of the surrounding `q`,
-to either a single *statement* AST node, or a `list` of *statement* AST nodes.
-Typically, `stmts` is the name of a variable that holds such data.
+to a *statement* AST node, an AST marker containing a *statement* AST node,
+or a `list` of such values.
+
+Typically, `stmts` is the name of a variable that holds such data, but it
+doesn't have to be; any expression that evaluates to acceptable data is fine.
 
 This expands as if all those statements appeared in the `with` body,
 in the order listed. The `with a` block itself is compiled away;
@@ -399,9 +411,8 @@ the statements are spliced into the surrounding context.
 The body of the `with a` must not contain anything else.
 
 The `with a` operator will type-check at run time, at the use site of the
-surrounding `q`, once each `stmts` has been resolved to a value, that each node
-it got is a *statement* AST node (or an `ASTMarker`, with such valid data in its
-`body`).
+surrounding `q`, once each `stmts` has been resolved to a value, that the
+value is of the correct type.
 
 ### Notes
 
