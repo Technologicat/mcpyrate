@@ -19,6 +19,19 @@ with phase[1]:
     _aif_level = NestingLevelTracker()
 
     def aif(tree, *, syntax, expander, **kw):
+        """[syntax, expr] Anaphoric if. The test result is `it`.
+
+        Usage::
+
+            aif[test, then, otherwise]
+
+        Expands to a `let` and an if-expr::
+
+            let[[it, test]][then if it else otherwise]
+
+        The name `it` is literally exactly that. The variable `it` is available
+        in the `then` and `otherwise` parts, and refers to the test result.
+        """
         if syntax != "expr":
             raise SyntaxError("`aif` is an expr macro only")
 
