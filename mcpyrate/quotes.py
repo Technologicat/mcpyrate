@@ -22,7 +22,7 @@ from .core import global_bindings, Done
 from .expander import MacroExpander, isnamemacro
 from .markers import ASTMarker, get_markers
 from .unparser import unparse
-from .utils import gensym, scrub_uuid, flatten, NestingLevelTracker
+from .utils import gensym, scrub_uuid, flatten, extract_bindings, NestingLevelTracker
 
 
 def _mcpyrate_quotes_attr(attr):
@@ -604,7 +604,7 @@ def _expand_quasiquotes(tree, expander):
     # bindings of the quasiquote macros from the main `expander`, accounting
     # for possible as-imports. This second expander won't even see other macros,
     # thus leaving them alone.
-    bindings = {k: v for k, v in expander.bindings.items() if v in (q, u, n, a, s, h)}
+    bindings = extract_bindings(expander.bindings, q, u, n, a, s, h)
     return MacroExpander(bindings, expander.filename).visit(tree)
 
 

@@ -14,7 +14,7 @@ with phase[1]:
 
     from mcpyrate import namemacro
     from mcpyrate.expander import MacroExpander
-    from mcpyrate.utils import NestingLevelTracker
+    from mcpyrate.utils import extract_bindings, NestingLevelTracker
 
     _aif_level = NestingLevelTracker()
 
@@ -36,7 +36,7 @@ with phase[1]:
             raise SyntaxError("`aif` is an expr macro only")
 
         # Detect the name(s) of `it` at the use site (this accounts for as-imports)
-        bindings = {k: v for k, v in expander.bindings.items() if v is it_macro}
+        bindings = extract_bindings(expander.bindings, it_macro)
         if not bindings:
             raise SyntaxError("The use site of `aif` must macro-import `it`, too.")
 

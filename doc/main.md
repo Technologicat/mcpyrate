@@ -598,7 +598,8 @@ The recipe is as follows:
  1. Add the import `from mcpyrate.expander import MacroExpander`.
  2. In your macro, on your primary `expander`, consult `expander.bindings` to grab the macro functions you need.
     - Note you **must look at the values** (whether they are the function objects you expect), not at the names. Names can be aliased to anything at the use site - and that very use site also gives you the `tree` that uses those possibly aliased names.
-    - If you need to do the same on the expander from the macro expansion time of your macro definition (not the expander of your macro's *use site*, which is what the `expander` named argument refers to), see [`mcpyrate.metatools`](../mcpyrate/metatools.py), particularly the name macro `macro_bindings`. That will evaluate, at your macro's run time, to a snapshot of the bindings from the time its implementation was macro-expanded.
+    - The `extract_bindings` function from [`mcpyrate.utils`](../mcpyrate/utils.py) can grab the relevant bindings for you. Usage is `modified_bindings = extract_bindings(expander.bindings, mymacro0, mymacro1, ...)`.
+    - If you need to do the same on the expander from the macro expansion time of your macro definition (not the expander of your macro's *use site*, which is what the `expander` named argument refers to), see [`mcpyrate.metatools`](../mcpyrate/metatools.py), particularly the name macro `macro_bindings`. That will evaluate, at your macro's run time, to a snapshot of the bindings from the time the invocation of `macro_bindings` was macro-expanded. You can feed that snapshot to `extract_bindings`.
  3. In your macro, call `MacroExpander(modified_bindings, expander.filename).visit(tree)` to invoke a new expander instance with the modified bindings.
 
 The implementation of the quasiquote system has an example of this.

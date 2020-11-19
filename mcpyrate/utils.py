@@ -1,7 +1,7 @@
 # -*- coding: utf-8; -*-
 """General utilities. Can be useful for writing both macros as well as macro expanders."""
 
-__all__ = ["gensym", "scrub_uuid", "flatten", "rename",
+__all__ = ["gensym", "scrub_uuid", "flatten", "rename", "extract_bindings",
            "format_location", "format_macrofunction",
            "NestingLevelTracker"]
 
@@ -114,6 +114,31 @@ def rename(oldname, newname, tree):
                     tree.name = newname
             return self.generic_visit(tree)
     return Renamer().visit(tree)
+
+
+def extract_bindings(bindings, *functions, global_only=False):
+    """Scan `bindings` for given macro functions.
+
+    Return all matching bindings as a dictionary of macro name/function pairs,
+    which can be used to instantiate a new expander (that recognizes only those
+    bindings).
+
+    Note functions, not names. This is convenient as a helper when expanding
+    macros inside-out, but only those in a given set, accounting for any renames
+    due to as-imports.
+
+    Useful input values for `bindings` include `expander.bindings` (in a macro;
+    will see both local and global bindings), `mcpyrate.core.global_bindings`
+    (for global bindings only), and the run-time output of the name macro
+    `mcpyrate.metatools.macro_bindings`.
+
+    Typical usage::
+
+        bindings = extract_bindings(expander.bindings, mymacro1, mymacro2, mymacro3)
+        tree = MacroExpander(bindings, expander.filename).visit(tree)
+    """
+    functions = set(functions)
+    return {name: function for name, function in bindings.items() if function in functions}
 
 # --------------------------------------------------------------------------------
 
