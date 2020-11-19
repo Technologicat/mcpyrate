@@ -4,7 +4,7 @@ from mcpyrate.debug import macros, step_expansion  # noqa: F811
 # from mcpyrate.debug import macros, step_phases  # uncomment this line to see the multiphase compilation
 
 with phase[2]:
-    from mcpyrate.quotes import macros, q, a, s, h  # noqa: F811, F401
+    from mcpyrate.quotes import macros, q, a, h  # noqa: F811, F401
 
     from ast import arg
 
