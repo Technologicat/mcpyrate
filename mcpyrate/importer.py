@@ -16,7 +16,7 @@ from .dialects import DialectExpander
 from .expander import find_macros, expand_macros
 from .coreutils import resolve_package, ismacroimport
 from .markers import check_no_markers_remaining
-from .multiphase import ismultiphase, multiphase_expand
+from .multiphase import iswithphase, ismultiphase, multiphase_expand
 from .unparser import unparse_with_fallbacks
 from .utils import format_location
 
@@ -122,8 +122,18 @@ def path_xstats(self, path):
         # TODO: doesn't need. How to detect those? Regex-search the source text?
         with tokenize.open(path) as sourcefile:
             tree = ast.parse(sourcefile.read())
-        macroimports = [stmt for stmt in tree.body if ismacroimport(stmt)]
-        dialectimports = [stmt for stmt in tree.body if ismacroimport(stmt, magicname="dialects")]
+
+        macroimports = []
+        dialectimports = []
+        def scan(tree):
+            for stmt in tree.body:
+                if ismacroimport(stmt):
+                    macroimports.append(stmt)
+                elif ismacroimport(stmt, magicname="dialects"):
+                    dialectimports.append(stmt)
+                elif iswithphase(stmt):  # for multi-phase compilation: scan also inside top-level `with phase`
+                    scan(stmt)
+        scan(tree)
 
         macro_and_dialect_imports = macroimports + dialectimports
         has_relative_macroimports = any(macroimport.level for macroimport in macro_and_dialect_imports)
