@@ -956,11 +956,12 @@ from mcpyrate.metatools import macros, stepr
 on Python 3.6, the invocation `step_expansion[q[42]]` produces:
 
 ```
-**Tree 0x7f515e2454e0 (<ipython-session>) before macro expansion:
+**Tree 0x7f61fddf7a90 (<interactive input>) before macro expansion:
   q[42]
-**Tree 0x7f515e2454e0 (<ipython-session>) after step 1:
-  mcpyrate.quotes.ast.Num(n=42)
-**Tree 0x7f515e2454e0 (<ipython-session>) macro expansion complete after 1 step.
+**Tree 0x7f61fddf7a90 (<interactive input>) after step 1:
+  mcpyrate.quotes.splice_ast_literals(mcpyrate.quotes.ast.Num(n=42))
+**Tree 0x7f61fddf7a90 (<interactive input>) macro expansion complete after 1 step.
+<_ast.Num object at 0x7f61fe7c7b38>
 ```
 
 Keep in mind each piece of source code shown is actually the unparse of an AST. So the source code `q[42]` actually stands for an `ast.Subscript`, while the expanded result is an `ast.Call` that, **once it is compiled and run**, will call `ast.Num`. (If you're not convinced, try `step_expansion["dump"][q[42]]`, which pretty-prints the raw AST instead of unparsed source code.)
@@ -968,16 +969,17 @@ Keep in mind each piece of source code shown is actually the unparse of an AST. 
 The invocation `stepr[q[42]]`, on the other hand, produces:
 
 ```
-**Tree 0x7f515e00aac8 (<ipython-session>) before macro expansion:
+**Tree 0x7f61fe84fd68 (<interactive input>) before macro expansion:
   42
-**Tree 0x7f515e00aac8 (<ipython-session>) macro expansion complete after 0 steps.
+**Tree 0x7f61fe84fd68 (<interactive input>) macro expansion complete after 0 steps.
+<_ast.Num object at 0x7f61fe84fd68>
 ```
 
 or in other words, an `ast.Num` object. (Again, if not convinced, try `stepr["dump"][q[42]]`.)
 
 So the **run-time result** of both invocations is an `ast.Num` object (or `ast.Constant`, if running on Python 3.8+). But they see the expansion differently, because `step_expansion` operates at macro expansion time, while `stepr` operates at run time.
 
-Whereas unquotes are processed at run time of the use site of `q` (see [the quasiquote system docs](quasiquotes.md)), the `q` itself is processed at macro expansion time. Hence, `step_expansion` will see the `q`, but when `stepr` expands the tree at run time, it will already be gone. (And the expression mode of `q` itself does not have a run-time part, so it just vanishes.)
+Whereas unquotes are processed at run time of the use site of `q` (see [the quasiquote system docs](quasiquotes.md)), the `q` itself is processed at macro expansion time. Hence, `step_expansion` will see the `q`, but when `stepr` expands the tree at run time, it will already be gone.
 
 
 ## Error in `compile`, an AST node is missing the required field `lineno`?
