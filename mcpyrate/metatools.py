@@ -78,7 +78,7 @@ def runtime_expand(bindings, filename, tree):
 # --------------------------------------------------------------------------------
 
 @namemacro
-def macro_bindings(tree, *, syntax, expander, **kw):  # tree is unused
+def macro_bindings(tree, *, syntax, expander, **kw):  # tree argument is unused
     """[syntax, name] capture the macro expander's macro bindings.
 
     This macro snapshots the macro expander's current macro bindings at macro
@@ -87,12 +87,15 @@ def macro_bindings(tree, *, syntax, expander, **kw):  # tree is unused
 
     The snapshot is a `dict` that contains the macro bindings. It is in the
     format used for instantiating a `mcpyrate.expander.MacroExpander`.
+
+    The snapshot is retained across process boundaries (function references
+    are pickled), so bytecode caching will work as expected.
     """
     if syntax != "name":
         raise SyntaxError("`macro_bindings` is a name macro only")
     # This is exactly the kind of thing the hygienic capture system was
     # designed to do.
-    keys = list(ast.Constant(value=k) for k in expander.bindings.keys())
+    keys = list(astify(k) for k in expander.bindings.keys())
     values = list(capture_value(v, k) for k, v in expander.bindings.items())
     return ast.Dict(keys=keys, values=values)
 
