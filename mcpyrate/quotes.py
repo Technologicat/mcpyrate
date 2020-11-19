@@ -35,6 +35,14 @@ class QuasiquoteMarker(ASTMarker):
     """Base class for AST markers used by quasiquotes. Compiled away by `astify`."""
     pass
 
+class SpliceNodes(QuasiquoteMarker):
+    """Splice a `list` of AST nodes into the surrounding context.
+
+    Command sent by `ast_literal` (run-time part of `a`)
+    to `splice_ast_literals` (run-time part of the surrounding `q`).
+    """
+    pass
+
 # --------------------------------------------------------------------------------
 # Unquote commands for `astify`. Each type corresponds to an unquote macro.
 
@@ -109,7 +117,6 @@ def lift_sourcecode(value, filename="<unknown>"):
     return ast.parse(value, filename=filename, mode="eval").body
 
 
-_splice_ast_literal_marker = object()  # nonce value, only used at run time inside the same process.
 def ast_literal(tree, syntax):
     """Perform run-time typecheck on AST literal `tree`. Run-time part of `a`.
 
@@ -129,7 +136,7 @@ def ast_literal(tree, syntax):
             tree = flatten(tree)
             for expr in tree:
                 check_expr(expr)
-            return [_splice_ast_literal_marker] + tree
+            return SpliceNodes(tree)
         else:
             check_expr(tree)
             return tree
@@ -160,7 +167,7 @@ def ast_literal(tree, syntax):
     tree = flatten(tree)
     for stmt in tree:
         check_stmt(stmt)
-    return [_splice_ast_literal_marker] + tree
+    return SpliceNodes(tree)
 
 
 def splice_ast_literals(tree):
@@ -171,10 +178,10 @@ def splice_ast_literals(tree):
         if isinstance(thing, list):
             newthing = []
             for item in thing:
-                if isinstance(item, list) and item and item[0] == _splice_ast_literal_marker:
-                    elts = item[1:]
-                    doit(elts)
-                    newthing.extend(elts)
+                if isinstance(item, SpliceNodes):
+                    doit(item.body)
+                    # Discard the `SpliceNodes` marker and splice the `list` that was contained in it.
+                    newthing.extend(item.body)
                 else:
                     doit(item)
                     newthing.append(item)
