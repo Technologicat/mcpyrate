@@ -24,6 +24,7 @@
         - [Block mode](#block-mode)
         - [Notes](#notes)
     - [`s`: ast-list-unquote](#s-ast-list-unquote)
+    - [`t`: ast-tuple-unquote](#t-ast-tuple-unquote)
     - [`h`: hygienic-unquote](#h-hygienic-unquote)
         - [Hygienically captured run-time values](#hygienically-captured-run-time-values)
         - [Hygienically captured macros](#hygienically-captured-macros)
@@ -467,8 +468,10 @@ The expression mode is equivalent to `macropy`'s `ast_literal`.
 
 ## `s`: ast-list-unquote
 
-`s[lst]` takes a `list`, and into the quoted code, splices an `ast.List` node,
-with the original list as its `elts` attribute. Note the list is **not** copied.
+`s[lst]` takes an iterable of AST nodes, and into the quoted code, splices an
+`ast.List` node, with all nodes from the iterable collected into its `elts`
+attribute. The input iterable is converted to a `list` (so it can be assigned
+as `elts`), but the nodes themselves are **not** copied.
 
 This allows interpolating a list of expression AST nodes as an `ast.List` node.
 This can be convenient because in Python, lists can appear in many places, such
@@ -488,6 +491,41 @@ If you need to splice statements, see the block mode of `a` (ast-unquote), or
 the function `mcpyrate.splicing.splice_statements`.
 
 Equivalent to `macropy`'s `ast_list`.
+
+
+## `t`: ast-tuple-unquote
+
+Like `s`, but makes an `ast.Tuple`.
+
+This is especially useful to splice in a list of ASTs into the [macro
+arguments](main.md#macro-arguments) of some parametric macro. (In `mcpyrate`,
+multiple macro arguments are always represented as an `ast.Tuple` node.)
+
+```python
+args = [q[[a, 1]], q[[b, 2]], q[[c, 3]]]
+q[let[t[args]][a + b + c]]
+```
+
+It doesn't really matter here what `let` is, but you can consider it as the
+[`let` macro from the demos](../demo/let.py). The result of the above is the
+same as if we had written:
+
+```python
+q[let[[a, 1], [b, 2], [c, 3]][a + b + c]]
+```
+
+Note that in the `let` bindings, as in any macro invocation, the outer brackets
+belong to the subscript expression; they do **not** denote a `list`. Because in
+Python's surface syntax, a bare comma (without surrounding parentheses or brackets
+that belong to that comma) creates a tuple, this is exactly the same as:
+
+```python
+q[let[([a, 1], [b, 2], [c, 3])][a + b + c]]
+```
+
+which is how the `let` bindings look like if you `unparse` the above. Hence the
+natural container for multiple macro arguments in Python is a tuple; which is
+why we provide the `t[]` unquote.
 
 
 ## `h`: hygienic-unquote

@@ -13,7 +13,7 @@ and uncompiler, respectively.
 
 __all__ = ["capture_value", "capture_macro",
            "astify", "unastify",
-           "q", "u", "n", "a", "s", "h"]
+           "q", "u", "n", "a", "s", "t", "h"]
 
 import ast
 import pickle
@@ -71,7 +71,12 @@ class ASTLiteral(QuasiquoteMarker):  # similar to `macropy`'s `Literal`, but sup
 
 
 class ASTList(QuasiquoteMarker):
-    """Interpolate the given `list` of AST nodes as an `ast.List` node. Emitted by `s[]`."""
+    """Interpolate the given iterable of AST nodes as an `ast.List` node. Emitted by `s[]`."""
+    pass
+
+
+class ASTTuple(QuasiquoteMarker):
+    """Interpolate the given iterable of AST nodes as an `ast.Tuple` node. Emitted by `t[]`."""
     pass
 
 
@@ -120,9 +125,9 @@ def lift_sourcecode(value, filename="<unknown>"):
 def ast_literal(tree, syntax):
     """Perform run-time typecheck on AST literal `tree`. Run-time part of `a`.
 
-    If `tree` is a run-time `list`, flatten the `list` locally, and inject a
-    run-time marker for `splice_ast_literals`, to indicate where splicing into
-    the surrounding context is needed.
+    If `tree` is a run-time iterable, convert it to a `list`, flatten that `list`
+    locally, and inject a run-time marker for `splice_ast_literals`, to indicate
+    where splicing into the surrounding context is needed.
     """
     if syntax not in ("expr", "block"):
         raise TypeError(f"expected `syntax` either 'expr' or 'block', got {type(syntax)} with value {repr(syntax)}")
@@ -132,17 +137,20 @@ def ast_literal(tree, syntax):
             body = tree.body if isinstance(tree, ASTMarker) else tree
             if not isinstance(body, ast.expr):
                 raise TypeError(f"`a` (expr mode): expected an expression node, got {type(body)} with value {repr(body)}")
-        if isinstance(tree, list):
-            tree = flatten(tree)
-            for expr in tree:
-                check_expr(expr)
-            return SpliceNodes(tree)
-        else:
+        if isinstance(tree, ast.AST):
             check_expr(tree)
             return tree
+        else:
+            try:
+                lst = list(tree)
+            except TypeError:
+                raise TypeError(f"`a` (expr mode): expected an AST node or iterable, got {type(tree)} with value {repr(tree)}")
+            lst = flatten(lst)
+            for expr in lst:
+                check_expr(expr)
+            return SpliceNodes(lst)
 
     assert syntax == "block"
-    assert isinstance(tree, list)
     # Block mode `a` always produces a `list` of the items in its body.
     # Each item may refer, at run time, to a statement AST node or to a `list`
     # of statement AST nodes.
@@ -164,10 +172,14 @@ def ast_literal(tree, syntax):
         body = tree.body if isinstance(tree, ASTMarker) else tree
         if not isinstance(body, ast.stmt):
             raise TypeError(f"`a` (block mode): expected a statement node, got {type(body)} with value {repr(body)}")
-    tree = flatten(tree)
-    for stmt in tree:
+    try:
+        lst = list(tree)
+    except TypeError:
+        raise TypeError(f"`a` (block mode): expected an AST node or iterable, got {type(tree)} with value {repr(tree)}")
+    lst = flatten(lst)
+    for stmt in lst:
         check_stmt(stmt)
-    return SpliceNodes(tree)
+    return SpliceNodes(lst)
 
 
 def splice_ast_literals(tree):
@@ -186,6 +198,11 @@ def splice_ast_literals(tree):
                     doit(item)
                     newthing.append(item)
             thing[:] = newthing
+        # elif isinstance(thing, ast.Subscript):
+        #     for fieldname, value in ast.iter_fields(thing):
+        #         if fieldname == ""
+        #         if isinstance(value, list):
+        #             doit(value)
         elif isinstance(thing, ast.AST):
             for fieldname, value in ast.iter_fields(thing):
                 if isinstance(value, list):
@@ -198,12 +215,25 @@ def splice_ast_literals(tree):
 
 
 def ast_list(nodes):
-    """Interpolate a `list` of expression AST nodes as an `ast.List` node. Run-time part of `s[]`."""
-    if not isinstance(nodes, list):
-        raise TypeError(f"`s[]`: expected an expression that evaluates to list, result was {type(nodes)} with value {repr(nodes)}")
-    if not all(isinstance(tree, ast.expr) for tree in nodes):
-        raise ValueError(f"`s[]`: expected a list of expression AST nodes, got {repr(nodes)}")
-    return ast.List(elts=nodes)
+    """Interpolate an iterable of expression AST nodes as an `ast.List` node. Run-time part of `s[]`."""
+    try:
+        lst = list(nodes)
+    except TypeError:
+        raise TypeError(f"`s[]`: expected an iterable of AST nodes, got {type(nodes)} with value {repr(nodes)}")
+    if not all(isinstance(tree, ast.expr) for tree in lst):
+        raise ValueError(f"`s[]`: expected an iterable of expression AST nodes only, got {repr(lst)}")
+    return ast.List(elts=lst)
+
+
+def ast_tuple(nodes):
+    """Interpolate an iterable of expression AST nodes as an `ast.Tuple` node. Run-time part of `t[]`."""
+    try:
+        lst = list(nodes)
+    except TypeError:
+        raise TypeError(f"`t[]`: expected an iterable of AST nodes, got {type(nodes)} with value {repr(nodes)}")
+    if not all(isinstance(tree, ast.expr) for tree in lst):
+        raise ValueError(f"`t[]`: expected an iterable of expression AST nodes only, got {repr(lst)}")
+    return ast.Tuple(elts=lst)
 
 
 def capture_value(value, name):
@@ -362,6 +392,9 @@ def astify(x, expander=None):  # like `macropy`'s `ast_repr`
 
         elif T is ASTList:  # `s[]`
             return ast.Call(_mcpyrate_quotes_attr("ast_list"), [x.body], [])
+
+        elif T is ASTTuple:  # `t[]`
+            return ast.Call(_mcpyrate_quotes_attr("ast_tuple"), [x.body], [])
 
         elif T is Capture:  # `h[]`
             if expander and type(x.body) is ast.Name:
@@ -540,6 +573,9 @@ def unastify(tree):
         elif dotted_name == "mcpyrate.quotes.ast_list":  # `s[]`
             body = tree.args[0]
             return ASTList(body)
+        elif dotted_name == "mcpyrate.quotes.ast_tuple":  # `t[]`
+            body = tree.args[0]
+            return ASTTuple(body)
         elif dotted_name == "mcpyrate.quotes.capture_value":  # `h[]` (run-time value)
             body, name = tree.args[0], tree.args[1].value
             return Capture(body, name)
@@ -594,7 +630,7 @@ def unastify(tree):
 # --------------------------------------------------------------------------------
 # Quasiquote macros
 #
-# These operators are named after Qu'nash, the goddess of quasiquotes in high-tech-elven mythology.
+# These operators are named after Qu'nasth, the goddess of quasiquotes in high-tech-elven mythology.
 
 _quotelevel = NestingLevelTracker()
 
@@ -604,7 +640,7 @@ def _expand_quasiquotes(tree, expander):
     # bindings of the quasiquote macros from the main `expander`, accounting
     # for possible as-imports. This second expander won't even see other macros,
     # thus leaving them alone.
-    bindings = extract_bindings(expander.bindings, q, u, n, a, s, h)
+    bindings = extract_bindings(expander.bindings, q, u, n, a, s, t, h)
     return MacroExpander(bindings, expander.filename).visit(tree)
 
 
@@ -624,10 +660,11 @@ def q(tree, *, syntax, expander, **kw):
         # run time into the surrounding context (which is only available to the
         # surrounding `q`). Inject a handler for that.
         #
-        #   - Block mode `a` always produces a `list` of statement AST nodes.
-        #   - For expression mode `a`, a `list` of expression AST nodes is valid
-        #     e.g. in a function call argument position, to splice the list into
-        #     positional arguments of the `Call`.
+        # Block mode `a` always produces a `list` of statement AST nodes.
+        #
+        # For expression mode `a`, a `list` of expression AST nodes is valid
+        # e.g. in a function call argument position, to splice the list into
+        # positional arguments of the `Call`.
         tree = ast.Call(_mcpyrate_quotes_attr("splice_ast_literals"),
                         [tree],
                         [])
@@ -748,7 +785,7 @@ def a(tree, *, syntax, expander, **kw):
         # When `a` expands, the elements of the list `tree` are `Expr` nodes
         # containing expressions. Typically each expression is just a `Name`
         # node, or in general, any expression that at run time evaluates to
-        # a statement AST node, or to a list of statement AST nodes.
+        # a statement AST node, or to an iterable of statement AST nodes.
         #
         # We want to return, as an AST, a list of those expressions for processing
         # later.
@@ -760,13 +797,13 @@ def a(tree, *, syntax, expander, **kw):
         out = []
         for stmt in tree:
             if type(stmt) is not ast.Expr:
-                raise SyntaxError("`a` (block mode): each item in the body must be an expression (that at run time evaluates to a statement node or list of statement nodes)")
+                raise SyntaxError("`a` (block mode): each item in the body must be an expression (that at run time evaluates to a statement node or iterable of statement nodes)")
             out.append(stmt.value)
         return ASTLiteral(ast.List(elts=out), syntax)
 
 
 def s(tree, *, syntax, expander, **kw):
-    """[syntax, expr] ast-list-unquote. Splice a `list` of ASTs, as an `ast.List`, into a quasiquote."""
+    """[syntax, expr] ast-list-unquote. Splice an iterable of ASTs, as an `ast.List`, into a quasiquote."""
     if syntax != "expr":
         raise SyntaxError("`s` is an expr macro only")
     if _quotelevel.value < 1:
@@ -774,6 +811,17 @@ def s(tree, *, syntax, expander, **kw):
     with _quotelevel.changed_by(-1):
         tree = expander.visit_recursively(tree)
         return ASTList(tree)
+
+
+def t(tree, *, syntax, expander, **kw):
+    """[syntax, expr] ast-tuple-unquote. Splice an iterable of ASTs, as an `ast.Tuple`, into a quasiquote."""
+    if syntax != "expr":
+        raise SyntaxError("`t` is an expr macro only")
+    if _quotelevel.value < 1:
+        raise SyntaxError("`t` encountered while quotelevel < 1")
+    with _quotelevel.changed_by(-1):
+        tree = expander.visit_recursively(tree)
+        return ASTTuple(tree)
 
 
 def h(tree, *, syntax, expander, **kw):
