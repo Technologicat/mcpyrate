@@ -118,8 +118,10 @@ def path_xstats(self, path):
         # This can be slow, the point of `.pyc` is to avoid the parse-and-compile cost.
         # We do save the macro-expansion cost, though, and that's likely much more expensive.
         #
-        # TODO: Dialects may inject imports in the template that the dialect transformer itself
+        # TODO: Dialects may inject macro-imports in the template that the dialect transformer itself
         # TODO: doesn't need. How to detect those? Regex-search the source text?
+        # TODO: Or just document it, that the dialect definition module *must* macro-import those macros
+        # TODO: even if it just injects them in the template?
         with tokenize.open(path) as sourcefile:
             tree = ast.parse(sourcefile.read())
 
