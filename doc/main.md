@@ -27,6 +27,8 @@
         - [Differences to `mcpy`](#differences-to-mcpy)
     - [Macro arguments](#macro-arguments)
         - [Using parametric macros](#using-parametric-macros)
+            - [The two possible meanings of the expression `macroname[a][b]`](#the-two-possible-meanings-of-the-expression-macronameab)
+            - [Multiple macro arguments are a tuple](#multiple-macro-arguments-are-a-tuple)
         - [Writing parametric macros](#writing-parametric-macros)
         - [Arguments or no arguments?](#arguments-or-no-arguments)
         - [Differences to `macropy`](#differences-to-macropy-1)
@@ -461,7 +463,39 @@ with macroname:
 ...
 ```
 
-Observe that the syntax `macroname[a][b]` may mean one of **two different things**:
+#### Multiple macro arguments are a tuple
+
+In `mcpyrate`, in the AST, multiple macro arguments are always represented as an
+`ast.Tuple`. This is because in Python's surface syntax, a bare comma (without
+surrounding parentheses or brackets that belong to that comma) creates a tuple,
+and the brackets around the macro argument list actually belong to the subscript
+expression.
+
+So comma-separating macro arguments naturally encodes them as a tuple. These are
+exactly the same:
+
+```python
+macroname[arg0, ...][...]
+macroname[(arg0, ...)][...]
+```
+
+But if you use extra brackets to make a list, that whole list is treated a single macro argument.
+
+If you need to pass a tuple as a single macro argument, wrap it in another tuple:
+
+```python
+macroname[((a, b, c),)][...]
+macroname[(a, b, c),][...]
+```
+
+These are exactly the same, because a bare comma creates a tuple. The outer tuple
+is interpreted by the macro expander to mean *multiple macro arguments*, and then
+the inner tuple gets passed as a single macro argument.
+
+
+#### The two possible meanings of the expression `macroname[a][b]`
+
+Observe that the syntax `macroname[a][b]` may mean one of two different things:
 
   - If `macroname` is parametric, a macro invocation with `args=[a]`, `tree=b`.
 
@@ -471,9 +505,11 @@ Observe that the syntax `macroname[a][b]` may mean one of **two different things
     Whether that subscript operation is applied at macro expansion time
     or at run time, depends on whether `macroname[a]` returns an AST for
     a `result`, for which `result[b]` can be interpreted as an invocation
-    of a macro that is bound in the use site's macro expander. (This is
-    exploited by the hygienic unquote operator `h`, when it is applied
-    to a macro name. The trick is `h` takes no macro arguments.)
+    of a macro that is bound in the use site's macro expander.
+
+    (This is exploited by the hygienic unquote operator `h`, when it is applied
+    to a macro name. The trick is, `h` takes no macro arguments. So `h[mymacro][...]`
+    means hygienify the `mymacro` reference, and then use that in `mymacro[...]`.)
 
 
 ### Writing parametric macros
