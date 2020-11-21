@@ -99,10 +99,10 @@ def path_xstats(self, path):
 #
 # To compute the relevant timestamp, we must examine not only the target file,
 # but also its macro-dependencies (recursively). The easy thing to do - to
-# facilitate reloading for REPL use - is to not keep a global cache, but only
-# cache the timestamps during a single call of `path_xstats`, so if the same
-# dependency appears again at another place in the graph, we can get its
-# timestamp from the cache.
+# facilitate reloading for REPL use - is to not keep a global timestamp cache,
+# but only cache the timestamps during a single call of `path_xstats`, so if
+# the same dependency appears again at another place in the graph, we can get
+# its timestamp from the timestamp cache.
 
 def _stats(self, path, stats_cache=None):
     """Actual implementation of `path_xstats`."""
@@ -120,8 +120,8 @@ def _stats(self, path, stats_cache=None):
     # macro-import statement cache file for `path` based on the mtime of `path` only.
     #
     # For a given source file `path`, the `.pyc` sometimes becomes newer than
-    # the macro-dependency cache. This is normal. Unlike the bytecode, the
-    # macro-dependency cache only needs to be refreshed when the text of the
+    # the macro-import statement cache. This is normal. Unlike the bytecode, the
+    # macro-import statement cache only needs to be refreshed when the text of the
     # source file `path` changes.
     #
     # So if some of the macro-dependency source files have changed (so `path`
@@ -129,20 +129,20 @@ def _stats(self, path, stats_cache=None):
     # of the source file `path` will still have the same macro-imports it did
     # last time.
     #
-    pycpath = importlib.util.cache_from_source(path)
-    if pycpath.endswith(".pyc"):
-        pycpath = pycpath[:-4]
-    importcachepath = pycpath + ".mcpyrate.pickle"
+    pyc_path = importlib.util.cache_from_source(path)
+    if pyc_path.endswith(".pyc"):
+        pyc_path = pyc_path[:-4]
+    macroimport_cache_path = pyc_path + ".mcpyrate.pickle"
     try:
-        cache_valid = False
-        with open(importcachepath, "rb") as importcachefile:
+        macroimport_cache_valid = False
+        with open(macroimport_cache_path, "rb") as importcachefile:
             data = pickle.load(importcachefile)
         if data["st_mtime_ns"] == stat_result.st_mtime_ns:
-            cache_valid = True
+            macroimport_cache_valid = True
     except Exception:
         pass
 
-    if cache_valid:
+    if macroimport_cache_valid:
         macro_and_dialect_imports = data["macroimports"] + data["dialectimports"]
         has_relative_macroimports = data["has_relative_macroimports"]
     else:
@@ -178,7 +178,7 @@ def _stats(self, path, stats_cache=None):
                     "dialectimports": dialectimports,
                     "has_relative_macroimports": has_relative_macroimports}
             try:
-                with open(importcachepath, "wb") as importcachefile:
+                with open(macroimport_cache_path, "wb") as importcachefile:
                     pickle.dump(data, importcachefile)
             except Exception:
                 pass
