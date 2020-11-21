@@ -625,7 +625,7 @@ def unastify(tree):
             node = ast.copy_location(node, tree)
             return node
 
-    raise TypeError(f"Don't know how to unastify {unparse(tree)}")
+    raise TypeError(f"Don't know how to unastify {unparse_with_fallbacks(tree, debug=True, color=True)}")
 
 # --------------------------------------------------------------------------------
 # Quasiquote macros
