@@ -351,7 +351,7 @@ def multiphase_expand(tree, dexpander, *, filename, self_module, _optimize=-1):
             print(f"{c(CS.HEADING)}**AST for {c(CS.ATTENTION)}PHASE {k}{c(CS.HEADING)} of module {c(CS.TREEID)}'{self_module}' ({c(CS.SOURCEFILENAME)}{filename}{c(CS.TREEID)}){c()}", file=sys.stderr)
 
         phase_k_tree = extract_phase(tree, phase=k)
-        if phase_k_tree:
+        if phase_k_tree.body:
             # inject `__phase__ = k` for introspection
             tgt = ast.Name(id="__phase__", ctx=ast.Store(), lineno=1, col_offset=1)
             val = ast.Constant(value=k, lineno=1, col_offset=13)
