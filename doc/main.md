@@ -663,10 +663,12 @@ by the importer, and slips through to the macro expander).
 
 When multi-phase compilation is enabled, use the `with phase[n]` syntactic
 construct to define which parts of your module should be compiled before which
-other ones. The phase number `n` must be a positive integer literal. **Phases count
-down**, run time is phase `0`. For any `k >= 0`, the run time of phase `k + 1` is
-the macro-expansion time of phase `k`. Phase `0` is defined implicitly. All code
-that is **not** inside any `with phase` block belongs to phase `0`.
+other ones. The phase number `n` must be a positive integer literal.
+
+**Phases count down**, run time is phase `0`. For any `k >= 0`, the run time of
+phase `k + 1` is the macro-expansion time of phase `k`. Phase `0` is defined
+implicitly. All code that is **not** inside any `with phase` block belongs to
+phase `0`.
 
 ```python
 # application.py
