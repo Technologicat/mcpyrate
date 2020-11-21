@@ -356,7 +356,10 @@ def multiphase_expand(tree, dexpander, *, filename, self_module, _optimize=-1):
             tgt = ast.Name(id="__phase__", ctx=ast.Store(), lineno=1, col_offset=1)
             val = ast.Constant(value=k, lineno=1, col_offset=13)
             assignment = ast.Assign(targets=[tgt], value=val, lineno=1, col_offset=1)
-            phase_k_tree.body = [assignment] + phase_k_tree.body
+            if type(phase_k_tree.body[0]) is ast.Expr:  # has a module docstring, keep it at the top
+                phase_k_tree.body = [phase_k_tree.body[0], assignment] + phase_k_tree.body[1:]
+            else:  # no docstring
+                phase_k_tree.body = [assignment] + phase_k_tree.body
 
             if debug:
                 print(unparse_with_fallbacks(phase_k_tree, debug=True, color=True), file=sys.stderr)
