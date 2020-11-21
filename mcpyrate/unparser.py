@@ -11,7 +11,7 @@ import sys
 
 from .astdumper import dump  # fallback
 from .colorizer import setcolor, colorize, ColorScheme
-from .markers import ASTMarker
+from . import markers
 
 # Large float and imaginary literals get turned into infinities in the AST.
 # We unparse those infinities to INFSTR.
@@ -147,7 +147,7 @@ class Unparser:
             for t in tree:
                 self.dispatch(t)
             return
-        if isinstance(tree, ASTMarker):  # mcpyrate and macro communication internal
+        if isinstance(tree, markers.ASTMarker):  # mcpyrate and macro communication internal
             self.astmarker(tree)
             return
         methodname = "_" + tree.__class__.__name__

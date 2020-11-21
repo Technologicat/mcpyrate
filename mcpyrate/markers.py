@@ -10,8 +10,8 @@ __all__ = ["ASTMarker", "get_markers", "delete_markers", "check_no_markers_remai
 import ast
 
 from . import core
-from .walkers import ASTVisitor, ASTTransformer
 from . import utils
+from . import walkers
 
 
 class ASTMarker(ast.AST):
@@ -44,7 +44,7 @@ class ASTMarker(ast.AST):
 
 def get_markers(tree, cls=ASTMarker):
     """Return a `list` of any `cls` instances found in `tree`. For output validation."""
-    class ASTMarkerCollector(ASTVisitor):
+    class ASTMarkerCollector(walkers.ASTVisitor):
         def examine(self, tree):
             if isinstance(tree, cls):
                 self.collect(tree)
@@ -60,7 +60,7 @@ def delete_markers(tree, cls=ASTMarker):
     The deletion takes place by replacing each marker node with
     the actual AST node stored in its `body` attribute.
     """
-    class ASTMarkerDeleter(ASTTransformer):
+    class ASTMarkerDeleter(walkers.ASTTransformer):
         def transform(self, tree):
             if isinstance(tree, cls):
                 tree = tree.body

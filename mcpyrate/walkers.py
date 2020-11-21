@@ -6,7 +6,7 @@ from abc import ABCMeta, abstractmethod
 from ast import NodeVisitor, NodeTransformer
 
 from .bunch import Bunch
-from .utils import flatten
+from . import utils
 
 
 class BaseASTWalker:
@@ -110,7 +110,7 @@ class ASTTransformer(BaseASTWalker, NodeTransformer, metaclass=ABCMeta):
             self._stack.append(newstate)
         try:
             if isinstance(tree, list):
-                new_tree = flatten(self.visit(elt) for elt in tree)
+                new_tree = utils.flatten(self.visit(elt) for elt in tree)
                 if new_tree:
                     tree[:] = new_tree
                     return tree
