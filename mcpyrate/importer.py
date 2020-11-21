@@ -1,12 +1,12 @@
 # -*- coding: utf-8; -*-
 """Importer (finder/loader) customizations, to inject the dialect and macro expanders."""
 
-__all__ = ["source_to_xcode", "path_xstats", "invalidate_xcaches"]
+__all__ = ["source_to_xcode", "path_xstats"]
 
 import ast
 import distutils.sysconfig
 import importlib.util
-from importlib.machinery import FileFinder, SourceFileLoader
+from importlib.machinery import SourceFileLoader
 import tokenize
 import os
 import pickle
@@ -56,7 +56,6 @@ def source_to_xcode(self, data, path, *, _optimize=-1):
 # TODO: Support PEP552 (Deterministic pycs). Need to intercept source file hashing, too.
 # TODO: https://www.python.org/dev/peps/pep-0552/
 _stdlib_path_stats = SourceFileLoader.path_stats
-_xstats_cache = {}
 def path_xstats(self, path):
     """[mcpyrate] Compute a `.py` source file's mtime, accounting for macro-imports.
 
@@ -77,8 +76,40 @@ def path_xstats(self, path):
     # .py based stdlib modules. Also makes `macropython -i` start faster.
     if path in _stdlib_sourcefile_paths or not path.endswith(".py"):
         return _stdlib_path_stats(self, path)
-    if path in _xstats_cache:
-        return _xstats_cache[path]
+    return _stats(self, path)
+
+
+# Note about caching. Look at:
+#   https://github.com/python/cpython/blob/master/Lib/importlib/__init__.py
+#   https://github.com/python/cpython/blob/master/Lib/importlib/_bootstrap.py
+#   https://github.com/python/cpython/blob/master/Lib/importlib/_bootstrap_external.py
+#
+# As of Python 3.9:
+#   - The function `importlib.reload` (from `__init__.py`) eventually calls `_bootstrap._exec`.
+#   - `_bootstrap._exec` takes the loader from the spec, and calls its `exec_module` method.
+#   - `SourceFileLoader` defaults to the implementation of `_bootstrap_external._LoaderBasics.exec_module`,
+#     which calls the `get_code` method of the actual loader class.
+#   - `SourceFileLoader` inherits its `get_code` method from `SourceLoader`, which inherits from `_LoaderBasics`.
+#   - `SourceLoader.get_code` calls `path_stats` (hence our `path_xstats`,
+#     which replaces that), which returns the relevant timestamp; it then
+#     validates the bytecode cache against that timestamp (if in timestamp mode).
+#
+# The conclusion is, the timestamp we return from `path_xstats` determines
+# whether `reload` even attempts to actually reload the module!
+#
+# To compute the relevant timestamp, we must examine not only the target file,
+# but also its macro-dependencies (recursively). The easy thing to do - to
+# facilitate reloading for REPL use - is to not keep a global cache, but only
+# cache the timestamps during a single call of `path_xstats`, so if the same
+# dependency appears again at another place in the graph, we can get its
+# timestamp from the cache.
+
+def _stats(self, path, stats_cache=None):
+    """Actual implementation of `path_xstats`."""
+    if stats_cache is None:
+        stats_cache = {}
+    if path in stats_cache:
+        return stats_cache[path]
 
     stat_result = os.stat(path)
 
@@ -86,7 +117,7 @@ def path_xstats(self, path):
     #
     # This is a single node in the dependency graph; the result depends only
     # on the content of the source file `path` itself. So we invalidate the
-    # macro-import statement cache for `path` based on the mtime of `path` only.
+    # macro-import statement cache file for `path` based on the mtime of `path` only.
     #
     # For a given source file `path`, the `.pyc` sometimes becomes newer than
     # the macro-dependency cache. This is normal. Unlike the bytecode, the
@@ -174,7 +205,7 @@ def path_xstats(self, path):
         spec = importlib.util.find_spec(module_absname)
         if spec:  # self-macro-imports have no `spec`, and that's fine.
             origin = spec.origin
-            stats = path_xstats(self, origin)
+            stats = _stats(self, origin, stats_cache)
             mtimes.append(stats["mtime"])
 
     mtime = stat_result.st_mtime_ns * 1e-9
@@ -190,18 +221,8 @@ def path_xstats(self, path):
         # if the `size` is not used. See `get_code` in:
         # https://github.com/python/cpython/blob/master/Lib/importlib/_bootstrap_external.py
         result["size"] = None
-    _xstats_cache[path] = result
+    stats_cache[path] = result
     return result
-
-
-_stdlib_invalidate_caches = FileFinder.invalidate_caches
-def invalidate_xcaches(self):
-    '''[mcpyrate] Clear the macro dependency tree cache.
-
-    Then delegate to the standard implementation of `FileFinder.invalidate_caches`.
-    '''
-    _xstats_cache.clear()
-    return _stdlib_invalidate_caches(self)
 
 
 def _detect_stdlib_sourcefile_paths():
