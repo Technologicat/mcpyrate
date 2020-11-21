@@ -1,6 +1,8 @@
 # -*- coding: utf-8; -*-
-#
-# Run as `macropython demo/anaphoric_if.py`.
+"""Advanced tricks, part 2. Building an anaphoric if, with a context-sensitive `it`.
+
+Run as `macropython demo/anaphoric_if.py`.
+"""
 
 from mcpyrate.multiphase import macros, phase
 from mcpyrate.debug import macros, step_expansion  # noqa: F811
@@ -57,8 +59,29 @@ with phase[1]:
             # if we leave it to the expander to handle later, our context
             # will have exited and it'll error out.
             let_body = q[a[then] if a[expanded_it] else a[otherwise]]
+
+            # Which unquote to use to inject the `let` bindings depends on the data:
+            #  - One binding, like we have: `a[let_bindings]`
+            #  - Two or more bindings, defined as `q[[k1, v1], [k2, v2]]`: still `a[let_bindings]`,
+            #    because that quoted code represents an `ast.Tuple` (which contains two `ast.List`s
+            #    as its elements).
+            #  - Two or more bindings, defined as `[q[[k1, v1]], q[[k2, v2]]]`: then `t[let_bindings]`,
+            #    to convert that run-time `list` wrapper into an `ast.Tuple` node.
+            # (Keep in mind multiple macroargs are always fed in as an `ast.Tuple`. The `let` macro
+            #  takes in one or more args, each of which is a two-element `ast.List`.)
             return q[h[let][a[let_bindings]][a[let_body]]]
 
+            # The temporary variables above are only for readability. This works, too:
+            # return q[h[let][[n[name_of_it], a[test]]][a[then] if a[expanded_it] else a[otherwise]]]
+
+    # If this was in a separate file, we could name the function `it` directly,
+    # but due to multi-phase compilation, the macro binding established in phase 1
+    # would prevent us from referring to the macro function `it` during the compilation
+    # of phase 0. (This is because all code from phase 1 is lifted to appear also in phase 0,
+    # so that other modules can import things from it).
+    #
+    # So we give the function a different name, to separate the concepts of
+    # "the macro function `it`" and "the name macro `it`".
     def it_function(tree, *, syntax, **kw):
         """[syntax, name] The `it` of an anaphoric if.
 
@@ -67,11 +90,19 @@ with phase[1]:
         """
         if syntax != "name":
             raise SyntaxError("`it` is a name macro only")
+
         # Accept `it` in any non-load context, so that we can below define the macro `it`.
-        # TODO: Only an issue if we define this with multi-phase compilation?
-        # The phase-1 `it` is in the macro expander when the lifted phase-0 definition is being run.
+        #
+        # This is only an issue, because this example uses multi-phase compilation.
+        # The phase-1 `it` is in the macro expander - preventing us from referring to
+        # the name `it` - when the lifted phase-0 definition is being run. During phase 0,
+        # that makes the line `it = namemacro(...)` below into a macro-expansion-time
+        # syntax error, because that `it` is not inside an `aif`.
+        #
+        # We hack around it, by allowing `it` anywhere as long as the context is not a `Load`.
         if hasattr(tree, "ctx") and type(tree.ctx) is not Load:
             return tree
+
         if _aif_level.value < 1:
             raise SyntaxError("`it` may only appear within an `aif[...]`")
         # Check passed, go ahead and use this `it` as a regular run-time name.
