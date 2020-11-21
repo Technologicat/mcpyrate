@@ -158,7 +158,8 @@ def format_location(filename, tree, sourcecode):
         source_with_sep = f"{sep}{sourcecode}"
     else:
         source_with_sep = ""
-    return f'{filename}:{lineno}:{source_with_sep}'
+
+    return f'{colorize(filename, ColorScheme.SOURCEFILENAME)}:{lineno}:{source_with_sep}'
 
 
 def format_macrofunction(function):
