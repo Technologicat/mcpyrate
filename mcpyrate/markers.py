@@ -11,6 +11,7 @@ import ast
 
 from . import core
 from .walkers import ASTVisitor, ASTTransformer
+from . import utils
 
 
 class ASTMarker(ast.AST):
@@ -67,8 +68,10 @@ def delete_markers(tree, cls=ASTMarker):
     return ASTMarkerDeleter().visit(tree)
 
 
-def check_no_markers_remaining(tree, *, filename):
+def check_no_markers_remaining(tree, *, filename, cls=None):
     """Check that `tree` has no AST markers remaining.
+
+    If a class `cls` is provided, only check for markers that `isinstance(cls)`.
 
     If there are any, raise `MacroExpansionError`.
     No return value.
@@ -76,8 +79,12 @@ def check_no_markers_remaining(tree, *, filename):
     `filename` is the full path to the `.py` file, for error reporting.
 
     Convenience function.
+
     """
-    remaining_markers = get_markers(tree)
+    cls = cls or ASTMarker
+    remaining_markers = get_markers(tree, cls)
     if remaining_markers:
-        # print(unparse_with_fallbacks(expansion, debug=True, color=True))
-        raise core.MacroExpansionError(f"{filename}: AST markers remaining after expansion: {remaining_markers}")
+        codes = [utils.format_context(node, n=5) for node in remaining_markers]
+        locations = [utils.format_location(filename, node, code) for node, code in zip(remaining_markers, codes)]
+        report = "\n\n".join(locations)
+        raise core.MacroExpansionError(f"{filename}: AST markers remaining after expansion:\n{report}")
