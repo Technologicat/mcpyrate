@@ -335,11 +335,11 @@ def multiphase_expand(tree, dexpander, *, filename, self_module, _optimize=-1):
     c, CS = setcolor, ColorScheme
 
     if debug:
-        print(f"{c(CS.HEADING)}**Multi-phase compiling module {c(CS.TREEID)}'{self_module}' {c(CS.SOURCEFILENAME)}({filename}){c()}", file=sys.stderr)
+        print(f"{c(CS.HEADING)}**Multi-phase compiling module {c(CS.TREEID)}'{self_module}' ({c(CS.SOURCEFILENAME)}{filename}{c(CS.TREEID)}){c()}", file=sys.stderr)
 
     for k in range(n, -1, -1):  # phase 0 is what a regular compile would do
         if debug:
-            print(f"{c(CS.HEADING)}**AST for {c(CS.ATTENTION)}PHASE {k}{c(CS.HEADING)} of module {c(CS.TREEID)}'{self_module}' {c(CS.SOURCEFILENAME)}({filename}){c()}", file=sys.stderr)
+            print(f"{c(CS.HEADING)}**AST for {c(CS.ATTENTION)}PHASE {k}{c(CS.HEADING)} of module {c(CS.TREEID)}'{self_module}' ({c(CS.SOURCEFILENAME)}{filename}{c(CS.TREEID)}){c()}", file=sys.stderr)
 
         phase_k_tree = extract_phase(tree, phase=k)
         if phase_k_tree:
