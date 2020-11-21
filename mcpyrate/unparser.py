@@ -668,7 +668,11 @@ class Unparser:
     unop = {"Invert": "~", "Not": "not", "UAdd": "+", "USub": "-"}
     def _UnaryOp(self, t):
         self.write("(")
-        self.write(self.unop[t.op.__class__.__name__])
+        # if it's an English keyword, highlight it.
+        if t.op.__class__.__name__ == "Not":
+            self.write(self.maybe_colorize_python_keyword(self.unop[t.op.__class__.__name__]))
+        else:
+            self.write(self.unop[t.op.__class__.__name__])
         self.write(" ")
         self.dispatch(t.operand)
         self.write(")")
@@ -689,7 +693,11 @@ class Unparser:
         self.write("(")
         self.dispatch(t.left)
         for o, e in zip(t.ops, t.comparators):
-            self.write(" " + self.cmpops[o.__class__.__name__] + " ")
+            # if it's an English keyword, highlight it.
+            if o.__class__.__name__ in ("Is", "IsNot", "In", "NotIn"):
+                self.write(" " + self.maybe_colorize_python_keyword(self.cmpops[o.__class__.__name__]) + " ")
+            else:
+                self.write(" " + self.cmpops[o.__class__.__name__] + " ")
             self.dispatch(e)
         self.write(")")
 
