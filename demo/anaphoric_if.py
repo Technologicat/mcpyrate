@@ -36,16 +36,16 @@ with phase[1]:
             raise SyntaxError("`aif` is an expr macro only")
 
         # Detect the name(s) of `it` at the use site (this accounts for as-imports)
-        bindings = extract_bindings(expander.bindings, it_macro)
-        if not bindings:
+        macro_bindings = extract_bindings(expander.bindings, it_function)
+        if not macro_bindings:
             raise SyntaxError("The use site of `aif` must macro-import `it`, too.")
 
         with _aif_level.changed_by(+1):
             # expand any `it` inside the `aif` (thus confirming those uses are valid)
             def expand_it(tree):
-                return MacroExpander(bindings, expander.filename).visit(tree)
+                return MacroExpander(macro_bindings, expander.filename).visit(tree)
 
-            name_of_it = list(bindings.keys())[0]
+            name_of_it = list(macro_bindings.keys())[0]
             expanded_it = expand_it(q[n[name_of_it]])
 
             tree = expand_it(tree)
@@ -59,7 +59,7 @@ with phase[1]:
             let_body = q[a[then] if a[expanded_it] else a[otherwise]]
             return q[h[let][a[let_bindings]][a[let_body]]]
 
-    def it_macro(tree, *, syntax, **kw):
+    def it_function(tree, *, syntax, **kw):
         """[syntax, name] The `it` of an anaphoric if.
 
         Inside an `aif` body, evaluates to the value of the test result.
@@ -76,7 +76,7 @@ with phase[1]:
             raise SyntaxError("`it` may only appear within an `aif[...]`")
         # Check passed, go ahead and use this `it` as a regular run-time name.
         return tree
-    it = namemacro(it_macro)
+    it = namemacro(it_function)
 
 
 from __self__ import macros, aif, it  # noqa: F811, F401
