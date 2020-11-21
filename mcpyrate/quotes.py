@@ -198,11 +198,6 @@ def splice_ast_literals(tree, filename):
                     doit(item)
                     newthing.append(item)
             thing[:] = newthing
-        # elif isinstance(thing, ast.Subscript):
-        #     for fieldname, value in ast.iter_fields(thing):
-        #         if fieldname == ""
-        #         if isinstance(value, list):
-        #             doit(value)
         elif isinstance(thing, ast.AST):
             for fieldname, value in ast.iter_fields(thing):
                 if isinstance(value, list):
