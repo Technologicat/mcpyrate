@@ -1,10 +1,12 @@
 # -*- coding: utf-8; -*-
+"""Advanced tricks, part 1. Building simple `let` expressions for Python."""
+
 from mcpyrate.multiphase import macros, phase
 from mcpyrate.debug import macros, step_expansion  # noqa: F811
 # from mcpyrate.debug import macros, step_phases  # uncomment this line to see the multiphase compilation
 
 with phase[2]:
-    from mcpyrate.quotes import macros, q, a, h  # noqa: F811, F401
+    from mcpyrate.quotes import macros, q, n, a, t, h  # noqa: F811, F401
 
     from ast import arg
 
@@ -40,7 +42,8 @@ with phase[2]:
         lam = q[lambda: a[tree]]
         lam.args.args = [arg(arg=x) for x in names]
 
-        # Using a[] with a list of expression AST nodes splices that list into the surrounding context.
+        # Using a[] with a list of expression AST nodes splices that list into the surrounding context,
+        # when it appears in an AST slot that is represented as a `list`.
         # We splice `values` into positional arguments of the `Call`.
         return q[a[lam](a[values])]
 
@@ -48,8 +51,10 @@ with phase[2]:
 with phase[1]:
     from __self__ import macros, let  # noqa: F811, F401
 
+    from mcpyrate.utils import extract_bindings
+
     @parametricmacro
-    def letseq(tree, *, args, syntax, **kw):
+    def letseq(tree, *, args, syntax, expander, **kw):
         """[syntax, expr] Sequential let, like `let*` in Scheme.
 
         Usage::
@@ -70,10 +75,30 @@ with phase[1]:
         if not args:
             return tree
         first, *rest = args
-        body = letseq(tree, args=rest, syntax=syntax)
+
+        # We can and should `h[let]` to make our expansion use the macro binding of `let`
+        # from letseq's *definition site*.
+        #
+        # But we can't `h[letseq]` to mean "this macro", because letseq isn't bound as a macro
+        # *at its own definition site*. However, a macro can extract its own binding from its
+        # *use site's* expander, like this:
+        macro_bindings = extract_bindings(expander.bindings, letseq)
+        letseq_macroname = list(macro_bindings.keys())[0]
+
+        # Then we just generate the appropriate macro-enabled tree, and let the expander handle the rest.
+        #
+        # Note that the macro argument position expects either a single argument, or an `ast.Tuple` node
+        # if you want to pass several arguments. (Keep in mind that in Python's surface syntax, without any
+        # surrounding parentheses, a comma creates a tuple. The brackets belong to the subscript expression;
+        # they do not denote a list.)
+        #
+        # So we can use the `t[]` unquote to splice in the ASTs for the remaining bindings as a `Tuple` node.
+        # This will effectively splat it into separate macro arguments.
+        body = q[n[letseq_macroname][t[rest]][a[tree]]]
         return q[h[let][a[first]][a[body]]]
 
-        # We could as well call `let` as a function, to expand it immediately.
+        # # We could call the macros as functions, to expand them immediately (in the traditional `macropy` way).
+        # body = letseq(tree, args=rest, syntax=syntax)
         # let(body, args=[first, ], syntax=syntax)
 
 
