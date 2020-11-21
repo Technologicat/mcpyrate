@@ -2,7 +2,7 @@
 
 from ..metatools import (macros, expands, expand1s, expandsq, expand1sq,  # noqa: F811
                          expandr, expand1r, expandrq, expand1rq)
-from ..quotes import macros, q, u, n, a, s, h  # noqa: F811
+from ..quotes import macros, q, u, n, a, s, t, h  # noqa: F811
 from .macros import (macros, test_q, test_hq,  # noqa: F401, F811
                      first, second, third)
 
@@ -68,10 +68,18 @@ def test():
     assert qa.id == nom
 
     # s[]: list of ASTs -> ast.List
-    lst = [ast.Name(id=x) for x in ("a", "b", "c")]
+    thenames = ["a", "b", "c"]
+    lst = [ast.Name(id=x) for x in thenames]
     qs = q[s[lst]]
     assert type(qs) is ast.List
-    assert qs.elts is lst
+    assert [node.id for node in qs.elts] == thenames
+
+    # t[]: list of ASTs -> ast.Tuple
+    thenames = ["a", "b", "c"]
+    lst = [ast.Name(id=x) for x in thenames]
+    qs = q[t[lst]]
+    assert type(qs) is ast.Tuple
+    assert [node.id for node in qs.elts] == thenames
 
     # classic and hygienic unquoting
     assert test_q == "f from macro use site"
@@ -84,10 +92,10 @@ def test():
     assert unparse(q[first[42]]) == "first[42]"
 
     # TODO: Python 3.8: remove ast.Num
-    assert unparse(q[q[42]]) in ("mcpyrate.quotes.splice_ast_literals(mcpyrate.quotes.ast.Num(n=42))",
-                                 "mcpyrate.quotes.splice_ast_literals(mcpyrate.quotes.ast.Constant(value=42))")
-    assert unparse(expand1rq[h[q][42]]) in ("mcpyrate.quotes.splice_ast_literals(mcpyrate.quotes.ast.Num(n=42))",
-                                            "mcpyrate.quotes.splice_ast_literals(mcpyrate.quotes.ast.Constant(value=42))")
+    assert unparse(q[q[42]]) in (f"mcpyrate.quotes.splice_ast_literals(mcpyrate.quotes.ast.Num(n=42), '{__file__}')",
+                                 f"mcpyrate.quotes.splice_ast_literals(mcpyrate.quotes.ast.Constant(value=42), '{__file__}')")
+    assert unparse(expand1rq[h[q][42]]) in (f"mcpyrate.quotes.splice_ast_literals(mcpyrate.quotes.ast.Num(n=42), '{__file__}')",
+                                            "mcpyrate.quotes.splice_ast_literals(mcpyrate.quotes.ast.Constant(value=42), '{__file__}')")
 
     # Macro names can be hygienically captured, too. The name becomes "originalname_uuid".
     assert unparse(q[h[first][42]]).startswith("first_")
