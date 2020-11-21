@@ -352,6 +352,12 @@ def multiphase_expand(tree, dexpander, *, filename, self_module, _optimize=-1):
 
         phase_k_tree = extract_phase(tree, phase=k)
         if phase_k_tree:
+            # inject `__phase__ = k` for introspection
+            tgt = ast.Name(id="__phase__", ctx=ast.Store(), lineno=1, col_offset=1)
+            val = ast.Constant(value=k, lineno=1, col_offset=13)
+            assignment = ast.Assign(targets=[tgt], value=val, lineno=1, col_offset=1)
+            phase_k_tree.body = [assignment] + phase_k_tree.body
+
             if debug:
                 print(unparse_with_fallbacks(phase_k_tree, debug=True, color=True), file=sys.stderr)
 
