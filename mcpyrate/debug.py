@@ -17,7 +17,7 @@ from .dialects import StepExpansion  # re-export for discoverability, it's a deb
 from .expander import MacroCollector, namemacro, parametricmacro
 from .multiphase import step_phases  # re-export for discoverability, it's a debug feature
 from .unparser import unparse_with_fallbacks
-from .utils import NestingLevelTracker, format_macrofunction
+from .utils import NestingLevelTracker, format_macrofunction, format_context
 from .walkers import ASTVisitor
 
 
@@ -223,11 +223,7 @@ class SourceLocationInfoValidator(ASTVisitor):
         if tree not in self.ignore:
             present = [hasattr(tree, x) for x in self.check_fields]
             if not all(present):
-                code_lines = unparse_with_fallbacks(tree).split("\n")
-                code = "\n".join(code_lines[:self.n])
-                if len(code_lines) > self.n:
-                    code += "\n..."
-
+                code = format_context(tree, n=self.n)
                 self.collect((tree,
                               code,
                               [fieldname for fieldname, p in zip(self.check_fields, present) if not p]))

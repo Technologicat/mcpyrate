@@ -2,13 +2,15 @@
 """General utilities. Can be useful for writing both macros as well as macro expanders."""
 
 __all__ = ["gensym", "scrub_uuid", "flatten", "rename", "extract_bindings",
-           "format_location", "format_macrofunction",
+           "format_location", "format_macrofunction", "format_context",
            "NestingLevelTracker"]
 
 import ast
 from contextlib import contextmanager
 import uuid
 
+from .colorizer import colorize, ColorScheme
+from . import unparser
 from . import walkers
 
 
@@ -164,6 +166,15 @@ def format_macrofunction(function):
     if not function.__module__:  # Macros defined in the REPL have `__module__=None`.
         return function.__qualname__
     return f"{function.__module__}.{function.__qualname__}"
+
+
+def format_context(tree, *, n=5):
+    """Format up to the first `n` lines of source code of `tree`."""
+    code_lines = unparser.unparse_with_fallbacks(tree, debug=True, color=True).split("\n")
+    code = "\n".join(code_lines[:n])
+    if len(code_lines) > n:
+        code += "\n" + colorize("...", ColorScheme.GREYEDOUT)
+    return code
 
 # --------------------------------------------------------------------------------
 
