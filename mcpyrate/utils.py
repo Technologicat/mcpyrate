@@ -10,6 +10,7 @@ from contextlib import contextmanager
 import uuid
 
 from .colorizer import colorize, ColorScheme
+from . import markers
 from . import unparser
 from . import walkers
 
@@ -148,11 +149,19 @@ def format_location(filename, tree, sourcecode):
     """Format a source code location in a standard way, for error messages.
 
     `filename`: full path to `.py` file.
-    `tree`: AST node to get source line number from.
+    `tree`: AST node to get source line number from. (Looks inside AST markers.)
     `sourcecode`: source code (typically, to get this, `unparse(tree)`
                   before expanding it), or `None` to omit it.
     """
-    lineno = tree.lineno if hasattr(tree, "lineno") else None
+    lineno = None
+    if hasattr(tree, "lineno"):
+        lineno = tree.lineno
+    elif isinstance(tree, markers.ASTMarker) and hasattr(tree, "body"):
+        if hasattr(tree.body, "lineno"):
+            lineno = tree.body.lineno
+        elif isinstance(tree.body, list) and tree.body and hasattr(tree.body[0], "lineno"):  # e.g. `SpliceNodes`
+            lineno = tree.body[0].lineno
+
     if sourcecode:
         sep = " " if "\n" not in sourcecode else "\n"
         source_with_sep = f"{sep}{sourcecode}"
