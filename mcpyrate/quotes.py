@@ -122,6 +122,21 @@ def lift_sourcecode(value, filename="<unknown>"):
     return ast.parse(value, filename=filename, mode="eval").body
 
 
+def _typecheck(node, cls, macroname):
+    body = node.body if isinstance(node, ASTMarker) else node
+    if not isinstance(body, cls):
+        raise TypeError(f"{macroname}: expected an expression node, got {type(body)} with value {repr(body)}")
+
+def _flatten_and_typecheck_iterable(nodes, cls, macroname):
+    try:
+        lst = list(nodes)
+    except TypeError:
+        raise TypeError(f"{macroname}: expected an iterable of AST nodes, got {type(nodes)} with value {repr(nodes)}")
+    lst = flatten(lst)
+    for node in lst:
+        _typecheck(node, cls, macroname)
+    return lst
+
 def ast_literal(tree, syntax):
     """Perform run-time typecheck on AST literal `tree`. Run-time part of `a`.
 
@@ -133,21 +148,11 @@ def ast_literal(tree, syntax):
         raise TypeError(f"expected `syntax` either 'expr' or 'block', got {type(syntax)} with value {repr(syntax)}")
 
     if syntax == "expr":
-        def check_expr(tree):
-            body = tree.body if isinstance(tree, ASTMarker) else tree
-            if not isinstance(body, ast.expr):
-                raise TypeError(f"`a` (expr mode): expected an expression node, got {type(body)} with value {repr(body)}")
         if isinstance(tree, ast.AST):
-            check_expr(tree)
+            _typecheck(tree, ast.expr, "`a` (expr mode)")
             return tree
         else:
-            try:
-                lst = list(tree)
-            except TypeError:
-                raise TypeError(f"`a` (expr mode): expected an AST node or iterable, got {type(tree)} with value {repr(tree)}")
-            lst = flatten(lst)
-            for expr in lst:
-                check_expr(expr)
+            lst = _flatten_and_typecheck_iterable(tree, ast.expr, "`a` (expr mode)")
             return SpliceNodes(lst)
 
     assert syntax == "block"
@@ -168,17 +173,7 @@ def ast_literal(tree, syntax):
     # The splicer must splice only places marked by us, because lists occur
     # in many places in a Python AST beside statement suites (e.g. `Assign`
     # targets, the parameter list in a function definition, ...).
-    def check_stmt(tree):
-        body = tree.body if isinstance(tree, ASTMarker) else tree
-        if not isinstance(body, ast.stmt):
-            raise TypeError(f"`a` (block mode): expected a statement node, got {type(body)} with value {repr(body)}")
-    try:
-        lst = list(tree)
-    except TypeError:
-        raise TypeError(f"`a` (block mode): expected an AST node or iterable, got {type(tree)} with value {repr(tree)}")
-    lst = flatten(lst)
-    for stmt in lst:
-        check_stmt(stmt)
+    lst = _flatten_and_typecheck_iterable(tree, ast.stmt, "`a` (block mode)")
     return SpliceNodes(lst)
 
 
@@ -216,23 +211,13 @@ def splice_ast_literals(tree, filename):
 
 def ast_list(nodes):
     """Interpolate an iterable of expression AST nodes as an `ast.List` node. Run-time part of `s[]`."""
-    try:
-        lst = list(nodes)
-    except TypeError:
-        raise TypeError(f"`s[]`: expected an iterable of AST nodes, got {type(nodes)} with value {repr(nodes)}")
-    if not all(isinstance(tree, ast.expr) for tree in lst):
-        raise ValueError(f"`s[]`: expected an iterable of expression AST nodes only, got {repr(lst)}")
+    lst = _flatten_and_typecheck_iterable(nodes, ast.expr, "`s[]`")
     return ast.List(elts=lst)
 
 
 def ast_tuple(nodes):
     """Interpolate an iterable of expression AST nodes as an `ast.Tuple` node. Run-time part of `t[]`."""
-    try:
-        lst = list(nodes)
-    except TypeError:
-        raise TypeError(f"`t[]`: expected an iterable of AST nodes, got {type(nodes)} with value {repr(nodes)}")
-    if not all(isinstance(tree, ast.expr) for tree in lst):
-        raise ValueError(f"`t[]`: expected an iterable of expression AST nodes only, got {repr(lst)}")
+    lst = _flatten_and_typecheck_iterable(nodes, ast.expr, "`t[]`")
     return ast.Tuple(elts=lst)
 
 
