@@ -731,11 +731,19 @@ from __self__ import macros, ...
 # then just code as usual
 ```
 
-Macro-imports usually appear at the top level of the module body. That causes
-the macros to be imported at phase `0`. If you need to import some macros
-earlier, it is allowed to place macro-imports at the top level of the body of a
-`with phase[n]`. This will make those macros available at phase `n` and at any
-later (lower-numbered) phases, including at the implicit phase `0`.
+Macro-imports must usually appear at the top level of the module body. Doing
+that in a module that uses multi-phase compilation causes the macros to be
+imported at phase `0`. If you need to import some macros earlier, it is allowed
+to place macro-imports at the top level of the body of a `with phase[n]`. This
+will make those macros available at phase `n` and at any later (lower-numbered)
+phases, including at the implicit phase `0`.
+
+Finally, there is an implicit magic variable in the module's top-level scope,
+`__phase__`, which contains the number of the current compilation phase, as an
+integer. This can be useful if you want to include a certain piece of code in
+all phases, but do different things in different phases (or skip doing something
+until a certain phase is reached). The `__phase__` magic variable is only present
+if the module enables the multi-phase compiler.
 
 
 ## Displaying the source code for each phase
