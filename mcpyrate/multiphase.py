@@ -334,6 +334,15 @@ def multiphase_expand(tree, dexpander, *, filename, self_module, _optimize=-1):
     debug = isdebug(tree)
     c, CS = setcolor, ColorScheme
 
+    # If this module is already in `sys.modules` (e.g. created by Python's
+    # import system as a blank module instance, to be filled in by an exec
+    # after compilation is done), record the original module object, so we
+    # can reinstate it once we're done.
+    if self_module in sys.modules:
+        original_module = sys.modules[self_module]
+    else:
+        original_module = None
+
     if debug:
         print(f"{c(CS.HEADING)}**Multi-phase compiling module {c(CS.TREEID)}'{self_module}' ({c(CS.SOURCEFILENAME)}{filename}{c(CS.TREEID)}){c()}", file=sys.stderr)
 
@@ -352,9 +361,9 @@ def multiphase_expand(tree, dexpander, *, filename, self_module, _optimize=-1):
             expansion = dexpander.postprocess_ast(expansion, dialect_instances)
             check_no_markers_remaining(expansion, filename=filename)
 
-            # # Once we hit the final phase, no more temporary modules - let the import system take over.
-            # if k == 0:
-            #     break
+            # Once we hit the final phase, no more temporary modules - let the import system take over.
+            if k == 0:
+                break
 
             # Compile temporary module, and inject it into `sys.modules`, so we can compile the next phase.
             #
@@ -366,10 +375,13 @@ def multiphase_expand(tree, dexpander, *, filename, self_module, _optimize=-1):
             sys.modules[self_module] = temporary_module
             exec(temporary_code, temporary_module.__dict__)
 
-    # # delete temporary module
-    # try:
-    #     del sys.modules[self_module]
-    # except KeyError:
-    #     pass
+    # restore `sys.modules` to how it was before we began the multi-phase compile for this module
+    if original_module:
+        sys.modules[self_module] = original_module
+    else:
+        try:
+            del sys.modules[self_module]
+        except KeyError:
+            pass
 
     return expansion
