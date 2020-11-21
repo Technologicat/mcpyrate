@@ -169,7 +169,12 @@ class BaseMacroExpander(NodeTransformer):
                 if oldmsg[0] == "\n":
                     oldmsg = oldmsg[1:]
                 msg = f"\n{msg}\n{oldmsg}"
+                # TODO: This causes us to see the *oldest* telescoped traceback, which is confusing.
+                # But it's even more confusing to not telescope these.
                 err = err.__cause__
+            # TODO: We would like to remove the really noisy traceback of the new exception being raised here
+            # (the only relevant part is that it came from here in `core.py`), but Python 3.6 doesn't have the
+            # tools to do that. `raise` will populate the traceback automatically, and that's that.
             raise MacroExpansionError(msg) from err
 
         # Convert possible iterable result to `list`, then typecheck macro output.
