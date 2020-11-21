@@ -18,10 +18,10 @@ __all__ = ["capture_value", "capture_macro",
 import ast
 import pickle
 
-from .core import global_bindings, Done
+from .core import global_bindings, Done, MacroExpansionError
 from .expander import MacroExpander, isnamemacro
-from .markers import ASTMarker, get_markers
-from .unparser import unparse
+from .markers import ASTMarker, check_no_markers_remaining
+from .unparser import unparse, unparse_with_fallbacks
 from .utils import gensym, scrub_uuid, flatten, extract_bindings, NestingLevelTracker
 
 
@@ -182,7 +182,7 @@ def ast_literal(tree, syntax):
     return SpliceNodes(lst)
 
 
-def splice_ast_literals(tree):
+def splice_ast_literals(tree, filename):
     """Splice list-valued `a` AST literals into the surrounding context. Run-time part of `q`."""
     # We do this recursively to splice also at any inner levels of the quoted
     # AST (e.g. `with a` inside an `if`).
@@ -210,6 +210,11 @@ def splice_ast_literals(tree):
         else:
             raise TypeError(f"Expected `list` or AST node, got {type(thing)} with value {repr(thing)}")
     doit(tree)
+
+    try:
+        check_no_markers_remaining(tree, filename=filename, cls=SpliceNodes)
+    except MacroExpansionError as err:
+        raise SyntaxError("`q`: `SpliceNodes` markers remaining after expansion, likely a misplaced `a` unquote; did you mean `s[]` or `t[]`?") from err
 
     return tree
 
@@ -651,10 +656,7 @@ def q(tree, *, syntax, expander, **kw):
     with _quotelevel.changed_by(+1):
         tree = _expand_quasiquotes(tree, expander)  # expand any inner quotes and unquotes first
         tree = astify(tree, expander)  # Magic part of `q`. Supply `expander` for `h[macro]` detection.
-
-        ps = get_markers(tree, QuasiquoteMarker)  # postcondition: no remaining QuasiquoteMarkers
-        if ps:
-            assert False, f"QuasiquoteMarker instances remaining in output: {ps}"
+        check_no_markers_remaining(tree, filename=expander.filename, cls=QuasiquoteMarker)
 
         # `a` introduces the need to splice any interpolated `list`s of ASTs at
         # run time into the surrounding context (which is only available to the
@@ -666,7 +668,8 @@ def q(tree, *, syntax, expander, **kw):
         # e.g. in a function call argument position, to splice the list into
         # positional arguments of the `Call`.
         tree = ast.Call(_mcpyrate_quotes_attr("splice_ast_literals"),
-                        [tree],
+                        [tree,
+                         ast.Constant(value=expander.filename)],
                         [])
 
         if syntax == "block":
