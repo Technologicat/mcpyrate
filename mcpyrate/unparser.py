@@ -945,7 +945,7 @@ def unparse(tree, *, debug=False, color=False, expander=None):
         return code
     except UnparserError as err:  # fall back to an AST dump
         try:
-            astdump = dump(tree, multiline=True)
+            astdump = dump(tree, multiline=True, color=color)
             sep = " " if "\n" not in astdump else "\n"
             msg = f"unparse failed, likely invalid AST; here's an AST dump instead:{sep}{astdump}"
             raise UnparserError(msg) from err

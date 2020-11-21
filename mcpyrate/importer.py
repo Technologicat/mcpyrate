@@ -166,7 +166,7 @@ def path_xstats(self, path):
     mtimes = []
     for macroimport in macro_and_dialect_imports:
         if macroimport.module is None:
-            approx_sourcecode = unparse_with_fallbacks(macroimport)
+            approx_sourcecode = unparse_with_fallbacks(macroimport, debug=True, color=True)
             loc = format_location(path, macroimport, approx_sourcecode)
             raise SyntaxError(f"{loc}\nmissing module name in macro-import")
         module_absname = importlib.util.resolve_name('.' * macroimport.level + macroimport.module, package_absname)

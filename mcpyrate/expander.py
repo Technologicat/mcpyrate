@@ -142,7 +142,7 @@ class MacroExpander(BaseMacroExpander):
         if self.ismacrocall(macroname, macroargs, "expr"):
             kw = {"args": macroargs}
             tree = subscript.slice.value
-            sourcecode = unparse_with_fallbacks(subscript)
+            sourcecode = unparse_with_fallbacks(subscript, debug=True, color=True, expander=self)
             new_tree = self.expand("expr", subscript,
                                    macroname, tree, sourcecode=sourcecode, kw=kw)
             if new_tree is None:
@@ -200,7 +200,7 @@ class MacroExpander(BaseMacroExpander):
         macroname, macroargs = destructure_candidate(candidate)
 
         # let the source code and `invocation` see also the withitem we pop away
-        sourcecode = unparse_with_fallbacks(withstmt)
+        sourcecode = unparse_with_fallbacks(withstmt, debug=True, color=True, expander=self)
         original_withstmt = copy(withstmt)
         original_withstmt.items = copy(withstmt.items)
 
@@ -255,7 +255,7 @@ class MacroExpander(BaseMacroExpander):
         macroname, macroargs = destructure_candidate(innermost_macro)
 
         # let the source code and `invocation` see also the decorator we pop away
-        sourcecode = unparse_with_fallbacks(decorated)
+        sourcecode = unparse_with_fallbacks(decorated, debug=True, color=True, expander=self)
         original_decorated = copy(decorated)
         original_decorated.decorator_list = copy(decorated.decorator_list)
 
@@ -320,7 +320,7 @@ class MacroExpander(BaseMacroExpander):
                 return not (type(tree) is Name and tree.id == macroname)
             with self._recursive_mode(False):
                 kw = {"args": None}
-                sourcecode = unparse_with_fallbacks(name)
+                sourcecode = unparse_with_fallbacks(name, debug=True, color=True, expander=self)
                 new_tree = self.expand("name", name, macroname, name, sourcecode=sourcecode, kw=kw)
             if new_tree is None:
                 # Expression slots in the AST cannot be empty, but we can make

@@ -114,14 +114,14 @@ def get_macros(macroimport, *, filename, reload=False, allow_asname=True, self_m
 
     if macroimport.module is None:
         # fallbacks may trigger if the macro-import is programmatically generated.
-        approx_sourcecode = unparse_with_fallbacks(macroimport)
+        approx_sourcecode = unparse_with_fallbacks(macroimport, debug=True, color=True)
         loc = format_location(filename, macroimport, approx_sourcecode)
         raise SyntaxError(f"{loc}\nmissing module name in macro-import")
 
     # macro-import from an earlier phase of a module using `with phase`
     if macroimport.module == "__self__":
         if macroimport.level:
-            approx_sourcecode = unparse_with_fallbacks(macroimport)
+            approx_sourcecode = unparse_with_fallbacks(macroimport, debug=True, color=True)
             loc = format_location(filename, macroimport, approx_sourcecode)
             raise SyntaxError(f"{loc}\nself-macro-imports cannot be relative")
         # When we get here, the module, as compiled up to the previous phase,
@@ -137,7 +137,7 @@ def get_macros(macroimport, *, filename, reload=False, allow_asname=True, self_m
         try:
             module = importlib.import_module(module_absname)
         except ModuleNotFoundError as err:
-            approx_sourcecode = unparse_with_fallbacks(macroimport)
+            approx_sourcecode = unparse_with_fallbacks(macroimport, debug=True, color=True)
             loc = format_location(filename, macroimport, approx_sourcecode)
             raise ModuleNotFoundError(f"{loc}\nNo module named {module_absname}") from err
 
@@ -152,7 +152,7 @@ def get_macros(macroimport, *, filename, reload=False, allow_asname=True, self_m
         try:
             bindings[name.asname or name.name] = getattr(module, name.name)
         except AttributeError as err:
-            approx_sourcecode = unparse_with_fallbacks(macroimport)
+            approx_sourcecode = unparse_with_fallbacks(macroimport, debug=True, color=True)
             loc = format_location(filename, macroimport, approx_sourcecode)
             raise ImportError(f"{loc}\ncannot import name '{name.name}' from module {module_absname}") from err
 
