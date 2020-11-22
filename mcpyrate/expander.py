@@ -143,8 +143,7 @@ class MacroExpander(BaseMacroExpander):
             kw = {"args": macroargs}
             tree = subscript.slice.value
             sourcecode = unparse_with_fallbacks(subscript, debug=True, color=True, expander=self)
-            new_tree = self.expand("expr", subscript,
-                                   macroname, tree, sourcecode=sourcecode, kw=kw)
+            new_tree = self.expand("expr", subscript, macroname, tree, sourcecode=sourcecode, kw=kw)
             if new_tree is None:
                 # Expression slots in the AST cannot be empty, but we can make
                 # something that evaluates to `None` at run-time, and get
@@ -208,8 +207,7 @@ class MacroExpander(BaseMacroExpander):
         kw = {"args": macroargs}
         kw.update({"optional_vars": with_item.optional_vars})
         tree = withstmt.body if not withstmt.items else [withstmt]
-        new_tree = self.expand("block", original_withstmt,
-                               macroname, tree, sourcecode=sourcecode, kw=kw)
+        new_tree = self.expand("block", original_withstmt, macroname, tree, sourcecode=sourcecode, kw=kw)
         new_tree = _insert_coverage_dummy_stmt(new_tree, withstmt, macroname, self.filename)
         return new_tree
 
@@ -261,8 +259,7 @@ class MacroExpander(BaseMacroExpander):
 
         decorated.decorator_list.remove(innermost_macro)
         kw = {"args": macroargs}
-        new_tree = self.expand("decorator", original_decorated,
-                               macroname, decorated, sourcecode=sourcecode, kw=kw)
+        new_tree = self.expand("decorator", original_decorated, macroname, decorated, sourcecode=sourcecode, kw=kw)
         new_tree = _insert_coverage_dummy_stmt(new_tree, innermost_macro, macroname, self.filename)
         return new_tree
 
