@@ -13,6 +13,7 @@ import pathlib
 import sys
 
 from ..coreutils import relativize
+from ..core import ApplyMacroError
 
 from .. import activate  # noqa: F401
 
@@ -98,8 +99,19 @@ def import_module_as_main(name, script_mode):
         sys.modules["__main__"] = module  # replace this bootstrapper with the new __main__
         try:
             spec.loader.exec_module(module)
-        except Exception:
+        except Exception as err:
             sys.modules["__main__"] = _macropython_module
+            if isinstance(err, ApplyMacroError):
+                # To avoid noise, discard most of the traceback of the chained
+                # macro-expansion errors emitted by the expander core. The
+                # linked (`__cause__`) exceptions have the actual tracebacks.
+                #
+                # Keep just the last entry, which should state that this
+                # exception came from `expand` in `core.py`.
+                tb = err.__traceback__
+                while tb.tb_next:
+                    tb = tb.tb_next
+                raise err.with_traceback(tb)
             raise
         # # __main__ has no parent module so we don't need to do this.
         # if path is not None:

@@ -1204,13 +1204,16 @@ We recommend raising:
 
  - `SyntaxError` with a descriptive message, if there's something wrong with how the macro was invoked, or with the AST layout of the `tree` (or `args`) it got vs. what it was expecting.
  - `TypeError` or a `ValueError`, as appropriate if there is a problem in the macro arguments meant for the macro itself. (As opposed to macro arguments such as in the `let` example, where `args` is just another place to send in an AST to be transformed.)
+ - `mcpyrate.core.MacroExpansionError` if something else macro-related went wrong.
 
-In general, you can use any exception type as appropriate, except `mcpyrate.core.MacroExpansionError`. This one type gets automatically telescoped (i.e. intermediate stack traces of causes are omitted); it is used internally for generating the use site report when an exception is raised during macro expansion.
+In general, you can use any exception type as appropriate, except `mcpyrate.core.ApplyMacroError`, which only exists for internal use by the expander core. This one type gets automatically telescoped (i.e. intermediate stack traces of causes are omitted); it is used internally for generating the use site report when an exception is raised during macro expansion.
+
+Furthermore, if the program is being run through the `macropython` wrapper, `macropython` will strip most of the traceback for `ApplyMacroError` (and for this one type only!), because that traceback speaks of things such as `macropython` itself, the importer, and the macro expander, and it is typically very long. The actually relevant tracebacks, for the client code, are contained within the linked ("direct cause") exceptions.
 
 
 ## Differences to `macropy`
 
-In `mcpyrate`, `AssertionError` is **not** treated specially; any exception (except `mcpyrate.core.MacroExpansionError`) raised while expanding a macro gets the same treatment.
+In `mcpyrate`, `AssertionError` is **not** treated specially; any exception (except `mcpyrate.core.ApplyMacroError`) raised while expanding a macro gets the same treatment.
 
 In `mcpyrate`, all macro-expansion errors are reported immediately at macro expansion time.
 

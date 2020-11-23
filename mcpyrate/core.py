@@ -17,7 +17,39 @@ from .utils import flatten, format_location
 global_bindings = {}
 
 class MacroExpansionError(Exception):
-    """Error during macro expansion."""
+    """Base class for errors specific to macro expansion.
+
+    We recommend raising:
+
+     - `SyntaxError` with a descriptive message, if there's something wrong
+       with how the macro was invoked, or with the AST layout of the `tree`
+       (or `args`) it got vs. what it was expecting.
+
+     - `TypeError` or a `ValueError`, as appropriate if there is a problem in
+       the macro arguments meant for the macro itself. (As opposed to macro
+       arguments such as in the `let` demo, where `args` is just another
+       place to send in an AST to be transformed.)
+
+     - `MacroExpansionError` (or a custom descendant of it) if something else
+       macro-related went wrong.
+    """
+
+class ApplyMacroError(MacroExpansionError):
+    """The expander core caught an exception while applying a macro function.
+
+    The expander uses this type to automatically telescope use site reports
+    for nested macro invocations (which occur when a macro opts to expand
+    inside-out).
+
+    The `macropython` wrapper also strips most of the traceback when it catches
+    an exception of this type. There is only one place in the whole codebase
+    that emits `ApplyMacroError`. We know that for that one particular use,
+    the traceback speaks of things such as `macropython` itself, the importer,
+    and the macro expander, and it is typically very long. The linked ("direct
+    cause") exceptions contain the actually relevant, client code tracebacks.
+
+    **CAUTION**: This type is for internal use only.
+    """
 
 class MacroExpanderMarker(ASTMarker):
     """Base class for AST markers used by the macro expander itself."""
@@ -164,14 +196,15 @@ class BaseMacroExpander(NodeTransformer):
             expansion = _apply_macro(macro, tree, kw)
         except Exception as err:
             msg = f"{loc}\nwhile expanding {syntax} macro invocation for '{macroname}'"
-            if isinstance(err, MacroExpansionError) and err.__cause__:  # telescope nested use site reports
+            # There is just one place in the whole codebase that should emit `ApplyMacroError`: **right here**.
+            if isinstance(err, ApplyMacroError) and err.__cause__:  # telescope nested use site reports
                 oldmsg = err.args[0]
-                if oldmsg[0] == "\n":
+                if oldmsg.split("\n")[0] == "(innermost macro application last)":
                     oldmsg = oldmsg[1:]
-                msg = f"\n{msg}\n{oldmsg}"
-                raise MacroExpansionError(msg).with_traceback(err.__traceback__) from err.__cause__
+                msg = f"(innermost macro application last)\n{msg}\n{oldmsg}"
+                raise ApplyMacroError(msg).with_traceback(err.__traceback__) from err.__cause__
             else:
-                raise MacroExpansionError(msg) from err
+                raise ApplyMacroError(msg) from err
 
         # Convert possible iterable result to `list`, then typecheck macro output.
         output_type_ok = True
