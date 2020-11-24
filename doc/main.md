@@ -326,6 +326,8 @@ By default, in `mcpyrate`, macros in quasiquoted code are not expanded when the 
 
 In `mcpyrate`, all quote and unquote operators have single-character names by default: `q`, `u`, `n`, `a`, `s`, `t`, `h`. Of these, `q` and `u` are as in `macropy`, the operator `n` most closely corresponds to `name`, `a` to `ast_literal`, and `s` to `ast_list`.
 
+`mcpyrate` adds a sister for `s`, namely `t`, which works similarly, but makes an `ast.Tuple`. This is convenient especially in the macro argument position, because `mcpyrate` represents multiple macro arguments as a tuple.
+
 In `mcpyrate`, there is **just one *quote* operator**, `q[]`, although just like in `macropy`, there are several different *unquote* operators, depending on what you want to do. In `mcpyrate`, there is no `unhygienic` operator, because there is no separate `hq` quote.
 
 For [macro hygiene](https://en.wikipedia.org/wiki/Hygienic_macro), we provide a **hygienic unquote** operator, `h[]`. So instead of implicitly hygienifying all `Name` nodes inside a `hq[]` like `macropy` does, `mcpyrate` instead expects the user to use the regular `q[]`, and explicitly say which subexpressions to hygienify, by unquoting each of those separately with `h[]`. The hygienic unquote operator captures expressions by snapshotting a value; it does not care about names, except for human-readable output.
