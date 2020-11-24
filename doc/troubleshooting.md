@@ -61,13 +61,13 @@ This can be a problem, because hygienic value storage uses `pickle`, which in or
 
 ## How to debug macro transformations?
 
-We provide several utilities that show the steps of macro transformations, to help debugging them:
+We provide several utilities that show the steps of macro transformations, to help debugging them. See the module [`mcpyrate.debug`](../mcpyrate/debug.py).
 
- - To troubleshoot **regular macro expansion**, see the module [`mcpyrate.debug`](../mcpyrate/debug.py), particularly the macro `step_expansion`. It is both an `expr` and `block` macro. This is the one you'll likely need most often.
+ - To troubleshoot **regular macro expansion**, see `step_expansion` in `mcpyrate.debug`. It is both an `expr` and `block` macro. This is the one you'll likely need most often.
 
- - To troubleshoot **macro expansion of a run-time AST value** (such as quasiquoted code), see [`mcpyrate.metatools`](../mcpyrate/metatools.py), particularly the macro `stepr`. It is an `expr` macro that takes in a run-time AST value. (In Python, values are always referred to by expressions. Hence no block mode.) This one you'll likely need second-most often.
+ - To troubleshoot **macro expansion of a run-time AST value** (such as quasiquoted code), see the module [`mcpyrate.metatools`](../mcpyrate/metatools.py), particularly the macro `stepr`. It is an `expr` macro that takes in a run-time AST value. (In Python, values are always referred to by expressions. Hence no block mode.) This one you'll likely need second-most often.
 
-   Also, use `print(unparse(tree, debug=True, color=True))` if there's a particular `tree` whose source code representation you'd like to look at, or even `print(dump(tree, color=True))`. Look at the docstrings of those functions for other possibly useful parameters.
+   Also, use `print(unparse(tree, debug=True, color=True))` if there's a particular `tree` whose source code representation you'd like to look at, or even `print(dump(tree, color=True))`. Look at the docstrings of those functions for other possibly useful parameters. Both functions are available in the top-level namespace of `mcpyrate`.
 
  - To troubleshoot **multi-phase compilation**, see `step_phases` in `mcpyrate.debug`. Just macro-import it (`from mcpyrate.debug import macros, step_phases`). It will show you the unparsed source code of each phase just after AST extraction.
 
