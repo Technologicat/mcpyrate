@@ -88,12 +88,18 @@ So the "time" must be considered separately for each source file.
 
 Furthermore, if you use [multi-phase compilation](main.md#multi-phase-compilation) (a.k.a. `with phase`), then in a particular source file, each phase will have its own macro-expansion time as well as its own run time. For any `k >= 0`, the run time of phase `k + 1` is the macro expansion time of phase `k`.
 
-This is something to keep in mind when developing macros where the macro implementation itself is macro-enabled code (vs. just emitting macro invocations in the output AST). (Since the [quasiquote system](quasiquotes.md) is built on macros, this includes any macros that use `q`.)
+This is something to keep in mind when developing macros where the macro implementation itself is macro-enabled code (vs. just emitting macro invocations in the output AST). Since the [quasiquote system](quasiquotes.md) is built on macros, this includes any macros that use `q`.
 
 
 ## My macro needs to fill in `lineno` recursively, any recommendations?
 
 See [`mcpyrate.astfixers.fix_locations`](../mcpyrate/astfixers.py), which is essentially an improved `ast.fix_missing_locations`. You'll likely want either `mode="overwrite"` or `mode="reference"`, depending on what your macro does.
+
+```python
+from mcpyrate.astfixers import fix_locations
+
+fix_locations(tree, reference_node, mode="reference")
+```
 
 There's also the stdlib barebones solution:
 
