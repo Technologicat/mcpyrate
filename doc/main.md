@@ -46,6 +46,7 @@
 - [The import algorithm](#the-import-algorithm)
 - [Macro expansion error reporting](#macro-expansion-error-reporting)
     - [Recommended exception types](#recommended-exception-types)
+    - [Reserved exception type `mcpyrate.core.MacroApplicationError`](#reserved-exception-type-mcpyratecoremacroapplicationerror)
     - [Nested exceptions](#nested-exceptions)
     - [Differences to `macropy`](#differences-to-macropy-2)
 
@@ -888,29 +889,42 @@ Each code snippet is shown as it was after the last successful macro expansion, 
 
 ## Recommended exception types
 
-We recommend raising:
+For errors detected **at macro expansion time**, we recommend raising:
 
  - `SyntaxError` with a descriptive message, if there's something wrong with how the macro was invoked, or with the AST layout of the `tree` (or `args`) it got vs. what it was expecting.
- - `TypeError` or a `ValueError`, as appropriate if there is a problem in the macro arguments meant for the macro itself. (As opposed to macro arguments such as in the `let` example, where `args` is just another place to send in an AST to be transformed.)
- - `mcpyrate.core.MacroExpansionError` if something else macro-related went wrong.
+ - `TypeError` or `ValueError` as appropriate, if there is a problem in the macro arguments meant for the macro itself. (As opposed to macro arguments such as in the `let` demo, where `args` is just another place to send in an AST to be transformed.)
+ - `mcpyrate.core.MacroExpansionError`, or a custom descendant of it, if something else macro-related went wrong.
 
-In general, you can use any exception type as appropriate, except `mcpyrate.core.MacroApplicationError`, which only exists for internal use by the expander core. This one type gets automatically telescoped (i.e. intermediate stack traces of causes are omitted); it is used internally for generating the use site report when an exception is raised during macro expansion.
+Some operations represented by a macro may inject a call to a run-time part of that operation itself (e.g. the [quasiquote system](quasiquotes.md) does this). For errors detected **at run time of the use site**:
 
-Furthermore, if the program is being run through the `macropython` wrapper, `macropython` will strip most of the traceback for `MacroApplicationError` (and for this one type only!), because that traceback is typically very long, and speaks (only) of things such as `macropython` itself, the importer, and the macro expander. The actually relevant tracebacks, for the client code, are contained within the linked ("direct cause") exceptions.
+ - Use whichever exception type you would in regular Python code that doesn't use macros. For example, a `TypeError`, `ValueError` or `RuntimeError` may be appropriate.
+
+
+## Reserved exception type `mcpyrate.core.MacroApplicationError`
+
+Generally speaking, for reporting errors in your macro-related code, you can use any exception type as appropriate, except `mcpyrate.core.MacroApplicationError`, which is **reserved for the expander core**.
+
+This is not to be confused with `mcpyrate.core.MacroExpansionError`, which is just fine to use. The public API of `mcpyrate.core` reflects this; `MacroExpansionError` is considered public, whereas `MacroApplicationError` is not.
+
+The type `mcpyrate.core.MacroApplicationError` is automatically used for reporting errors during macro expansion, when an exception propagates from a macro function into the expander that was calling that macro function. The name means **error detected while a macro was being applied** (it has nothing to do with the other sense of *application*, as in a program).
+
+`MacroApplicationError` instances undergo some special processing. The expander automatically telescopes them: intermediate stack traces of causes are omitted, and the macro use site messages are combined.
+
+Furthermore, if the program is being run through the `macropython` wrapper, `macropython` will strip most of the traceback for `MacroApplicationError` (for this one exception type only!), because that traceback is typically very long, and speaks (only) of things such as `macropython` itself, the importer, and the macro expander. The actually relevant tracebacks, for the client code, are contained within the linked (`__cause__`, *"The above exception was the direct cause..."*) exceptions.
 
 
 ## Nested exceptions
 
-In macros, it is especially important to pay attention to the clarity of the error report when using nested exceptions, because a basic macro-expansion error report itself already consists of two parts: the macro code that raised the error, and the macro use site.
+In macros, it is especially important to focus on the clarity of the error report when using nested exceptions, because a basic macro-expansion error report itself already consists of two parts: the macro code that raised the error, and the macro use site.
 
-Any nested exceptions add more parts to the start of the chain. This, in turn, buries the report for the final problem location in the macro code into the middle of the full error report (as the second-last item, just before the macro use site report that is always last), potentially making the report harder to read.
+Any nested exceptions add more parts to the start of the chain. This, in turn, buries the report for the final problem location in the macro code into the middle of the full error report (as the second-last item, just before the macro use site report that is always last). This may make the error report harder to read.
 
 So, if you use nested exceptions:
 
- - If the original exception is relevant *to the user* of your macro, then use `raise ... from ...` to report it, too.
- - If the original exception is internal to your macro implementation (and you don't need it for bug reports), then just `raise ...`.
+ - If the original exception is relevant *to the user* of your macro, then it's fine - use `raise ... from ...` to report it, too.
+ - If the original exception is internal to your macro implementation (and you don't need its traceback for issue reports against your own code), then just `raise ...`.
 
-In the second case, sometimes, swallowing the original exception makes for a clearer traceback. There are two main ways to do this. The first one is to raise the user-relevant exception outside the original `except` block, to break the context chain:
+In the second case, sometimes, hiding the original exception makes for a clearer traceback. There are two main ways to do this. The first one is to raise the user-relevant exception outside the original `except` block, to break the exception context chain:
 
 ```python
 success = True
@@ -922,7 +936,7 @@ if not success:
     raise SomeRelevantException(...)
 ```
 
-This, however, completely loses the original context. It may be better to leave it available for introspection in the `__context__` magic attribute, but tell Python that you don't want it printed in the backtrace (see [the exception docs](https://docs.python.org/3/library/exceptions.html)):
+That, however, completely loses the original context. It is better to leave it available for introspection in the exception instance's `__context__` magic attribute (so that it can be accessed by a post-mortem debugger, or logged), but tell Python that you don't want it printed in the backtrace (see [the exception docs](https://docs.python.org/3/library/exceptions.html)):
 
 ```python
 try:
@@ -933,11 +947,13 @@ except SomeInternalException:
     raise err
 ```
 
+`mcpyrate` itself uses this pattern in some places.
+
 
 ## Differences to `macropy`
 
-In `mcpyrate`, `AssertionError` is **not** treated specially; any exception (except `mcpyrate.core.MacroApplicationError`) raised while expanding a macro gets the same treatment.
+In `mcpyrate`, `AssertionError` is **not** treated specially; any instance of `Exception` (except `mcpyrate.core.MacroApplicationError`) raised while expanding a macro gets the same treatment.
 
 In `mcpyrate`, all macro-expansion errors are reported immediately at macro expansion time.
 
-The [quasiquote system](quasiquotes.md) **does** report some errors at run time, but it does so only when that's the earliest time possible, e.g. due to needing an unquoted value to become available before its validity can be checked. Note the error is still usually reported at the macro expansion time *of your macro*, which contains the use site of `q`. But it does mean *your macro* must be invoked before such an error can be triggered.
+The [quasiquote system](quasiquotes.md) **does** report some errors at run time, but it does so only when that's the earliest time possible, e.g. due to needing an unquoted value to become available before its validity can be checked. Note the error is still usually reported at the macro expansion time *of your macro*, which contains the use site of `q`. But it does mean *your macro* must be invoked before such an error can be detected.

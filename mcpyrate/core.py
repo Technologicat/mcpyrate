@@ -19,19 +19,27 @@ global_bindings = {}
 class MacroExpansionError(Exception):
     """Base class for errors specific to macro expansion.
 
-    We recommend raising:
+    For errors detected **at macro expansion time**, we recommend raising:
 
      - `SyntaxError` with a descriptive message, if there's something wrong
        with how the macro was invoked, or with the AST layout of the `tree`
        (or `args`) it got vs. what it was expecting.
 
-     - `TypeError` or a `ValueError`, as appropriate if there is a problem in
+     - `TypeError` or `ValueError` as appropriate, if there is a problem in
        the macro arguments meant for the macro itself. (As opposed to macro
        arguments such as in the `let` demo, where `args` is just another
        place to send in an AST to be transformed.)
 
-     - `MacroExpansionError` (or a custom descendant of it) if something else
+     - `MacroExpansionError`, or a custom descendant of it, if something else
        macro-related went wrong.
+
+    Some operations represented by a macro may inject a call to a run-time part
+    of that operation itself (e.g. the quasiquote system does this). For errors
+    detected **at run time of the use site**:
+
+     - Use whichever exception type you would in regular Python code that
+       doesn't use macros. For example, a `TypeError`, `ValueError` or
+       `RuntimeError` may be appropriate.
     """
 
 class MacroApplicationError(MacroExpansionError):
