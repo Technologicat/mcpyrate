@@ -1,4 +1,9 @@
 # -*- coding: utf-8; -*-
+"""Demos from `mcpy` 2.0.0, converted to `mcpyrate` and Python 3.6+.
+
+Note that these demos do not use quasiquotes, because that feature
+was added in `mcpyrate`.
+"""
 
 from ast import (Call, arg, Name, Attribute, Str, FunctionDef, Assign,
                  NodeTransformer, copy_location)
