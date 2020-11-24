@@ -213,6 +213,7 @@ class BaseMacroExpander(NodeTransformer):
         try:
             if expansion is not None and not isinstance(expansion, AST):
                 expansion = list(expansion)
+
             if isinstance(expansion, AST) or expansion is None:
                 pass  # ok
             elif isinstance(expansion, list):
