@@ -20,7 +20,7 @@ with phase[1]:  # The phase number must be a positive integer literal.
 
     def block(tree, *, syntax, **kw):
         if syntax != "block":
-            raise SyntaxError("sorry, block macro only")
+            raise SyntaxError("`block` is a block macro only")
         f("Expanding macro `block` defined in phase 1.")
         with step_expansion:
             with q as quoted:
