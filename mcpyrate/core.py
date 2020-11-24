@@ -50,8 +50,7 @@ class MacroApplicationError(MacroExpansionError):
     inside-out).
 
     The `macropython` wrapper also strips most of the traceback when it catches
-    an exception of this type. There is only one place in the whole codebase
-    that emits `MacroApplicationError`. We know that for that one particular use,
+    an exception of this type. We know that for the internal uses of this type,
     the traceback speaks of things such as `macropython` itself, the importer,
     and the macro expander, and it is typically very long. The linked ("direct
     cause") exceptions contain the actually relevant, client code tracebacks.
