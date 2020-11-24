@@ -210,7 +210,6 @@ class BaseMacroExpander(NodeTransformer):
                 raise ApplyMacroError(msg) from err
 
         # Convert possible iterable result to `list`, then typecheck macro output.
-        output_type_ok = True
         try:
             if expansion is not None and not isinstance(expansion, AST):
                 expansion = list(expansion)
@@ -222,11 +221,11 @@ class BaseMacroExpander(NodeTransformer):
             else:
                 raise MacroExpansionError
         except Exception:
-            output_type_ok = False
-        if not output_type_ok:
             reason = f"expected macro to return AST node, iterable of AST nodes, or None; got {type(expansion)} with value {repr(expansion)}"
             msg = f"{loc}\n{reason}"
-            raise MacroExpansionError(msg)
+            err = MacroExpansionError(msg)
+            err.__suppress_context__ = True
+            raise err
 
         return self._visit_expansion(expansion, target)
 
