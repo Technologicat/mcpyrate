@@ -938,7 +938,7 @@ if not success:
     raise SomeRelevantException(...)
 ```
 
-That, however, completely loses the original context. It is better to leave it available for introspection in the exception instance's `__context__` magic attribute (so that it can be accessed by a post-mortem debugger, or logged), but tell Python that you don't want it printed in the backtrace (see [the exception docs](https://docs.python.org/3/library/exceptions.html)):
+That, however, completely loses the original context. It is better to leave it available for introspection in the exception instance's `__context__` magic attribute (so that it can be accessed by a post-mortem debugger, or logged), but tell Python that you don't want it printed in the traceback:
 
 ```python
 try:
@@ -948,6 +948,8 @@ except SomeInternalException:
     err.__suppress_context__ = True
     raise err
 ```
+
+This makes Python skip printing the `SomeInternalException`, as well as suppresses the *"During handling of the above exception, another exception occurred"* message belonging to that exception. See [the exception docs](https://docs.python.org/3/library/exceptions.html).
 
 `mcpyrate` itself uses this pattern in some places.
 
