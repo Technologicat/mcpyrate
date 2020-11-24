@@ -78,17 +78,17 @@ When interpreting the output, keep in mind in which order various kinds of trans
 
 ## Macro expansion time where exactly?
 
-The "time", as in *macro expansion time* vs. *run time*, is fundamentally a local concept, not a global one.
+The "time", as in *macro expansion time* vs. *run time*, is fundamentally a local concept, not a global one. As the old saying goes, *it's always five'o'clock **somewhere***.
 
-This is something to keep in mind when developing macros where the macro implementation itself is macro-enabled code (vs. just emitting macro invocations in the output AST). Since the [quasiquote system](quasiquotes.md) is built on macros, this includes any macros that use `q`.
-
-As an example, consider a macro `mymacro`, which uses `q` to define an AST using the quasiquote notation. When `mymacro` reaches run time, any macro invocations used as part of its own implementation (such as the `q`) are already long gone. On the other hand, the use site of `mymacro` has not yet reached run time - for that use site, it is still macro expansion time.
+As an example, consider a macro `mymacro`, which uses `mcpyrate.quotes.q` to define an AST using the quasiquote notation. When `mymacro` reaches run time, any macro invocations used as part of its own implementation (such as the `q`) are already long gone. On the other hand, the use site of `mymacro` has not yet reached run time - for that use site, it is still macro expansion time.
 
 Any macros that `mymacro` invokes in its output AST are just data, to be spliced in to the use site. By default, they'll expand (run!) after `mymacro` has returned.
 
-As the old saying goes, *it's always five'o'clock **somewhere***. *There is no global macro expansion time* - the "time" must be considered separately for each source file.
+So the "time" must be considered separately for each source file.
 
 Furthermore, if you use [multi-phase compilation](main.md#multi-phase-compilation) (a.k.a. `with phase`), then in a particular source file, each phase will have its own macro-expansion time as well as its own run time. For any `k >= 0`, the run time of phase `k + 1` is the macro expansion time of phase `k`.
+
+This is something to keep in mind when developing macros where the macro implementation itself is macro-enabled code (vs. just emitting macro invocations in the output AST). (Since the [quasiquote system](quasiquotes.md) is built on macros, this includes any macros that use `q`.)
 
 
 ## My macro needs to fill in `lineno` recursively, any recommendations?
