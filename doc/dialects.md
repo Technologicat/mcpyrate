@@ -28,7 +28,15 @@
 
 # Introduction
 
-Dialects are essentially *whole-module source and AST transformers*. Think [Racket's](https://racket-lang.org/) `#lang`, but for Python. Source transformers are akin to *reader macros* in the Lisp family.
+Syntactic macros have two main limitations as to what and how they can transform. As is noted in [The Racket Guide, chapter 17: Creating Languages](https://docs.racket-lang.org/guide/languages.html):
+
+ - *a macro cannot restrict the syntax available in its context or change the meaning of surrounding forms; and*
+
+ - *a macro can extend the syntax of a language only within the parameters of the language’s lexical conventions [...].*
+
+*Dialects* provide infrastructure that can be used to overcome both of these limitations.
+
+Dialects are essentially *whole-module source and AST transformers*. Think [Racket's](https://racket-lang.org/) `#lang`, but for Python. Source transformers are akin to *reader macros* in the Lisp family (*reader extensions* in Racket).
 
 Dialects allow you to define languages that use Python's surface syntax, but change the semantics; or let you plug in a per-module transpiler that (at import time) compiles source code from some other programming language into macro-enabled Python. Also an AST [optimizer](http://compileroptimizations.com/) could be defined as a dialect.
 
