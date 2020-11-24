@@ -26,7 +26,7 @@ from .utils import gensym, scrub_uuid, flatten, extract_bindings, NestingLevelTr
 
 
 def _mcpyrate_quotes_attr(attr):
-    """Create an AST that, when compiled and run, looks up `mcpyrate.quotes.attr` in `Load` context."""
+    """Create an AST that, when compiled and run, looks up `mcpyrate.quotes.attr`."""
     mcpyrate_quotes_module = ast.Attribute(value=ast.Name(id="mcpyrate"), attr="quotes")
     return ast.Attribute(value=mcpyrate_quotes_module, attr=attr)
 

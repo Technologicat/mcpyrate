@@ -48,7 +48,7 @@ from .quotes import q, astify, unastify, capture_value
 
 
 def _mcpyrate_metatools_attr(attr):
-    """Create an AST that, when compiled and run, looks up `mcpyrate.metatools.attr` in `Load` context."""
+    """Create an AST that, when compiled and run, looks up `mcpyrate.metatools.attr`."""
     mcpyrate_metatools_module = ast.Attribute(value=ast.Name(id="mcpyrate"), attr="metatools")
     return ast.Attribute(value=mcpyrate_metatools_module, attr=attr)
 
