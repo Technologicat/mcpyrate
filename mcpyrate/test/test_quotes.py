@@ -8,11 +8,38 @@ from .macros import (macros, test_q, test_hq,  # noqa: F401, F811
 
 import ast
 
+from ..astfixers import fix_locations
+from ..core import global_postprocess
 from ..quotes import unastify
 from ..unparser import unparse
 
 def f():
     return "f from macro use site"
+
+
+def fake_import(tree):
+    """Take a list of statements, wrap it in an `ast.Module`, and `compile` it.
+
+    `tree`: `list` of statement AST nodes.
+
+    Return value is a code object, ready for `exec`.
+
+    This is a poor man's approximation of what the importer does, so that
+    we can locally test how a given block of statements behaves at run time.
+    """
+    module = ast.Module(body=tree)
+
+    # This would be done by core for each individual macro expansion,
+    # using the appropriate source location info.
+    reference_node = ast.Constant(value=None, lineno=1, col_offset=1)
+    fix_locations(tree, reference_node, mode="reference")
+
+    # This would be done by core for the whole module. (This fixes the ctx.)
+    tree = global_postprocess(tree)
+
+    code = compile(module, filename="<string>", mode="exec", dont_inherit=True)
+    return code
+
 
 def test():
     # q: quasiquote (has both expr and block modes)
@@ -47,7 +74,7 @@ def test():
     assert type(quv) is ast.Constant
     assert quv.value == v
 
-    # n[]: string -> identifier
+    # n[]: parse and evaluate Python code (e.g. string -> lexical identifier)
     qnx = q[n["x"]]  # same as q[x], the point of n[] is that the argument may be a variable.
     assert type(qnx) is ast.Name
     assert qnx.id == "x"
@@ -60,6 +87,23 @@ def test():
     qnss = q[n[nom + nom]]  # expressions that evaluate to a string are ok, too.
     assert type(qnss) is ast.Name
     assert qnss.id == nom + nom
+
+    # Thanks to the ctx fixer, `n[]` can also appear on the LHS of an assignment.
+    # (Indeed, any unquote can, if the end result makes sense syntactically.)
+    with q as quoted:
+        n[nom] = 42
+    # Testing hack: because we're not in a macro (that could just return `tree`
+    # to the importer), we have to compile and exec `tree` manually to run it.
+    namespace = {}
+    exec(fake_import(quoted), namespace)
+    assert namespace["x"] == 42
+
+    # `n[]` can also appear in a `del`:
+    assert "x" in namespace
+    with q as quoted:
+        del n[nom]
+    exec(fake_import(quoted), namespace)
+    assert "x" not in namespace
 
     # a[]: AST literal
     nam = ast.Name(id=nom)
