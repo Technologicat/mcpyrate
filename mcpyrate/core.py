@@ -187,54 +187,56 @@ class BaseMacroExpander(NodeTransformer):
         macro function, place them in a dictionary and pass that dictionary
         as `kw`.
         """
-        loc = format_location(self.filename, target, sourcecode)
-
-        macro = self.isbound(macroname)
-        if not macro:
-            raise MacroExpansionError(f"{loc}\nThe name '{macroname}' is not bound to a macro.")
+        loc = format_location(self.filename, target, sourcecode)  # macro use site
 
         kw = kw or {}
-        kw.update({
-            "syntax": syntax,
-            "expander": self,
-            "invocation": target})
+        kw.update({"syntax": syntax,
+                   "expander": self,
+                   "invocation": target})
 
-        # Expand the macro.
         try:
+            # Resolve macro binding.
+            macro = self.isbound(macroname)
+            if not macro:  # pragma: no cover
+                raise MacroApplicationError(f"{loc}\nin {syntax} macro invocation for '{macroname}': the name '{macroname}' is not bound to a macro.")
+
+            # Expand the macro.
             expansion = _apply_macro(macro, tree, kw)
+
+            # Convert possible iterable result to `list`, then typecheck macro output.
+            try:
+                if expansion is not None and not isinstance(expansion, AST):
+                    expansion = list(expansion)
+
+                if isinstance(expansion, AST) or expansion is None:
+                    pass  # ok
+                elif isinstance(expansion, list):
+                    if not all(isinstance(elt, AST) for elt in expansion):
+                        raise TypeError("Expected all elements of list returned by macro function to be ASTs")
+                else:
+                    raise TypeError("Unexpected return type from macro function")
+            except Exception:
+                reason = f"in {syntax} macro invocation for '{macroname}': expected macro to return AST node, iterable of AST nodes, or None; got {type(expansion)} with value {repr(expansion)} (after iterable to list conversion)"
+                msg = f"{loc}\n{reason}"
+                err = MacroApplicationError(msg)
+                err.__suppress_context__ = True
+                raise err
+
+        # If something went wrong, generate a standardized macro use site report.
         except Exception as err:
             msg = f"{loc}\nin {syntax} macro invocation for '{macroname}'"
-            # There is just one place in the whole codebase that should emit `MacroApplicationError`: **right here**.
             if isinstance(err, MacroApplicationError) and err.__cause__:  # telescope nested use site reports
                 oldmsg = err.args[0]
                 oldmsg_lines = oldmsg.split("\n")
-                hint = "A syntax transformer raised an exception during macro expansion.\n\nMacro use site (most recent macro application last):"
-                hint_length_in_lines = len(hint.split("\n"))
-                if oldmsg_lines[0] == hint:
+                hint = "An exception occurred during macro expansion.\n\nMacro use site (most recent macro application last):"
+                hint_lines = hint.split("\n")
+                hint_length_in_lines = len(hint_lines)
+                if oldmsg_lines[0] == hint_lines[0]:
                     oldmsg = "\n".join(oldmsg_lines[hint_length_in_lines:])
                 msg = f"{hint}\n{msg}\n{oldmsg}"
                 raise MacroApplicationError(msg).with_traceback(err.__traceback__) from err.__cause__
             else:
                 raise MacroApplicationError(msg) from err
-
-        # Convert possible iterable result to `list`, then typecheck macro output.
-        try:
-            if expansion is not None and not isinstance(expansion, AST):
-                expansion = list(expansion)
-
-            if isinstance(expansion, AST) or expansion is None:
-                pass  # ok
-            elif isinstance(expansion, list):
-                if not all(isinstance(elt, AST) for elt in expansion):
-                    raise MacroExpansionError("Expected all elements of list returned by macro function to be ASTs")
-            else:
-                raise MacroExpansionError("Unexpected return type from macro function")
-        except Exception:
-            reason = f"in {syntax} macro invocation for '{macroname}': expected macro to return AST node, iterable of AST nodes, or None; got {type(expansion)} with value {repr(expansion)} (after iterable to list conversion)"
-            msg = f"{loc}\n{reason}"
-            err = MacroExpansionError(msg)
-            err.__suppress_context__ = True
-            raise err
 
         return self._visit_expansion(expansion, target)
 
