@@ -9,7 +9,7 @@ We build on `mcpy` 2.0.0, but add a lot of new features.
 **New**:
 
 - **Agile development tools**.
-  - [Multi-phase compilation](README.md#multi-phase-compilation): Use macros also in the same module where they are defined.
+  - [Multi-phase compilation](doc/main.md#multi-phase-compilation): Use macros also in the same module where they are defined.
   - Universal bootstrapper: `macropython`. Import and use macros in your main program.
   - Interactive console: `macropython -i`. Import, define and use macros in a console session.
     - Embeddable à la `code.InteractiveConsole`. See `mcpyrate.repl.console.MacroConsole`.

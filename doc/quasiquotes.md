@@ -736,7 +736,7 @@ Whether working with quasiquoted code, or thinking about how the quasiquote syst
 
 Below, let `mymacro` be a macro that uses `q` to build (part of) its output AST.
 
- - "Time" (as in macro expansion time vs. run time) [must be considered separately for each source file](../README.md#macro-expansion-time-where-exactly).
+ - "Time" (as in *macro expansion time* vs. *run time*) [must be considered separately for each source file](troubleshooting.md#macro-expansion-time-where-exactly).
  - As for how `q` works, the question is: how does one lift the input AST of a macro, from macro expansion time (of the macro's use site), into the corresponding AST, at run time (of the macro's use site)?
    - *We make a new AST for code that, when it runs, it builds the original input AST **as a run-time value**.* In `mcpyrate`, the function that does this is called `astify`.
    - For example, consider the expression `q[cat]`, appearing inside the definition of `mymacro`. The input AST to `q` is `ast.Name(id='cat')`. Roughly speaking, the `q` macro outputs the "astified" AST `ast.Call(ast.Name, [], [ast.keyword('id', ast.Constant(value='cat'))])`.
