@@ -109,7 +109,7 @@ familiar with Common Lisp's `defmacro` (or if you've been reading
 [Seibel](http://www.gigamonkeys.com/book/) or
 [Graham](http://paulgraham.com/onlisp.html)), you'll feel almost right at home.
 
-The system is similar in flavor to [`macropy`'s quasiquote system](https://macropy3.readthedocs.io/en/latest/reference.html#quasiquotes), but with some important differences.
+The system is similar in flavor to [`macropy`'s quasiquote system](https://macropy3.readthedocs.io/en/latest/reference.html#quasiquotes), but with [some important differences](#differences-to-macropy).
 
 
 # Avoiding name conflicts at the macro use site
