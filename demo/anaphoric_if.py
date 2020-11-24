@@ -1,7 +1,7 @@
 # -*- coding: utf-8; -*-
 """Advanced tricks, part 2. Building an anaphoric if, with a context-sensitive `it`.
 
-Run as `macropython demo/anaphoric_if.py`.
+Run as `macropython demo/anaphoric_if.py` (needs `let.py` from the same set of demos).
 """
 
 __all__ = ["aif", "it"]
