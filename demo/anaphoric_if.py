@@ -4,6 +4,8 @@
 Run as `macropython demo/anaphoric_if.py`.
 """
 
+__all__ = ["aif", "it"]
+
 from mcpyrate.multiphase import macros, phase
 from mcpyrate.debug import macros, step_expansion  # noqa: F811
 

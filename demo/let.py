@@ -1,6 +1,8 @@
 # -*- coding: utf-8; -*-
 """Advanced tricks, part 1. Building simple `let` expressions for Python."""
 
+__all__ = ["let", "letseq"]
+
 from mcpyrate.multiphase import macros, phase
 from mcpyrate.debug import macros, step_expansion  # noqa: F811
 # from mcpyrate.debug import macros, step_phases  # uncomment this line to see the multiphase compilation
