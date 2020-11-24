@@ -110,6 +110,8 @@ def test():
     # --------------------------------------------------------------------------------
     # expand macros in quoted code (returns quoted result)
 
+    # The `s` variants operate at macro expansion time.
+
     # expand1s[...] expands once
     assert first[21] == 2 * 21
     assert unparse(q[first[21]]) == "first[21]"
