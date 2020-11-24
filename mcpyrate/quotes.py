@@ -726,9 +726,10 @@ def a(tree, *, syntax, expander, **kw):
 
         a[expr]
 
-    `expr` must evaluate, at the use site of `q`, to an *expression* AST node,
-    or in certain contexts where that is valid in the AST, a `list` of
-    *expression* AST nodes.
+    The expression `expr` must evaluate, at run time at the use site of the
+    surrounding `q`, to an *expression* AST node, an AST marker containing
+    an *expression* AST node in its `body` attribute, or in certain contexts
+    where that is valid in the AST, a `list` of such values.
 
     Typically, `expr` is the name of a variable that holds such data, but
     it doesn't have to be; any expression that evaluates to acceptable data
@@ -746,8 +747,9 @@ def a(tree, *, syntax, expander, **kw):
             stmts
             ...
 
-    Each `stmts` must evaluate to either a single *statement* AST node,
-    or a `list` of *statement* AST nodes.
+    Each `stmts` must evaluate, at run time at the use site of the surrounding `q`,
+    to a *statement* AST node, an AST marker containing a *statement* AST node in
+    its `body` attribute, or a `list` of such values.
 
     Typically, `stmts`t is the name of a variable that holds such data, but
     it doesn't have to be; any expression that evaluates to acceptable data
