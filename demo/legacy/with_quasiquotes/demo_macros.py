@@ -1,12 +1,13 @@
 # -*- coding: utf-8; -*-
 """Demos from `mcpy` 2.0.0, converted to `mcpyrate` and Python 3.6+.
 
-This is the classic version, no quasiquotes. It is a straightforward port
-of the original demo.
+This version uses quasiquotes, a feature that was added in `mcpyrate`.
+It is otherwise a straightforward port of the original demo.
 """
 
-from ast import (Call, arg, Name, Attribute, Constant, FunctionDef, Assign,
-                 NodeTransformer, copy_location)
+from mcpyrate.quotes import macros, q, u, n, a  # noqa: F401
+
+from ast import arg, Assign, Name, FunctionDef, NodeTransformer
 from mcpyrate import unparse
 
 def customliterals(statements, *, expander, **kw):
@@ -38,8 +39,7 @@ def log(expr, **kw):
         # d['a']: 1
     '''
     label = unparse(expr) + ': '
-    return Call(func=Name(id='print'),
-                args=[Constant(value=label), expr], keywords=[])
+    return q[print(u[label], a[expr])]
 
 def value(classdef, **kw):
     '''
@@ -57,10 +57,11 @@ def value(classdef, **kw):
     '''
     symbols = _gather_symbols(classdef)
     baked_class = _IntoValueTransformer(symbols).visit(classdef)
-    replacement = Assign(targets=[Name(id=baked_class.name)],
-                         value=Call(func=Name(id=baked_class.name),
-                                    args=[], keywords=[]))
-    return [baked_class, replacement]
+    with q as replacement:
+        with a:
+            baked_class
+        n[baked_class.name] = n[baked_class.name]()
+    return replacement
 
 class _WrapLiterals(NodeTransformer):
     '''
@@ -71,11 +72,7 @@ class _WrapLiterals(NodeTransformer):
         '''
         Convert `node` into `fname(node)`
         '''
-        return copy_location(
-            Call(func=Name(id=fname),
-                 args=[node], keywords=[]),
-            node
-        )
+        return q[n[fname](a[node])]
 
     def visit_Constant(self, node):  # Python 3.8+
         v = node.value
@@ -144,10 +141,7 @@ class _NameBinder(NodeTransformer):
         '''
         self_name = name
         if name.id in self._symbols:
-            self_name = Attribute(value=Name(id='self'),
-                                  attr=name.id)
-            copy_location(self_name, name)
-
+            self_name = q[n["self." + name.id]]
         return self_name
 
 
