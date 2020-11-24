@@ -260,7 +260,7 @@ def log(expr, **kw):
     '''[syntax, expr] Replace log[expr] with print('expr: ', expr)'''
     label = unparse(expr) + ': '
     return Call(func=Name(id='print', ctx=Load()),
-                args=[Str(s=label), expr], keywords=[])
+                args=[Constant(value=label), expr], keywords=[])
 ```
 
 
