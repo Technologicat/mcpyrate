@@ -224,7 +224,16 @@ class BaseMacroExpander(NodeTransformer):
         # If something went wrong, generate a standardized macro use site report.
         except Exception as err:
             msg = f"{loc}\nin {syntax} macro invocation for '{macroname}'"
-            if isinstance(err, MacroApplicationError) and err.__cause__:  # telescope nested use site reports
+            if isinstance(err, MacroApplicationError) and err.__cause__:
+                # Telescope nested use site reports, by keeping the original
+                # traceback and `__cause__`, but combining the messages.
+                #
+                # When macro invocations are nested, the `expand` call
+                # that is processing the innermost macro raises first.
+                # So when the next outer one catches the exception,
+                # it should add its own message to the beginning,
+                # to make the report read in an outside-in order,
+                # similarly to a Python traceback.
                 oldmsg = err.args[0]
                 oldmsg_lines = oldmsg.split("\n")
                 hint = "An exception occurred during macro expansion.\n\nMacro use site (most recent macro application last):"
@@ -235,6 +244,12 @@ class BaseMacroExpander(NodeTransformer):
                 msg = f"{hint}\n{msg}\n{oldmsg}"
                 raise MacroApplicationError(msg).with_traceback(err.__traceback__) from err.__cause__
             else:
+                # Not nested; tack on a `MacroApplicationError` with
+                # use site info to whatever exception we originally got.
+                #
+                # Use site report telescoping uses the fact that this
+                # is the only raise-from for a `MacroApplicationError`.
+                # So if it has a `__cause__`, it came from here.
                 raise MacroApplicationError(msg) from err
 
         return self._visit_expansion(expansion, target)
