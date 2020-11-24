@@ -69,6 +69,7 @@
     - [I tried making a Debian package out of an app that uses `mcpyrate`, and it's not working?](#i-tried-making-a-debian-package-out-of-an-app-that-uses-mcpyrate-and-its-not-working)
 - [Macro expansion error reporting](#macro-expansion-error-reporting)
     - [Recommended exception types](#recommended-exception-types)
+    - [Nested exceptions](#nested-exceptions)
     - [Differences to `macropy`](#differences-to-macropy-2)
 
 <!-- markdown-toc end -->
@@ -1215,6 +1216,41 @@ We recommend raising:
 In general, you can use any exception type as appropriate, except `mcpyrate.core.ApplyMacroError`, which only exists for internal use by the expander core. This one type gets automatically telescoped (i.e. intermediate stack traces of causes are omitted); it is used internally for generating the use site report when an exception is raised during macro expansion.
 
 Furthermore, if the program is being run through the `macropython` wrapper, `macropython` will strip most of the traceback for `ApplyMacroError` (and for this one type only!), because that traceback is typically very long, and speaks (only) of things such as `macropython` itself, the importer, and the macro expander. The actually relevant tracebacks, for the client code, are contained within the linked ("direct cause") exceptions.
+
+
+## Nested exceptions
+
+In macros, it is especially important to pay attention to the clarity of the error report when using nested exceptions, because a basic macro-expansion error report itself already consists of two parts: the macro code that raised the error, and the macro use site.
+
+Any nested exceptions add more parts to the start of the chain. This, in turn, buries the report for the final problem location in the macro code into the middle of the full error report (as the second-last item, just before the macro use site report that is always last), potentially making the report harder to read.
+
+So, if you use nested exceptions:
+
+ - If the original exception is relevant *to the user* of your macro, then use `raise ... from ...` to report it, too.
+ - If the original exception is internal to your macro implementation (and you don't need it for bug reports), then just `raise ...`.
+
+In the second case, sometimes, swallowing the original exception makes for a clearer traceback. There are two main ways to do this. The first one is to raise the user-relevant exception outside the original `except` block, to break the context chain:
+
+```python
+success = True
+try:
+    epic_fail()
+except SomeInternalException:
+    success = False
+if not success:
+    raise SomeRelevantException(...)
+```
+
+This, however, completely loses the original context. It may be better to leave it available for introspection in the `__context__` magic attribute, but tell Python that you don't want it printed in the backtrace (see [the exception docs](https://docs.python.org/3/library/exceptions.html)):
+
+```python
+try:
+    epic_fail()
+except SomeInternalException:
+    err = SomeRelevantException(...)
+    err.__suppress_context__ = True
+    raise err
+```
 
 
 ## Differences to `macropy`
