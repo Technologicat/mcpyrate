@@ -5,6 +5,7 @@
 - [REPL and `macropython`](repl.md)
 - [AST walkers](walkers.md)
 - [Dialects](dialects.md)
+- [Troubleshooting](troubleshooting.md)
 
 <!-- markdown-toc start - Don't edit this section. Run M-x markdown-toc-refresh-toc -->
 **Table of Contents**
