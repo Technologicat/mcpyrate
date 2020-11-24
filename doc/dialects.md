@@ -108,7 +108,7 @@ To put it all together, source transformers allow implementing things like:
 
 ```python
 # -*- coding: utf-8; -*-
-'''See https://en.wikipedia.org/wiki/Brainfuck#Examples'''
+"""See https://en.wikipedia.org/wiki/Brainfuck#Examples"""
 
 from mylibrary import dialects, Brainfuck
 
