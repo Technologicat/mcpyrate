@@ -9,7 +9,7 @@ from ast import (Call, arg, Name, Attribute, Str, FunctionDef, Assign,
                  NodeTransformer, copy_location)
 from mcpyrate import unparse
 
-def customliterals(statements, expander, **kw):
+def customliterals(statements, *, expander, **kw):
     '''
     Provide custom meaning to literals. Example:
 
