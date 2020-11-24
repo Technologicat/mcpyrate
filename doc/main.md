@@ -1195,9 +1195,13 @@ In order to fix this problem, you must provide a custom `postinst` script that g
 
 In `mcpyrate`, any exception raised during macro expansion is reported immediately at macro expansion time, and the program exits.
 
-The error report includes two source locations: the macro use site (which was being expanded, not running yet), and the macro code that raised the exception (that was running and was terminated due to the exception).
+The error report includes two source locations: the macro code that raised the exception (that was running and was terminated due to the exception), and the macro use site (which was being expanded, not running yet).
 
-The use site source location is reported in a chained exception (`raise from`), so if the second stack trace is long, scroll back in your terminal to see the original exception that was raised by the macro (including a traceback of where it occurred in the macro code).
+The use site source location is reported in a chained exception (`raise from`). Note that the use site report may show the unparsed source code in a partially macro-expanded state, depending on when the exception occurred.
+
+Each code snippet is shown as it was after the last successful macro expansion, i.e. just before the error occurred. This helps debug macros that output invocations of other macros, so you can see which step is failing. (If that's not immediately clear from the traceback, use the macro `mcpyrate.debug.step_expansion` to show the successful steps, too.)
+
+`mcpyrate` aims to produce compact error reports when an error occurs in a syntax transformer during macro expansion. Still, if a particular stack trace happens to be long, or if the report contains many chained exceptions, then as usual, scroll back in your terminal to see the details.
 
 
 ## Recommended exception types
@@ -1210,7 +1214,7 @@ We recommend raising:
 
 In general, you can use any exception type as appropriate, except `mcpyrate.core.ApplyMacroError`, which only exists for internal use by the expander core. This one type gets automatically telescoped (i.e. intermediate stack traces of causes are omitted); it is used internally for generating the use site report when an exception is raised during macro expansion.
 
-Furthermore, if the program is being run through the `macropython` wrapper, `macropython` will strip most of the traceback for `ApplyMacroError` (and for this one type only!), because that traceback speaks of things such as `macropython` itself, the importer, and the macro expander, and it is typically very long. The actually relevant tracebacks, for the client code, are contained within the linked ("direct cause") exceptions.
+Furthermore, if the program is being run through the `macropython` wrapper, `macropython` will strip most of the traceback for `ApplyMacroError` (and for this one type only!), because that traceback is typically very long, and speaks (only) of things such as `macropython` itself, the importer, and the macro expander. The actually relevant tracebacks, for the client code, are contained within the linked ("direct cause") exceptions.
 
 
 ## Differences to `macropy`
