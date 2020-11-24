@@ -269,7 +269,9 @@ The macro [`mcpyrate.metatools.expandsq`](../mcpyrate/metatools.py) produces res
 
 `u[expr]` unquotes `expr`. It evaluates the value of the expression `expr`
 at the macro definition site, and lifts the result into an AST that is
-spliced into the quoted code.
+spliced into the quoted code. Unquoting occurs at run time of the use site
+of the surrounding `q` (which is typically inside the implementation of
+one of your own macros).
 
 `expr` must evaluate to a value of a built-in type (number, string, bytes,
 boolean or None), a built-in container (`list`, `dict` or `set`) containing
@@ -352,14 +354,14 @@ the same as just `q[x]`. This is a useless use of `n[]`. The reason `n[]` exists
 at all is that its argument can be the result of a computation.
 
 Using `n[]` to name-unquote a string literal does shut up flake8 concerning
-the "undefined" name `x`, but for that use case, we recommend `# noqa: F821`.
+the "undefined" name `x`, but for that use case, we recommend [`# noqa: F821`](https://flake8.pycqa.org/en/latest/user/error-codes.html).
 
 Generalized from `macropy`'s `name`, which converts a string into a lexical variable access.
 
 
 ## `a`: ast-unquote
 
-Splice an existing AST into quoted code. This unquote supports both expr and block modes.
+Splice an existing AST value into quoted code. This unquote supports both expr and block modes.
 
 ### Expression mode
 
@@ -369,23 +371,23 @@ a[expr]
 
 The expression `expr` must evaluate, at run time at the use site of the
 surrounding `q`, to an *expression* AST node, an AST marker containing
-an *expression* AST node, or in certain contexts where that is valid
-in the AST, a `list` of such values.
+an *expression* AST node in its `body` attribute, or in certain contexts
+where that is valid in the AST, a `list` of such values.
 
 Typically, `expr` is the name of a variable that holds such data, but it
 doesn't have to be; any expression that evaluates to acceptable data is fine.
 
 An example of a context that accepts a `list` of expression nodes is the
 positional arguments of a function call. `q[myfunc(a[args])]` will splice
-the `list` `args` into the positional arguments of the `Call`. Of course,
-ast-unquoting single positional arguments such as `q[myfunc(a[arg1], a[arg2])]`
-is also fine.
+the `list` value `args` into the positional arguments of the `Call`. Each element
+of the `list` becomes one positional argument. Of course, ast-unquoting single
+positional arguments such as `q[myfunc(a[arg1], a[arg2])]` is also fine.
 
-The result is an *expression* AST, replacing the invocation of `a[]`. Note that
-if `a[]` appears in a statement position (inside a block mode `q`), it actually
-appears in the AST inside Python's invisible `ast.Expr` "expression statement"
-node. If you want to inject a tree to the raw statement position without a
-surrounding `ast.Expr`, use the block mode of `a`.
+The result of `a[]` is an *expression* AST, replacing the invocation of `a[]`.
+Note that if `a[]` appears in a statement position (inside a block mode `q`),
+it actually appears in the AST inside Python's invisible `ast.Expr` "expression
+statement" node. If you want to inject a tree to the raw statement position
+without a surrounding `ast.Expr`, use the block mode of `a`.
 
 The `a[]` operator will type-check at run time, at the use site of the
 surrounding `q`, that the value of `expr` is of the correct type.
@@ -399,8 +401,8 @@ with a:
 ```
 
 Each `stmts` must evaluate, at run time at the use site of the surrounding `q`,
-to a *statement* AST node, an AST marker containing a *statement* AST node,
-or a `list` of such values.
+to a *statement* AST node, an AST marker containing a *statement* AST node in
+its `body` attribute, or a `list` of such values.
 
 Typically, `stmts` is the name of a variable that holds such data, but it
 doesn't have to be; any expression that evaluates to acceptable data is fine.
@@ -631,7 +633,9 @@ things explicit.
 ## Syntactically allowed positions for unquotes
 
 Unquote operators may only appear inside quasiquoted code. This is checked at
-macro expansion time. Otherwise, they may appear anywhere a subscript expression
+macro expansion time.
+
+In quasiquoted code, unquote operators may appear anywhere a subscript expression
 is syntactically allowed.
 
 Especially, when `q` is used block mode, unquotes may appear on the LHS of an
