@@ -230,7 +230,7 @@ class BaseMacroExpander(NodeTransformer):
             else:
                 raise MacroExpansionError("Unexpected return type from macro function")
         except Exception:
-            reason = f"in {syntax} macro invocation for '{macroname}': expected macro to return AST node, iterable of AST nodes, or None; got {type(expansion)} with value {repr(expansion)}"
+            reason = f"in {syntax} macro invocation for '{macroname}': expected macro to return AST node, iterable of AST nodes, or None; got {type(expansion)} with value {repr(expansion)} (after iterable to list conversion)"
             msg = f"{loc}\n{reason}"
             err = MacroExpansionError(msg)
             err.__suppress_context__ = True
