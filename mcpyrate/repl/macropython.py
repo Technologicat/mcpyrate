@@ -13,7 +13,7 @@ import pathlib
 import sys
 
 from ..coreutils import relativize
-from ..core import ApplyMacroError
+from ..core import MacroApplicationError
 
 from .. import activate  # noqa: F401
 
@@ -101,7 +101,7 @@ def import_module_as_main(name, script_mode):
             spec.loader.exec_module(module)
         except Exception as err:
             sys.modules["__main__"] = _macropython_module
-            if isinstance(err, ApplyMacroError):
+            if isinstance(err, MacroApplicationError):
                 # To avoid noise, discard most of the traceback of the chained
                 # macro-expansion errors emitted by the expander core. The
                 # linked (`__cause__`) exceptions have the actual tracebacks.

@@ -34,7 +34,7 @@ class MacroExpansionError(Exception):
        macro-related went wrong.
     """
 
-class ApplyMacroError(MacroExpansionError):
+class MacroApplicationError(MacroExpansionError):
     """The expander core caught an exception while applying a macro function.
 
     The expander uses this type to automatically telescope use site reports
@@ -43,7 +43,7 @@ class ApplyMacroError(MacroExpansionError):
 
     The `macropython` wrapper also strips most of the traceback when it catches
     an exception of this type. There is only one place in the whole codebase
-    that emits `ApplyMacroError`. We know that for that one particular use,
+    that emits `MacroApplicationError`. We know that for that one particular use,
     the traceback speaks of things such as `macropython` itself, the importer,
     and the macro expander, and it is typically very long. The linked ("direct
     cause") exceptions contain the actually relevant, client code tracebacks.
@@ -196,8 +196,8 @@ class BaseMacroExpander(NodeTransformer):
             expansion = _apply_macro(macro, tree, kw)
         except Exception as err:
             msg = f"{loc}\nin {syntax} macro invocation for '{macroname}'"
-            # There is just one place in the whole codebase that should emit `ApplyMacroError`: **right here**.
-            if isinstance(err, ApplyMacroError) and err.__cause__:  # telescope nested use site reports
+            # There is just one place in the whole codebase that should emit `MacroApplicationError`: **right here**.
+            if isinstance(err, MacroApplicationError) and err.__cause__:  # telescope nested use site reports
                 oldmsg = err.args[0]
                 oldmsg_lines = oldmsg.split("\n")
                 hint = "A syntax transformer raised an exception during macro expansion.\n\nMacro use site (most recent macro application last):"
@@ -205,9 +205,9 @@ class BaseMacroExpander(NodeTransformer):
                 if oldmsg_lines[0] == hint:
                     oldmsg = "\n".join(oldmsg_lines[hint_length_in_lines:])
                 msg = f"{hint}\n{msg}\n{oldmsg}"
-                raise ApplyMacroError(msg).with_traceback(err.__traceback__) from err.__cause__
+                raise MacroApplicationError(msg).with_traceback(err.__traceback__) from err.__cause__
             else:
-                raise ApplyMacroError(msg) from err
+                raise MacroApplicationError(msg) from err
 
         # Convert possible iterable result to `list`, then typecheck macro output.
         try:
