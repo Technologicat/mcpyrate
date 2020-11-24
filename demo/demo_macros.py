@@ -1,6 +1,6 @@
 # -*- coding: utf-8; -*-
 
-from ast import (Call, arg, Name, Attribute, Str, FunctionDef, Assign, Load, Store,
+from ast import (Call, arg, Name, Attribute, Str, FunctionDef, Assign,
                  NodeTransformer, copy_location)
 from mcpyrate import unparse
 
@@ -33,7 +33,7 @@ def log(expr, **kw):
         # d['a']: 1
     '''
     label = unparse(expr) + ': '
-    return Call(func=Name(id='print', ctx=Load()),
+    return Call(func=Name(id='print'),
                 args=[Str(s=label), expr], keywords=[])
 
 def value(classdef, **kw):
@@ -52,8 +52,8 @@ def value(classdef, **kw):
     '''
     symbols = _gather_symbols(classdef)
     baked_class = _IntoValueTransformer(symbols).visit(classdef)
-    replacement = Assign(targets=[Name(id=baked_class.name, ctx=Store())],
-                         value=Call(func=Name(id=baked_class.name, ctx=Load()),
+    replacement = Assign(targets=[Name(id=baked_class.name)],
+                         value=Call(func=Name(id=baked_class.name),
                                     args=[], keywords=[]))
     return [baked_class, replacement]
 
@@ -67,7 +67,7 @@ class _WrapLiterals(NodeTransformer):
         Convert `node` into `fname(node)`
         '''
         return copy_location(
-            Call(func=Name(id=fname, ctx=Load()),
+            Call(func=Name(id=fname),
                  args=[node], keywords=[]),
             node
         )
@@ -139,8 +139,8 @@ class _NameBinder(NodeTransformer):
         '''
         self_name = name
         if name.id in self._symbols:
-            self_name = Attribute(value=Name(id='self', ctx=Load()),
-                                  attr=name.id, ctx=Load())
+            self_name = Attribute(value=Name(id='self'),
+                                  attr=name.id)
             copy_location(self_name, name)
 
         return self_name
