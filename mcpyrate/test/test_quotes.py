@@ -91,6 +91,8 @@ def test():
     # A quoted expression can be unparsed into a source code representation.
     assert unparse(q[first[42]]) == "first[42]"
 
+    # TODO: This is testing, beside what we want, an implementation detail;
+    # TODO: is there a better way?
     # TODO: Python 3.8: remove ast.Num
     assert unparse(q[q[42]]) in (f"mcpyrate.quotes.splice_ast_literals(mcpyrate.quotes.ast.Num(n=42), '{__file__}')",
                                  f"mcpyrate.quotes.splice_ast_literals(mcpyrate.quotes.ast.Constant(value=42), '{__file__}')")
