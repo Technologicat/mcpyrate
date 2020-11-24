@@ -218,11 +218,11 @@ class BaseMacroExpander(NodeTransformer):
                 pass  # ok
             elif isinstance(expansion, list):
                 if not all(isinstance(elt, AST) for elt in expansion):
-                    raise MacroExpansionError
+                    raise MacroExpansionError("Expected all elements of list returned by macro function to be ASTs")
             else:
-                raise MacroExpansionError
+                raise MacroExpansionError("Unexpected return type from macro function")
         except Exception:
-            reason = f"expected macro to return AST node, iterable of AST nodes, or None; got {type(expansion)} with value {repr(expansion)}"
+            reason = f"in {syntax} macro invocation for '{macroname}': expected macro to return AST node, iterable of AST nodes, or None; got {type(expansion)} with value {repr(expansion)}"
             msg = f"{loc}\n{reason}"
             err = MacroExpansionError(msg)
             err.__suppress_context__ = True
