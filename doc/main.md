@@ -863,7 +863,9 @@ When a module is imported with `mcpyrate` enabled, here's what the importer does
     2. Apply the macro expander.
     3. Apply dialect **AST postprocessors**.
  6. If the phase that was just compiled was not phase `0`, reify the current temporary module into `sys.modules`, and jump back to step 5.
- 7. Delete the temporary module, if any, from `sys.modules`.
+ 7. Restore the original state of `sys.modules`.
+    - The temporary module is deleted from `sys.modules`.
+    - If there was an entry for this module in `sys.modules` before we began multi-phase-compiling this module, reinstate that entry. (There usually is; Python's import system creates the module object and injects it into `sys.modules` before calling the loader's `source_to_code` method. It then execs the obtained code in that module object's namespace.)
  8. Apply the builtin `compile` function to the resulting AST. Hand the result over to Python's standard import system.
 
 **CAUTION**: As of `mcpyrate` 3.0.0, *code injected by dialect AST transformers cannot itself use multi-phase compilation*. The client code can; just the dialect code template AST cannot.
