@@ -4,7 +4,6 @@
 from demo_macros import macros, customliterals, log, value  # noqa: F401
 
 class Point2D(tuple):
-
     def distance(self, other):
         return ((other[0] - self[0])**2 + (other[1] - self[1])**2)**.5
 
