@@ -91,7 +91,7 @@ from ... import macros, ...  # then macro-imports
 
 Technically speaking, a dialect is a class that inherits from `mcpyrate.dialects.Dialect`, and has the methods `transform_source`, `transform_ast`, and `postprocess_ast`.
 
-It may implement just one of these methods, if the others are not needed. The default implementation for each returns the value `NotImplemented`, which means that the dialect does not need that kind of transformation.
+A dialect may implement only those methods it needs. The default implementation for each method returns the value `NotImplemented`, which tells the dialect expander that this dialect does not need that kind of transformation.
 
 See the docstrings in [`mcpyrate.dialects`](../mcpyrate/dialects.py) for details.
 
@@ -102,7 +102,7 @@ In your dialect, implement the method `transform_source` to add a whole-module s
 
 Because we don't (yet) have a generic, extensible tokenizer for *"Python-plus"* with extended surface syntax, `transform_source` is currently essentially a per-module hook to plug in a transpiler that compiles source code *from some other programming language into macro-enabled Python*.
 
-Your `transform_source` method gets its input as `str` (**not** `bytes`). The input is the full source text of the module. Output should be the transformed full source text, as a string (`str`).
+The `transform_source` method gets its input as `str` (**not** `bytes`). The input is the full source text of the module. Output should be the transformed full source text, as a string (`str`).
 
 To put it all together, source transformers allow implementing things like:
 
@@ -125,7 +125,7 @@ Implementing the actual BF to Python transpiler is left as an exercise to the re
 
 If you want to just extend Python's surface syntax slightly, then as a starting point, maybe look at the implementation of the [`tokenize`](https://docs.python.org/3/library/tokenize.html) module in Python's standard library; or at third-party libraries such as [`LibCST`](https://libcst.readthedocs.io/en/latest/), [`Parso`](https://parso.readthedocs.io/en/latest/), or [`leoAst.py`](http://leoeditor.com/appendices.html#leoast-py). For implementing new languages that compile to Python, maybe look at the [`pyparsing`](https://github.com/pyparsing/pyparsing) library.
 
-Note a source transformer will have to produce *Python source code*, not an AST. But if you can generate a standard (macro-enabled) Python AST, then the `unparse` function of `mcpyrate` may be able to bridge the gap.
+Note a source transformer will have to produce *Python source code*, not an AST. If it is more convenient for you to generate a standard (macro-enabled) Python AST, then the `unparse` function of `mcpyrate` may be able to bridge the gap.
 
 
 ## AST transformers
