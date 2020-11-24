@@ -50,7 +50,7 @@
 
 # Introduction
 
-Here's a complete implementation of `delay`/`force`, with memoization and plain-value passthrough. Spot the macro!
+Here's a minimal, complete implementation of delayed evaluation, with memoization. Spot the macro!
 
 ```python
 __all__ = ["delay", "force"]
@@ -72,10 +72,12 @@ def delay(tree, **kw):
     """[syntax, expr] Delay an expression."""
     return q[Promise(lambda: a[tree])]
 
-def force(promise):
+def force(x):
     """Evaluate a delayed expression, at most once."""
-    return promise.force() if isinstance(promise, Promise) else promise
+    return x.force() if isinstance(x, Promise) else x
 ```
+
+For a production-quality version of this example, see [`demo/promise.py`](../demo/promise.py).
 
 Quasiquoting is a way to build ASTs in notation that mostly looks like regular
 code. Classically, in Lisps, the quasiquote operator doesn't need to do much,
