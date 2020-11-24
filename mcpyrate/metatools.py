@@ -353,7 +353,7 @@ def _expandr_impl(tree, syntax, expander, macroname):
     return ast.Call(_mcpyrate_metatools_attr(runtime_operator),
                     [],
                     [ast.keyword("bindings", macro_bindings(None, syntax="name", expander=expander)),
-                     ast.keyword("filename", ast.Constant(value=expander.filename)),
+                     ast.keyword("filename", astify(expander.filename)),
                      ast.keyword("tree", tree)])
 
 # --------------------------------------------------------------------------------
