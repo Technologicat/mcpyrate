@@ -1,4 +1,5 @@
 # -*- coding: utf-8; -*-
+"""Demos from `mcpy` 2.0.0, converted to `mcpyrate` and Python 3.6+."""
 
 from demo_macros import macros, customliterals, log, value  # noqa: F401
 
