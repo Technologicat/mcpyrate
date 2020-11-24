@@ -1,5 +1,9 @@
 # -*- coding: utf-8; -*-
-# Multi-phase compiler demo.
+"""Multi-phase compiler demo.
+
+Multi-phase compilation allows using macros in the same module where they
+are defined.
+"""
 
 # Enable the multi-phase compiler for this module.
 from mcpyrate.multiphase import macros, phase
