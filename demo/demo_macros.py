@@ -91,7 +91,7 @@ class _WrapLiterals(NodeTransformer):
     def visit_Tuple(self, node):
         return self._wrap('tuple', node)
 
-    def visit_Str(self, node):
+    def visit_Str(self, node):  # TODO: Python 3.8: remove ast.Str
         return self._wrap('str', node)
 
     def visit_List(self, node):
@@ -103,7 +103,7 @@ class _WrapLiterals(NodeTransformer):
     def visit_Dict(self, node):
         return self._wrap('dict', node)
 
-    def visit_Num(self, node):
+    def visit_Num(self, node):  # TODO: Python 3.8: remove ast.Num
         return self._wrap('num', node)
 
 class _IntoValueTransformer(NodeTransformer):
