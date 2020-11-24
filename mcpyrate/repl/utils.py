@@ -10,6 +10,22 @@ import textwrap
 from ..colorizer import colorize, ColorScheme
 
 
+def _get_source(obj):
+    # `inspect.getsourcefile` accepts "a module, class, method, function,
+    # traceback, frame, or code object" (the error message says this if
+    # we try it on something invalid).
+    #
+    # So if `obj` is an instance, we need to try again with its `__class__`.
+    for x in (obj, obj.__class__):  # TODO: other places to fall back to?
+        try:
+            filename = inspect.getsourcefile(x)
+            source, firstlineno = inspect.getsourcelines(x)
+            return filename, source, firstlineno
+        except (TypeError, OSError):
+            continue
+    raise NotImplementedError
+
+
 def doc(obj):
     """Print an object's docstring, non-interactively.
 
@@ -17,11 +33,10 @@ def doc(obj):
     of the definition of `obj`.
     """
     try:
-        filename = inspect.getsourcefile(obj)
-        source, firstlineno = inspect.getsourcelines(obj)
+        filename, source, firstlineno = _get_source(obj)
         print(colorize(f"{filename}:{firstlineno}", ColorScheme.SOURCEFILENAME),
               file=stderr)
-    except (TypeError, OSError):
+    except NotImplementedError:
         pass
     if not hasattr(obj, "__doc__") or not obj.__doc__:
         print(colorize("<no docstring>", ColorScheme.GREYEDOUT),
@@ -37,14 +52,14 @@ def sourcecode(obj):
     of the definition of `obj`.
     """
     try:
-        filename = inspect.getsourcefile(obj)
-        source, firstlineno = inspect.getsourcelines(obj)
+        filename, source, firstlineno = _get_source(obj)
         print(colorize(f"{filename}:{firstlineno}", ColorScheme.SOURCEFILENAME),
               file=stderr)
-        # TODO: no syntax highlighting for now, because we'd have to parse and unparse.
+        # TODO: No syntax highlighting for now, because we'd have to parse and unparse,
+        # TODO: which loses the original formatting and comments.
         for line in source:
             print(line.rstrip("\n"))
-    except (TypeError, OSError):
+    except NotImplementedError:
         print(colorize("<no source code available>", ColorScheme.GREYEDOUT))
 
 
