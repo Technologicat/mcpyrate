@@ -881,7 +881,7 @@ The error report includes two source locations: the macro code that raised the e
 
 The use site source location is reported in a chained exception (`raise from`). Note that the use site report may show the unparsed source code in a partially macro-expanded state, depending on when the exception occurred.
 
-Each code snippet is shown as it was after the last successful macro expansion, i.e. just before the error occurred. This helps debug macros that output invocations of other macros, so you can see which step is failing. (If that's not immediately clear from the traceback, use the macro `mcpyrate.debug.step_expansion` to show the successful steps, too.)
+Each code snippet is shown as it was after the last successful macro expansion, i.e. just before the error occurred. This helps debug macros that output invocations of other macros, so you can see which step is failing. (If needed, use the macro `mcpyrate.debug.step_expansion` to show the successful steps, too.)
 
 `mcpyrate` aims to produce compact error reports when an error occurs in a syntax transformer during macro expansion. Still, if a particular stack trace happens to be long, or if the report contains many chained exceptions, then as usual, scroll back in your terminal to see the details.
 
