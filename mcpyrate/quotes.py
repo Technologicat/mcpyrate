@@ -204,7 +204,7 @@ def splice_ast_literals(tree, filename):
     try:
         check_no_markers_remaining(tree, filename=filename, cls=SpliceNodes)
     except MacroExpansionError:
-        err = SyntaxError("`q`: `SpliceNodes` markers remaining after expansion, likely a misplaced `a` unquote; did you mean `s[]` or `t[]`?")
+        err = RuntimeError("`q`: `SpliceNodes` markers remaining after expansion, likely a misplaced `a` unquote; did you mean `s[]` or `t[]`?")
         # The list of remaining markers is not very useful, suppress it
         # (but leave it available for introspection in the `__context__` attribute).
         err.__suppress_context__ = True
