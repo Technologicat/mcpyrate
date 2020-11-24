@@ -146,7 +146,7 @@ The full documentation of `mcpyrate` lives in the [`doc/`](doc/) subfolder. Some
 - [REPL and `macropython`](doc/repl.md)
 - [AST walkers](doc/walkers.md)
 - [Dialects](doc/dialects.md)
-- [Troubleshooting](troubleshooting.md)
+- [Troubleshooting](doc/troubleshooting.md)
 
 *We aim at complete documentation.* If you find something is missing, please [file an issue](https://github.com/Technologicat/mcpyrate/issues/new) to ask a question.
 
