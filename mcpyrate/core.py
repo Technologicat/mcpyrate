@@ -195,13 +195,16 @@ class BaseMacroExpander(NodeTransformer):
         try:
             expansion = _apply_macro(macro, tree, kw)
         except Exception as err:
-            msg = f"{loc}\nwhile expanding {syntax} macro invocation for '{macroname}'"
+            msg = f"{loc}\nin {syntax} macro invocation for '{macroname}'"
             # There is just one place in the whole codebase that should emit `ApplyMacroError`: **right here**.
             if isinstance(err, ApplyMacroError) and err.__cause__:  # telescope nested use site reports
                 oldmsg = err.args[0]
-                if oldmsg.split("\n")[0] == "(innermost macro application last)":
-                    oldmsg = oldmsg[1:]
-                msg = f"(innermost macro application last)\n{msg}\n{oldmsg}"
+                oldmsg_lines = oldmsg.split("\n")
+                hint = "A syntax transformer raised an exception during macro expansion.\n\nMacro use site (most recent macro application last):"
+                hint_length_in_lines = len(hint.split("\n"))
+                if oldmsg_lines[0] == hint:
+                    oldmsg = "\n".join(oldmsg_lines[hint_length_in_lines:])
+                msg = f"{hint}\n{msg}\n{oldmsg}"
                 raise ApplyMacroError(msg).with_traceback(err.__traceback__) from err.__cause__
             else:
                 raise ApplyMacroError(msg) from err
