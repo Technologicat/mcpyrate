@@ -11,7 +11,7 @@ from ast import arg, Assign, Name, FunctionDef, NodeTransformer
 from mcpyrate import unparse
 
 def customliterals(statements, *, expander, **kw):
-    '''
+    """
     Provide custom meaning to literals. Example:
 
         class MyStr(str): pass
@@ -24,12 +24,12 @@ def customliterals(statements, *, expander, **kw):
 
     You can use `str`, `tuple`, `list`, `dict`, `set` and `num` to customize
     literals.
-    '''
+    """
     visitor = _WrapLiterals()
     return map(visitor.visit, map(expander.visit, statements))
 
 def log(expr, **kw):
-    '''
+    """
     Print the passed value, labeling the output with the expression. Example:
 
         d = { 'a': 1 }
@@ -37,12 +37,12 @@ def log(expr, **kw):
 
         # prints
         # d['a']: 1
-    '''
+    """
     label = unparse(expr) + ': '
     return q[print(u[label], a[expr])]
 
 def value(classdef, **kw):
-    '''
+    """
     Quick definition of singleton values a-la Scala. Example:
 
         @value
@@ -54,7 +54,7 @@ def value(classdef, **kw):
         assert(not isinstance(superman, type))
         assert(isinstance(superman, object))
         assert(superman.completename() == 'Klark Kent')
-    '''
+    """
     symbols = _gather_symbols(classdef)
     baked_class = _IntoValueTransformer(symbols).visit(classdef)
     with q as replacement:
@@ -64,14 +64,14 @@ def value(classdef, **kw):
     return replacement
 
 class _WrapLiterals(NodeTransformer):
-    '''
+    """
     Wrap each appearance of a literal with a constructor call to that literal type.
-    '''
+    """
 
     def _wrap(self, fname, node):
-        '''
+        """
         Convert `node` into `fname(node)`
-        '''
+        """
         return q[n[fname](a[node])]
 
     def visit_Constant(self, node):  # Python 3.8+
@@ -109,36 +109,36 @@ class _WrapLiterals(NodeTransformer):
         return self._wrap('num', node)
 
 class _IntoValueTransformer(NodeTransformer):
-    '''
+    """
     Convert simplified method syntax into traditional Python syntax.
-    '''
+    """
 
     def __init__(self, symbols):
         self._symbols = symbols
 
     def visit_FunctionDef(self, functiondef):
-        '''
+        """
         Add self as first argument of the simplified method, and bind to
         self all the internal names belonging to symbols.
-        '''
+        """
         args = functiondef.args.args
         if not args or args[0].arg != 'self':
             args.insert(0, arg(arg='self', annotation=None))
         return _NameBinder(self._symbols).generic_visit(functiondef)
 
 class _NameBinder(NodeTransformer):
-    '''
+    """
     Transform each `Name` into an access to `self` if the `Name`
     belongs to a given set of symbols.
-    '''
+    """
 
     def __init__(self, symbols):
         self._symbols = symbols
 
     def visit_Name(self, name):
-        '''
+        """
         Transform name into self.name
-        '''
+        """
         self_name = name
         if name.id in self._symbols:
             self_name = q[n["self." + name.id]]
