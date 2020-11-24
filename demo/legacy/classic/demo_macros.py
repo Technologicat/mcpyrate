@@ -5,7 +5,7 @@ Note that these demos do not use quasiquotes, because that feature
 was added in `mcpyrate`.
 """
 
-from ast import (Call, arg, Name, Attribute, Str, FunctionDef, Assign,
+from ast import (Call, arg, Name, Attribute, Constant, FunctionDef, Assign,
                  NodeTransformer, copy_location)
 from mcpyrate import unparse
 
@@ -39,7 +39,7 @@ def log(expr, **kw):
     '''
     label = unparse(expr) + ': '
     return Call(func=Name(id='print'),
-                args=[Str(s=label), expr], keywords=[])
+                args=[Constant(value=label), expr], keywords=[])
 
 def value(classdef, **kw):
     '''
