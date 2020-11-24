@@ -10,14 +10,17 @@
 <!-- markdown-toc start - Don't edit this section. Run M-x markdown-toc-refresh-toc -->
 **Table of Contents**
 
-- [Questions & Answers](#questions--answers)
-    - [How to debug macro-enabled code?](#how-to-debug-macro-enabled-code)
+- [General issues](#general-issues)
     - [I just ran my program again and no macro expansion is happening?](#i-just-ran-my-program-again-and-no-macro-expansion-is-happening)
-    - [My own macros are working, but I'm not seeing any output from `step_expansion` (or `show_bindings`)?](#my-own-macros-are-working-but-im-not-seeing-any-output-from-stepexpansion-or-showbindings)
+    - [How to debug macro transformations?](#how-to-debug-macro-transformations)
     - [Macro expansion time where exactly?](#macro-expansion-time-where-exactly)
+    - [My macro needs to fill in `lineno` recursively, any recommendations?](#my-macro-needs-to-fill-in-lineno-recursively-any-recommendations)
+- [Expansion stepping](#expansion-stepping)
+    - [My own macros are working, but I'm not seeing any output from `step_expansion` (or `show_bindings`)?](#my-own-macros-are-working-but-im-not-seeing-any-output-from-stepexpansion-or-showbindings)
     - [`step_expansion` is treating the `expands` family of macros as a single step?](#stepexpansion-is-treating-the-expands-family-of-macros-as-a-single-step)
     - [Can I use the `step_expansion` macro to report steps with `expander.visit(tree)`?](#can-i-use-the-stepexpansion-macro-to-report-steps-with-expandervisittree)
     - [`step_expansion` and `stepr` report different results?](#stepexpansion-and-stepr-report-different-results)
+- [Compile-time errors](#compile-time-errors)
     - [Error in `compile`, an AST node is missing the required field `lineno`?](#error-in-compile-an-ast-node-is-missing-the-required-field-lineno)
         - [Unexpected bare value](#unexpected-bare-value)
         - [Wrong type of list](#wrong-type-of-list)
@@ -26,38 +29,20 @@
         - [Wrong unquote operator](#wrong-unquote-operator)
         - [Failing all else](#failing-all-else)
     - [Expander says it doesn't know how to `astify` X?](#expander-says-it-doesnt-know-how-to-astify-x)
-        - [Expander says it doesn't know how to `unastify` X?](#expander-says-it-doesnt-know-how-to-unastify-x)
+    - [Expander says it doesn't know how to `unastify` X?](#expander-says-it-doesnt-know-how-to-unastify-x)
+- [Coverage reporting](#coverage-reporting)
     - [Why do my block and decorator macros generate extra do-nothing nodes?](#why-do-my-block-and-decorator-macros-generate-extra-do-nothing-nodes)
     - [`Coverage.py` says some of the lines inside my block macro invocation aren't covered?](#coveragepy-says-some-of-the-lines-inside-my-block-macro-invocation-arent-covered)
     - [`Coverage.py` says my quasiquoted code block is covered? It's quoted, not running, so why?](#coveragepy-says-my-quasiquoted-code-block-is-covered-its-quoted-not-running-so-why)
     - [My line numbers aren't monotonically increasing, why is that?](#my-line-numbers-arent-monotonically-increasing-why-is-that)
-    - [My macro needs to fill in `lineno` recursively, any recommendations?](#my-macro-needs-to-fill-in-lineno-recursively-any-recommendations)
+- [Packaging](#packaging)
     - [I tried making a PyPI package with `setuptools` out of an app that uses `mcpyrate`, and it's not working?](#i-tried-making-a-pypi-package-with-setuptools-out-of-an-app-that-uses-mcpyrate-and-its-not-working)
     - [I tried making a Debian package out of an app that uses `mcpyrate`, and it's not working?](#i-tried-making-a-debian-package-out-of-an-app-that-uses-mcpyrate-and-its-not-working)
 
 <!-- markdown-toc end -->
 
 
-# Questions & Answers
-
-## How to debug macro-enabled code?
-
-At run time, just debug as usual. At compile time:
-
-In whichever way the program is editing the source code, looking at the steps of that transformation often helps. We provide several utilities for this purpose:
-
- - To troubleshoot regular macro expansion, see the module [`mcpyrate.debug`](../mcpyrate/debug.py), particularly the macro `step_expansion`. It is both an `expr` and `block` macro. This is the one you'll likely need most often.
-
- - To troubleshoot macro expansion of a run-time AST value (such as quasiquoted code), see [`mcpyrate.metatools`](../mcpyrate/metatools.py), particularly the macro `stepr`. It is an `expr` macro that takes in a run-time AST value. (In Python, values are always referred to by expressions. Hence no block mode.) This one you'll likely need second-most often.
-
-   Also, use `print(unparse(tree, debug=True, color=True))` if there's a particular `tree` whose source code representation you'd like to look at, or even `print(dump(tree, color=True))`. Look at the docstrings of those functions for other possibly useful parameters.
-
- - To troubleshoot multi-phase compilation, see `step_phases` in `mcpyrate.debug`. Just macro-import it (`from mcpyrate.debug import macros, step_phases`). It will show you the unparsed source code of each phase just after AST extraction.
-
- - To troubleshoot dialect transformations, see the dialect `StepExpansion` in `mcpyrate.debug`; just dialect-import it (`from mcpyrate.debug import dialects, StepExpansion`). It will step source and AST transformers as well as AST postprocessors in the dialect compiler, one step per transformer.
-
-When interpreting the output, keep in mind [the import algorithm](#the-import-algorithm) as outlined above.
-
+# General issues
 
 ## I just ran my program again and no macro expansion is happening?
 
@@ -74,6 +59,54 @@ However, there is an edge case. If you hygienically capture a value that was imp
 This can be a problem, because hygienic value storage uses `pickle`, which in order to unpickle the value, expects to be able to load the original (or at least a data-compatible) class definition from the same place where it was defined when the value was pickled. If this happens, then delete the bytecode cache (`.pyc`) files, and the program should work again once the macros re-expand.
 
 
+## How to debug macro transformations?
+
+We provide several utilities that show the steps of macro transformations, to help debugging them:
+
+ - To troubleshoot **regular macro expansion**, see the module [`mcpyrate.debug`](../mcpyrate/debug.py), particularly the macro `step_expansion`. It is both an `expr` and `block` macro. This is the one you'll likely need most often.
+
+ - To troubleshoot **macro expansion of a run-time AST value** (such as quasiquoted code), see [`mcpyrate.metatools`](../mcpyrate/metatools.py), particularly the macro `stepr`. It is an `expr` macro that takes in a run-time AST value. (In Python, values are always referred to by expressions. Hence no block mode.) This one you'll likely need second-most often.
+
+   Also, use `print(unparse(tree, debug=True, color=True))` if there's a particular `tree` whose source code representation you'd like to look at, or even `print(dump(tree, color=True))`. Look at the docstrings of those functions for other possibly useful parameters.
+
+ - To troubleshoot **multi-phase compilation**, see `step_phases` in `mcpyrate.debug`. Just macro-import it (`from mcpyrate.debug import macros, step_phases`). It will show you the unparsed source code of each phase just after AST extraction.
+
+ - To troubleshoot **dialect transformations**, see the dialect `StepExpansion` in `mcpyrate.debug`; just dialect-import it (`from mcpyrate.debug import dialects, StepExpansion`). It will step source and AST transformers as well as AST postprocessors in the dialect compiler, one step per transformer.
+
+When interpreting the output, keep in mind in which order various kinds of transformations occur; see [`mcpyrate`'s import algorithm](main.md#the-import-algorithm).
+
+
+## Macro expansion time where exactly?
+
+The "time", as in *macro expansion time* vs. *run time*, is fundamentally a local concept, not a global one.
+
+This is something to keep in mind when developing macros where the macro implementation itself is macro-enabled code (vs. just emitting macro invocations in the output AST). Since the [quasiquote system](quasiquotes.md) is built on macros, this includes any macros that use `q`.
+
+As an example, consider a macro `mymacro`, which uses `q` to define an AST using the quasiquote notation. When `mymacro` reaches run time, any macro invocations used as part of its own implementation (such as the `q`) are already long gone. On the other hand, the use site of `mymacro` has not yet reached run time - for that use site, it is still macro expansion time.
+
+Any macros that `mymacro` invokes in its output AST are just data, to be spliced in to the use site. By default, they'll expand (run!) after `mymacro` has returned.
+
+As the old saying goes, *it's always five'o'clock **somewhere***. *There is no global macro expansion time* - the "time" must be considered separately for each source file.
+
+Furthermore, if you use [multi-phase compilation](main.md#multi-phase-compilation) (a.k.a. `with phase`), then in a particular source file, each phase will have its own macro-expansion time as well as its own run time. For any `k >= 0`, the run time of phase `k + 1` is the macro expansion time of phase `k`.
+
+
+## My macro needs to fill in `lineno` recursively, any recommendations?
+
+See [`mcpyrate.astfixers.fix_locations`](../mcpyrate/astfixers.py), which is essentially an improved `ast.fix_missing_locations`. You'll likely want either `mode="overwrite"` or `mode="reference"`, depending on what your macro does.
+
+There's also the stdlib barebones solution:
+
+```python
+from ast import walk, copy_location
+
+for node in walk(tree):
+    copy_location(node, reference_node)
+```
+
+
+# Expansion stepping
+
 ## My own macros are working, but I'm not seeing any output from `step_expansion` (or `show_bindings`)?
 
 The most likely cause is that the bytecode cache (`.pyc`) for your `.py` source file is up to date. Hence, the macro expander was skipped.
@@ -83,19 +116,6 @@ Unlike most macros, the whole point of `step_expansion` and `show_bindings` are 
 Your own macros do indeed work; but Python is loading the bytecode, which was macro-expanded during an earlier run. Your macros didn't run this time, but the expanded code from the previous run is still there in the bytecode cache (and, since it is up to date, it matches the output the macros would have, were they to run again).
 
 Force an *mtime* update on your source file (`touch` it, or just save it again in a text editor), so the expander will then run again (seeing that the source file has been modified).
-
-
-## Macro expansion time where exactly?
-
-This is mainly something to keep in mind when developing macros where the macro implementation itself is macro-enabled code (vs. just emitting macro invocations in the output AST). Since the [quasiquote system](quasiquotes.md) is built on macros, this includes any macros that use `q`.
-
-As an example, consider a macro `mymacro`, which uses `q` to define an AST using the quasiquote notation. When `mymacro` reaches run time, any macro invocations used as part of its own implementation (such as the `q`) are already long gone. On the other hand, the use site of `mymacro` has not yet reached run time - for that use site, it is still macro expansion time.
-
-Any macros that `mymacro` invokes in its output AST are just data, to be spliced in to the use site. By default, they'll expand (run!) after `mymacro` has returned.
-
-As the old saying goes, *it's always five'o'clock **somewhere***. *There is no global macro expansion time* - the "time" must be considered separately for each source file.
-
-And if you use [multi-phase compilation](#multi-phase-compilation) (a.k.a. `with phase`), then in a particular source file, each phase will have its own macro-expansion time as well as its own run time. For any `k >= 0`, the run time of phase `k + 1` is the macro expansion time of phase `k`.
 
 
 ## `step_expansion` is treating the `expands` family of macros as a single step?
@@ -176,6 +196,8 @@ So the **run-time result** of both invocations is an `ast.Num` object (or `ast.C
 Whereas unquotes are processed at run time of the use site of `q` (see [the quasiquote system docs](quasiquotes.md)), the `q` itself is processed at macro expansion time. Hence, `step_expansion` will see the `q`, but when `stepr` expands the tree at run time, it will already be gone.
 
 
+# Compile-time errors
+
 ## Error in `compile`, an AST node is missing the required field `lineno`?
 
 Welcome to the club. It is likely not much of an exaggeration that all Python macro authors (regardless of which expander you pick) have seen this error at some point.
@@ -237,10 +259,15 @@ If it's the latter, and the expander is complaining specifically about an AST ma
 
 If these don't help, I'd have to see the details. Please file an issue so we can either document the reason, or if reasonably possible, fix it.
 
-### Expander says it doesn't know how to `unastify` X?
 
-Most likely, the input to `expands` or `expand1s` wasn't a quasiquoted tree. See `expandsq`, `expand1sq`, `expandrq`, `expand1rq`, or just `expander.visit(tree)`, depending on what you want.
+## Expander says it doesn't know how to `unastify` X?
 
+Most likely, the input to `expands` or `expand1s` wasn't a quasiquoted tree.
+
+See `expandsq`, `expand1sq`, `expandrq`, `expand1rq`, or just `expander.visit(tree)`, depending on what you want.
+
+
+# Coverage reporting
 
 ## Why do my block and decorator macros generate extra do-nothing nodes?
 
@@ -298,19 +325,7 @@ Hence, non-monotonicity occurs if a block (or decorator) macro adds new AST node
 Note that the non-monotonicity, when present at all, is mild; it's local to each block.
 
 
-## My macro needs to fill in `lineno` recursively, any recommendations?
-
-See [`mcpyrate.astfixers.fix_locations`](../mcpyrate/astfixers.py), which is essentially an improved `ast.fix_missing_locations`. You'll likely want either `mode="overwrite"` or `mode="reference"`, depending on what your macro does.
-
-There's also the stdlib barebones solution:
-
-```python
-from ast import walk, copy_location
-
-for node in walk(tree):
-    copy_location(node, reference_node)
-```
-
+# Packaging
 
 ## I tried making a PyPI package with `setuptools` out of an app that uses `mcpyrate`, and it's not working?
 
