@@ -57,7 +57,7 @@ __all__ = ["delay", "force"]
 
 from mcpyrate.quotes import macros, q, a
 
-_ununitialized = object()
+_uninitialized = object()
 class Promise:
     def __init__(self, thunk):
         self.thunk = thunk
