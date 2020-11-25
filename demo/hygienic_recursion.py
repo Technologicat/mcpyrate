@@ -31,11 +31,13 @@ with phase[1]:
             return q[False]
         return q[a[our_even][u[v - 1]]]
 
-    # This is the magic part: capture macro functions manually to make hygienic
+    # This is the important part: capture macro functions manually to make hygienic
     # references, without caring about macro-imports at the use site.
     #
     # We can't simply `q[h[...]]`, because these macros aren't bound in *our* expander.
-    # This is where the `capture_as_macro` function comes in.
+    # This is where the `capture_as_macro` function comes in. It registers the macro
+    # in the global bindings table for the current process, and returns an AST snippet
+    # that refers to that macro hygienically.
     our_even = capture_as_macro(even)
     our_odd = capture_as_macro(odd)
 
