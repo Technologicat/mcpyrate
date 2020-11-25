@@ -666,7 +666,7 @@ any macro function to all expanders in the current process, without caring about
 macro-imports. This is the same mechanism `q[h[...]]` itself uses; we are now
 just using a different source for the bindings.
 
-A [mutually recursive](https://en.wikipedia.org/wiki/Mutual_recursion) example:
+A [mutually recursive](https://en.wikipedia.org/wiki/Mutual_recursion) example (available as [`demo/hygienic_recursion.py`](../demo/hygienic_recursion.py)):
 
 ```python
 from mcpyrate.quotes import macros, q, u, a
