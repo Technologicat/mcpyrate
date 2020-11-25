@@ -20,6 +20,7 @@
     - [`step_expansion` is treating the `expands` family of macros as a single step?](#stepexpansion-is-treating-the-expands-family-of-macros-as-a-single-step)
     - [Can I use the `step_expansion` macro to report steps with `expander.visit(tree)`?](#can-i-use-the-stepexpansion-macro-to-report-steps-with-expandervisittree)
     - [`step_expansion` and `stepr` report different results?](#stepexpansion-and-stepr-report-different-results)
+    - [My macro crashes with a call stack overflow, but the error goes away if I `step_expansion` it?](#my-macro-crashes-with-a-call-stack-overflow-but-the-error-goes-away-if-i-stepexpansion-it)
 - [Compile-time errors](#compile-time-errors)
     - [Error in `compile`, an AST node is missing the required field `lineno`?](#error-in-compile-an-ast-node-is-missing-the-required-field-lineno)
         - [Unexpected bare value](#unexpected-bare-value)
@@ -200,6 +201,13 @@ or in other words, an `ast.Num` object. (Again, if not convinced, try `stepr["du
 So the **run-time result** of both invocations is an `ast.Num` object (or `ast.Constant`, if running on Python 3.8+). But they see the expansion differently, because `step_expansion` operates at macro expansion time, while `stepr` operates at run time.
 
 Whereas unquotes are processed at run time of the use site of `q` (see [the quasiquote system docs](quasiquotes.md)), the `q` itself is processed at macro expansion time. Hence, `step_expansion` will see the `q`, but when `stepr` expands the tree at run time, it will already be gone.
+
+
+## My macro crashes with a call stack overflow, but the error goes away if I `step_expansion` it?
+
+That's some deep recursion right there! The reason it works with `step_expansion` is that `step_expansion` converts the recursive calls to the expander into a while loop in expand-once mode.
+
+If you need to do the same, look at [its source code](../mcpyrate/debug.py).
 
 
 # Compile-time errors
