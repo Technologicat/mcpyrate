@@ -201,7 +201,7 @@ Despite their [fearsome](http://www.greghendershott.com/fear-of-macros/) reputat
 
      Here *embedded* means the DSL seamlessly integrates into the surrounding programming language (the host language). With embedded DSLs, there is no need to implement a whole new parser for the DSL, and many operations can be borrowed from the host language.
 
-     This approach significantly decreases the effort needed to implement a DSL, thus making small DSLs an attractive solution for a class of design problems. A language construction kit [can be much more useful](https://beautifulracket.com/appendix/why-racket-why-lisp.html#a_pwJR1) than the idea may sound at first.
+     This approach significantly decreases the effort needed to implement a DSL, thus making small DSLs an attractive solution for a class of design problems. A language construction kit [can be much more useful](https://beautifulracket.com/appendix/why-racket-why-lisp.html#a_pwJR1) than how it may sound at first.
 
   6. **[Mobile code](https://macropy3.readthedocs.io/en/latest/discussion.html#mobile-code)**, as pioneered by `macropy`. Shuttle code between domains, while still allowing it to be written together in a single code base.
 
