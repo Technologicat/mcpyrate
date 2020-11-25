@@ -756,8 +756,8 @@ and then just refer to it classically (non-hygienically):
 from mcpyrate.utils import extract_bindings
 
 def mymacro(tree, *, expander, **kw):
-    mynames = extract_bindings(expander.bindings, mymacro)
-    myname = mynames[0]
+    bindings = extract_bindings(expander.bindings, mymacro)
+    myname = list(bindings.keys())[0]
 
     newtree = q[n[myname][...]]
     ...
