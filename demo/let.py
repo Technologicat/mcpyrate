@@ -38,15 +38,17 @@ with phase[2]:
         if len(set(names)) < len(names):
             raise SyntaxError("binding names must be unique in the same `let`")  # pragma: no cover
 
-        # Create the lambda, injecting the parameters with an oldschool AST edit.
-        # Note we can't really put any sensible placeholder there, since parameter names must be literals,
-        # and "..." - which would best suggest we're going to replace it - is not a valid name in Python.
+        # Create the lambda, injecting the parameters with an oldschool AST
+        # edit. Note we can't really put any sensible placeholder there, since
+        # parameter names must be literals, and "..." - which would best
+        # suggest we're going to replace it - is not a valid name in Python.
         lam = q[lambda: a[tree]]
         lam.args.args = [arg(arg=x) for x in names]
 
-        # Using a[] with a list of expression AST nodes splices that list into the surrounding context,
-        # when it appears in an AST slot that is represented as a `list`.
-        # We splice `values` into positional arguments of the `Call`.
+        # Using a[] with a list of expression AST nodes splices that list into
+        # the surrounding context, when it appears in an AST slot that is
+        # represented as a `list`. We splice `values` into positional arguments
+        # of the `Call`.
         return q[a[lam](a[values])]
 
 
@@ -78,28 +80,37 @@ with phase[1]:
             return tree
         first, *rest = args
 
-        # We can and should `h[let]` to make our expansion use the macro binding of `let`
+        # We can `h[let]` to make our expansion use the macro binding of `let`
         # from letseq's *definition site*.
         #
-        # But we can't `h[letseq]` to mean "this macro", because letseq isn't bound as a macro
-        # *at its own definition site*. However, a macro can extract its own binding from its
-        # *use site's* expander, like this:
+        # But we can't `h[letseq]` to mean "this macro", because letseq isn't
+        # bound as a macro *at its own definition site*. However, a macro can
+        # extract its own binding from its *use site's* expander, as follows.
+        #
+        # Note we make here the assumption that we're being invoked as a macro
+        # (not being called directly as a function), so that a macro binding exists.
+        # To overcome this limitation, see the other version of this example in the
+        # `anaphoric_if_revisited/` subfolder, using hygienic macro recursion.
         macro_bindings = extract_bindings(expander.bindings, letseq)
         letseq_macroname = list(macro_bindings.keys())[0]
 
-        # Then we just generate the appropriate macro-enabled tree, and let the expander handle the rest.
+        # Then we just generate the appropriate macro-enabled tree, and let the
+        # expander handle the rest.
         #
-        # Note that the macro argument position expects either a single argument, or an `ast.Tuple` node
-        # if you want to pass several arguments. (Keep in mind that in Python's surface syntax, without any
-        # surrounding parentheses, a comma creates a tuple. The brackets belong to the subscript expression;
-        # they do not denote a list.)
+        # Note that the macro argument position expects either a single
+        # argument, or an `ast.Tuple` node if you want to pass several
+        # arguments. (Keep in mind that in Python's surface syntax, without any
+        # surrounding parentheses, a comma creates a tuple. The brackets belong
+        # to the subscript expression; they do not denote a list.)
         #
-        # So we can use the `t[]` unquote to splice in the ASTs for the remaining bindings as a `Tuple` node.
-        # This will effectively splat it into separate macro arguments.
+        # So we can use the `t[]` unquote to splice in the ASTs for the
+        # remaining bindings as a `Tuple` node. The expander will then
+        # splat it into separate macro arguments.
         body = q[n[letseq_macroname][t[rest]][a[tree]]]
         return q[h[let][a[first]][a[body]]]
 
-        # # We could call the macros as functions, to expand them immediately (in the traditional `macropy` way).
+        # # We could call the macros as functions, to expand them immediately
+        # # (in the traditional `macropy` way).
         # body = letseq(tree, args=rest, syntax=syntax)
         # let(body, args=[first, ], syntax=syntax)
 
