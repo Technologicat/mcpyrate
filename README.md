@@ -185,7 +185,7 @@ Despite their [fearsome](http://www.greghendershott.com/fear-of-macros/) reputat
 
   1. **Syntactic abstraction**, to extract a pattern that cannot be extracted as a regular run-time function. Regular function definitions are a tool for extracting certain kinds of patterns; macros are another such tool. Both these tools aim at eliminating boilerplate, by allowing the definition of reusable abstractions.
 
-     [Macros can replace design patterns](http://wiki.c2.com/?AreDesignPatternsMissingLanguageFeatures), especially patterns that work around a language's limitations. For a concrete example, see [Seibel](http://www.gigamonkeys.com/book/practical-building-a-unit-test-framework.html).
+     [Macros can replace design patterns](http://wiki.c2.com/?AreDesignPatternsMissingLanguageFeatures), especially patterns that work around a language's limitations. See Norvig's [classic presentation on design patterns](https://norvig.com/design-patterns/ppframe.htm). For a concrete example, see [Seibel](http://www.gigamonkeys.com/book/practical-building-a-unit-test-framework.html).
 
   2. **Source code access**. Any operation that needs to get a copy of the source code of an expression (or of a code block) as well as run that same code is a prime candidate for a macro. This is useful for implementing tooling for e.g. debug-logging and testing.
 
