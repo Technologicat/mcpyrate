@@ -3,7 +3,7 @@
 
 The macro operators `q`, `u`, `n`, `a`, `s`, `h` are the primary API.
 
-The functions `capture_value` and `capture_macro` are public, so you can get the
+The functions `capture_value` and `capture_as_macro` are public, so you can get the
 benefits of hygienic capture also in old-school macros that build ASTs manually
 without using quasiquotes.
 
@@ -11,7 +11,7 @@ The `astify` and `unastify` functions are the low-level quasiquote compiler
 and uncompiler, respectively.
 """
 
-__all__ = ["capture_value", "capture_macro",
+__all__ = ["capture_value", "capture_macro", "capture_as_macro",
            "astify", "unastify",
            "q", "u", "n", "a", "s", "t", "h"]
 
@@ -298,8 +298,10 @@ def capture_macro(macro, name):
     The return value is an AST that, when compiled and run, injects the macro
     into the expander's global macro bindings table (even in another Python
     process later), and then evaluates to the uniqified macro name as an
-    `ast.Name`, so that macro-expanding that AST will invoke the macro.
+    `ast.Name`.
     """
+    if not callable(macro):
+        raise TypeError(f"`macro` must be callable (a macro function), got {type(macro)} with value {repr(macro)}")
     # Scrub any previous UUID suffix from the macro name. We'll get those when
     # `unastify` uncompiles a hygienic macro capture, and then `astify`
     # compiles the result again.
@@ -310,6 +312,22 @@ def capture_macro(macro, name):
                                      ast.Constant(value=gensym(name)),
                                      ast.Constant(value=frozen_macro)])],
                     [])
+
+
+def capture_as_macro(macro):
+    """Hygienically capture a macro function as a macro, manually.
+
+    Like `capture_macro`, but with one less level of delay. This injects the
+    macro into the expander's global bindings table immediately, and returns
+    the uniqified `ast.Name` that can be used to refer to it.
+
+    The name is taken automatically from the name of the macro function.
+    """
+    if not callable(macro):
+        raise TypeError(f"`macro` must be callable (a macro function), got {type(macro)} with value {repr(macro)}")
+    frozen_macro = pickle.dumps(macro)
+    name = macro.__name__
+    return lookup_macro((name, gensym(name), frozen_macro))
 
 
 def lookup_macro(key):

@@ -29,6 +29,7 @@
     - [`h`: hygienic-unquote](#h-hygienic-unquote)
         - [Hygienically captured run-time values](#hygienically-captured-run-time-values)
         - [Hygienically captured macros](#hygienically-captured-macros)
+        - [Hygienic macro recursion](#hygienic-macro-recursion)
     - [Syntactically allowed positions for unquotes](#syntactically-allowed-positions-for-unquotes)
     - [Quotes, unquotes, and macro expansion](#quotes-unquotes-and-macro-expansion)
 - [The `expand` family of macros](#the-expand-family-of-macros)
@@ -197,7 +198,7 @@ If you want to capture values or macro names hygienically in an old-school macro
 that does not use the quasiquote notation, this is also possible. The machinery
 underlying the `h[]` operator is part of the public API, by design.
 
-The functions `mcpyrate.quotes.capture_value` and `mcpyrate.quotes.capture_macro`
+The functions `mcpyrate.quotes.capture_value` and `mcpyrate.quotes.capture_as_macro`
 perform the actual capture. The return value is the AST snippet for the hygienic
 reference. You can call these functions directly in your macro implementation.
 
@@ -605,6 +606,7 @@ process boundaries; that is, the hygienically captured thing can be looked up
 even in another Python process later. This allows bytecode caching of use sites
 of macros that use `q[h[...]]`.
 
+
 ### Hygienically captured run-time values
 
 The result of evaluating `expr` can be any run-time value, as long as it is
@@ -622,6 +624,7 @@ Further activations of any particular use site refer to the same object
 instance the unpickling during that site's first activation (in the current
 process) produced.
 
+
 ### Hygienically captured macros
 
 Hygienic macro capture must be asked for explicitly, and it is not
@@ -631,6 +634,147 @@ captured hygienically; any macro invocations in its output will not be.
 Thus, each macro in a chain must use `h[]` explicitly, if it wants macro
 invocations in its output to be hygienified. This is a feature, to keep
 things explicit.
+
+
+### Hygienic macro recursion
+
+It is always possible, for a macro implementation, to call another macro
+directly as a regular function (i.e. treating it as a syntax transformer); this
+will expand it immediately. This is indeed how things were done using `macropy`
+when a macro needed to use another macro.
+
+But what if we want, instead, to encode the use of that other macro as a
+*hygienic* macro invocation in the output AST, and let the expander handle it?
+This allows `step_expansion` to see the intermediate steps, while preserving
+macro hygiene (so we can be sure the result expands using the macro we intended).
+
+Using `q[h[...]]`, hygienically referring to a macro name works fine as long as
+the target macro is bound in the expander that is expanding the use site of
+`q[h[...]]` (keep in mind that use site is typically inside your own macro
+definition).
+
+This implies that the macro definition of the macro being hygienically referred
+to must have come from another source file that has already finished compiling,
+or from an earlier phase of the current source file (if multi-phase compiling);
+both cases rule out loops. So it turns out that for hygienic macro recursion, we
+cannot use `q[h[...]]`.
+
+But we can use the function `mcpyrate.quotes.capture_as_macro`, which manually
+captures a hygienic reference to a macro function into the expander's global
+macro bindings table in the current process. This makes it possible to inject
+any macro function to all expanders in the current process, without caring about
+macro-imports. This is the same mechanism `q[h[...]]` itself uses; we are now
+just using a different source for the bindings.
+
+A [mutually recursive](https://en.wikipedia.org/wiki/Mutual_recursion) example:
+
+```python
+from mcpyrate.quotes import macros, q, u, a
+
+import ast
+
+from mcpyrate.quotes import capture_as_macro
+
+def even(tree, **kw):
+    if type(tree) is ast.Constant:
+        v = tree.value
+    elif type(tree) is ast.Num:  # up to Python 3.7
+        v = tree.n
+
+    if v == 0:
+        return q[True]
+    return q[a[our_odd][u[v - 1]]]
+
+def odd(tree, **kw):
+    if type(tree) is ast.Constant:
+        v = tree.value
+    elif type(tree) is ast.Num:  # up to Python 3.7
+        v = tree.n
+
+    if v == 0:
+        return q[False]
+    return q[a[our_even][u[v - 1]]]
+
+our_even = capture_as_macro(even)
+our_odd = capture_as_macro(odd)
+```
+
+Note the use of `a[]` instead of `h[]` to splice in the hygienic reference.
+This is because the function `capture_as_macro` already performs the capture,
+and returns the AST snippet that represents the hygienic reference.
+
+(Keep in mind that it is the job description of the `h[]` operator to perform
+a capture, using the current expander's macro bindings as the source for macro
+captures. Now that we already have a capture, we don't need `h[]`.)
+
+Note the actual hygienic macro name **won't be** `our_even` or `our_odd`; the
+`capture_as_macro` function takes the original name of the macro function and
+tacks on an uuid. The variable names `our_even` and `our_odd` just refer to
+the AST snippets.
+
+Pasting that code into the IPython REPL (with the extension
+`mcpyrate.repl.iconsole` loaded), we can now:
+
+```python
+from mcpyrate.debug import macros, step_expansion
+from __self__ import macros, even, odd
+
+step_expansion[odd[4]]
+```
+
+The output is:
+
+```python
+In [21]: step_expansion[odd[4]]
+    ...:
+**Tree 0x7f66113be710 (<ipython-session>) before macro expansion:
+  odd[4]
+**Tree 0x7f66113be710 (<ipython-session>) after step 1:
+  even_5d1045354cfe42498f6854f3f59a519c[3]
+**Tree 0x7f66113be710 (<ipython-session>) after step 2:
+  odd_f498be9593b5448ba811661875364969[2]
+**Tree 0x7f66113be710 (<ipython-session>) after step 3:
+  even_5d1045354cfe42498f6854f3f59a519c[1]
+**Tree 0x7f66113be710 (<ipython-session>) after step 4:
+  odd_f498be9593b5448ba811661875364969[0]
+**Tree 0x7f66113be710 (<ipython-session>) after step 5:
+  False
+**Tree 0x7f66113be710 (<ipython-session>) macro expansion complete after 5 steps.
+Out[21]: False
+```
+
+Note the telltale uuid-suffixed names, indicating hygienic captures.
+
+The same technique works for simple self-recursion, too. However, for that, let
+us demonstrate a different trick, using `mcpyrate.utils.extract_bindings`. For a
+hygienic self-reference, the function object for the macro itself is obviously
+in scope, and because the macro is being expanded, it's (almost) guaranteed to
+be in the bindings of the current expander. So we can grab the name from there,
+and then just refer to it classically (non-hygienically):
+
+```python
+from mcpyrate.utils import extract_bindings
+
+def mymacro(tree, *, expander, **kw):
+    mynames = extract_bindings(expander.bindings, mymacro)
+    myname = mynames[0]
+
+    newtree = q[n[myname][...]]
+    ...
+```
+
+(The *almost* comes up when some code calls the macro function directly,
+instead of invoking it as a macro.)
+
+Mutual macro recursion cannot be achieved cleanly with this second approach,
+because any macro being queried must have been macro-imported at the use site.
+It does respect as-imports, though, and it's a useful advanced technique for
+other use cases; see [`demo/anaphoric_if.py`](../demo/anaphoric_if.py) for
+an example.
+
+In conclusion, for hygienic macro recursion, we recommend the first approach
+using `capture_as_macro`, because in that approach the macros invoked in the
+output AST don't need to be in the expander's bindings at the use site.
 
 
 ## Syntactically allowed positions for unquotes
@@ -763,13 +907,13 @@ So when the run-time value is evaluated, at run time of the use site of `q`, bot
 
 ## How `q` arranges hygienic captures
 
-Regular macros that want to use hygienic capture, without using quasiquotes, can just call the API functions `capture_value` or `capture_macro`.
+Regular macros that want to use hygienic capture, without using quasiquotes, can just call the API functions `capture_value` or `capture_as_macro`.
 
 `q` itself can't simply call `capture_value`, because *it generates code for your macro*. So instead of calling `capture_value` directly in the implementation of `q`, it needs to arrange things so that `capture_value` gets called *at the use site of `q`*.
 
 If you write your own macro-generating macro that needs to do something similar, you can make an `ast.Call` that will, at run time, call `capture_value` with the appropriate arguments, and splice that `ast.Call` into your output. As the arguments in the `ast.Call`, you'll want to set `value` to the tree for the expression whose value you want to capture, and `name` to an `ast.Constant` with a human-readable string value.
 
-`q` **does** call `capture_macro` directly. This works because the use site imports all the macros that source file will use already at macro-expansion time. (Even if some of the macros are only imported for use in macro output, specifically so that `h[]` can detect references to them.) So the relevant macro binding is available in the expander that is running that invocation of `q`.
+`q` **does** call `capture_macro` (note no `as`) directly. This works because the use site imports all the macros that source file will use already at macro-expansion time. (Even if some of the macros are only imported for use in macro output, specifically so that `h[]` can detect references to them.) So the relevant macro binding is available in the expander that is running that invocation of `q`.
 
 This is better than delaying the macro capture until run time of the use site, because at run time, macro imports are gone. So the relevant binding must be recorded at macro expansion time anyway, from the expander that's expanding the use site of `q`. That's exactly the `expander` argument of the `q` macro function.
 
