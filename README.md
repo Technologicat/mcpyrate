@@ -195,7 +195,7 @@ Despite their [fearsome](http://www.greghendershott.com/fear-of-macros/) reputat
 
   4. **Language-level features** inspired by other programming languages. For example, [`unpythonic`](https://github.com/Technologicat/unpythonic) provides expression-local variables (`let`), automatic tail call optimization (TCO), autocurry, lazy functions, and multi-shot continuations.
 
-     As [the Racket guide notes](https://docs.racket-lang.org/guide/pattern-macros.html), this is especially convenient for language-level features not approved by some other language designer. Macros allow users to [extend the language](https://docs.racket-lang.org/guide/languages.html). [Dialects](doc/dialects.md) take that idea one step further.
+     As [the Racket guide notes](https://docs.racket-lang.org/guide/pattern-macros.html), this is especially convenient for language-level features not approved by some other language designer. Macros allow users to [extend](https://docs.racket-lang.org/guide/languages.html) the language. [Dialects](doc/dialects.md) take that idea one step further.
 
   5. **[Embedded domain-specific languages (eDSLs)](https://en.wikipedia.org/wiki/Domain-specific_language#External_and_Embedded_Domain_Specific_Languages)**.
 
