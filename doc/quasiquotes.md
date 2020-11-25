@@ -639,9 +639,9 @@ things explicit.
 ### Hygienic macro recursion
 
 It is always possible, for a macro implementation, to call another macro
-directly as a regular function (i.e. treating it as a syntax transformer); this
-will expand it immediately. This is indeed how things were done using `macropy`
-when a macro needed to use another macro.
+directly as a regular function (i.e. treating it as a syntax transformer);
+this will expand it immediately. This is indeed how things were often done
+using `macropy` when a macro needed to use another macro.
 
 But what if we want, instead, to encode the use of that other macro as a
 *hygienic* macro invocation in the output AST, and let the expander handle it?
@@ -653,18 +653,18 @@ the target macro is bound in the expander that is expanding the use site of
 `q[h[...]]` (keep in mind that use site is typically inside your own macro
 definition).
 
-This implies that the macro definition of the macro being hygienically referred
-to must have come from another source file that has already finished compiling,
-or from an earlier phase of the current source file (if multi-phase compiling);
-both cases rule out loops. So it turns out that for hygienic macro recursion, we
-cannot use `q[h[...]]`.
+Macro bindings are usually established using macro-imports. This implies that
+the macro definition of the macro being hygienically referred to must have come
+from another source file that has already finished compiling, or from an earlier
+phase of the current source file (if multi-phase compiling); both cases rule out
+loops. So it turns out that for hygienic macro recursion, we cannot use `q[h[...]]`.
 
-But we can use the function `mcpyrate.quotes.capture_as_macro`, which manually
-captures a hygienic reference to a macro function into the expander's global
-macro bindings table in the current process. This makes it possible to inject
-any macro function to all expanders in the current process, without caring about
-macro-imports. This is the same mechanism `q[h[...]]` itself uses; we are now
-just using a different source for the bindings.
+Instead, we can use **the function `mcpyrate.quotes.capture_as_macro`**, which
+manually captures a hygienic reference to a macro function into the expander's
+global macro bindings table in the current process. This makes it possible to
+inject any macro function to all expanders in the current process, without
+caring about macro-imports. This is the same mechanism `q[h[...]]` itself uses;
+we are now just using a different source for the bindings.
 
 A [mutually recursive](https://en.wikipedia.org/wiki/Mutual_recursion) example (available as [`demo/hygienic_recursion.py`](../demo/hygienic_recursion.py)):
 
@@ -703,9 +703,9 @@ Note the use of `a[]` instead of `h[]` to splice in the hygienic reference.
 This is because the function `capture_as_macro` already performs the capture,
 and returns the AST snippet that represents the hygienic reference.
 
-(Keep in mind that it is the job description of the `h[]` operator to perform
-a capture, using the current expander's macro bindings as the source for macro
-captures. Now that we already have a capture, we don't need `h[]`.)
+(It is the job of the `h[]` operator to *perform a capture*, using the current
+expander's macro bindings as the source for macro captures. Now that we already
+have a capture, we don't need `h[]`.)
 
 Note the actual hygienic macro name **won't be** `our_even` or `our_odd`; the
 `capture_as_macro` function takes the original name of the macro function and
@@ -743,14 +743,14 @@ In [21]: step_expansion[odd[4]]
 Out[21]: False
 ```
 
-Note the telltale uuid-suffixed names, indicating hygienic captures.
+This example used mutual recursion, but the same technique works for simple
+self-recursion, too. Note the telltale uuid-suffixed names, indicating hygienic
+captures.
 
-The same technique works for simple self-recursion, too. However, for that, let
-us demonstrate a different trick, using `mcpyrate.utils.extract_bindings`. For a
-hygienic self-reference, the function object for the macro itself is obviously
-in scope, and because the macro is being expanded, it's (almost) guaranteed to
-be in the bindings of the current expander. So we can grab the name from there,
-and then just refer to it classically (non-hygienically):
+Finally, for the sake of exposition, let us demonstrate another useful advanced
+technique, using `mcpyrate.utils.extract_bindings`. If we know that the macro we
+want to invoke is in the current expander's bindings, we can grab its name from
+there, and then refer to it classically (non-hygienically):
 
 ```python
 from mcpyrate.utils import extract_bindings
@@ -763,18 +763,30 @@ def mymacro(tree, *, expander, **kw):
     ...
 ```
 
-(The *almost* comes up when some code calls the macro function directly,
-instead of invoking it as a macro.)
+However, this does not work for hygienic macro recursion, because some code may
+call the macro function directly, instead of invoking it as a macro. So in this
+example, even `mymacro` itself is **not** guaranteed to be bound in the current
+expander. Also, mutual macro recursion cannot be achieved cleanly with this
+technique, because any macro being queried must have been macro-imported
+at the use site.
 
-Mutual macro recursion cannot be achieved cleanly with this second approach,
-because any macro being queried must have been macro-imported at the use site.
-It does respect as-imports, though, and it's a useful advanced technique for
-other use cases; see [`demo/anaphoric_if.py`](../demo/anaphoric_if.py) for
-an example.
+This technique does respect as-imports, though, and it's the right approach for
+a different use case; see [`demo/anaphoric_if.py`](../demo/anaphoric_if.py) for
+an example. This technique does the right thing when there is a set of macros
+that must be imported together (such as `aif` and its magic variable `it`),
+and *the use site* is expected to explicitly invoke all of them.
 
-In conclusion, for hygienic macro recursion, we recommend the first approach
-using `capture_as_macro`, because in that approach the macros invoked in the
-output AST don't need to be in the expander's bindings at the use site.
+Note the subtle difference: in that other use case, the use site controls the
+names of the macros (locally), via macro-imports. So the use site knows the
+names, and may also rename them (via as-import). But in hygienic macro
+recursion, the use site doesn't even care about macros other than the one it's
+invoking directly. There the definition site has a macro function it wants to
+refer to, and the name used in its macro binding can be anything, as long as
+it's unambiguous.
+
+In conclusion, for hygienic macro recursion, use the function `capture_as_macro`,
+as demonstrated above. Using that, the macros invoked hygienically in the output AST
+don't need to be in the expander's bindings at the use site.
 
 
 ## Syntactically allowed positions for unquotes
