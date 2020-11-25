@@ -33,6 +33,9 @@ with phase[1]:
 
     # This is the magic part: capture macro functions manually to make hygienic
     # references, without caring about macro-imports at the use site.
+    #
+    # We can't simply `q[h[...]]`, because these macros aren't bound in *our* expander.
+    # This is where the `capture_as_macro` function comes in.
     our_even = capture_as_macro(even)
     our_odd = capture_as_macro(odd)
 
