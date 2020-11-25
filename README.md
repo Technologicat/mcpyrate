@@ -1,18 +1,22 @@
 # mcpyrate
 
-Advanced, third-generation macro expander for Python, after the pioneering [macropy](https://github.com/lihaoyi/macropy), and the compact, pythonic [mcpy](https://github.com/delapuente/mcpy). The focus is on correctness, feature-completeness for serious macro-enabled work, and simplicity, in that order.
-
-We aim at developer-friendliness. `mcpyrate` yields correct [coverage](https://github.com/nedbat/coveragepy/) for macro-enabled code, reports errors as early as possible, and makes it easy to display the steps of any expansion - with syntax highlighting, use site filename, and source line numbers.
-
-`mcpyrate` builds on `mcpy`, with a similar explicit and compact approach, but with a lot of new features. Some of our features are strongly inspired by `macropy`, such as quasiquotes, macro arguments, and expansion tracing. We provide an integrated REPL system (including an IPython extension) and support for dialects, in a more advanced development based on the prototypes [`imacropy`](https://github.com/Technologicat/imacropy) and [`pydialect`](https://github.com/Technologicat/pydialect).
+Advanced, third-generation macro expander and language lab for Python, after the pioneering [macropy](https://github.com/lihaoyi/macropy), and the compact, pythonic [mcpy](https://github.com/delapuente/mcpy). The focus is on correctness, feature-completeness for serious macro-enabled work, and simplicity, in that order.
 
 We support Python 3.6, 3.7, 3.8, and PyPy3.
+
+We aim at developer-friendliness. `mcpyrate` yields correct [coverage](https://github.com/nedbat/coveragepy/) for macro-enabled code, reports errors as early as possible, and makes it easy to display the steps of any macro expansion - with syntax highlighting, use site filename, and source line numbers:
+
+![mcpyrate stepping through expansion of `letseq` from demos](step_expansion.png)
+**Figure 1.** *`mcpyrate` stepping through `letseq` from the demos.*
+
+`mcpyrate` builds on `mcpy`, with a similar explicit and compact approach, but with a lot of new features. Some of our features are strongly inspired by `macropy`, such as quasiquotes, macro arguments, and expansion tracing. We provide an integrated REPL system (including an IPython extension) and support for dialects, in a more advanced development based on the prototypes [`imacropy`](https://github.com/Technologicat/imacropy) and [`pydialect`](https://github.com/Technologicat/pydialect).
 
 We use [semantic versioning](https://semver.org/). `mcpyrate` is almost-but-not-quite compatible with `mcpy` 2.0.0, hence the initial release is 3.0.0. There are some differences in the named parameters the expander provides to the macro functions; for details, search [the main user manual](doc/main.md) for *differences to mcpy*.
 
 ![100% Python](https://img.shields.io/github/languages/top/Technologicat/mcpyrate) 
 ![open issues](https://img.shields.io/github/issues/Technologicat/mcpyrate) 
 [![contributions welcome](https://img.shields.io/badge/contributions-welcome-brightgreen.svg?style=flat)](http://makeapullrequest.com/)
+
 
 <!-- markdown-toc start - Don't edit this section. Run M-x markdown-toc-refresh-toc -->
 **Table of Contents**
