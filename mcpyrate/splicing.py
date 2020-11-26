@@ -1,14 +1,78 @@
 # -*- coding: utf-8; -*-
 """Utilities for splicing the actual code into a code template."""
 
-__all__ = ["splice_statements", "splice_dialect"]
+__all__ = ["splice_expression", "splice_statements", "splice_dialect"]
 
 import ast
 from copy import deepcopy
 
 from .astfixers import fix_locations
 from .coreutils import ismacroimport
+from .markers import ASTMarker
 from .walkers import ASTTransformer
+
+
+def splice_expression(expr, template, tag="__paste_here__"):
+    """Splice `expr` into `template`.
+
+    This is somewhat like `mcpyrate.quotes.a`, but must be called from outside the
+    quoted snippet.
+
+    Parameters:
+
+        `expr`: an expression AST node, or an AST marker containing such.
+            The expression you would like to splice in.
+
+        `template`: an AST node, or a `list` of AST nodes.
+            Template into which to splice `expr`.
+
+            Must contain a paste-here indicator AST node that specifies where
+            `expr` is to be spliced in. The node is expected to have the format::
+
+                ast.Name(id=tag)
+
+            Or in plain English, it's a bare identifier.
+
+            The first-found instance (in AST scan order) of the paste-here indicator
+            is replaced by `expr`.
+
+            If the paste-here indicator appears multiple times, second and further
+            instances are replaced with a `copy.deepcopy` of `expr` so that they will
+            stay independent during any further AST edits.
+
+        `tag`: `str`
+            The name of the paste-here indicator in `template`.
+
+    Returns `template` with `expr` spliced in. Note `template` is **not** copied,
+    and will be mutated in-place.
+
+    """
+    if not template:
+        return expr
+
+    if not (isinstance(expr, ast.expr) or
+            (isinstance(expr, ASTMarker) and isinstance(expr.body, ast.expr))):
+        raise TypeError(f"`expr` must be an expression AST node or AST marker containing such; got {type(expr)} with value {repr(expr)}")
+    if not isinstance(template, (ast.AST, list)):
+        raise TypeError(f"`template` must be an AST or `list`; got {type(template)} with value {repr(template)}")
+
+    def ispastehere(tree):
+        return type(tree) is ast.Expr and type(tree.value) is ast.Name and tree.value.id == tag
+
+    class ExpressionSplicer(ASTTransformer):
+        def __init__(self):
+            self.first = True
+            super().__init__()
+
+        def transform(self, tree):
+            if ispastehere(tree):
+                if not self.first:
+                    return deepcopy(expr)
+                self.first = False
+                return expr
+            return self.generic_visit(tree)
+
+    return ExpressionSplicer().visit(template)
 
 
 def splice_statements(body, template, tag="__paste_here__"):
