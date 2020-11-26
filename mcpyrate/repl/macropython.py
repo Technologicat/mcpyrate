@@ -16,6 +16,7 @@ from ..coreutils import relativize
 from ..core import MacroApplicationError
 
 from .. import activate  # noqa: F401
+from .. import __version__ as __mcpyrate_version__
 
 __version__ = "3.0.0"
 
@@ -140,7 +141,7 @@ def main():
     parser = argparse.ArgumentParser(description="""Run a Python program or an interactive interpreter with mcpyrate enabled.""",
                                      formatter_class=argparse.RawDescriptionHelpFormatter)
 
-    parser.add_argument('-v', '--version', action='version', version=('%(prog)s (mcpyrate ' + __version__ + ')'))
+    parser.add_argument('-v', '--version', action='version', version=('%(prog)s ' + __version__ + ' (mcpyrate ' + __mcpyrate_version__ + ')'))
     parser.add_argument(dest='filename', nargs='?', default=None, type=str, metavar='file',
                         help='script to run')
     parser.add_argument('-m', '--module', dest='module', default=None, type=str, metavar='mod',
