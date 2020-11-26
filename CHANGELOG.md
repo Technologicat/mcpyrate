@@ -56,8 +56,8 @@ We build on `mcpy` 2.0.0, but add a lot of new features.
   - The named parameter `args` is a raw `list` of the macro argument ASTs. Empty if no args were sent, or if the macro function is not parametric.
 
 - **Identifier (a.k.a. name) macros**.
-  - Can be used for creating magic variables that may only appear inside specific macro invocations.
   - Opt-in. Declare by using the [`@namemacro`](mcpyrate/expander.py) decorator on your macro function.
+  - Can be used for creating magic variables that may only appear inside specific macro invocations.
 
 - **Dialects, i.e. whole-module source and AST transforms**.
   - Think [Racket's](https://racket-lang.org/) `#lang`, but for Python.
