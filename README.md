@@ -1,6 +1,6 @@
 # mcpyrate
 
-Advanced macro expander and language lab for Python. The focus is on correctness, feature-completeness for serious macro-enabled work, and simplicity, in that order. We support Python 3.6, 3.7, 3.8, and PyPy3.
+Advanced macro expander and language lab for Python. The focus is on correctness, feature-completeness for serious macro-enabled work, and simplicity, in that order.
 
 We aim at developer-friendliness. `mcpyrate` yields correct [coverage](https://github.com/nedbat/coveragepy/) for macro-enabled code, reports errors as early as possible, and makes it easy to display the steps of any macro expansion - with syntax highlighting, use site filename, and source line numbers:
 
