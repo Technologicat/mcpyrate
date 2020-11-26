@@ -14,6 +14,7 @@ We use [semantic versioning](https://semver.org/). `mcpyrate` is almost-but-not-
 ![100% Python](https://img.shields.io/github/languages/top/Technologicat/mcpyrate) 
 ![open issues](https://img.shields.io/github/issues/Technologicat/mcpyrate) 
 [![contributions welcome](https://img.shields.io/badge/PRs-welcome-brightgreen)](http://makeapullrequest.com/)
+*Some hypertext features of this README, such as local links to detailed documentation, are not supported when viewed on PyPI; [view on GitHub](https://github.com/Technologicat/mcpyrate) to have those work properly.*
 
 
 <!-- markdown-toc start - Don't edit this section. Run M-x markdown-toc-refresh-toc -->
