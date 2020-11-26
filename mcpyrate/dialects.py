@@ -17,7 +17,7 @@ from .utils import format_macrofunction
 class Dialect:
     """Base class for dialects."""
     def __init__(self, expander):
-        '''`expander`: the `DialectExpander` instance. The expander provides this automatically.'''
+        """`expander`: the `DialectExpander` instance. The expander provides this automatically."""
         self.expander = expander
 
     def transform_source(self, text):

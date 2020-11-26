@@ -89,7 +89,7 @@ def parametricmacro(function):
     return function
 
 def isparametricmacro(function):
-    '''Return whether the macro function `function` has been declared as taking macro arguments.'''
+    """Return whether the macro function `function` has been declared as taking macro arguments."""
     return hasattr(function, "_isparametricmacro")
 
 # --------------------------------------------------------------------------------
@@ -444,14 +444,14 @@ class MacroCollector(NodeVisitor):
 
 
 def _insert_coverage_dummy_stmt(tree, macronode, macroname, filename):
-    '''Force statement `macronode` to be reported as covered by coverage tools.
+    """Force statement `macronode` to be reported as covered by coverage tools.
 
     A dummy node will be injected to `tree`. The `tree` must appear in a
     statement position, so `ast.NodeTransformer.visit` may return a list of nodes.
 
     `macronode` is the macro invocation node to copy source location info from.
     `macroname` and `filename` are included in the dummy node, to ease debugging.
-    '''
+    """
     # `macronode` itself might be macro-generated. In that case don't bother.
     if not hasattr(macronode, "lineno") and not hasattr(macronode, "col_offset"):
         return tree

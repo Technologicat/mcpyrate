@@ -1,5 +1,5 @@
 # -*- coding: utf-8; -*-
-'''Utilities related to writing macro expanders and similar meta-metaprogramming tasks.'''
+"""Utilities related to writing macro expanders and similar meta-metaprogramming tasks."""
 
 __all__ = ["resolve_package", "relativize", "match_syspath",
            "ismacroimport", "get_macros"]

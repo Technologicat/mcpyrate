@@ -1,5 +1,5 @@
 # -*- coding: utf-8; -*-
-'''Install mcpyrate hooks to preprocess source files.
+"""Install mcpyrate hooks to preprocess source files.
 
 Actually, we monkey-patch `SourceFileLoader`, to compile the code in a
 different way, macroexpanding the AST before compiling into bytecode.
@@ -23,7 +23,7 @@ the `PYTHONDONTWRITEBYTECODE` environment variable, and the attribute
     https://docs.python.org/3/using/cmdline.html#envvar-PYTHONDONTWRITEBYTECODE
     https://docs.python.org/3/library/sys.html#sys.dont_write_bytecode
     https://www.python.org/dev/peps/pep-0552/
-'''
+"""
 
 __all__ = ["activate", "deactivate"]
 

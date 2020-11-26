@@ -226,7 +226,7 @@ def _stats(self, path, stats_cache=None):
 
 
 def _detect_stdlib_sourcefile_paths():
-    '''Return a set of full paths of `.py` files that are part of Python's standard library.'''
+    """Return a set of full paths of `.py` files that are part of Python's standard library."""
     # Adapted from StackOverflow answer by Adam Spiers, https://stackoverflow.com/a/8992937
     # Note we don't want to get module names, but full paths to `.py` files.
     stdlib_dir = distutils.sysconfig.get_python_lib(standard_lib=True)

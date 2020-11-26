@@ -75,7 +75,7 @@ For dialects that look mostly like Python, the recommended code layout in the sp
 
 ```python
 # -*- coding: utf-8; -*-
-'''Example module using a dialect.'''
+"""Example module using a dialect."""
 
 __all__ = [...]  # public API exports
 
@@ -153,7 +153,7 @@ To give a flavor, *Lispython* is essentially Python with automatic TCO, and impl
 
 ```python
 # -*- coding: utf-8; -*-
-'''Lispython example.'''
+"""Lispython example."""
 
 from mylibrary import dialects, Lispython
 
