@@ -275,7 +275,7 @@ def step_phases(tree, **kw):
     The macro expansion itself will **not** be stepped; this debug tool is
     orthogonal to that. For that, use the `step_expansion` macro, as usual.
     """
-    raise SyntaxError("`step_phases` may only appear in its macro-import.")
+    raise SyntaxError("`step_phases` is a compiler flag; it may only appear in its macro-import.")
 
 
 def isdebug(tree):
