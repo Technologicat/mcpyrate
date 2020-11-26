@@ -32,6 +32,13 @@ from .importer import source_to_xcode, path_xstats
 
 
 def activate():
+    """Activate `mcpyrate`.
+
+    Called automatically once, when the module `mcpyrate.activate` is imported.
+
+    The function is available so that if you call `deactivate`, it is possible
+    to call `activate` to re-activate the macro expander.
+    """
     SourceFileLoader.source_to_code = source_to_xcode
     # Bytecode caching (`.pyc`) support. If you need to force-disable `.pyc`
     # caching, replace `SourceFileLoader.set_data` with a no-op, like `mcpy` does.
@@ -39,6 +46,11 @@ def activate():
 
 
 def deactivate():
+    """Deactivate `mcpyrate`.
+
+    This can be useful if you want the macro expander to be enabled only for
+    some part of your codebase.
+    """
     SourceFileLoader.source_to_code = stdlib_source_to_code
     SourceFileLoader.path_stats = stdlib_path_stats
 
