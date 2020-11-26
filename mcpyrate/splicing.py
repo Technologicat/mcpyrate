@@ -75,6 +75,7 @@ def splice_expression(expr, template, tag="__paste_here__"):
     return ExpressionSplicer().visit(template)
 
 
+# TODO: this is actually a generic list-of-ast splicer, not specific to statements.
 def splice_statements(body, template, tag="__paste_here__"):
     """Splice `body` into `template`.
 
