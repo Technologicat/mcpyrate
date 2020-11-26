@@ -8,9 +8,33 @@ def read(*relpath, **kwargs):
               encoding=kwargs.get("encoding", "utf8")) as fh:
         return fh.read()
 
+# Extract __version__ from the package __init__.py
+# (since it's not a good idea to actually run __init__.py during the build process).
+#
+# http://stackoverflow.com/questions/2058802/how-can-i-get-the-version-defined-in-setup-py-setuptools-in-my-package
+import ast
+init_py_path = os.path.join("mcpyrate", "__init__.py")
+version = None
+try:
+    with open(init_py_path) as f:
+        for line in f:
+            if line.startswith("__version__"):
+                module = ast.parse(line)
+                expr = module.body[0]
+                v = expr.value
+                if type(v) is ast.Constant:
+                    version = v.value
+                elif type(v) is ast.Str:  # TODO: Python 3.8: remove ast.Str
+                    version = v.s
+                break
+except FileNotFoundError:
+    pass
+if not version:
+    raise RuntimeError(f"Version information not found in {init_py_path}")
+
 setup(
     name="mcpyrate",
-    version="3.0.0",
+    version=version,
     packages=["mcpyrate", "mcpyrate.repl"],
     provides=["mcpyrate"],
     keywords=["macros", "syntactic-macros", "macro-expander", "metaprogramming", "import", "importer"],
