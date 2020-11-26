@@ -18,21 +18,23 @@
     - [Macro invocation syntax](#macro-invocation-syntax)
     - [Importing macros](#importing-macros)
 - [Writing macros](#writing-macros)
+    - [Macro-writing utilities in `mcpyrate`](#macro-writing-utilities-in-mcpyrate)
+    - [Macro docstrings](#macro-docstrings)
+    - [Source location information and `ctx` attributes](#source-location-information-and-ctx-attributes)
     - [Macro invocation types](#macro-invocation-types)
+    - [Named parameters filled by expander](#named-parameters-filled-by-expander)
+        - [Differences to `mcpy`](#differences-to-mcpy)
     - [Quasiquotes](#quasiquotes)
-        - [Differences to `macropy`](#differences-to-macropy)
     - [Get the source of an AST](#get-the-source-of-an-ast)
         - [Syntax highlighting](#syntax-highlighting)
     - [Walk an AST](#walk-an-ast)
-    - [The named parameters](#the-named-parameters)
-        - [Differences to `mcpy`](#differences-to-mcpy)
     - [Macro arguments](#macro-arguments)
         - [Using parametric macros](#using-parametric-macros)
             - [Multiple macro arguments are a tuple](#multiple-macro-arguments-are-a-tuple)
             - [The two possible meanings of the expression `macroname[a][b]`](#the-two-possible-meanings-of-the-expression-macronameab)
         - [Writing parametric macros](#writing-parametric-macros)
         - [Arguments or no arguments?](#arguments-or-no-arguments)
-        - [Differences to `macropy`](#differences-to-macropy-1)
+        - [Differences to `macropy`](#differences-to-macropy)
     - [Identifier macros](#identifier-macros)
         - [Syntax limitations](#syntax-limitations)
         - [Creating a magic variable](#creating-a-magic-variable)
@@ -48,7 +50,7 @@
     - [Recommended exception types](#recommended-exception-types)
     - [Reserved exception type `mcpyrate.core.MacroApplicationError`](#reserved-exception-type-mcpyratecoremacroapplicationerror)
     - [Nested exceptions](#nested-exceptions)
-    - [Differences to `macropy`](#differences-to-macropy-2)
+    - [Differences to `macropy`](#differences-to-macropy-1)
 
 <!-- markdown-toc end -->
 
@@ -216,6 +218,8 @@ def macro(tree, **kw):
     return tree
 ```
 
+The only explicit hint at the definition site that a function is actually a macro is the `**kw`.
+
 Refer to [Green Tree Snakes](https://greentreesnakes.readthedocs.io/en/latest/nodes.html) (a.k.a. the missing Python AST docs) for details on the AST node types. The documentation for the [AST module](https://docs.python.org/3/library/ast.html) may also be occasionally useful.
 
 The `tree` parameter is the only positional parameter the macro function is called with. All other parameters are passed by name, so you can easily pick what you need (and let `**kw` gather the ones you don't).
@@ -224,7 +228,22 @@ A macro can return a single AST node, a list of AST nodes, or `None`. See [Macro
 
 The result of the macro expansion is recursively expanded until no new macro invocations are found.
 
-The only explicit hint at the definition site that a function is actually a macro is the `**kw`. To be more explicit, mention it at the start of the docstring, such as above. (We recommend the terminology used in [The Racket Reference](https://docs.racket-lang.org/reference/): a macro is *a syntax*, as opposed to *a procedure* a.k.a. garden variety function.)
+A simple working example:
+
+```python
+from ast import Call, Name, Constant
+from mcpyrate import unparse
+
+def log(expr, **kw):
+    """[syntax, expr] Replace log[expr] with print("expr: ", expr)"""
+    label = unparse(expr) + ": "
+    return Call(func=Name(id="print"),
+                args=[Constant(value=label), expr],
+                keywords=[])
+```
+
+
+## Macro-writing utilities in `mcpyrate`
 
 Although you don't strictly have to import anything to write macros, there are some useful functions in the top-level namespace of `mcpyrate`. See `gensym`, `unparse`, `dump`, `@namemacro`, and `@parametricmacro`.
 
@@ -237,7 +256,40 @@ Other modules contain utilities for writing macros:
  - [`mcpyrate.splicing`](../mcpyrate/splicing.py) helps splice statements (or even a complete module body) into a code template. Note in quasiquoted code you can locally splice statements with the block mode of the `a` (ast-unquote) operator.
  - [`mcpyrate.debug`](../mcpyrate/debug.py) may be useful if something in your macro is not working. **See especially the macro `step_expansion`.**
 
-Any missing `ctx` fields are fixed automatically in a postprocessing step, so you don't need to care about those when writing your AST.
+
+## Macro docstrings
+
+*Docstrings for macros are important.* For convenience, [the REPL system](repl.md) imports each macro-imported macro also as a regular run-time function, precisely so that its docstring and source code can be viewed easily.
+
+Because in `mcpyrate` macros are functions, the docstring should make it explicit that the function is actually a macro. `mcpyrate` itself follows the convention of prefixing the first line of each macro docstring with one of:
+
+```
+[syntax, expr]
+[syntax, block]
+[syntax, decorator]
+[syntax, name]
+```
+
+or when applicable, a combination such as:
+
+```
+[syntax, expr/block]
+```
+
+If you're writing a [dialect](dialects.md), and doing something completely wild with something that looks like a macro, then we recommend:
+
+```
+[syntax, special]
+```
+
+For example, `mcpyrate` itself provides `mcpyrate.debug.step_phases`; its macro-import acts as a flag for the multi-phase compiler, and otherwise that "macro" is unused.
+
+The term *syntax* to denote a macro was inspired by [The Racket Reference](https://docs.racket-lang.org/reference/). In Racket, a macro is *a syntax*, as opposed to *a procedure* a.k.a. garden variety function.
+
+
+## Source location information and `ctx` attributes
+
+Any missing `ctx` attributes are fixed automatically in a postprocessing step, so you don't need to care about those when writing your AST.
 
 For **source location information**, the recommendation is:
 
@@ -249,19 +301,7 @@ For **source location information**, the recommendation is:
 
  - If you just edit an existing AST node, just leave its source location information as-is.
 
-(What we can do automatically, and what `mcpyrate` indeed does, is to make sure that *the line with the macro invocation* shows as covered, on the condition that the macro was actually invoked.)
-
-Simple example:
-
-```python
-from ast import *
-from mcpyrate import unparse
-def log(expr, **kw):
-    '''[syntax, expr] Replace log[expr] with print('expr: ', expr)'''
-    label = unparse(expr) + ': '
-    return Call(func=Name(id='print', ctx=Load()),
-                args=[Constant(value=label), expr], keywords=[])
-```
+What we can do automatically, and what `mcpyrate` indeed does, is to make sure that *the line with the macro invocation* shows as covered, on the condition that the macro was actually invoked.
 
 
 ## Macro invocation types
@@ -300,6 +340,39 @@ Valid return values from a macro are as follows:
 (If a `block` macro deletes the whole block, any lines in the source code *inside that block* will *not* be reported as covered, since they will then not run.)
 
 
+## Named parameters filled by expander
+
+When calling a macro function to expand a macro, the expander passes certain named arguments to the macro function. Any unused ones are gathered by the macro function's `**kw` parameter.
+
+Full list as of v3.0.0, in alphabetical order:
+
+ - `args`: macro argument ASTs, if the invocation provided any. If not, `args = []`.
+   - A macro function only accepts macro arguments if declared `@parametricmacro`. For non-parametric macros (default), `args=[]`.
+ - `expander`: the macro expander instance.
+   - To expand macro invocations inside the current one, use `expander.visit(tree)`, or in special use cases (when you know why), `expander.visit_recursively(tree)` or `expander.visit_once(tree)`.
+     - These methods will use the macro bindings *from the use site of your macro*. If you instead need to use the macro bindings *from the definition site of your macro*, see the `expand` family of macros in [`mcpyrate.metatools`](../mcpyrate/metatools.py). [Full documentation](quasiquotes.md#the-expand-family-of-macros).
+   - Also potentially useful are `expander.bindings` and `expander.filename`.
+   - See [`mcpyrate.core.BaseMacroExpander`](../mcpyrate/core.py) and [`mcpyrate.expander.MacroExpander`](../mcpyrate/expander.py) for the expander API; it's just a few methods and attributes.
+- `invocation`: the whole macro invocation AST node as-is, not only `tree`. For introspection.
+   - Very rarely needed; if you need it, you'll know.
+   - **CAUTION**: not a copy, or at most a shallow copy.
+ - `optional_vars`: only exists when `syntax='block'`. The *as-part* of the `with` statement. (So use it as `kw['optional_vars']`.)
+ - `syntax`: invocation type. One of `expr`, `block`, `decorator`, `name`.
+   - Can be `name` only if the macro function is declared `@namemacro`.
+
+### Differences to `mcpy`
+
+No named parameter `to_source`. Use the function `mcpyrate.unparse`.
+
+No named parameter `expand_macros`. Use the named parameter `expander`, which grants access to the macro expander instance. Call `expander.visit(tree)`.
+
+You might also want to see the `expand` family of macros in [`mcpyrate.metatools`](../mcpyrate/metatools.py). [Documentation](quasiquotes.md#the-expand-family-of-macros).
+
+The named parameters `args` and `invocation` are new.
+
+The fourth `syntax` invocation type `name` is new.
+
+
 ## Quasiquotes
 
 [[full documentation](quasiquotes.md)]
@@ -313,34 +386,12 @@ from mcpyrate import unparse
 from mcpyrate.quotes import macros, q, u, a
 
 def log(expr, **kw):
-    '''[syntax, expr] Replace log[expr] with print('expr: ', expr)'''
-    label = unparse(expr) + ': '
+    """[syntax, expr] Replace log[expr] with print("expr: ", expr)"""
+    label = unparse(expr) + ": "
     return q[print(u[label], a[expr])]
 ```
 
 Here `q[]` quasiquotes an expression, `u[]` unquotes a simple value, and `a[]` unquotes an expression AST. If you're worried that `print` may refer to something else at the use site of `log[]`, you can hygienically capture the function with `h[]`: `q[h[print](u[label], a[expr])]`.
-
-### Differences to `macropy`
-
-By default, in `mcpyrate`, macros in quasiquoted code are not expanded when the quasiquote itself expands.
-
-In `mcpyrate`, all quote and unquote operators have single-character names by default: `q`, `u`, `n`, `a`, `s`, `t`, `h`. Of these, `q` and `u` are as in `macropy`, the operator `n` most closely corresponds to `name`, `a` to `ast_literal`, and `s` to `ast_list`.
-
-`mcpyrate` adds a sister for `s`, namely `t`, which works similarly, but makes an `ast.Tuple`. This is convenient especially in the macro argument position, because `mcpyrate` represents multiple macro arguments as a tuple.
-
-In `mcpyrate`, there is **just one *quote* operator**, `q[]`, although just like in `macropy`, there are several different *unquote* operators, depending on what you want to do. In `mcpyrate`, there is no `unhygienic` operator, because there is no separate `hq` quote.
-
-For [macro hygiene](https://en.wikipedia.org/wiki/Hygienic_macro), we provide a **hygienic unquote** operator, `h[]`. So instead of implicitly hygienifying all `Name` nodes inside a `hq[]` like `macropy` does, `mcpyrate` instead expects the user to use the regular `q[]`, and explicitly say which subexpressions to hygienify, by unquoting each of those separately with `h[]`. The hygienic unquote operator captures expressions by snapshotting a value; it does not care about names, except for human-readable output.
-
-In `mcpyrate`, also macro names can be captured hygienically.
-
-In `mcpyrate`, there is no `expose_unhygienic`, and no names are reserved for the macro system. (You can call a variable `ast` if you want, and it won't shadow anything important.)
-
-The `expose_unhygienic` mechanism is not needed, because in `mcpyrate`, each macro-import is transformed into a regular import of the module the macros are imported from. So the macros can refer to anything in the top-level namespace of their module as attributes of that module object. (As usual in Python, this includes any imports. For example, `mcpyrate.quotes` refers to the stdlib `ast` module in the macro expansions as `mcpyrate.quotes.ast` for this reason.)
-
-In `mcpyrate`, the `a` operator has also a block mode (`with a`), which unquotes *statement* AST nodes.
-
-In `mcpyrate`, the `n[]` operator is a wrapper for `ast.parse`, so it will lift any source code that represents an expression, not only lexical variable references.
 
 
 ## Get the source of an AST
@@ -381,37 +432,6 @@ And when using the `mcpyrate.debug.StepExpansion` debugging dialect, then during
 To bridge the feature gap between [`ast.NodeVisitor`](https://docs.python.org/3/library/ast.html#ast.NodeVisitor)/  [`ast.NodeTransformer`](https://docs.python.org/3/library/ast.html#ast.NodeTransformer) and `macropy`'s `Walker`, we provide `ASTVisitor` and `ASTTransformer` that can context-manage their state for different subtrees, while optionally collecting items across the whole walk. These can be found in the module [`mcpyrate.walkers`](../mcpyrate/walkers.py).
 
 The walkers are based on `ast.NodeVisitor` and `ast.NodeTransformer`, respectively. So `ASTVisitor` only looks at the tree, gathering information from it, while `ASTTransformer` may perform edits.
-
-
-## The named parameters
-
-Full list as of v3.0.0, in alphabetical order:
-
- - `args`: macro argument ASTs, if the invocation provided any. If not, `args = []`.
-   - A macro function only accepts macro arguments if declared `@parametricmacro`. For non-parametric macros (default), `args=[]`.
- - `expander`: the macro expander instance.
-   - To expand macro invocations inside the current one, use `expander.visit(tree)`, or in special use cases (when you know why), `expander.visit_recursively(tree)` or `expander.visit_once(tree)`.
-     - These methods will use the macro bindings *from the use site of your macro*. If you instead need to use the macro bindings *from the definition site of your macro*, see the `expand` family of macros in [`mcpyrate.metatools`](../mcpyrate/metatools.py). [Full documentation](quasiquotes.md#the-expand-family-of-macros).
-   - Also potentially useful are `expander.bindings` and `expander.filename`.
-   - See [`mcpyrate.core.BaseMacroExpander`](../mcpyrate/core.py) and [`mcpyrate.expander.MacroExpander`](../mcpyrate/expander.py) for the expander API; it's just a few methods and attributes.
-- `invocation`: the whole macro invocation AST node as-is, not only `tree`. For introspection.
-   - Very rarely needed; if you need it, you'll know.
-   - **CAUTION**: not a copy, or at most a shallow copy.
- - `optional_vars`: only exists when `syntax='block'`. The *as-part* of the `with` statement. (So use it as `kw['optional_vars']`.)
- - `syntax`: invocation type. One of `expr`, `block`, `decorator`, `name`.
-   - Can be `name` only if the macro function is declared `@namemacro`.
-
-### Differences to `mcpy`
-
-No named parameter `to_source`. Use the function `mcpyrate.unparse`.
-
-No named parameter `expand_macros`. Use the named parameter `expander`, which grants access to the macro expander instance. Call `expander.visit(tree)`.
-
-You might also want to see the `expand` family of macros in [`mcpyrate.metatools`](../mcpyrate/metatools.py). [Documentation](quasiquotes.md#the-expand-family-of-macros).
-
-The named parameters `args` and `invocation` are new.
-
-The fourth `syntax` invocation type `name` is new.
 
 
 ## Macro arguments
@@ -497,7 +517,7 @@ Observe that the syntax `macroname[a][b]` may mean one of two different things:
 
 ### Writing parametric macros
 
-To declare a macro parametric, use the `@parametricmacro` decorator on your macro function. Place it outermost (along with `@namemacro`, if used too).
+To declare a macro parametric, use the `@parametricmacro` decorator on your macro function. It can be imported from the top-level namespace of `mcpyrate`. Place it outermost (along with `@namemacro`, if used too).
 
 The parametric macro function receives macro arguments as the `args` named parameter. It is a raw `list` of the ASTs `arg0` and so on. If the macro was invoked without macro arguments, `args` is an empty list.
 
@@ -521,12 +541,13 @@ In `mcpyrate`, macros must explicitly opt in to accept arguments. This makes it 
 ## Identifier macros
 
 Identifier macros are a rarely used feature, but one that is indispensable for
-that rare use case. The reason this feature exists is to allow creating magic
-variables that may appear only in certain contexts.
+that rare use case. The main reason this feature exists is to allow creating
+magic variables that may appear only in certain contexts.
 
 To be eligible to be called as an identifier macro, a macro must be declared as
 an identifier macro. Declare by using the `@namemacro` decorator on your macro
-function. Place it outermost (along with `@parametricmacro`, if used too).
+function. It can be imported from the top-level namespace of `mcpyrate`. Place
+it outermost (along with `@parametricmacro`, if used too).
 
 Identifier macro invocations do not take macro arguments. So when a macro
 function is invoked as an identifier macro, `args=[]`. The `tree` will be the
@@ -541,9 +562,12 @@ name, you can `return tree` without modifying it. This is useful when the
 identifier macro is needed only for its side effects, such as validating its use
 site.
 
-Of course, if you want something else, you can return any tree you want to
-replace the original with - after all, an identifier macro is just a macro,
-and an identifier is just a special kind of expression.
+Of course, if you want to use this feature for something else, you can return
+any expression AST you want to replace the `Name` node with - after all, an
+identifier macro is just a macro, and an identifier is just a special kind of
+expression. `mcpyrate` itself provides some identifier macros that have nothing
+to do with magic variables; see [`mcpyrate.debug.show_bindings`](../mcpyrate/debug.py)
+and [`mcpyrate.metatools.macro_bindings`](../mcpyrate/metatools.py).
 
 ### Syntax limitations
 
