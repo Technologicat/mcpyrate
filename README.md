@@ -11,9 +11,10 @@ We aim at developer-friendliness. `mcpyrate` yields correct [coverage](https://g
 
 We use [semantic versioning](https://semver.org/). `mcpyrate` is almost-but-not-quite compatible with `mcpy` 2.0.0, hence the initial release is 3.0.0. There are some differences in the named parameters the expander provides to the macro functions; for details, search [the main user manual](doc/main.md) for *differences to mcpy*.
 
-![100% Python](https://img.shields.io/github/languages/top/Technologicat/mcpyrate) 
-![open issues](https://img.shields.io/github/issues/Technologicat/mcpyrate) 
-[![contributions welcome](https://img.shields.io/badge/PRs-welcome-brightgreen)](http://makeapullrequest.com/)
+![100% Python](https://img.shields.io/github/languages/top/Technologicat/mcpyrate) ![supported language versions](https://img.shields.io/pypi/pyversions/mcpyrate) ![supported implementations](https://img.shields.io/pypi/implementation/mcpyrate)  
+![version on PyPI](https://img.shields.io/pypi/v/mcpyrate) ![PyPI package format](https://img.shields.io/pypi/format/mcpyrate) ![dependency status](https://img.shields.io/librariesio/github/Technologicat/mcpyrate)  
+![license: MIT](https://img.shields.io/pypi/l/mcpyrate) ![open issues](https://img.shields.io/github/issues/Technologicat/mcpyrate) [![PRs welcome](https://img.shields.io/badge/PRs-welcome-brightgreen)](http://makeapullrequest.com/)
+
 *Some hypertext features of this README, such as local links to detailed documentation, are not supported when viewed on PyPI; [view on GitHub](https://github.com/Technologicat/mcpyrate) to have those work properly.*
 
 
