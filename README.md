@@ -155,7 +155,17 @@ The full documentation of `mcpyrate` lives in the [`doc/`](doc/) subfolder. Some
 
 ## Install & uninstall
 
-PyPI package will follow later. For now, install from source:
+### From PyPI
+
+```bash
+pip install mcpyrate
+```
+
+possibly with `--user`, if your OS is a *nix, and you feel lucky enough to use the system Python. If not, activate your venv first; the `--user` flag is then not needed.
+
+### From source
+
+Clone the repo from GitHub. Then, navigate to it in a terminal, and:
 
 ```bash
 python -m setup install
