@@ -1,6 +1,11 @@
 # Changelog
 
-**3.0.0** (in progress; updated 1 November 2020) - *Arrr!* edition:
+**3.0.1** (27 November 2020)
+
+- Fix project metadata in `setup.py`.
+
+
+**3.0.0** (27 November 2020) - *Arrr!* edition:
 
 Initial release of **`mcpyrate`**, the advanced, third-generation macro expander for Python, after the pioneering [macropy](https://github.com/lihaoyi/macropy), and the compact, pythonic [mcpy](https://github.com/delapuente/mcpy). The emphasis is on correctness, feature-completeness for serious macro-enabled work, and simplicity, in that order.
 
