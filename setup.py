@@ -5,7 +5,7 @@ from setuptools import setup
 
 def read(*relpath, **kwargs):
     with open(os.path.join(os.path.dirname(__file__), *relpath),
-              encoding=kwargs.get('encoding', 'utf8')) as fh:
+              encoding=kwargs.get("encoding", "utf8")) as fh:
         return fh.read()
 
 setup(
