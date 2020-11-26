@@ -13,7 +13,7 @@ We use [semantic versioning](https://semver.org/). `mcpyrate` is almost-but-not-
 
 ![100% Python](https://img.shields.io/github/languages/top/Technologicat/mcpyrate) 
 ![open issues](https://img.shields.io/github/issues/Technologicat/mcpyrate) 
-[![contributions welcome](https://img.shields.io/badge/contributions-welcome-brightgreen.svg?style=flat)](http://makeapullrequest.com/)
+[![contributions welcome](https://img.shields.io/badge/PRs-welcome-brightgreen)](http://makeapullrequest.com/)
 
 
 <!-- markdown-toc start - Don't edit this section. Run M-x markdown-toc-refresh-toc -->
