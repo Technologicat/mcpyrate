@@ -188,7 +188,7 @@ def splice_dialect(body, template, tag="__paste_here__"):
 
     finalbody = splice_statements(body, template, tag)
     return (docstring +
-            template_dialect_imports + user_dialect_imports +
             user_magic_all +
+            template_dialect_imports + user_dialect_imports +
             template_macro_imports + user_macro_imports +
             finalbody)
