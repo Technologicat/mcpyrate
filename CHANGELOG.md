@@ -1,5 +1,10 @@
 # Changelog
 
+**3.0.2** (in progress)
+
+*No changes yet.*
+
+
 **3.0.1** (27 November 2020)
 
 - Fix project metadata in `setup.py`.
