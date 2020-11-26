@@ -15,8 +15,7 @@ def splice_statements(body, template, tag="__paste_here__"):
     """Splice `body` into `template`.
 
     This is somewhat like `mcpyrate.quotes.a`, but must be called from outside the
-    quoted snippet, and splices statements (from a `list` of AST nodes) instead
-    of a single expression AST node.
+    quoted snippet.
 
     Parameters:
 
