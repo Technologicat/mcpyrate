@@ -21,7 +21,7 @@ We use [semantic versioning](https://semver.org/). `mcpyrate` is almost-but-not-
 
 - [mcpyrate](#mcpyrate)
     - [First example](#first-example)
-    - [Highlights](#highlights)
+    - [Features](#features)
     - [Documentation](#documentation)
     - [Install & uninstall](#install--uninstall)
     - [Understanding the implementation](#understanding-the-implementation)
@@ -62,7 +62,7 @@ echo[6 * 7]
 To run either example, `macropython -m application`, or `macropython application.py`. For more examples, see the [`demo/`](demo/) subfolder.
 
 
-## Highlights
+## Features
 
 - **Agile development tools**.
   - [Multi-phase compilation](doc/main.md#multi-phase-compilation): Use macros also in the same module where they are defined.
