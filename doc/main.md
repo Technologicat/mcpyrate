@@ -652,8 +652,9 @@ Obviously, if you want to expand just one layer with the second expander, use it
 
 # Multi-phase compilation
 
-*Multi-phase compilation*, a.k.a. `with phase`, allows to use macros in the
-same module where they are defined. To tell `mcpyrate` to enable the multi-phase
+*Multi-phase compilation*, a.k.a. *staging*, allows to use macros in the
+same module where they are defined. In `mcpyrate`, this is achieved with the
+`with phase` syntactic construct. To tell `mcpyrate` to enable the multi-phase
 compiler for your module, add the following macro-import somewhere in the top
 level of the module body:
 

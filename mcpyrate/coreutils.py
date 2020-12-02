@@ -101,7 +101,7 @@ def get_macros(macroimport, *, filename, reload=False, allow_asname=True, self_m
 
     `self_module` is an optional string, the absolute dotted module name of the
     module being expanded. Used for supporting `from __self__ import macros, ...`
-    for multi-phase compilation (a.k.a. `with phase`).
+    for multi-phase compilation (a.k.a. staging).
 
     This function is meant for implementing actual macro expanders.
     """

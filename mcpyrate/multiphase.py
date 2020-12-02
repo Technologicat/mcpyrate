@@ -12,6 +12,10 @@ part of the public API of `mcpyrate.debug`, because it's a debugging utility.
 As a developer, see `ismultiphase` and `multiphase_expand`; the rest are
 implementation details. We provide `isdebug` and `detect_highest_phase`
 for convenient introspection.
+
+Multi-phase compilation is also known as *staging*, but the focus is usually
+slightly different. Hence we have preferred the term *phase*, from Racket,
+because Racket's phase level tower is the system that most resembles this one.
 """
 
 __all__ = ["phase", "ismultiphase", "detect_highest_phase", "isdebug", "multiphase_expand"]
@@ -128,7 +132,7 @@ def extract_phase(tree, *, phase=0):
 
 @parametricmacro
 def phase(tree, syntax, **kw):
-    """[syntax, block] Control multi-phase compilation.
+    """[syntax, block] Control multi-phase compilation (a.k.a. staging).
 
     Allows a module to use macros defined in that module itself.
 

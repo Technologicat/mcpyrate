@@ -535,7 +535,7 @@ def find_macros(tree, *, filename, reload=False, self_module=None, transform=Tru
 
     `self_module`: str, optional, absolute dotted module name of the module being
                    expanded. Used for supporting `from __self__ import macros, ...`
-                   for multi-phase compilation (a.k.a. `with phase`).
+                   for multi-phase compilation (a.k.a. staging).
 
     `transform`: If enabled, transform each macro-import into `import ...`,
                  where `...` is the absolute module name the macros are being
