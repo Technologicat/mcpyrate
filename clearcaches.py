@@ -31,6 +31,12 @@ def _delete_directory_recursively(path):
             except FileNotFoundError:
                 pass
 
+        for x in dirs:
+            try:
+                os.rmdir(os.path.join(root, x))
+            except FileNotFoundError:
+                pass
+
     try:
         os.rmdir(path)
     except FileNotFoundError:
