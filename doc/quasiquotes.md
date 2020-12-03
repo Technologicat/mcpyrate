@@ -824,8 +824,12 @@ with q as quoted:
 ## Quotes, unquotes, and macro expansion
 
 **In an unquote expression** inside quoted code, regardless of how many levels of
-quoting are present, macros are always fully expanded, because the purpose of
-an unquote is to interpolate a value.
+quoting are present, macros are always fully expanded.
+
+(This may change in a future version; another reasonable strategy is that macros
+are only expanded when the quote level reaches zero. But that raises the question
+of what to do with the macro bindings of macros seen in quoted code when the quote
+level is nonzero. This is why 3.0.0 opts for the simpler, but not as flexible, solution.)
 
 Anywhere else **in quoted code**, macros are **not** expanded by default.
 Depending on what you want, you can:
