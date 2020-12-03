@@ -1,43 +1,63 @@
 # -*- coding: utf-8 -*-
 
 from ..metatools import (macros, expands, expand1s, expandsq, expand1sq,  # noqa: F811
-                         expandr, expand1r, expandrq, expand1rq)
+                         expandr, expand1r, expandrq, expand1rq, fill_location)
 from ..quotes import macros, q, u, n, a, s, t, h  # noqa: F811
 from .macros import (macros, test_q, test_hq,  # noqa: F401, F811
                      first, second, third)
 
 import ast
 
-from ..astfixers import fix_locations
-from ..core import global_postprocess
+from ..dialects import DialectExpander
+from ..importer import expand_ast
 from ..quotes import unastify
 from ..unparser import unparse
+from ..utils import gensym
+
 
 def f():
     return "f from macro use site"
 
 
 def fake_import(tree):
-    """Take a list of statements, wrap it in an `ast.Module`, and `compile` it.
+    """Wrap a list of statements in an `ast.Module`, expand it, and `compile`.
 
     `tree`: `list` of statement AST nodes.
 
     Return value is a code object, ready for `exec`.
 
-    This is a poor man's approximation of what the importer does, so that
-    we can locally test how a given block of statements behaves at run time.
+    Expansion is performed by calling `mcpyrate.importer.expand`, so this supports
+    also dialect AST transforms and multi-phase compilation.
     """
     module = ast.Module(body=tree)
+    self_module = f"fake_import_{gensym()}"
+    fake_filename = f"<run-time AST value at {hex(id(tree))}>"
 
-    # This would be done by core for each individual macro expansion,
-    # using the appropriate source location info.
-    reference_node = ast.Constant(value=None, lineno=1, col_offset=1)
-    fix_locations(tree, reference_node, mode="reference")
+    # Quoted code itself doesn't carry a source location, by design; this is to support its
+    # most common use case so that the expander can auto-fill the appropriate location when
+    # the code gets spliced in. (Note that the usual appropriate location - considering the
+    # unexpanded source code - is not the use site of `q` itself, but the use site of the
+    # macro that uses `q`. The use site of `q` is typically in a different source file.)
+    #
+    # We could fill some dummy source location info here, but see the macro
+    # `mcpyrate.metatools.fill_location`.
+    #
+    # Missing locations are usually fixed by core for each individual macro expansion,
+    # using the appropriate source location info. Using the `fill_location`
+    # macro, we can manually do it at the use site for the whole quoted `tree`,
+    # before calling `fake_import`. So we don't fill in any source location info here.
+    #
+    # from ..astfixers import fix_locations
+    # fake_lineno = 9999
+    # fake_col_offset = 9999
+    # reference_node = ast.Constant(value=None, lineno=fake_lineno, col_offset=fake_col_offset)
+    # fix_locations(tree, reference_node, mode="reference")
 
-    # This would be done by core for the whole module. (This fixes the ctx.)
-    tree = global_postprocess(tree)
+    dexpander = DialectExpander(filename=fake_filename)
+    # dexpander.debug = True  # uncomment this to enable debug mode (like the `StepExpansion` dialect does)
+    module = expand_ast(module, filename=fake_filename, self_module=self_module, dexpander=dexpander)
 
-    code = compile(module, filename="<string>", mode="exec", dont_inherit=True)
+    code = compile(module, filename=fake_filename, mode="exec", dont_inherit=True)
     return code
 
 
@@ -95,14 +115,14 @@ def test():
     # Testing hack: because we're not in a macro (that could just return `tree`
     # to the importer), we have to compile and exec `tree` manually to run it.
     namespace = {}
-    exec(fake_import(quoted), namespace)
+    exec(fake_import(fill_location[quoted]), namespace)
     assert namespace["x"] == 42
 
     # `n[]` can also appear in a `del`:
     assert "x" in namespace
     with q as quoted:
         del n[nom]
-    exec(fake_import(quoted), namespace)
+    exec(fake_import(fill_location[quoted]), namespace)
     assert "x" not in namespace
 
     # a[]: AST literal
