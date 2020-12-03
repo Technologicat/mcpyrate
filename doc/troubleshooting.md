@@ -51,7 +51,7 @@ This is normal. The behavior is due to bytecode caching (`.pyc` files). When `mc
 
 Even if you use [`sys.dont_write_bytecode = True`](https://docs.python.org/3/library/sys.html#sys.dont_write_bytecode) or the environment variable [`PYTHONDONTWRITEBYTECODE=1`](https://docs.python.org/3/using/cmdline.html#envvar-PYTHONDONTWRITEBYTECODE), Python will still **use** existing `.pyc` files if they are up to date.
 
-If you want to force all of your code to be macro-expanded again, delete your bytecode cache (`.pyc`) files; they'll be re-generated automatically. Typically, they can be found in a folder named `__pycache__`, at each level of your source tree.
+If you want to force all of your code to be macro-expanded again, delete your bytecode cache (`.pyc`) files; they'll be re-generated automatically. Typically, they can be found in a folder named `__pycache__`, at each level of your source tree. To do this conveniently, see the `clearcaches.py` script, provided with the `mcpyrate` source code.
 
 Normally there is no need to delete bytecode caches manually.
 
