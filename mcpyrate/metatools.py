@@ -79,7 +79,7 @@ def runtime_expand(bindings, filename, tree):
 
 @namemacro
 def macro_bindings(tree, *, syntax, expander, **kw):  # tree argument is unused
-    """[syntax, name] capture the macro expander's macro bindings.
+    """[syntax, name] Capture the macro expander's macro bindings.
 
     This macro snapshots the macro expander's current macro bindings at macro
     expansion time (when the invocation of `macro_bindings` is reached), and
