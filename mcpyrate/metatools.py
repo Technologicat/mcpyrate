@@ -33,6 +33,7 @@ definition site*, you should use the `expand` family of macros.
 """
 
 __all__ = ["macro_bindings",
+           "fill_location",
            "expand1sq", "expandsq",
            "expand1s", "expands",
            "expand1rq", "expandrq",
@@ -42,6 +43,7 @@ __all__ = ["macro_bindings",
 import ast
 
 # Note we import some macros as regular functions. We just want their syntax transformers.
+from .astfixers import fix_locations  # noqa: F401, used in macro output.
 from .debug import step_expansion  # noqa: F401, used in macro output.
 from .expander import MacroExpander, namemacro, parametricmacro
 from .quotes import q, astify, unastify, capture_value
@@ -98,6 +100,58 @@ def macro_bindings(tree, *, syntax, expander, **kw):  # tree argument is unused
     keys = list(astify(k) for k in expander.bindings.keys())
     values = list(capture_value(v, k) for k, v in expander.bindings.items())
     return ast.Dict(keys=keys, values=values)
+
+
+def fill_location(tree, *, syntax, invocation, **kw):
+    """[syntax, expr] Fill missing source location info, recursively.
+
+    The source location is copied from the invocation of `fill_location` itself
+    at macro expansion time. The filling itself is delayed *until run time*.
+
+    This is useful to set a source location for a run-time AST value, such as a
+    quoted tree; especially if you intend to expand it at run time, so that the
+    traceback for any macro expansion error will sensibly identify the use site
+    in your code.
+
+    Using this macro, you don't need to manually grab `lineno` and `col_offset`
+    to be used as the fill values. If you wish to use custom values, use the
+    function `mcpyrate.astfixers.fix_locations` instead.
+
+    Usage::
+
+        quoted = fill_location[q[...]]
+
+    or::
+
+        with q as quoted:
+            ...
+        quoted = fill_location[quoted]
+    """
+    if syntax != "expr":
+        raise SyntaxError("`fill_location` is an expr macro only")
+    if not (hasattr(invocation, "lineno") and hasattr(invocation, "col_offset")):
+        raise SyntaxError("`fill_location` invocation itself is missing source location info.")
+    fake_lineno = invocation.lineno
+    fake_col_offset = invocation.col_offset
+    reference_node = ast.Constant(value="source location dummy")  # We want this as a run-time AST value.
+    # By design, an astified run-time AST value does not carry a source location, because typically,
+    # it's used by `q`, and the quoted code will be ultimately spliced in to a different source file.
+    # (It will be spliced in to the use site of the macro that uses `q`, which is usually different
+    # from the file where the implementation of that macro - the use site of `q` - resides.)
+    #
+    # So we modify the `Call` node, to pass in our captured source location info at run time.
+    #
+    # (If this looks confusing, `step_expansion` the output at the use site; the "dump" mode may help.
+    #  It may also be useful to set `fake_lineno` and `fake_col_offset` to 9999 here, to see more clearly
+    #  where exactly those values end up in the output AST.)
+    astified_reference_node = astify(reference_node)
+    astified_reference_node.keywords.extend([ast.keyword("lineno", astify(fake_lineno)),
+                                             ast.keyword("col_offset", astify(fake_col_offset))])
+    return ast.Call(_mcpyrate_metatools_attr("fix_locations"),
+                    [tree,
+                     astified_reference_node],
+                    [ast.keyword("mode", astify("reference"))])
+
 
 # --------------------------------------------------------------------------------
 
