@@ -1,7 +1,7 @@
 # -*- coding: utf-8; -*-
 """Importer (finder/loader) customizations, to inject the dialect and macro expanders."""
 
-__all__ = ["source_to_xcode", "path_xstats"]
+__all__ = ["source_to_xcode", "expand_ast", "path_xstats"]
 
 import ast
 import distutils.sysconfig
@@ -38,19 +38,89 @@ def source_to_xcode(self, data, path, *, _optimize=-1):
     except Exception as err:
         raise ImportError(f"Failed to parse {path} as Python after applying all dialect source transformers.") from err
 
-    if not ismultiphase(tree):
-        tree, dialect_instances = dexpander.transform_ast(tree)
-        module_macro_bindings = find_macros(tree, filename=path)
-        expansion = expand_macros(tree, bindings=module_macro_bindings, filename=path)
-        expansion = dexpander.postprocess_ast(expansion, dialect_instances)
-        check_no_markers_remaining(expansion, filename=path)
-
-    else:
-        # `self.name` is absolute dotted module name, see `importlib.machinery.FileLoader`.
-        # This is used to resolve `__self__` in `from __self__ import macros, ...`.
-        expansion = multiphase_expand(tree, dexpander, filename=path, self_module=self.name, _optimize=_optimize)
+    # `self.name` is absolute dotted module name, see `importlib.machinery.FileLoader`.
+    expansion = expand_ast(tree, filename=path, self_module=self.name, dexpander=dexpander, _optimize=_optimize)
 
     return compile(expansion, path, "exec", dont_inherit=True, optimize=_optimize)
+
+
+def expand_ast(tree, *, filename, self_module=None, dexpander=None, _optimize=-1):
+    """Expand dialects and macros in `tree`, multi-phase compiling if needed.
+
+    This is a low-level function, provided for convenience. It is useful for
+    aiding compilation of macro-enabled (and dialect-enabled) ASTs at run time.
+
+    Primarily meant to be called with `tree` the AST of a module that
+    uses macros, but works with any `tree` that has a `body` attribute,
+    where that `body` is a `list` of statement AST nodes.
+
+    Note that dialect source transforms, as well as the parsing of the input
+    source code into a Python AST, is already done when this function is called.
+
+    `filename`:         Full path to the `.py` file being compiled.
+
+    `self_module`:      Absolute dotted module name of the module being compiled.
+                        Used for temporarily injecting the temporary, higher-phase
+                        modules into `sys.modules`, as well as resolving `__self__`
+                        in self-macro-imports (`from __self__ import macros, ...`).
+
+                        Needed for modules that request multi-phase compilation.
+                        Ignored in single-phase compilation.
+
+    `dexpander`:        The `DialectExpander` instance to use for dialect AST transforms.
+                        If not provided, dialect processing is skipped.
+
+                        This is a parameter so that we can honor debug mode if it was
+                        enabled during dialect *source* transforms earlier.
+
+    `_optimize`:        Passed to `mcpyrate.multiphase.multiphase_expand` when a module
+                        requests multi-phase compilation. Only affects the temporary
+                        higher-phase modules.
+
+    Return value is the expanded `tree`, which is a plain Python AST (no macros or dialects)
+    that can be passed to the built-in `compile` function.
+    """
+    if not ismultiphase(tree):
+        expansion = _expand_ast_impl(tree, filename=filename, self_module=None, dexpander=dexpander)
+    else:
+        if not self_module:
+            raise ValueError("`self_module` must be specified when multi-phase compiling.")
+        expansion = multiphase_expand(tree, filename=filename, self_module=self_module,
+                                      dexpander=dexpander, _optimize=_optimize)
+    return expansion
+
+
+# This is split into its own function so we can re-use it inside `multiphase_expand`.
+def _expand_ast_impl(tree, *, filename, self_module, dexpander):
+    """Expand dialects and macros in `tree`. Single phase.
+
+    In multi-phase compilation, `tree` must be preprocessed so that it contains
+    only the AST for the desired phase.
+
+    Primarily meant to be called with `tree` the AST of a module that
+    uses macros, but works with any `tree` that has a `body` attribute,
+    where that `body` is a `list` of statement AST nodes.
+
+    `filename`:         Full path to the `.py` file being compiled.
+
+    `self_module`:      During multi-phase compilation, used for resolving `__self__`
+                        in self-macro-imports (`from __self__ import macros, ...`).
+
+                        Ignored in single-phase compilation.
+
+    `dexpander`:        The `DialectExpander` instance to use for dialect AST transforms.
+                        If not provided, dialect processing is skipped.
+
+    Return value is the expanded `tree`.
+    """
+    if dexpander:
+        tree, dialect_instances = dexpander.transform_ast(tree)
+    module_macro_bindings = find_macros(tree, filename=filename, self_module=self_module)
+    expansion = expand_macros(tree, bindings=module_macro_bindings, filename=filename)
+    if dexpander:
+        expansion = dexpander.postprocess_ast(expansion, dialect_instances)
+    check_no_markers_remaining(expansion, filename=filename)
+    return expansion
 
 
 # TODO: Support PEP552 (Deterministic pycs). Need to intercept source file hashing, too.

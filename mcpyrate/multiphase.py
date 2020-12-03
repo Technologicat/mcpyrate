@@ -28,6 +28,7 @@ from types import ModuleType
 from .colorizer import setcolor, ColorScheme
 from .coreutils import ismacroimport
 from .expander import find_macros, expand_macros, destructure_candidate, namemacro, parametricmacro
+from . import importer
 from .markers import check_no_markers_remaining
 from .unparser import unparse_with_fallbacks
 
@@ -308,7 +309,7 @@ def isdebug(tree):
 # --------------------------------------------------------------------------------
 # The multi-phase compiler.
 
-def multiphase_expand(tree, dexpander, *, filename, self_module, _optimize=-1):
+def multiphase_expand(tree, *, filename, self_module, dexpander=None, _optimize=-1):
     """Macro-expand an AST in multiple phases, controlled by `with phase[n]`.
 
     Primarily meant to be called with `tree` the AST of a module that
@@ -321,13 +322,15 @@ def multiphase_expand(tree, dexpander, *, filename, self_module, _optimize=-1):
     Once phase `k = 0` is reached and the code has been macro-expanded, the temporary
     entry is deleted from `sys.modules`.
 
-    `dexpander`:        The `DialectExpander` instance to use for dialect AST transforms.
-
     `filename`:         Full path to the `.py` file being compiled.
 
     `self_module`:      Absolute dotted module name of the module being compiled.
-                        Will be used to temporarily inject the temporary,
-                        higher-phase modules into `sys.modules`.
+                        Used for temporarily injecting the temporary, higher-phase
+                        modules into `sys.modules`, as well as resolving `__self__`
+                        in self-macro-imports (`from __self__ import macros, ...`).
+
+    `dexpander`:        The `DialectExpander` instance to use for dialect AST transforms.
+                        If not provided, dialect processing is skipped.
 
     `_optimize`:        Passed on to Python's built-in `compile` function, when compiling
                         the temporary higher-phase modules. Has no effect on the final result.
@@ -370,11 +373,8 @@ def multiphase_expand(tree, dexpander, *, filename, self_module, _optimize=-1):
             if debug:
                 print(unparse_with_fallbacks(phase_k_tree, debug=True, color=True), file=sys.stderr)
 
-            phase_k_tree, dialect_instances = dexpander.transform_ast(phase_k_tree)
-            module_macro_bindings = find_macros(phase_k_tree, filename=filename, self_module=self_module)
-            expansion = expand_macros(phase_k_tree, bindings=module_macro_bindings, filename=filename)
-            expansion = dexpander.postprocess_ast(expansion, dialect_instances)
-            check_no_markers_remaining(expansion, filename=filename)
+            expansion = importer._expand_ast_impl(phase_k_tree, filename=filename,
+                                                  self_module=self_module, dexpander=dexpander)
 
             # Once we hit the final phase, no more temporary modules - let the import system take over.
             if k == 0:
