@@ -128,8 +128,20 @@ def get_macros(macroimport, *, filename, reload=False, allow_asname=True, self_m
         # is already in `sys.modules`, because the importer temporarily places
         # it there. That way we can load macro bindings from it, while the
         # current phase is being compiled.
+        #
+        # If the highest phase tries to self-macro-import (which is incorrect),
+        # a blank dummy module will have been placed in `sys.modules` by Python's
+        # import system itself. So this should never trigger a `KeyError`;
+        # it'll instead trigger an error when attempting to import a name
+        # from that blank module.
+        #
+        # But just in case that some exotic use case leads to a `KeyError` here,
+        # translate that to an error sensible at this level of abstraction.
         module_absname = self_module
-        module = sys.modules[module_absname]
+        try:
+            module = sys.modules[module_absname]
+        except KeyError:
+            raise ModuleNotFoundError(f"{loc}\nModule {module_absname} not found in `sys.modules`")
 
     # regular macro-import
     else:
