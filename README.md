@@ -152,7 +152,7 @@ The full documentation of `mcpyrate` lives in the [`doc/`](doc/) subfolder. Some
 - [Dialects](doc/dialects.md)
 - [Troubleshooting](doc/troubleshooting.md)
 
-*We aim at complete documentation.* If you find something is missing, please [file an issue](https://github.com/Technologicat/mcpyrate/issues/new) to ask a question.
+*We aim at complete documentation.* If you find something is missing, please [file an issue](https://github.com/Technologicat/mcpyrate/issues/new). (And if you already figured out the thing that was missing from the docs, a documentation PR is also welcome!)
 
 
 ## Install & uninstall
