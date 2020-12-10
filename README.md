@@ -209,9 +209,11 @@ Despite their [fearsome](http://www.greghendershott.com/fear-of-macros/) reputat
 
   5. **[Embedded domain-specific languages (eDSLs)](https://en.wikipedia.org/wiki/Domain-specific_language#External_and_Embedded_Domain_Specific_Languages)**.
 
-     Here *embedded* means the DSL seamlessly integrates into the surrounding programming language (the host language). With embedded DSLs, there is no need to implement a whole new parser for the DSL, and many operations can be borrowed from the host language.
+     Here *embedded* means the DSL seamlessly integrates into the surrounding programming language (the host language). With embedded DSLs, there is no need to implement a whole new parser for the DSL, and many operations can be borrowed from the host language. Infix arithmetic notation and regular expressions are common examples of eDSLs that come embedded in many programming languages.
 
-     This approach significantly decreases the effort needed to implement a DSL, thus making small DSLs an attractive solution for a class of design problems. A language construction kit [can be much more useful](https://beautifulracket.com/appendix/why-racket-why-lisp.html#a_pwJR1) than how it may sound at first.
+     (Note that a general-purpose programming language does not strictly need to provide infix arithmetic; many Lisps do not. Of course, a form of infix arithmetic can be added as a macro; here's [a very compact Racket solution](https://artyom.me/learning-racket-2) (search the page for *"more operators"*).)
+
+     The embedded approach significantly decreases the effort needed to implement a DSL, thus making small DSLs an attractive solution for a class of design problems. A language construction kit [can be much more useful](https://beautifulracket.com/appendix/why-racket-why-lisp.html#a_pwJR1) than how it may sound at first.
 
   6. **[Mobile code](https://macropy3.readthedocs.io/en/latest/discussion.html#mobile-code)**, as pioneered by `macropy`. Shuttle code between domains, while still allowing it to be written together in a single code base.
 
