@@ -56,7 +56,12 @@ def match_syspath(filename):
     If `filename` is not under any directory in `sys.path`, raises `ValueError`.
     """
     absolute_filename = str(pathlib.Path(filename).expanduser().resolve())
-    for root_path in sys.path:
+    # Match deeper paths first; for readability, break ties lexicographically.
+    # This allows the matching to work also if e.g. both `/home/user/.local/`
+    # and `/home/user/.local/lib/python3.8/site-packages/` end up on `sys.path`.
+    def sortkey(s):
+        return -s.count(os.path.sep), s
+    for root_path in sorted(sys.path, key=sortkey):
         root_path = pathlib.Path(root_path).expanduser().resolve()
         if absolute_filename.startswith(str(root_path)):
             return root_path
