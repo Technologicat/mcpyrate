@@ -29,6 +29,7 @@ We use [semantic versioning](https://semver.org/). `mcpyrate` is almost-but-not-
         - [From PyPI](#from-pypi)
         - [From source](#from-source)
     - [Understanding the implementation](#understanding-the-implementation)
+    - [Emacs syntax highlighting](#emacs-syntax-highlighting)
     - [Why macros?](#why-macros)
 
 <!-- markdown-toc end -->
@@ -189,6 +190,32 @@ but first, make sure you're not in a folder that has an `mcpyrate` subfolder - `
 ## Understanding the implementation
 
 We follow the `mcpy` philosophy that macro expanders aren't rocket science. See [`CONTRIBUTING.md`](CONTRIBUTING.md).
+
+
+## Emacs syntax highlighting
+
+This Elisp snippet adds syntax highlighting for keywords specific to `mcpyrate` to your Emacs setup:
+
+```elisp
+  (defun my/mcpyrate-syntax-highlight-setup ()
+    "Set up additional syntax highlighting for `mcpyrate` in Python mode."
+    ;; adapted from code in dash.el
+    (let ((additional-keywords '("macros" "dialects"
+                                 "q" "u" "n" "a" "s" "t" "h"))
+          ;; Only for the anaphoric if demo; but this is how you make Emacs recognize your magic variables.
+          ;; This is a list, like `additional-keywords`, even though in the example it has only one item.
+          (magic-variables '("it")))
+      (font-lock-add-keywords 'python-mode `((,(concat "\\_<" (regexp-opt magic-variables 'paren) "\\_>")
+                                              1 font-lock-variable-name-face)) 'append)
+      (font-lock-add-keywords 'python-mode `((,(concat "\\_<" (regexp-opt additional-keywords 'paren) "\\_>")
+                                              1 font-lock-keyword-face)) 'append)
+  ))
+  (add-hook 'python-mode-hook 'my/mcpyrate-syntax-highlight-setup)
+```
+
+*Known issue*: For some reason, during a given session, this takes effect only starting with the second Python file opened. The first Python file opened during a session shows with the default Python syntax highlighting. Probably something to do with the initialization order of font-lock and whichever `python-mode` is being used.
+
+Tested with `anaconda-mode`.
 
 
 ## Why macros?
