@@ -1,6 +1,6 @@
 # -*- coding: utf-8; -*-
 
-__all__ = ["Bunch"]
+__all__ = ["Bunch", "bunchify"]
 
 from collections.abc import Mapping, MutableMapping, Container, Iterable, Sized
 
@@ -87,6 +87,48 @@ class Bunch:
         args = ", ".join(bindings)
         return f"Bunch({args})"
 
-for abscls in (Mapping, MutableMapping, Container, Iterable, Sized):  # virtual ABCs
+
+# Register virtual abstract base classes.
+_virtual_bases = (Mapping, MutableMapping, Container, Iterable, Sized)
+for abscls in _virtual_bases:
     abscls.register(Bunch)
 del abscls
+
+
+def bunchify(d):
+    """Convert a mapping into a `Bunch`.
+
+    The use case is as a shim, to refer to the contents of a dictionary using
+    attribute access syntax::
+
+        d = {"foo": "variable", "bar": "tavern"}
+        b = bunchify(d)
+        assert b.foo == "variable"
+        assert b.bar == "tavern"
+
+    No copy. The original mapping itself is used as the bunch's data storage.
+
+    If you need to copy and efficiently convert the result into a bunch,
+    use something like `bunchify(dict(d))` or `bunchify(copy.copy(d))`.
+
+    `d` can be `dict`, but also any mapping that behaves similarly enough.
+    The type check passes if `d` implements, from `collections.abc`, the APIs
+    `Container`, `Iterable`, `Sized`, `Mapping`, and `MutableMapping` (that is,
+    exactly those APIs that `dict` itself implements).
+
+    Each key in `d` must be a valid identifier.
+
+    Return value is the `Bunch` instance with `d` as its data. If `d` is
+    already a `Bunch`, then the return value is `d` itself.
+    """
+    if isinstance(d, Bunch):
+        return d
+    if not all(isinstance(d, cls) for cls in _virtual_bases):
+        raise TypeError(f"`d` did not declare it implements the expected APIs ({_virtual_bases}); got {type(d)} with value {repr(d)}")
+    if not all(x.isidentifier() for x in d):
+        invalid_keys = [x for x in d if not x.isidentifier()]
+        invalid_keys_msg = ", ".join(repr(x) for x in invalid_keys)
+        raise ValueError(f"`d` has one or more keys that are not valid identifiers: {invalid_keys_msg}")
+    b = Bunch()
+    b._data = d
+    return b
