@@ -201,7 +201,7 @@ Despite their [fearsome](http://www.greghendershott.com/fear-of-macros/) reputat
 
   3. **Evaluation order manipulation**. By editing code, macros can change the order in which it gets evaluated, as well as decide whether a particular expression or statement runs at all.
 
-     As an example, macros allow properly abstracting [`delay`/`force`](https://docs.racket-lang.org/reference/Delayed_Evaluation.html) in a [strict](https://en.wikipedia.org/wiki/Evaluation_strategy#Strict_evaluation) language. `force` is just a regular function, but `delay` needs to be a macro.
+     As an example, macros allow properly abstracting [`delay`/`force`](https://docs.racket-lang.org/reference/Delayed_Evaluation.html) in a [strict](https://en.wikipedia.org/wiki/Evaluation_strategy#Strict_evaluation) language. `force` is just a regular function, but `delay` needs to be a macro. See [our delayed evaluation demo](demo/promise.py).
 
   4. **Language-level features** inspired by other programming languages. For example, [`unpythonic`](https://github.com/Technologicat/unpythonic) provides expression-local variables (`let`), automatic tail call optimization (TCO), autocurry, lazy functions, and multi-shot continuations.
 
