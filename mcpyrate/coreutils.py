@@ -131,7 +131,8 @@ def get_macros(macroimport, *, filename, reload=False, allow_asname=True, self_m
         module_absname = self_module
         module = sys.modules[module_absname]
 
-    else:  # regular macro-import
+    # regular macro-import
+    else:
         module_absname = importlib.util.resolve_name("." * macroimport.level + macroimport.module, package_absname)
 
         try:
