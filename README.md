@@ -200,14 +200,14 @@ This Elisp snippet adds syntax highlighting for keywords specific to `mcpyrate` 
   (defun my/mcpyrate-syntax-highlight-setup ()
     "Set up additional syntax highlighting for `mcpyrate` in Python mode."
     ;; adapted from code in dash.el
-    (let ((additional-keywords '("macros" "dialects"
-                                 "q" "u" "n" "a" "s" "t" "h"))
-          ;; Only for the anaphoric if demo; but this is how you make Emacs recognize your magic variables.
-          ;; This is a list, like `additional-keywords`, even though in the example it has only one item.
+    (let ((more-keywords '("macros" "dialects"
+                           "q" "u" "n" "a" "s" "t" "h"))
+          ;; Only for the anaphoric if demo; how to make Emacs recognize your magic variables.
+          ;; A list, like `additional-keywords`, even though in the example there is only one item.
           (magic-variables '("it")))
       (font-lock-add-keywords 'python-mode `((,(concat "\\_<" (regexp-opt magic-variables 'paren) "\\_>")
                                               1 font-lock-variable-name-face)) 'append)
-      (font-lock-add-keywords 'python-mode `((,(concat "\\_<" (regexp-opt additional-keywords 'paren) "\\_>")
+      (font-lock-add-keywords 'python-mode `((,(concat "\\_<" (regexp-opt more-keywords 'paren) "\\_>")
                                               1 font-lock-keyword-face)) 'append)
   ))
   (add-hook 'python-mode-hook 'my/mcpyrate-syntax-highlight-setup)
