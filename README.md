@@ -26,6 +26,8 @@ We use [semantic versioning](https://semver.org/). `mcpyrate` is almost-but-not-
     - [Features](#features)
     - [Documentation](#documentation)
     - [Install & uninstall](#install--uninstall)
+        - [From PyPI](#from-pypi)
+        - [From source](#from-source)
     - [Understanding the implementation](#understanding-the-implementation)
     - [Why macros?](#why-macros)
 
