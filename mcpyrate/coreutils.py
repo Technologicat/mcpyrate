@@ -148,7 +148,7 @@ def get_macros(macroimport, *, filename, reload=False, allow_asname=True, self_m
     bindings = {}
     for name in macroimport.names[1:]:
         if not allow_asname and name.asname is not None:
-            raise ImportError("This expander (see call stack) does not support as-naming macro-imports.")
+            raise ImportError(f"{loc}\nThis expander (see traceback) does not support as-naming macro-imports.")
 
         try:
             bindings[name.asname or name.name] = getattr(module, name.name)
