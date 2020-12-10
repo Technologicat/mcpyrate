@@ -30,6 +30,7 @@ We use [semantic versioning](https://semver.org/). `mcpyrate` is almost-but-not-
         - [From source](#from-source)
     - [Understanding the implementation](#understanding-the-implementation)
     - [Emacs syntax highlighting](#emacs-syntax-highlighting)
+        - [Installation (for Emacs beginners)](#installation-for-emacs-beginners)
     - [Why macros?](#why-macros)
 
 <!-- markdown-toc end -->
@@ -216,6 +217,12 @@ This Elisp snippet adds syntax highlighting for keywords specific to `mcpyrate` 
 *Known issue*: For some reason, during a given session, this takes effect only starting with the second Python file opened. The first Python file opened during a session shows with the default Python syntax highlighting. Probably something to do with the initialization order of font-lock and whichever `python-mode` is being used.
 
 Tested with `anaconda-mode`.
+
+### Installation (for Emacs beginners)
+
+If you use the [Spacemacs](http://spacemacs.org/) kit, the right place to insert the snippet is into the function `dotspacemacs/user-config`. Here's [my spacemacs.d](https://github.com/Technologicat/spacemacs.d/) for reference; the syntax highlight code is in `prettify-symbols-config.el`, and it's invoked from `dotspacemacs/user-config` in `init.el`.
+
+In a basic Emacs setup, the snippet goes into the `~/.emacs` startup file, or if you have an `.emacs.d/` directory, then into `~/.emacs.d/init.el`.
 
 
 ## Why macros?
