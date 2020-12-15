@@ -33,7 +33,7 @@ def fake_import(tree, *, debug_dialects=False):
 
     Return value is a code object, ready for `exec`.
 
-    Expansion is performed by calling `mcpyrate.importer.expand`, so this supports
+    Expansion is performed by calling `mcpyrate.importer.expand_ast`, so this supports
     also dialect AST transforms (as well as AST postprocessors) and multi-phase
     compilation.
 
