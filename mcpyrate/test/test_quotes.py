@@ -19,15 +19,26 @@ def f():
     return "f from macro use site"
 
 
-def fake_import(tree):
+def fake_import(tree, *, debug_dialects=False):
     """Wrap a list of statements in an `ast.Module`, expand it, and `compile`.
 
     `tree`: `list` of statement AST nodes.
 
+    `debug_dialects`: whether to enable the dialect expander's debug mode
+                      (like the `StepExpansion` dialect does).
+
+                      This is needed, because we are fake-importing an *AST*,
+                      so it's too late to enable `StepExpansion` (which enables
+                      the debug mode in its *source* transformer).
+
     Return value is a code object, ready for `exec`.
 
     Expansion is performed by calling `mcpyrate.importer.expand`, so this supports
-    also dialect AST transforms and multi-phase compilation.
+    also dialect AST transforms (as well as AST postprocessors) and multi-phase
+    compilation.
+
+    This does **not** support dialect source transforms, because the input `tree`
+    is already an AST.
     """
     module = ast.Module(body=tree)
     self_module = f"fake_import_{gensym()}"
@@ -42,10 +53,10 @@ def fake_import(tree):
     # We could fill some dummy source location info here, but see the macro
     # `mcpyrate.metatools.fill_location`.
     #
-    # Missing locations are usually fixed by core for each individual macro expansion,
-    # using the appropriate source location info. Using the `fill_location`
-    # macro, we can manually do it at the use site for the whole quoted `tree`,
-    # before calling `fake_import`. So we don't fill in any source location info here.
+    # Missing locations are usually filled in by core for each individual macro expansion,
+    # using the appropriate source location info. Using the `fill_location` macro,
+    # we can manually do it at the use site for the whole quoted `tree`, before calling
+    # `fake_import`. So we don't fill in any source location info here.
     #
     # from ..astfixers import fix_locations
     # fake_lineno = 9999
@@ -54,7 +65,7 @@ def fake_import(tree):
     # fix_locations(tree, reference_node, mode="reference")
 
     dexpander = DialectExpander(filename=fake_filename)
-    # dexpander.debug = True  # uncomment this to enable debug mode (like the `StepExpansion` dialect does)
+    dexpander.debug = debug_dialects
     module = expand_ast(module, filename=fake_filename, self_module=self_module, dexpander=dexpander)
 
     code = compile(module, filename=fake_filename, mode="exec", dont_inherit=True)
