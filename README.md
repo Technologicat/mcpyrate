@@ -30,7 +30,7 @@ We use [semantic versioning](https://semver.org/). `mcpyrate` is almost-but-not-
         - [From source](#from-source)
     - [Understanding the implementation](#understanding-the-implementation)
     - [Emacs syntax highlighting](#emacs-syntax-highlighting)
-        - [Installation (for Emacs beginners)](#installation-for-emacs-beginners)
+        - [Install (for beginners in Emacs customization)](#install-for-beginners-in-emacs-customization)
     - [Why macros?](#why-macros)
 
 <!-- markdown-toc end -->
@@ -203,8 +203,8 @@ This Elisp snippet adds syntax highlighting for keywords specific to `mcpyrate` 
     ;; adapted from code in dash.el
     (let ((more-keywords '("macros" "dialects"
                            "q" "u" "n" "a" "s" "t" "h"))
-          ;; Only for the anaphoric if demo; how to make Emacs recognize your magic variables.
-          ;; A list, like `additional-keywords`, even though in the example there is only one item.
+          ;; How to make Emacs recognize your magic variables. Only for the anaphoric if demo.
+          ;; A list, like `more-keywords`, even though in the example there is only one item.
           (magic-variables '("it")))
       (font-lock-add-keywords 'python-mode `((,(concat "\\_<" (regexp-opt magic-variables 'paren) "\\_>")
                                               1 font-lock-variable-name-face)) 'append)
@@ -218,9 +218,9 @@ This Elisp snippet adds syntax highlighting for keywords specific to `mcpyrate` 
 
 Tested with `anaconda-mode`.
 
-### Installation (for Emacs beginners)
+### Install (for beginners in Emacs customization)
 
-If you use the [Spacemacs](http://spacemacs.org/) kit, the right place to insert the snippet is into the function `dotspacemacs/user-config`. Here's [my spacemacs.d](https://github.com/Technologicat/spacemacs.d/) for reference; the syntax highlight code is in `prettify-symbols-config.el`, and it's invoked from `dotspacemacs/user-config` in `init.el`.
+If you use the [Spacemacs](http://spacemacs.org/) kit, the snippet can be inserted into the function `dotspacemacs/user-config`. (If you use the Emacs key bindings, `M-m f e d` to open your config file.) Here's [my spacemacs.d](https://github.com/Technologicat/spacemacs.d/) for reference; the syntax highlight code is in `prettify-symbols-config.el`, and it's invoked from the function `dotspacemacs/user-config` in `init.el`.
 
 In a basic Emacs setup, the snippet goes into the `~/.emacs` startup file, or if you have an `.emacs.d/` directory, then into `~/.emacs.d/init.el`.
 
