@@ -109,13 +109,9 @@ def fill_location(tree, *, syntax, invocation, **kw):
     at macro expansion time. The filling itself is delayed *until run time*.
 
     This is useful to set a source location for a run-time AST value, such as a
-    quoted tree; especially if you intend to expand it at run time, so that the
-    traceback for any macro expansion error will sensibly identify the use site
+    quoted tree; especially if you intend to macro-expand it at run time, so that
+    the traceback for any macro expansion error will sensibly identify the use site
     in your code.
-
-    Using this macro, you don't need to manually grab `lineno` and `col_offset`
-    to be used as the fill values. If you wish to use custom values, use the
-    function `mcpyrate.astfixers.fix_locations` instead.
 
     Usage::
 
@@ -126,6 +122,16 @@ def fill_location(tree, *, syntax, invocation, **kw):
         with q as quoted:
             ...
         quoted = fill_location[quoted]
+
+    Using this macro, you don't need to manually determine `lineno` and `col_offset`
+    to be used as the fill values. If you wish to use custom values, don't use
+    this macro; use the function `mcpyrate.astfixers.fix_locations` instead.
+    Here's the pattern::
+
+        fake_lineno = 9999
+        fake_col_offset = 9999
+        reference_node = ast.Constant(value=None, lineno=fake_lineno, col_offset=fake_col_offset)
+        fix_locations(tree, reference_node, mode="reference")
     """
     if syntax != "expr":
         raise SyntaxError("`fill_location` is an expr macro only")
