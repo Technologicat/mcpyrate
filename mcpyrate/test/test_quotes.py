@@ -8,68 +8,23 @@ from .macros import (macros, test_q, test_hq,  # noqa: F401, F811
 
 import ast
 
-from ..dialects import DialectExpander
-from ..importer import expand_ast
+from .. import compiler
 from ..quotes import unastify
 from ..unparser import unparse
 from ..utils import gensym
 
 
+def run(statements, namespace):
+    fake_filename = f"<run-time AST value at {hex(id(statements))}>"
+    # Generate a fully qualified module name, to allow compiling `statements`
+    # also if they request multi-phase compilation (by importing `phase`, etc.).
+    self_module = f"mcpyrate_run_{gensym()}"
+    code = compiler.compile(statements, filename=fake_filename, self_module=self_module)
+    exec(code, namespace)
+
+
 def f():
     return "f from macro use site"
-
-
-def fake_import(tree, *, debug_dialects=False):
-    """Wrap a list of statements in an `ast.Module`, expand it, and `compile`.
-
-    `tree`: `list` of statement AST nodes.
-
-    `debug_dialects`: whether to enable the dialect expander's debug mode
-                      (like the `StepExpansion` dialect does).
-
-                      This is needed, because we are fake-importing an *AST*,
-                      so it's too late to enable `StepExpansion` (which enables
-                      the debug mode in its *source* transformer).
-
-    Return value is a code object, ready for `exec`.
-
-    Expansion is performed by calling `mcpyrate.importer.expand_ast`, so this supports
-    also dialect AST transforms (as well as AST postprocessors) and multi-phase
-    compilation.
-
-    This does **not** support dialect source transforms, because the input `tree`
-    is already an AST.
-    """
-    module = ast.Module(body=tree)
-    self_module = f"fake_import_{gensym()}"
-    fake_filename = f"<run-time AST value at {hex(id(tree))}>"
-
-    # Quoted code itself doesn't carry a source location, by design; this is to support its
-    # most common use case so that the expander can auto-fill the appropriate location when
-    # the code gets spliced in. (Note that the usual appropriate location - considering the
-    # unexpanded source code - is not the use site of `q` itself, but the use site of the
-    # macro that uses `q`. The use site of `q` is typically in a different source file.)
-    #
-    # We could fill some dummy source location info here, but see the macro
-    # `mcpyrate.metatools.fill_location`.
-    #
-    # Missing locations are usually filled in by core for each individual macro expansion,
-    # using the appropriate source location info. Using the `fill_location` macro,
-    # we can manually do it at the use site for the whole quoted `tree`, before calling
-    # `fake_import`. So we don't fill in any source location info here.
-    #
-    # from ..astfixers import fix_locations
-    # fake_lineno = 9999
-    # fake_col_offset = 9999
-    # reference_node = ast.Constant(value=None, lineno=fake_lineno, col_offset=fake_col_offset)
-    # fix_locations(tree, reference_node, mode="reference")
-
-    dexpander = DialectExpander(filename=fake_filename)
-    dexpander.debug = debug_dialects
-    module = expand_ast(module, filename=fake_filename, self_module=self_module, dexpander=dexpander)
-
-    code = compile(module, filename=fake_filename, mode="exec", dont_inherit=True)
-    return code
 
 
 def test():
@@ -125,15 +80,17 @@ def test():
         n[nom] = 42
     # Testing hack: because we're not in a macro (that could just return `tree`
     # to the importer), we have to compile and exec `tree` manually to run it.
+    quoted = fill_location[quoted]
     namespace = {}
-    exec(fake_import(fill_location[quoted]), namespace)
+    run(quoted, namespace)
     assert namespace["x"] == 42
 
     # `n[]` can also appear in a `del`:
     assert "x" in namespace
     with q as quoted:
         del n[nom]
-    exec(fake_import(fill_location[quoted]), namespace)
+    quoted = fill_location[quoted]
+    run(quoted, namespace)
     assert "x" not in namespace
 
     # a[]: AST literal

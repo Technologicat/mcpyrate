@@ -26,10 +26,9 @@ import sys
 from types import ModuleType
 
 from .colorizer import setcolor, ColorScheme
+from . import compiler
 from .coreutils import ismacroimport
-from .expander import find_macros, expand_macros, destructure_candidate, namemacro, parametricmacro
-from . import importer
-from .markers import check_no_markers_remaining
+from .expander import destructure_candidate, namemacro, parametricmacro
 from .unparser import unparse_with_fallbacks
 
 # --------------------------------------------------------------------------------
@@ -373,8 +372,8 @@ def multiphase_expand(tree, *, filename, self_module, dexpander=None, _optimize=
             if debug:
                 print(unparse_with_fallbacks(phase_k_tree, debug=True, color=True), file=sys.stderr)
 
-            expansion = importer._expand_ast_impl(phase_k_tree, filename=filename,
-                                                  self_module=self_module, dexpander=dexpander)
+            expansion = compiler.expand_ast(phase_k_tree, filename=filename,
+                                            self_module=self_module, dexpander=dexpander)
 
             # Once we hit the final phase, no more temporary modules - let the import system take over.
             if k == 0:
