@@ -130,16 +130,28 @@ class StepExpansion(Dialect):  # actually part of public API of mcpyrate.debug, 
     This dialect has no other effects.
     """
     def transform_source(self, text):
-        self.expander.debugmode = True
-        c, CS = setcolor, ColorScheme
-        msg = f"{c(CS.SOURCEFILENAME)}{self.expander.filename} {c(CS.HEADING)}enabled {c(CS.ATTENTION)}DialectExpander debug mode {c(CS.HEADING)}while taking step {self.expander._step + 1}.{c()}"
-        print(_message_header + msg, file=stderr)
-        # Pass through the input (instead of returning `NotImplemented`) to
+        # We pass through the input (instead of returning `NotImplemented`) to
         # consider this as having taken a step, thus triggering the debug mode
         # output printer. (If this was the first dialect applied, our output is
         # actually the original input; but there's no way to know to show it
         # before this dialect has run.)
+        self._enable_debugmode()
         return text
+
+    # This exists only so that dialect-enabled AST compiles can use `StepExpansion`, too.
+    def transform_ast(self, tree):
+        # If the debug mode was already enabled, we're ok - behave as if this method didn't exist
+        # (to suppress the debug printout of a step that did nothing).
+        if self.expander.debugmode:
+            return NotImplemented
+        self._enable_debugmode()
+        return tree
+
+    def _enable_debugmode(self):
+        self.expander.debugmode = True
+        c, CS = setcolor, ColorScheme
+        msg = f"{c(CS.SOURCEFILENAME)}{self.expander.filename} {c(CS.HEADING)}enabled {c(CS.ATTENTION)}DialectExpander debug mode {c(CS.HEADING)}while taking step {self.expander._step + 1}.{c()}"
+        print(_message_header + msg, file=stderr)
 
 # --------------------------------------------------------------------------------
 
