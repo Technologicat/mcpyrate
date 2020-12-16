@@ -9,6 +9,7 @@ from copy import deepcopy
 from .astfixers import fix_locations
 from .coreutils import ismacroimport
 from .markers import ASTMarker
+from .utils import getdocstring
 from .walkers import ASTTransformer
 
 
@@ -211,8 +212,7 @@ def splice_dialect(body, template, tag="__paste_here__"):
     for stmt in template:
         fix_locations(stmt, body[0], mode="overwrite")
 
-    # TODO: remove ast.Str once we bump minimum language version to Python 3.8
-    if type(body[0]) is ast.Expr and type(body[0].value) in (ast.Constant, ast.Str):
+    if getdocstring(body):
         docstring, *body = body
         docstring = [docstring]
     else:

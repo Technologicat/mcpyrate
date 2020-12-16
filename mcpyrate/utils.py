@@ -1,7 +1,7 @@
 # -*- coding: utf-8; -*-
 """General utilities. Can be useful for writing both macros as well as macro expanders."""
 
-__all__ = ["gensym", "scrub_uuid", "flatten", "rename", "extract_bindings",
+__all__ = ["gensym", "scrub_uuid", "flatten", "rename", "extract_bindings", "getdocstring",
            "format_location", "format_macrofunction", "format_context",
            "NestingLevelTracker"]
 
@@ -142,6 +142,30 @@ def extract_bindings(bindings, *functions, global_only=False):
     """
     functions = set(functions)
     return {name: function for name, function in bindings.items() if function in functions}
+
+
+def getdocstring(body):
+    """Extract docstring from `body` if it has one.
+
+    Only static strings (no f-strings or string arithmetic) are recognized as docstrings.
+
+    `body` must be a `list` of statement AST nodes. (As a special case, if `body is None`,
+    we return `None`, allowing the caller to emit some boilerplate checks.)
+
+    Return value is either the docstring (as an `str`), or `None`.
+    """
+    if not body:
+        return None
+    if not isinstance(body, list):
+        raise TypeError(f"`body` must be a `list`, got {type(body)} with value {repr(body)}")
+    if type(body[0]) is ast.Expr and type(body[0].value) in (ast.Constant, ast.Str):
+        docstring_node = body[0].value  # Expr -> Expr.value
+        if type(docstring_node) is ast.Constant:
+            return docstring_node.value
+        # TODO: remove ast.Str once we bump minimum language version to Python 3.8
+        else:  # ast.Str
+            return docstring_node.s
+    return None
 
 # --------------------------------------------------------------------------------
 

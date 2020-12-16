@@ -1,26 +1,16 @@
 # -*- coding: utf-8 -*-
 
 from ..metatools import (macros, expands, expand1s, expandsq, expand1sq,  # noqa: F811
-                         expandr, expand1r, expandrq, expand1rq, fill_location)
+                         expandr, expand1r, expandrq, expand1rq)
 from ..quotes import macros, q, u, n, a, s, t, h  # noqa: F811
 from .macros import (macros, test_q, test_hq,  # noqa: F401, F811
                      first, second, third)
 
 import ast
 
-from .. import compiler
+from ..compiler import run
 from ..quotes import unastify
 from ..unparser import unparse
-from ..utils import gensym
-
-
-def run(statements, namespace):
-    fake_filename = f"<run-time AST value at {hex(id(statements))}>"
-    # Generate a fully qualified module name, to allow compiling `statements`
-    # also if they request multi-phase compilation (by importing `phase`, etc.).
-    self_module = f"mcpyrate_run_{gensym()}"
-    code = compiler.compile(statements, filename=fake_filename, self_module=self_module)
-    exec(code, namespace)
 
 
 def f():
@@ -78,20 +68,19 @@ def test():
     # (Indeed, any unquote can, if the end result makes sense syntactically.)
     with q as quoted:
         n[nom] = 42
-    # Testing hack: because we're not in a macro (that could just return `tree`
-    # to the importer), we have to compile and exec `tree` manually to run it.
-    quoted = fill_location[quoted]
-    namespace = {}
-    run(quoted, namespace)
-    assert namespace["x"] == 42
+    # Because we're not in a macro (that could just return `tree` to the
+    # importer), we have to compile and exec `tree`. For this use case,
+    # we have `mcpyrate.compiler.run`.
+    module = run(quoted)  # create new module, run the code in it
+    assert hasattr(module, "x")
+    assert module.x == 42
 
     # `n[]` can also appear in a `del`:
-    assert "x" in namespace
+    assert hasattr(module, "x")
     with q as quoted:
         del n[nom]
-    quoted = fill_location[quoted]
-    run(quoted, namespace)
-    assert "x" not in namespace
+    run(quoted, module)  # run in existing module
+    assert not hasattr(module, "x")
 
     # a[]: AST literal
     nam = ast.Name(id=nom)

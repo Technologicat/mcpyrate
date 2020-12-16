@@ -499,6 +499,10 @@ def _make_coverage_dummy_expr(macronode):
 def expand_macros(tree, bindings, *, filename):
     """Expand `tree` with macro bindings `bindings`. Top-level entry point.
 
+    Note that while this is a top-level entry point for the **macro** expander,
+    expanding macros is only a part of the full import algorithm. See the function
+    `mcpyrate.compiler.expand` for the 30,000ft (9,144m) view.
+
     Primarily meant to be called with `tree` the AST of a module that uses
     macros, but works with any `tree` (even inside a macro, if you need an
     independent second instance of the expander with different bindings).
@@ -515,6 +519,10 @@ def expand_macros(tree, bindings, *, filename):
 
 def find_macros(tree, *, filename, reload=False, self_module=None, transform=True):
     """Establish macro bindings from `tree`. Top-level entry point.
+
+    Note that while this is a top-level entry point for the **macro** expander,
+    expanding macros is only a part of the full import algorithm. See the function
+    `mcpyrate.compiler.expand` for the 30,000ft (9,144m) view.
 
     Collect bindings from each macro-import statement (`from ... import macros, ...`)
     at the top level of `tree.body`.

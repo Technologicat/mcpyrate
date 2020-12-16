@@ -23,13 +23,13 @@ __all__ = ["phase", "ismultiphase", "detect_highest_phase", "isdebug", "multipha
 import ast
 from copy import copy, deepcopy
 import sys
-from types import ModuleType
 
 from .colorizer import setcolor, ColorScheme
 from . import compiler
 from .coreutils import ismacroimport
 from .expander import destructure_candidate, namemacro, parametricmacro
 from .unparser import unparse_with_fallbacks
+from .utils import getdocstring
 
 # --------------------------------------------------------------------------------
 # Private utilities.
@@ -358,12 +358,12 @@ def multiphase_expand(tree, *, filename, self_module, dexpander=None, _optimize=
 
         phase_k_tree = extract_phase(tree, phase=k)
         if phase_k_tree.body:
-            # inject `__phase__ = k` for introspection
+            # inject `__phase__ = k` for introspection (at run time of the phase being compiled now)
             tgt = ast.Name(id="__phase__", ctx=ast.Store(), lineno=1, col_offset=1)
             val = ast.Constant(value=k, lineno=1, col_offset=13)
             assignment = ast.Assign(targets=[tgt], value=val, lineno=1, col_offset=1)
-            # TODO: remove ast.Str once we bump minimum language version to Python 3.8
-            if type(phase_k_tree.body[0]) is ast.Expr and type(phase_k_tree.body[0].value) in (ast.Constant, ast.Str):
+
+            if getdocstring(phase_k_tree.body):
                 docstring, *body = phase_k_tree.body
                 phase_k_tree.body = [docstring, assignment] + body
             else:  # no docstring
@@ -372,22 +372,17 @@ def multiphase_expand(tree, *, filename, self_module, dexpander=None, _optimize=
             if debug:
                 print(unparse_with_fallbacks(phase_k_tree, debug=True, color=True), file=sys.stderr)
 
-            expansion = compiler.expand_ast(phase_k_tree, filename=filename,
-                                            self_module=self_module, dexpander=dexpander)
+            expansion = compiler.singlephase_expand(phase_k_tree, filename=filename,
+                                                    self_module=self_module, dexpander=dexpander)
 
             # Once we hit the final phase, no more temporary modules - let the import system take over.
             if k == 0:
                 break
 
             # Compile temporary module, and inject it into `sys.modules`, so we can compile the next phase.
-            #
-            # We don't bother with hifi stuff, such as attributes usually set by the importer,
-            # or even the module docstring. We essentially just want the macro functions,
-            # so that the next phase can bind to them.
-            temporary_code = compile(expansion, filename, "exec", dont_inherit=True, optimize=_optimize)
-            temporary_module = ModuleType(self_module)
-            sys.modules[self_module] = temporary_module
-            exec(temporary_code, temporary_module.__dict__)
+            module = compiler.create_module(filename=filename, dotted_name=self_module)
+            code = compile(expansion, filename, "exec", dont_inherit=True, optimize=_optimize)
+            exec(code, module.__dict__)
 
     # restore `sys.modules` to how it was before we began the multi-phase compile for this module
     if original_module:
