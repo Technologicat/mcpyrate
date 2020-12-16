@@ -112,7 +112,7 @@ class BaseMacroExpander(NodeTransformer):
         return super().visit(tree)
 
     def visit_recursively(self, tree):
-        """Entrypoint. Expand macros in `tree`, in recursive mode.
+        """Entry point. Expand macros in `tree`, in recursive mode.
 
         That is, iterate the expansion process until no macros are left.
         Recursive mode is temporarily enabled even if currently inside the
@@ -124,7 +124,7 @@ class BaseMacroExpander(NodeTransformer):
             return self.visit(tree)
 
     def visit_once(self, tree):
-        """Entrypoint. Expand macros in `tree`, in non-recursive mode.
+        """Entry point. Expand macros in `tree`, in non-recursive mode.
 
         That is, make just one pass, regardless of whether there are macros
         remaining in the output. Then mark `tree` as `Done`, so the rest of
@@ -284,7 +284,7 @@ def _apply_macro(macro, tree, kw):
 
 
 # Final postprocessing for the top-level walk can't be done at the end of the
-# entrypoints `visit_once` and `visit_recursively`, because it is valid for a
+# entry points `visit_once` and `visit_recursively`, because it is valid for a
 # macro to call those for a subtree.
 def global_postprocess(tree):
     """Perform global postprocessing for the top-level expansion.

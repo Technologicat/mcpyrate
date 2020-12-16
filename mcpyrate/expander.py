@@ -497,7 +497,7 @@ def _make_coverage_dummy_expr(macronode):
 # --------------------------------------------------------------------------------
 
 def expand_macros(tree, bindings, *, filename):
-    """Expand `tree` with macro bindings `bindings`. Top-level entrypoint.
+    """Expand `tree` with macro bindings `bindings`. Top-level entry point.
 
     Primarily meant to be called with `tree` the AST of a module that uses
     macros, but works with any `tree` (even inside a macro, if you need an
@@ -514,7 +514,7 @@ def expand_macros(tree, bindings, *, filename):
 
 
 def find_macros(tree, *, filename, reload=False, self_module=None, transform=True):
-    """Establish macro bindings from `tree`. Top-level entrypoint.
+    """Establish macro bindings from `tree`. Top-level entry point.
 
     Collect bindings from each macro-import statement (`from ... import macros, ...`)
     at the top level of `tree.body`.
