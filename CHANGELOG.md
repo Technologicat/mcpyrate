@@ -1,8 +1,21 @@
 # Changelog
 
-**3.0.2** (in progress)
+**3.1.0** (in progress**
 
-*No changes yet.*
+**New**:
+
+- The `mcpyrate` compiler (implementing [the import algorithm](doc/main.md#the-import-algorithm)) is now exposed in `mcpyrate.compiler` for run-time use.
+  - You can just `expand`, or both expand and `compile` code, as needed.
+  - It is now convenient to compile and run macro-enabled quoted code snippets (or source code) at run time, see `run` and `create_module`.
+    - This makes it easier to test macros that are best tested via the behavior of the run-time code they output. (It also makes macro-enabled Python into a poor man's staged language  [1](https://www.researchgate.net/publication/221024597_A_Gentle_Introduction_to_Multi-stage_Programming) [2](https://cs.stackexchange.com/questions/2869/what-are-staged-functions-conceptually).)
+    - The system allows dynamically creating modules (for executing code snippets in) at run time, as well as running code in the namespace of an existing module.
+      - These features combine, so you can let `run` automatically create a module the first time, and then re-use that module if you want.
+      - You can also create a module with a specific dotted name in `sys.modules` (the multi-phase compiler actually uses this feature).
+    - Source code input supports dialects, macros, and multi-phase compilation. The source code represents a module.
+    - Quoted AST input supports macros and multi-phase compilation. No source transforms for this kind of input, because the input is already an AST. (Dialect AST transformers and postprocessors should work.) The top level of the quoted block (i.e. the body of a `with q as quoted:`) is seen by the compiler as the top level of a module.
+    - While the code snippet is running, the module's `__file__` and `__name__` attributes are available, as usual.
+    - For extracting results into the surrounding context, just assign them to variables inside the code snippet. The top level of the code snippet is the module's top level.
+  - Full documentation is in docstrings for now, see [`mcpyrate.compiler`](mcpyrate/compiler.py). Some usage examples can be found in [`mcpyrate.test.test_quotes`](mcpyrate/test/test_quotes.py).
 
 
 **3.0.1** (27 November 2020)
