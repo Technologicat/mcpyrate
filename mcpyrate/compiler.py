@@ -283,9 +283,9 @@ def _fill_dummy_location_info(tree):
 def create_module(filename=None, dotted_name=None):
     """Create a module at run time, insert it into `sys.modules`, and return it.
 
-    This is a convenience function that fills in some attributes of the module
-    (usually populated by the importer), and inserts the new module into `sys.modules`.
-    Used by `run` when no module is given.
+    This is a utility function that fills in some attributes of the module
+    (usually populated by the importer), and inserts the new module into
+    `sys.modules`. Used by `run` when no module is given.
 
     `filename`:     Full path to the `.py` file the module represents, if applicable.
                     Otherwise some descriptive string is recommended. Optional.
@@ -300,6 +300,13 @@ def create_module(filename=None, dotted_name=None):
 
     When neither `filename` nor `dotted_name` are provided, both generated names
     will use the same unique tag (since they belong to the same module).
+
+    When `dotted_name` has dots in it, the parent package for the new module
+    must exist in `sys.modules`. The new module is added to its parent's
+    namespace (like Python's importer would do), and the new module's
+    `__package__` attribute will be set to the dotted name of the parent package.
+
+    Otherwise the new module's `__package__` attribute will be the empty string.
     """
     if filename and not isinstance(filename, str):
         raise TypeError(f"`filename` must be an `str`, got {type(filename)} with value {repr(filename)}")
@@ -316,32 +323,36 @@ def create_module(filename=None, dotted_name=None):
 
     # TODO: What other attributes does the standard importer populate?
     #
-    # TODO: Might find hints in Python's `_bootstrap_external.py`. Important part is what happens either
-    # TODO: before or after the loader's `source_to_code` method is called. There's also
-    # TODO: `importlib.util.module_from_spec`, which might shed some light on what happens by default.
+    # We might find hints in Python's `_bootstrap_external.py`. Important part is what happens
+    # either before or after the loader's `source_to_code` method is called. There's also
+    # importlib.util.module_from_spec`, which might shed some light on what happens by default.
     #   https://github.com/python/cpython/blob/master/Lib/importlib/_bootstrap_external.py
     #   https://docs.python.org/3/library/importlib.html#importlib.util.module_from_spec
+    #
+    # module.__loader__ is left to its default None, because no loader exists for this
+    # dynamically created module.
     #
     module = ModuleType(dotted_name)
     module.__file__ = filename
     module.__name__ = dotted_name
-    # module.__loader__ is intentionally left as None.
-
-    sys.modules[dotted_name] = module
 
     # Manage the package abstraction, like the importer does - with the difference that we
-    # shouldn't import the parent packages here.
+    # shouldn't import parent packages here. To keep things simple, we only allow creating
+    # a module with dots in the name if its parent package exists in `sys.modules`.
     #
-    # TODO: Extend this to cover all cases. E.g. what to do if we have only "a", when creating "a.b.c"?
+    # In Python, submodules are added to the package namespace.
+    # http://python-notes.curiousefficiency.org/en/latest/python_concepts/import_traps.html
     if dotted_name.find(".") != -1:
         packagename, finalcomponent = dotted_name.rsplit(".", maxsplit=1)
         package = sys.modules.get(packagename, None)
-        if package:
-            # In Python, submodules are added to the package namespace.
-            # http://python-notes.curiousefficiency.org/en/latest/python_concepts/import_traps.html
-            module.__package__ = packagename
-            setattr(package, finalcomponent, module)
+
+        if not package:
+            raise ModuleNotFoundError(f"while dynamically creating module '{dotted_name}': its parent package '{packagename}' not found in `sys.modules`")
+
+        module.__package__ = packagename
+        setattr(package, finalcomponent, module)
     else:
         module.__package__ = ""
 
+    sys.modules[dotted_name] = module
     return module

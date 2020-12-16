@@ -8,7 +8,7 @@ from .macros import (macros, test_q, test_hq,  # noqa: F401, F811
 
 import ast
 
-from ..compiler import run
+from ..compiler import run, create_module
 from ..quotes import unastify
 from ..unparser import unparse
 
@@ -74,6 +74,20 @@ def test():
     module = run(quoted)  # create new module, run the code in it
     assert hasattr(module, "x")
     assert module.x == 42
+
+    # create_module obeys Python's package semantics when used with custom dotted names.
+    # TODO: compiler tests should be in their own test module.
+    try:
+        flop = create_module(dotted_name="flip.flop")
+    except ModuleNotFoundError:  # parent module does not exist
+        pass
+    else:
+        assert False
+
+    flip = create_module(dotted_name="flip")
+    flop = create_module(dotted_name="flip.flop")
+    assert flop.__package__ == "flip"
+    assert flip.flop is flop  # submodule is added to the package namespace
 
     # `n[]` can also appear in a `del`:
     assert hasattr(module, "x")
