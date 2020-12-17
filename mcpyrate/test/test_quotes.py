@@ -79,7 +79,7 @@ def test():
     # TODO: compiler tests should be in their own test module.
     try:
         flop = create_module("flip.flop")
-    except ModuleNotFoundError:  # parent module does not exist
+    except ModuleNotFoundError:  # parent module does not exist in `sys.modules`
         pass
     else:
         assert False
