@@ -340,7 +340,7 @@ def create_module(dotted_name=None, filename=None):
 
     # Manage the package abstraction, like the importer does - with the difference that we
     # shouldn't import parent packages here. To keep things simple, we only allow creating
-    # a module with dots in the name if its parent package exists in `sys.modules`.
+    # a module with dots in the name if its parent package already exists in `sys.modules`.
     if dotted_name.find(".") != -1:
         packagename, finalcomponent = dotted_name.rsplit(".", maxsplit=1)
         package = sys.modules.get(packagename, None)
