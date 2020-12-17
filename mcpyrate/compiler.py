@@ -335,8 +335,8 @@ def create_module(dotted_name=None, filename=None):
     # dynamically created module.
     #
     module = ModuleType(dotted_name)
-    module.__file__ = filename
     module.__name__ = dotted_name
+    module.__file__ = filename
 
     # Manage the package abstraction, like the importer does - with the difference that we
     # shouldn't import parent packages here. To keep things simple, we only allow creating
