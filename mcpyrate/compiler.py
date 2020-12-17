@@ -86,7 +86,7 @@ def expand(source, filename, optimize=-1, self_module=None):
 
     else:  # `ast.Module` or a `list` of statement AST nodes
         if isinstance(source, list):  # convenience, not provided by built-in `compile`.
-            tree = ast.Module(body=source)
+            tree = ast.Module(body=source, type_ignores=[])
         else:
             tree = source
 
