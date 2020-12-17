@@ -75,6 +75,13 @@ def test():
     assert hasattr(module, "x")
     assert module.x == 42
 
+    # `n[]` can also appear in a `del`:
+    assert hasattr(module, "x")
+    with q as quoted:
+        del n[nom]
+    run(quoted, module)  # run in existing module
+    assert not hasattr(module, "x")
+
     # create_module obeys Python's package semantics when used with custom dotted names.
     # TODO: compiler tests should be in their own test module.
     try:
@@ -88,13 +95,6 @@ def test():
     flop = create_module("flip.flop")
     assert flop.__package__ == "flip"
     assert flip.flop is flop  # submodule is added to the package namespace
-
-    # `n[]` can also appear in a `del`:
-    assert hasattr(module, "x")
-    with q as quoted:
-        del n[nom]
-    run(quoted, module)  # run in existing module
-    assert not hasattr(module, "x")
 
     # a[]: AST literal
     nam = ast.Name(id=nom)
