@@ -107,7 +107,6 @@ def expand(source, filename, optimize=-1, self_module=None):
     return expansion
 
 
-# TODO: Think about how to support `mode="single"`, needed to use the same machinery for the REPL.
 # TODO: Pass through also `flags` and `dont_inherit`? (Need to thread them to the multi-phase compiler, too.
 # TODO:                This starts to look like a job for `unpythonic.dyn`; should we move it to `mcpyrate`?)
 def compile(source, filename, optimize=-1, self_module=None):
