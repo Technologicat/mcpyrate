@@ -233,8 +233,8 @@ def run(source, module=None, optimize=-1):
         assert module.x == 42
 
         # run in a module with a custom filename and dotted name
-        mymodule = create_module(filename="some descriptive string",
-                                 dotted_name="mymod")
+        mymodule = create_module(dotted_name="mymod",
+                                 filename="some descriptive string")
         with q as quoted:
             x = 17
         run(quoted, mymodule)
@@ -279,22 +279,23 @@ def _fill_dummy_location_info(tree):
     fix_locations(tree, reference_node, mode="reference")
 
 
-def create_module(filename=None, dotted_name=None):
+def create_module(dotted_name=None, filename=None):
     """Create a module at run time, insert it into `sys.modules`, and return it.
 
     This is a utility function that fills in some attributes of the module
     (usually populated by the importer), and inserts the new module into
     `sys.modules`. Used by `run` when no module is given.
 
-    `filename`:     Full path to the `.py` file the module represents, if applicable.
-                    Otherwise some descriptive string is recommended. Optional.
-
-                    Used as the `__file__` attribute of the module. If not provided,
-                    a unique placeholder name will be auto-generated.
 
     `dotted_name`:  Fully qualified name of the module, for `sys.modules`. Optional.
 
                     Used as the `__name__` attribute of the module. If not provided,
+                    a unique placeholder name will be auto-generated.
+
+    `filename`:     Full path to the `.py` file the module represents, if applicable.
+                    Otherwise some descriptive string is recommended. Optional.
+
+                    Used as the `__file__` attribute of the module. If not provided,
                     a unique placeholder name will be auto-generated.
 
     When neither `filename` nor `dotted_name` are provided, both generated names

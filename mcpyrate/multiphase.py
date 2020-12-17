@@ -380,7 +380,7 @@ def multiphase_expand(tree, *, filename, self_module, dexpander=None, _optimize=
                 break
 
             # Compile temporary module, and inject it into `sys.modules`, so we can compile the next phase.
-            module = compiler.create_module(filename=filename, dotted_name=self_module)
+            module = compiler.create_module(dotted_name=self_module, filename=filename)
             code = compile(expansion, filename, "exec", dont_inherit=True, optimize=_optimize)
             exec(code, module.__dict__)
 

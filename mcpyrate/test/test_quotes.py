@@ -78,14 +78,14 @@ def test():
     # create_module obeys Python's package semantics when used with custom dotted names.
     # TODO: compiler tests should be in their own test module.
     try:
-        flop = create_module(dotted_name="flip.flop")
+        flop = create_module("flip.flop")
     except ModuleNotFoundError:  # parent module does not exist
         pass
     else:
         assert False
 
-    flip = create_module(dotted_name="flip")
-    flop = create_module(dotted_name="flip.flop")
+    flip = create_module("flip")
+    flop = create_module("flip.flop")
     assert flop.__package__ == "flip"
     assert flip.flop is flop  # submodule is added to the package namespace
 
