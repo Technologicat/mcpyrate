@@ -323,16 +323,17 @@ def create_module(dotted_name=None, filename=None):
     filename = filename or f"<{g}>"
     dotted_name = dotted_name or g
 
-    # TODO: What other attributes does the standard importer populate?
+    # Look at the definition of `types.ModuleType` for available attributes.
     #
-    # We might find hints in Python's `_bootstrap_external.py`. Important part is what happens
-    # either before or after the loader's `source_to_code` method is called. There's also
-    # importlib.util.module_from_spec`, which might shed some light on what happens by default.
-    #   https://github.com/python/cpython/blob/master/Lib/importlib/_bootstrap_external.py
-    #   https://docs.python.org/3/library/importlib.html#importlib.util.module_from_spec
+    # We always populate `__name__` and `__file__`, and when applicable, `__package__`.
     #
-    # module.__loader__ is left to its default None, because no loader exists for this
-    # dynamically created module.
+    # `__loader__` and `__spec__` are left to the default value `None`, because
+    # those don't make sense for a dynamically created module.
+    #
+    # `__doc__` can be filled later (by `run`, if that is used); we don't have the AST yet.
+    #
+    # `__dict__` is left at the default value, empty dictionary. It is filled later,
+    # when some code is executed in this module.
     #
     module = ModuleType(dotted_name)
     module.__name__ = dotted_name
