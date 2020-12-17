@@ -177,6 +177,7 @@ class MacroConsole(code.InteractiveConsole):
             # In this case, the standard stack trace is long and points only to our code and the stdlib,
             # not the erroneous input that's the actual culprit. Better ignore it, and emulate showsyntaxerror.
             # TODO: support sys.excepthook.
+            # TODO: Look at `code.InteractiveConsole.showsyntaxerror` for how to do that.
             self.write(f"{err.__class__.__name__}: {str(err)}\n")
             return False  # erroneous input
         except ImportError as err:  # during macro lookup in a successfully imported module
