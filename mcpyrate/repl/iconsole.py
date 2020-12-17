@@ -22,9 +22,9 @@ line magic.
 """
 
 import ast
+import copy
 from functools import partial
 import sys
-from types import ModuleType
 
 from IPython.core import magic_arguments
 from IPython.core.error import InputRejected
@@ -32,6 +32,7 @@ from IPython.core.magic import Magics, magics_class, cell_magic, line_magic
 
 from .. import __version__ as mcpyrate_version
 from ..astdumper import dump
+from ..compiler import create_module
 from ..debug import format_bindings
 from ..expander import find_macros, MacroExpander, global_postprocess
 from .utils import get_makemacro_sourcecode
@@ -40,7 +41,7 @@ from .utils import get_makemacro_sourcecode
 # Despite the meta-levels, there's just one global importer for the Python process.
 from .. import activate  # noqa: F401
 
-_magic_module_name = "__repl_self__"
+_magic_module_name = "__mcpyrate_repl_self__"
 _placeholder = "<ipython-session>"
 _instance = None
 
@@ -128,6 +129,11 @@ class InteractiveMacroTransformer(ast.NodeTransformer):
         try:
             sys.modules[_magic_module_name].__dict__.clear()
             sys.modules[_magic_module_name].__dict__.update(self._ipyextension.shell.user_ns)  # for self-macro-imports
+            # We treat the initial magic module metadata as write-protected: even if the user
+            # defines a variable of the same name in the user namespace, the metadata fields
+            # in the magic module won't be overwritten. (IPython actually defines e.g. `__name__`
+            # in `user_ns` even if the user explicitly doesn't.)
+            sys.modules[_magic_module_name].__dict__.update(self._ipyextension.magic_module_metadata)
             # macro-imports (this will import the modules)
             bindings = find_macros(tree, filename=self.expander.filename,
                                    reload=True, self_module=_magic_module_name)
@@ -159,8 +165,8 @@ class IMcpyrateExtension:
         shell.user_ns["__macro_expander__"] = self.macro_transformer.expander
 
         # support `from __self__ import macros, ...`
-        magic_module = ModuleType(_magic_module_name)
-        sys.modules[_magic_module_name] = magic_module
+        magic_module = create_module(dotted_name=_magic_module_name, filename=_placeholder)
+        self.magic_module_metadata = copy.copy(magic_module.__dict__)
 
         self.shell.run_cell(get_makemacro_sourcecode(),
                             store_history=False,
@@ -169,7 +175,7 @@ class IMcpyrateExtension:
         # TODO: If we want to support dialects in the REPL, we need to install
         # a string transformer here to call the dialect system's source transformer,
         # and then modify `InteractiveMacroTransformer` to run the dialect system's
-        # AST transformer before it runs the macro expander.
+        # AST transformer before it runs the macro expander. Look at `mcpyrate.compiler.compile`.
 
         ipy = self.shell.get_ipython()
         ipy.events.register("post_run_cell", self._refresh_macro_functions)

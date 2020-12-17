@@ -19,11 +19,12 @@ __all__ = ["MacroConsole"]
 
 import ast
 import code
+import copy
 import sys
 import textwrap
-from types import ModuleType
 
 from .. import __version__ as mcpyrate_version
+from ..compiler import create_module
 from ..core import MacroExpansionError
 from ..debug import format_bindings
 from ..expander import find_macros, MacroExpander, global_postprocess
@@ -33,7 +34,7 @@ from .utils import get_makemacro_sourcecode
 # Despite the meta-levels, there's just one global importer for the Python process.
 from .. import activate  # noqa: F401
 
-_magic_module_name = "__repl_self__"
+_magic_module_name = "__mcpyrate_repl_self__"
 
 class MacroConsole(code.InteractiveConsole):
     def __init__(self, locals=None, filename="<interactive input>"):
@@ -47,8 +48,8 @@ class MacroConsole(code.InteractiveConsole):
         locals["__macro_expander__"] = self.expander
 
         # support `from __self__ import macros, ...`
-        magic_module = ModuleType(_magic_module_name)
-        sys.modules[_magic_module_name] = magic_module
+        magic_module = create_module(dotted_name=_magic_module_name, filename=filename)
+        self.magic_module_metadata = copy.copy(magic_module.__dict__)
 
         super().__init__(locals, filename)
 
@@ -109,11 +110,16 @@ class MacroConsole(code.InteractiveConsole):
 
         try:
             # TODO: If we want to support dialects in the REPL, this is where to do it.
+            #       Look at `mcpyrate.compiler.compile`.
             tree = ast.parse(source)
 
             # macro-imports (this will import the modules)
             sys.modules[_magic_module_name].__dict__.clear()
             sys.modules[_magic_module_name].__dict__.update(self.locals)  # for self-macro-imports
+            # We treat the initial magic module metadata as write-protected: even if the user
+            # defines a variable of the same name in the user namespace, the metadata fields
+            # in the magic module won't be overwritten.
+            sys.modules[_magic_module_name].__dict__.update(self.magic_module_metadata)
             bindings = find_macros(tree, filename=self.expander.filename,
                                    reload=True, self_module=_magic_module_name)
             if bindings:
