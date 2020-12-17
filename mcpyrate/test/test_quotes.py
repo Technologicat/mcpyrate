@@ -93,6 +93,7 @@ def test():
 
     flip = create_module("flip")
     flop = create_module("flip.flop")
+    assert flip.__package__ is None
     assert flop.__package__ == "flip"
     assert flip.flop is flop  # submodule is added to the package namespace
 
