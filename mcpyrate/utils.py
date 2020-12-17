@@ -23,11 +23,25 @@ def gensym(basename=None):
 
     Can also be used for globally unique string keys, in which case `basename`
     does not need to be a valid identifier.
+
+    Examples::
+
+        gensym()         # --> 'gensym_e010a36f9cd64ad2b14041751ef40a6e'
+        gensym("kitty")  # --> 'kitty_65cc5638659d46209af11e1133698462'
+        gensym("")       # --> '7cf67f3eb02c4fdaa1a13e7f55bca908' (bare uuid only)
     """
-    basename = basename or "gensym"
+    if basename and not isinstance(basename, str):
+        raise TypeError(f"`basename` must be str, got {type(basename)} with value {repr(basename)}")
+
+    if basename is None:
+        basename = "gensym_"
+    elif len(basename):
+        basename = basename + "_"
+    # else basename = ""
+
     def generate():
         unique = str(uuid.uuid4()).replace("-", "")
-        return f"{basename}_{unique}"
+        return f"{basename}{unique}"
     sym = generate()
     # The uuid spec does not guarantee no collisions, only a vanishingly small chance.
     while sym in _previous_gensyms:

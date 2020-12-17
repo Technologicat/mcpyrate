@@ -303,10 +303,7 @@ def create_module(dotted_name=None, filename=None):
                     Otherwise some descriptive string is recommended. Optional.
 
                     Used as the `__file__` attribute of the module. If not provided,
-                    a unique placeholder name will be auto-generated.
-
-    When neither `filename` nor `dotted_name` are provided, both generated names
-    will use the same unique tag (since they belong to the same module).
+                    a description will be auto-generated (based on `dotted_name`).
 
     When `dotted_name` has dots in it, the parent package for the new module
     must exist in `sys.modules`. The new module is added to its parent's
@@ -324,9 +321,13 @@ def create_module(dotted_name=None, filename=None):
     if filename and not isinstance(filename, str):
         raise TypeError(f"`filename` must be an `str`, got {type(filename)} with value {repr(filename)}")
 
-    g = gensym("dynamically_created_module")
-    filename = filename or f"<{g}>"
-    dotted_name = dotted_name or g
+    uuid = gensym("")
+    if not filename:
+        if dotted_name:
+            filename = f"<dynamically created module '{dotted_name}'>"
+        else:
+            filename = f"<dynamically created module {uuid}>"
+    dotted_name = dotted_name or f"dynamically_created_module_{uuid}"
 
     # Look at the definition of `types.ModuleType` for available attributes.
     #
