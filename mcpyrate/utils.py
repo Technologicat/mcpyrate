@@ -100,6 +100,8 @@ def rename(oldname, newname, tree):
 
         tree = q[lambda _: ...]
         tree = rename("_", gensym(), tree)
+
+    The tree is modified in-place. For convenience, we return `tree`.
     """
     class Renamer(walkers.ASTTransformer):
         def transform(self, tree):
