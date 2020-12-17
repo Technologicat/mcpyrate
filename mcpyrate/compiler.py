@@ -217,9 +217,14 @@ def run(source, module=None, optimize=-1):
         from mcpyrate.compiler import run, create_module
 
         with q as quoted:
-            '''You can put a module docstring here if you want.
+            '''This quoted snippet is effectively a module.
+
+            You can put a module docstring here if you want.
 
             This code can use macros and multi-phase compilation.
+            To do that, you have to import the macros (and/or enable
+            the multi-phase compiler) at the top level of the quoted
+            snippet.
             '''
             x = 21
 
