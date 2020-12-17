@@ -123,6 +123,9 @@ def rename(oldname, newname, tree):
             elif T is ast.keyword:  # in function call, argument passed by name
                 if tree.arg == oldname:
                     tree.arg = newname
+            elif T is ast.ImportFrom:
+                if tree.module == oldname:
+                    tree.module = newname
             elif T is ast.alias:  # in ast.Import, ast.ImportFrom
                 if tree.name == oldname:
                     tree.name = newname
