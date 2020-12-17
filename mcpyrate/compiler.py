@@ -5,8 +5,9 @@ This is used by the import hooks in `mcpyrate.importer`.
 
 Functions specific to multi-phase compilation live in `mcpyrate.multiphase`.
 This module orchestrates all other transformations `mcpyrate` performs when
-a module is imported. You can also call the `compile` function manually if
-you want to compile macro-enabled code at run time.
+a module is imported.
+
+We also provide a public API to compile and run macro-enabled code at run time.
 """
 
 __all__ = ["expand", "compile",
@@ -34,8 +35,10 @@ def expand(source, filename, optimize=-1, self_module=None):
     `mcpyrate` performs when a module is imported.
 
     `source`:       `str` or `bytes` containing Python source code, an `ast.Module`,
-                    or a `list` of statement AST nodes. A list behaves as if it
-                    was the top level of a module.
+                    or a `list` of statement AST nodes.
+
+                    If `source` is a `list`, it is automatically wrapped into
+                    the `body` of a new `ast.Module`.
 
                     We always support macros, dialect AST transforms, dialect AST
                     postprocessors, and multi-phase compilation.
@@ -63,6 +66,77 @@ def expand(source, filename, optimize=-1, self_module=None):
     If you don't care about the expanded AST, and just want the final bytecode,
     see `mcpyrate.compiler.compile`, which performs both steps. It takes the
     same parameters as `expand`.
+
+    If you just want to run a macro-enabled code snippet you generated
+    at run time, see `run`.
+
+    **Notes**
+
+    `ast.Module` is just the top-level AST node type produced by
+    `ast.parse(..., mode="exec")`, which strictly speaking has nothing
+    to do with modules (`types.ModuleType`, the type of thing that lives
+    in `sys.modules`). Rather, `ast.Module` just represents a sequence of
+    statements. The common factor is that the source code for a module is
+    a sequence of statements.
+
+    `mcpyrate` stirs this picture up a bit. We always parse in `"exec"` mode.
+    Because macro bindings are established by macro-imports, the principle of
+    least astonishment requires that macros are looked up in a module - and
+    that module must be (or at least will have to become) available in
+    `sys.modules`.
+
+    Our `run` function uses an actual module as the namespace in which to run
+    the code, instead of using a bare dict like the built-in `exec` does.
+    This unifies the handling of run-time compiled and imported code, since
+    importing a source file always produces a module.
+
+    What this means in practice is that in `mcpyrate`, to run a code snippet
+    generated at run time, there has to be a module to run the code in. The
+    `run` function will auto-create one if needed, but in case you want more
+    control, you can create one explicitly with `create_module`, and then pass
+    that in to `run`.
+
+    Note this implies that, if you wish, you can first define one module at
+    run time that defines some macros, and then in another run-time code snippet,
+    import those macros from that dynamically generated module. Just use
+    `create_module` to create the first module, to give it a known dotted name
+    in `sys.modules`::
+
+        from mcpyrate.quotes import macros, q
+        from mcpyrate.compiler import create_module, run
+
+        mymacros = create_module("mymacros")
+        with q as quoted:
+            ...
+        run(quoted, mymacros)
+
+        with q as quoted:
+            from mymacros import macros, ...
+            ...
+        module = run(quoted)
+
+    If you're worried about module name collisions, you can use the default
+    gensymmed name (or gensym your own custom one). But since the module name
+    in an import statement must be literal, you'll then have to edit the second
+    code snippet after it was generated (if you generated it via quasiquotes)
+    to splice in the correct name for the first module to import the macros from::
+
+        from mcpyrate.quotes import macros, q
+        from mcpyrate import gensym
+        from mcpyrate.compiler import create_module, run
+        from mcpyrate.utils import rename
+
+        modname = gensym("mymacros")
+        mymacros = create_module(modname)
+        with q as quoted:
+            ...
+        run(quoted, mymacros)
+
+        with q as quoted:
+            from _xxx_ import macros, ...
+            ...
+        rename("_xxx_", modname, quoted)
+        module = run(quoted)
     """
     if not isinstance(source, (str, bytes, ast.Module, list)):
         raise TypeError(f"`source` must be Python source code (as `str` or `bytes`), an `ast.Module`, or a `list` of statement AST nodes; got {type(source)} with value {repr(source)}")
@@ -192,6 +266,7 @@ def run(source, module=None, optimize=-1):
 
     This behaves, for macro-enabled code, somewhat like the built-in `exec` for
     regular code, but instead of a dictionary, we take in an optional module.
+
     The module acts pretty much just as a namespace, though it is a
     `types.ModuleType` instance, and does usually live in `sys.modules`.
     This unifies the handling of run-time compiled and imported code,
@@ -200,6 +275,11 @@ def run(source, module=None, optimize=-1):
     `source` supports the same formats as in `expand`, plus passthrough
     for an already compiled code object that represents a module
     (i.e. the output of our `compile`).
+
+    If `source` is not yet compiled, and the first statement in it is a static
+    string (i.e. no f-strings or string arithmetic), it is assigned to the
+    docstring of the module the code runs in. Otherwise the module docstring
+    is set to `None`.
 
     The `module` parameter allows to run more code in the context of an
     existing module. It can be a dotted name (looked up in `sys.modules`)
@@ -213,13 +293,9 @@ def run(source, module=None, optimize=-1):
     pass in the result here as `module`.
 
     If you want to use a temporary module, but always the same one (e.g.
-    if you run a lot of snippets and worry about adding keys to `sys.modules`),
-    you can `gensym` a name for it, pass that to `create_module`, and then
-    pass the resulting module here.
-
-    If `source` is not yet compiled, and the first statement in it is a static
-    string (i.e. no f-strings or string arithmetic), it is used as the module's
-    docstring. Otherwise the module's docstring is set to `None`.
+    if you run a lot of snippets and worry about adding lots of keys to
+    `sys.modules`), you can `gensym` a name for it, pass that to
+    `create_module`, and then pass the resulting module here.
 
     When a new module is created, it is inserted into `sys.modules` **before**
     the code runs. If you need to remove it from there later, the key is
@@ -227,8 +303,7 @@ def run(source, module=None, optimize=-1):
     will not remove it from its parent package's namespace, if any. A module
     has a parent package if the module's dotted name contains at least one dot.)
 
-    Return value is the module, after the code has been `exec`'d in its
-    `__dict__`.
+    Return value is the module, after the code has been `exec`'d in its `__dict__`.
 
     Examples::
 
@@ -240,14 +315,14 @@ def run(source, module=None, optimize=-1):
         from mcpyrate import gensym
 
         with q as quoted:
-            '''This quoted snippet is seen by `run` as effectively a module.
+            '''This quoted snippet is considered by `run` as a module.
 
             You can put a module docstring here if you want.
 
             This code can use macros and multi-phase compilation.
             To do that, you have to import the macros (and/or enable
-            the multi-phase compiler) at the top level of the quoted
-            snippet.
+            the multi-phase compiler) here, at the top level of the
+            quoted snippet.
             '''
             x = 21
 
@@ -261,8 +336,7 @@ def run(source, module=None, optimize=-1):
         assert module.x == 42
 
         # run in a module with a custom dotted name and filename
-        mymodule = create_module("mymod",
-                                 filename="some descriptive string")
+        mymodule = create_module("mymod", filename="some descriptive string")
         with q as quoted:
             x = 17
         run(quoted, mymodule)
@@ -312,14 +386,14 @@ def run(source, module=None, optimize=-1):
 
 
 def create_module(dotted_name=None, filename=None):
-    """Create a module at run time, insert it into `sys.modules`, and return it.
+    """Create a new blank module at run time, insert it into `sys.modules`, and return it.
 
-    This is a utility function that fills in some attributes of the module
-    (usually populated by the importer), and inserts the new module into
-    `sys.modules`. Used by `run` when no module is given.
+    This is a utility function that closely emulates what Python's standard
+    importer does. It fills in some attributes of the module, and inserts the
+    new module into `sys.modules`. Used by `run` when no module is given.
 
-    This does not care whether a module by the given dotted name is already in
-    `sys.modules`; if so, its entry will get overwritten.
+    However, this does not care whether a module by the given dotted name is already
+    in `sys.modules`; if so, its entry will be overwritten.
 
     `dotted_name`:  Fully qualified name of the module, for `sys.modules`. Optional.
 
@@ -333,11 +407,11 @@ def create_module(dotted_name=None, filename=None):
                     a description will be auto-generated (based on `dotted_name`).
 
     When `dotted_name` has dots in it, the parent package for the new module
-    must exist in `sys.modules`. The new module is added to its parent's
-    namespace (like Python's importer would do), and the new module's
-    `__package__` attribute will be set to the dotted name of the parent package.
+    must already exist in `sys.modules`. The new module is added to its parent's
+    namespace (like Python's importer would do), and the new module's `__package__`
+    attribute is set to the dotted name of the parent.
 
-    Otherwise the new module's `__package__` attribute will be the empty string.
+    Otherwise the new module's `__package__` attribute is left as `None`.
     """
     if dotted_name:
         if not isinstance(dotted_name, str):
@@ -365,7 +439,7 @@ def create_module(dotted_name=None, filename=None):
     #
     # `__doc__` can be filled later (by `run`, if that is used); we don't have the AST yet.
     #
-    # `__dict__` is left at the default value, empty dictionary. It is filled later,
+    # `__dict__` is left at the default value, the empty dictionary. It is filled later,
     # when some code is executed in this module.
     #
     module = ModuleType(dotted_name)
