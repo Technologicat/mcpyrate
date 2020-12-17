@@ -138,6 +138,18 @@ def _compile(source, filename, optimize, self_module):
     code = builtins.compile(expansion, filename, mode="exec", dont_inherit=True, optimize=optimize)
     return code, docstring
 
+def _fill_dummy_location_info(tree):
+    """Populate missing location info with dummy values, so that Python can compile `tree`.
+
+    It's better to use sensible values for location info when available. This
+    function only exists because quoted code snippets carry no location info
+    (which is appropriate for their usual use case, in macro output).
+    """
+    fake_lineno = 9999
+    fake_col_offset = 9999
+    reference_node = ast.Constant(value=None, lineno=fake_lineno, col_offset=fake_col_offset)
+    fix_locations(tree, reference_node, mode="reference")
+
 
 def singlephase_expand(tree, *, filename, self_module, dexpander):
     """Expand dialects and macros in `tree`. Single phase only.
@@ -300,18 +312,6 @@ def run(source, module=None, optimize=-1):
 
     exec(code, module.__dict__)
     return module
-
-def _fill_dummy_location_info(tree):
-    """Populate missing location info with dummy values, so that Python can compile `tree`.
-
-    It's better to use sensible values for location info when available. This
-    function only exists because quoted code snippets carry no location info
-    (which is appropriate for their usual use case, in macro output).
-    """
-    fake_lineno = 9999
-    fake_col_offset = 9999
-    reference_node = ast.Constant(value=None, lineno=fake_lineno, col_offset=fake_col_offset)
-    fix_locations(tree, reference_node, mode="reference")
 
 
 def create_module(dotted_name=None, filename=None):
