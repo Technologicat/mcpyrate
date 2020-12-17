@@ -227,10 +227,21 @@ class Unparser:
         if print_mode == "expr":
             self.write(")")
 
-    def _Module(self, t):
+    # top level nodes
+    def _Module(self, t):  # ast.parse(..., mode="exec")
+        self.toplevelnode(t)
+
+    def _Interactive(self, t):  # ast.parse(..., mode="single")
+        self.toplevelnode(t)
+
+    def _Expression(self, t):  # ast.parse(..., mode="eval")
+        self.toplevelnode(t)
+
+    def toplevelnode(self, t):
         # TODO: Python 3.8 type_ignores. Since we don't store the source text, maybe ignore that?
         if self.debug:
-            self.fill(self.maybe_colorize("$Module", ColorScheme.INVISIBLENODE),
+            label = f"${t.__class__.__name__}"
+            self.fill(self.maybe_colorize(label, ColorScheme.INVISIBLENODE),
                       lineno_node=t)
             self.enter()
             for stmt in t.body:
