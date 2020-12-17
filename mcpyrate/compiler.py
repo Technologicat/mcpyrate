@@ -341,9 +341,6 @@ def create_module(dotted_name=None, filename=None):
     # Manage the package abstraction, like the importer does - with the difference that we
     # shouldn't import parent packages here. To keep things simple, we only allow creating
     # a module with dots in the name if its parent package exists in `sys.modules`.
-    #
-    # In Python, submodules are added to the package namespace.
-    # http://python-notes.curiousefficiency.org/en/latest/python_concepts/import_traps.html
     if dotted_name.find(".") != -1:
         packagename, finalcomponent = dotted_name.rsplit(".", maxsplit=1)
         package = sys.modules.get(packagename, None)
@@ -352,6 +349,9 @@ def create_module(dotted_name=None, filename=None):
             raise ModuleNotFoundError(f"while dynamically creating module '{dotted_name}': its parent package '{packagename}' not found in `sys.modules`")
 
         module.__package__ = packagename
+
+        # In Python, submodules are added to the package namespace.
+        # http://python-notes.curiousefficiency.org/en/latest/python_concepts/import_traps.html
         setattr(package, finalcomponent, module)
     else:
         module.__package__ = ""
