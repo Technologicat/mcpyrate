@@ -315,14 +315,14 @@ def create_module(dotted_name=None, filename=None):
 
     Otherwise the new module's `__package__` attribute will be the empty string.
     """
-    if filename and not isinstance(filename, str):
-        raise TypeError(f"`filename` must be an `str`, got {type(filename)} with value {repr(filename)}")
     if dotted_name:
         if not isinstance(dotted_name, str):
             raise TypeError(f"`dotted_name` must be an `str`, got {type(dotted_name)} with value {repr(dotted_name)}")
         path = dotted_name.split(".")
         if not all(component.isidentifier() for component in path):
             raise TypeError(f"each component of `dotted_name` must be a valid identifier`, got {repr(dotted_name)}")
+    if filename and not isinstance(filename, str):
+        raise TypeError(f"`filename` must be an `str`, got {type(filename)} with value {repr(filename)}")
 
     g = gensym("dynamically_created_module")
     filename = filename or f"<{g}>"
