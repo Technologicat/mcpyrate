@@ -286,6 +286,8 @@ def create_module(dotted_name=None, filename=None):
     (usually populated by the importer), and inserts the new module into
     `sys.modules`. Used by `run` when no module is given.
 
+    This does not care whether a module by the given dotted name is already in
+    `sys.modules`; if so, its entry will get overwritten.
 
     `dotted_name`:  Fully qualified name of the module, for `sys.modules`. Optional.
 
