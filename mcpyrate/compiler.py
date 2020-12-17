@@ -187,9 +187,6 @@ def singlephase_expand(tree, *, filename, self_module, dexpander):
 # --------------------------------------------------------------------------------
 # Convenience functions for compiling and running macro-enabled code snippets at run time.
 
-# Curiously, Python does not have a similar built-in for regular Python code,
-# though it comes with all the parts to implement one.
-
 def run(source, module=None, optimize=-1):
     """Compile and run macro-enabled code at run time.
 
