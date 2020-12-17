@@ -357,7 +357,7 @@ def create_module(dotted_name=None, filename=None):
 
         module.__package__ = packagename
 
-        # In Python, submodules are added to the package namespace.
+        # The standard importer adds submodules to the package namespace, so we should too.
         # http://python-notes.curiousefficiency.org/en/latest/python_concepts/import_traps.html
         setattr(package, finalcomponent, module)
 
