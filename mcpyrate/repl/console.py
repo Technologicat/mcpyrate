@@ -48,6 +48,46 @@ class MacroConsole(code.InteractiveConsole):
         locals["__macro_expander__"] = self.expander
 
         # support `from __self__ import macros, ...`
+        #
+        # To do this, we need the top-level variables in the REPL to be stored
+        # in the namespace of a module, so that `find_macros` can look them up.
+        #
+        # We create a module dynamically. The one obvious way would be to then
+        # replace the `__dict__` of that module with the given `locals`, but
+        # `types.ModuleType` is special in that the `__dict__` binding itself
+        # is read-only:
+        #   https://docs.python.org/3/library/stdtypes.html#modules
+        #
+        # This leaves two possible solutions:
+        #
+        #   a. Keep our magic module separate from `locals`, and shallow-copy
+        #      the user namespace into its `__dict__` after each REPL input.
+        #      The magic module's namespace is only used for macro lookups.
+        #
+        #      + Behaves exactly like `code.InteractiveConsole` in that the
+        #        user-given `locals` *is* the dict where the top-level variables
+        #        are stored. So the user can keep a reference to that dict, and
+        #        they will see any changes made by assigning to top-level
+        #        variables in the REPL.
+        #
+        #      - May slow down the REPL when a lot of top-level variables exist.
+        #        Likely not a problem in practice.
+        #
+        #   b. Use the module's `__dict__` as the local namespace of the REPL
+        #      session. At startup, update it from `locals`, to install any
+        #      user-provided initial variable bindings for the session.
+        #
+        #      + Elegant. No extra copying.
+        #
+        #      - Behavior does not match `code.InteractiveConsole`. The
+        #        `locals` argument only provides initial values; any updates
+        #        made during the REPL session are stored in the module's
+        #        `__dict__`, which is a different dict instance. Hence the user
+        #        will not see any changes made by assigning to top-level
+        #        variables in the REPL.
+        #
+        # We currently use strategy a., for least astonishment.
+        #
         magic_module = create_module(dotted_name=_magic_module_name, filename=filename)
         self.magic_module_metadata = copy.copy(magic_module.__dict__)
 
