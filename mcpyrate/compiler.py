@@ -230,7 +230,7 @@ def run(source, module=None, optimize=-1):
 
         module = run(quoted)  # run in a new module, don't care about name
         assert module.x == 21
-        assert module.__doc__.startswith("You")
+        assert module.__doc__.startswith("This")
 
         with q as quoted:
             x = 2 * x
