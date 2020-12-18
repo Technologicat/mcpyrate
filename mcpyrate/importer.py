@@ -20,7 +20,10 @@ from .utils import format_location
 
 
 def source_to_xcode(self, data, path, *, _optimize=-1):
-    """[mcpyrate] Import hook for the source to bytecode transformation."""
+    """[mcpyrate] Import hook for the source to bytecode transformation.
+
+    This function is monkey-patched into `importlib.machinery.SourceFileLoader`.
+    """
     # `self.name` is absolute dotted module name, see `importlib.machinery.FileLoader`.
     return compiler.compile(data, filename=path, self_module=self.name)
 
@@ -57,6 +60,9 @@ _stdlib_path_stats = SourceFileLoader.path_stats
 def path_xstats(self, path):
     """[mcpyrate] Import hook to compute mtime, accounting for macro-imports.
 
+    This function is monkey-patched into `importlib.machinery.SourceFileLoader`.
+    For direct use as an API function, use `mcpyrate.importer.path_stats`.
+
     The mtime is the latest of those of `path` and its macro-dependencies,
     considered recursively, so that if any macro definition anywhere in the
     macro-dependency tree of `path` is changed, Python will treat the source
@@ -91,6 +97,9 @@ _stdlib_sourcefile_paths = _detect_stdlib_sourcefile_paths()
 
 def path_stats(path, _stats_cache=None):
     """[mcpyrate] Compute a `.py` source file's mtime, accounting for macro-imports.
+
+    This is a public API function for direct use, if you have a `.py` file and
+    you want to know its macro-enabled mtime.
 
     Beside the source file `path` itself, we look at any macro definition files
     the source file imports macros from, recursively, in a `make`-like fashion.
