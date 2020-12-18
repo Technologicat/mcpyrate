@@ -34,7 +34,9 @@ from .importer import source_to_xcode, path_xstats
 def activate():
     """Activate `mcpyrate`.
 
-    Called automatically once, when the module `mcpyrate.activate` is imported.
+    Called automatically once, when the module's top-level code executes.
+    This typically happens when `mcpyrate.activate` is imported for the
+    first time in the current process.
 
     The function is available so that if you call `deactivate`, it is possible
     to call `activate` to re-activate the macro expander.
