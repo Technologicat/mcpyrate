@@ -209,6 +209,11 @@ def splice_dialect(body, template, tag="__paste_here__"):
     # to the use site where `body` comes from.
     #
     # Pretend the template code appears at the beginning of the user module.
+    #
+    # TODO: It would be better to pretend it appears at the line that has the dialect-import.
+    # TODO: Requires a `lineno` parameter here, and `DialectExpander` must be modified to supply it.
+    # TODO: We could extract the `lineno` in `find_dialectimport_ast` and then pass it to the
+    # TODO: user-defined dialect AST transformer, so it could pass it to us if it wants to.
     for stmt in template:
         fix_locations(stmt, body[0], mode="overwrite")
 
