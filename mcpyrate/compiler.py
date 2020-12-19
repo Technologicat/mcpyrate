@@ -206,6 +206,7 @@ def compile(source, filename, optimize=-1, self_module=None):
 
 def _compile(source, filename, optimize, self_module):
     expansion = expand(source, filename=filename, self_module=self_module, optimize=optimize)
+    assert isinstance(expansion, ast.Module)  # we always parse in `"exec"` mode
     docstring = getdocstring(expansion.body)
     _fill_dummy_location_info(expansion)  # convenience, not sure if this step should be optional?
     code = builtins.compile(expansion, filename, mode="exec", dont_inherit=True, optimize=optimize)
