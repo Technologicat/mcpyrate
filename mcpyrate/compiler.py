@@ -152,7 +152,7 @@ def expand(source, filename, optimize=-1, self_module=None):
         # dialect source transforms (transpilers, surface syntax extensions, etc.)
         text = dexpander.transform_source(text)
 
-        # produce initial AST
+        # produce initial AST (NOTE: this step produces source location info w.r.t. `text`)
         try:
             tree = ast.parse(text, filename=filename, mode="exec")
         except Exception as err:
