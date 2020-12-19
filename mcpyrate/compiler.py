@@ -385,7 +385,7 @@ def run(source, module=None, optimize=-1):
     return module
 
 
-def create_module(dotted_name=None, filename=None):
+def create_module(dotted_name=None, filename=None, *, update_parent=True):
     """Create a new blank module at run time, insert it into `sys.modules`, and return it.
 
     This is a utility function that closely emulates what Python's standard
@@ -400,18 +400,45 @@ def create_module(dotted_name=None, filename=None):
                     Used as the `__name__` attribute of the module. If not provided,
                     a unique placeholder name will be auto-generated.
 
+                    If `dotted_name` has at least one dot in it, the parent package
+                    for the new module must already exist in `sys.modules`. The new
+                    module's `__package__` attribute is set to the dotted name of
+                    the parent.
+
+                    If `dotted_name` has no dots in it, the new module is a top-level
+                    module; its `__package__` attribute is set to `None`.
+
     `filename`:     Full path to the `.py` file the module represents, if applicable.
                     Otherwise some descriptive string is recommended. Optional.
 
                     Used as the `__file__` attribute of the module. If not provided,
-                    a description will be auto-generated (based on `dotted_name`).
+                    a description will be auto-generated (based on `dotted_name` if
+                    that was provided).
 
-    When `dotted_name` has dots in it, the parent package for the new module
-    must already exist in `sys.modules`. The new module is added to its parent's
-    namespace (like Python's importer would do), and the new module's `__package__`
-    attribute is set to the dotted name of the parent.
+    `update_parent`:  bool, whether to honor Python's package semantics.
 
-    Otherwise the new module's `__package__` attribute is left as `None`.
+                    This parameter is used only when `dotted_name` has at least
+                    one dot in it.
+
+                    If `update_parent=True`, the new module is added to its
+                    parent's namespace, like Python's importer would do.
+                    Almost always, this is the right thing to do to achieve
+                    least astonishment.
+
+                    If `update_parent=False`, the parent module is not touched.
+                    This is occasionally useful, to avoid causing any changes to
+                    program state outside the new module object, while allowing
+                    the execution of code that uses relative imports in the context
+                    of the new module.
+
+                    An example of when it is the right thing to **not** honor
+                    package semantics can be found in the multi-phase compiler.
+                    It must avoid updating parent modules when compiling a temporary
+                    higher-phase module, so that any existing references in other
+                    modules (to an old but complete version of the module being
+                    compiled) will not be clobbered with ones pointing to the
+                    temporary module (that is incomplete, because the module
+                    being compiled hasn't reached phase 0 yet).
     """
     if dotted_name:
         if not isinstance(dotted_name, str):
@@ -458,9 +485,10 @@ def create_module(dotted_name=None, filename=None):
 
         module.__package__ = packagename
 
-        # The standard importer adds submodules to the package namespace, so we should too.
-        # http://python-notes.curiousefficiency.org/en/latest/python_concepts/import_traps.html
-        setattr(package, finalcomponent, module)
+        if update_parent:
+            # The standard importer adds submodules to the package namespace, so we should too.
+            # http://python-notes.curiousefficiency.org/en/latest/python_concepts/import_traps.html
+            setattr(package, finalcomponent, module)
 
     sys.modules[dotted_name] = module
     return module

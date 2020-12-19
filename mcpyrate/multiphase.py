@@ -372,17 +372,21 @@ def multiphase_expand(tree, *, filename, self_module, dexpander=None, _optimize=
             if debug:
                 print(unparse_with_fallbacks(phase_k_tree, debug=True, color=True), file=sys.stderr)
 
-            expansion = compiler.singlephase_expand(phase_k_tree, filename=filename,
-                                                    self_module=self_module, dexpander=dexpander)
-
             # Once we hit the final phase, no more temporary modules - let the import system take over.
             if k == 0:
+                expansion = compiler.singlephase_expand(phase_k_tree, filename=filename, self_module=self_module, dexpander=dexpander)
                 break
 
-            # Compile temporary module, and inject it into `sys.modules`, so we can compile the next phase.
-            module = compiler.create_module(dotted_name=self_module, filename=filename)
-            code = compile(expansion, filename, "exec", dont_inherit=True, optimize=_optimize)
-            exec(code, module.__dict__)
+            # Inject temporary module into `sys.modules`. Compile the current tree, and run it in the
+            # namespace of the temporary module. This gives us the temporary higher-phase module,
+            # which allows us to compile the next phase.
+            #
+            # Note that if the module already exists in `sys.modules`, its entry will be overwritten.
+            # We don't touch the parent module (if any), so that if it already refers to an old (but
+            # phase-0, fully compiled) version of this one, the reference won't be clobbered with one
+            # pointing to the temporary module.
+            module = compiler.create_module(dotted_name=self_module, filename=filename, update_parent=False)
+            compiler.run(phase_k_tree, module)
 
     # restore `sys.modules` to how it was before we began the multi-phase compile for this module
     if original_module:
