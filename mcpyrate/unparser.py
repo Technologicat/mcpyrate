@@ -380,12 +380,12 @@ class Unparser:
         for ex in t.handlers:
             self.dispatch(ex)
         if t.orelse:
-            self.fill(self.maybe_colorize_python_keyword("else"))
+            self.fill(self.maybe_colorize_python_keyword("else"), lineno_node=t)
             self.enter()
             self.dispatch(t.orelse)
             self.leave()
         if t.finalbody:
-            self.fill(self.maybe_colorize_python_keyword("finally"))
+            self.fill(self.maybe_colorize_python_keyword("finally"), lineno_node=t)
             self.enter()
             self.dispatch(t.finalbody)
             self.leave()
@@ -489,7 +489,7 @@ class Unparser:
         self.dispatch(t.body)
         self.leave()
         if t.orelse:
-            self.fill(self.maybe_colorize_python_keyword("else"))
+            self.fill(self.maybe_colorize_python_keyword("else"), lineno_node=t)
             self.enter()
             self.dispatch(t.orelse)
             self.leave()
@@ -505,14 +505,14 @@ class Unparser:
         while (t.orelse and len(t.orelse) == 1 and
                isinstance(t.orelse[0], ast.If)):
             t = t.orelse[0]
-            self.fill(self.maybe_colorize_python_keyword("elif "))
+            self.fill(self.maybe_colorize_python_keyword("elif "), lineno_node=t)
             self.dispatch(t.test)
             self.enter()
             self.dispatch(t.body)
             self.leave()
         # final else
         if t.orelse:
-            self.fill(self.maybe_colorize_python_keyword("else"))
+            self.fill(self.maybe_colorize_python_keyword("else"), lineno_node=t)
             self.enter()
             self.dispatch(t.orelse)
             self.leave()
@@ -524,7 +524,7 @@ class Unparser:
         self.dispatch(t.body)
         self.leave()
         if t.orelse:
-            self.fill(self.maybe_colorize_python_keyword("else"))
+            self.fill(self.maybe_colorize_python_keyword("else"), lineno_node=t)
             self.enter()
             self.dispatch(t.orelse)
             self.leave()
