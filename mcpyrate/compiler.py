@@ -175,8 +175,7 @@ def expand(source, filename, optimize=-1, self_module=None):
     else:
         if not self_module:
             raise ValueError("`self_module` must be specified when multi-phase compiling.")
-        expansion = multiphase_expand(tree, filename=filename, self_module=self_module, dexpander=dexpander,
-                                      _optimize=optimize)
+        expansion = multiphase_expand(tree, filename=filename, self_module=self_module, dexpander=dexpander, _optimize=optimize)
 
     return expansion
 
