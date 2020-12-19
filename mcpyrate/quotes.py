@@ -587,7 +587,7 @@ def unastify(tree):
             body, name = tree.args[0], tree.args[1].value
             return Capture(body, name)
         elif dotted_name == "mcpyrate.quotes.lookup_macro":  # `h[]` (macro)
-            # `capture_macro` is gone and done by the time we get here.
+            # `capture_macro` is done and gone by the time we get here.
             # `astify` has generated an `ast.Call` to `lookup_macro`.
             #
             # To make the this work properly even across process boundaries,
@@ -796,7 +796,7 @@ def a(tree, *, syntax, expander, **kw):
         assert syntax == "block"
         # Block mode: strip `Expr` wrappers.
         #
-        # When `a` expands, the elements of the list `tree` are `Expr` nodes
+        # When `with a` expands, the elements of the list `tree` are `Expr` nodes
         # containing expressions. Typically each expression is just a `Name`
         # node, or in general, any expression that at run time evaluates to
         # a statement AST node, or to an iterable of statement AST nodes.
