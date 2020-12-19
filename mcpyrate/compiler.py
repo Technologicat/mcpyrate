@@ -215,6 +215,22 @@ def _compile(source, filename, optimize, self_module):
     code = builtins.compile(expansion, filename, mode="exec", dont_inherit=True, optimize=optimize)
     return code, docstring
 
+# TODO: Filling dummy locations is stupid.
+#
+# The problem is, Python wasn't designed for the use scenario where an AST is assembled from pieces
+# defined in several locations (possibly each in a different source file), then passed around, and
+# finally compiled and run at a yet another location (possibly in yet another source file).
+#
+# The AST only has `lineno` and `col_offset`. It has no `filename`, so it assumes that an AST
+# comes from a single source file. `types.CodeType` has `co_filename` (only one per code object,
+# so it makes the same assumption), `co_firstlineno`, and `co_lnotab` (up to Python 3.9) or
+# `co_lines` (Python 3.10+).
+#
+#   https://greentreesnakes.readthedocs.io/en/latest/tofrom.html#fix-locations
+#   https://docs.python.org/3/library/types.html#types.CodeType
+#   https://docs.python.org/3/library/inspect.html#types-and-members
+#   https://github.com/python/cpython/blob/master/Objects/lnotab_notes.txt
+#
 def _fill_dummy_location_info(tree):
     """Populate missing location info with dummy values, so that Python can compile `tree`.
 
