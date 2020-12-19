@@ -145,7 +145,7 @@ def ast_literal(tree, syntax):
     where splicing into the surrounding context is needed.
     """
     if syntax not in ("expr", "block"):
-        raise TypeError(f"expected `syntax` either 'expr' or 'block', got {type(syntax)} with value {repr(syntax)}")
+        raise ValueError(f"expected `syntax` either 'expr' or 'block', got {repr(syntax)}")
 
     if syntax == "expr":
         if isinstance(tree, ast.AST):
