@@ -219,7 +219,7 @@ class SourceLocationInfoValidator(ASTVisitor):
         self.check_fields = check_fields
         super().__init__()
 
-    def transform(self, tree):
+    def examine(self, tree):
         if tree not in self.ignore:
             present = [hasattr(tree, x) for x in self.check_fields]
             if not all(present):
