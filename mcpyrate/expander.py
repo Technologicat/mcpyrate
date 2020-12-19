@@ -561,6 +561,7 @@ def find_macros(tree, *, filename, reload=False, self_module=None, transform=Tru
 
     Return value is a dict `{macroname: function, ...}` with all collected bindings.
     """
+    stmts_to_delete = []
     bindings = {}
     for index, statement in enumerate(tree.body):
         if ismacroimport(statement):
@@ -571,11 +572,21 @@ def find_macros(tree, *, filename, reload=False, self_module=None, transform=Tru
                     # Remove self-macro-imports after establishing bindings.
                     # No need to import a module at run time; the importer lifts all
                     # the higher-phase code also into the code of the current phase.
+                    #
+                    # `statement` usually has location info, in which case we can replace the
+                    # self-macro-import with a coverage dummy node. But it might not, if we are
+                    # dealing with a dynamically generated module that's being multi-phase compiled.
+                    # In that case it's best to just delete the statement now that it's done its job.
                     dummies = _insert_coverage_dummy_stmt(None, statement, "<self-macro-import>", filename)
-                    tree.body[index] = dummies[0]
+                    if dummies is not None:  # had location info?
+                        tree.body[index] = dummies[0]
+                    else:
+                        stmts_to_delete.append(index)
                 else:
                     # Remove all names to prevent macros being used as regular run-time objects.
                     # Always use an absolute import, for the unhygienic expose API guarantee.
                     tree.body[index] = copy_location(Import(names=[alias(name=module_absname, asname=None)]),
                                                      statement)
+    for index in reversed(stmts_to_delete):
+        tree.body.pop(index)
     return bindings
