@@ -185,6 +185,7 @@ def test():
         with q as quoted:
             # This is a module top level for `run`, so...
             from mcpyrate.multiphase import macros, phase  # noqa: F811
+            # from mcpyrate.debug import macros, step_phases  # uncomment if you want to see the phases
 
             with phase[1]:
                 from mcpyrate.quotes import macros, q  # noqa: F811, F401
