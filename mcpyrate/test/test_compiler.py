@@ -197,64 +197,7 @@ def test():
             # for the dynamically generated module.
             from __self__ import macros, testmacro  # noqa: F811, F401
             assert testmacro["blah"] == "success"
-
-        from ..compiler import _fill_dummy_location_info
-        _fill_dummy_location_info(quoted)
         module = run(quoted)  # noqa: F841
-
-        # TODO: improve the compiler so we don't need to fill in dummy locations here
-        #
-        # The problem here is that during `multiphase_expand`, the temporary modules
-        # for the higher phases are compiled directly with the built-in `compile`,
-        # whereas the dummy location filler is in `mcpyrate.compiler._compile`.
-        #
-        # Technically that's almost a drop-in replacement, but using `_compile`
-        # there leads to allowing `with phase` in positions where it's not
-        # understood by other parts of `mcpyrate` (particularly `path_stats`
-        # in the importer). In the long run that seems the right direction,
-        # but we should first think about the implications.
-        #
-        # Also, filling useless dummy locations is stupid. But the AST only has
-        # `lineno` and `col_offset`. It has no `filename`, so it assumes that:
-        #
-        #   1. an AST comes from a single source file
-        #
-        # `types.CodeType` only has `co_filename`, `co_firstlineno`, `co_lnotab`,
-        # so it might additionally assume that:
-        #
-        #   2. the source code is in one contiguous block
-        #
-        # (There's `co_lnotab`, which isn't documented that well, so it may be
-        #  it doesn't make that additional assumption.)
-        #
-        # Python's support for source location info just doesn't lend itself
-        # well to a use scenario where an AST is assembled from pieces defined
-        # in several locations, then passed around, and finally compiled and
-        # run at a yet another location.
-        #
-        #   https://greentreesnakes.readthedocs.io/en/latest/tofrom.html#fix-locations
-        #   https://docs.python.org/3/library/types.html#types.CodeType
-        #   https://docs.python.org/3/library/inspect.html#types-and-members
-        #
-        # As long as there is only one location that defines the whole snippet
-        # in one go, and the `run` appears in that same file, we could add a mode
-        # to `q` to fill in `lineno` and `col_offset` from the use site of `q`.
-        #
-        # (Note that for regular use of `q`, for constructing output ASTs in
-        #  macros, we must not do that, precisely because the AST will be used
-        #  somewhere else - namely at the use site *for the macro that used `q`*.
-        #  For that use case, the right solution is the current one - leave out
-        #  the source location info, and let the expander auto-fill it.)
-        #
-        # But even that runs into practical problems, because we have also
-        # `mcpyrate.quotes.unastify`, and especially hygienic macro capture
-        # is essentially a one-way operation (so passing around the original
-        # source location for that may be difficult so that it survives an
-        # astify-unastify-astify roundtrip).
-        #
-        # So, practically, perhaps we should just move to use `_compile`
-        # in `multiphase_expand`, hunt down and resolve the implications,
-        # and leave the source location issue unresolved for now.
     test_dynamicmodule_multiphase()
 
     print("All tests PASSED")
