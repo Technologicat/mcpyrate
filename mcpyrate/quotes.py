@@ -560,6 +560,12 @@ def unastify(tree):
     elif T is ast.Call:
         dotted_name = unparse(tree.func)
 
+        # Drop the run-time part of `q`, if present. This is added by `q` itself,
+        # not `astify`, but `unastify` is usually applied to the output of `q`.
+        if dotted_name == "mcpyrate.quotes.splice_ast_literals":  # `q[]`
+            body = tree.args[0]
+            return unastify(body)
+
         # Even though the unquote operators compile into calls, `unastify`
         # must not apply their run-time parts, because it's running in the
         # wrong context. Those only work properly at run time, and they
@@ -568,7 +574,7 @@ def unastify(tree):
         #
         # So we undo what `astify` did, converting the unquote calls back into
         # the corresponding AST markers.
-        if dotted_name == "mcpyrate.quotes.astify":  # `u[]`
+        elif dotted_name == "mcpyrate.quotes.astify":  # `u[]`
             body = tree.args[0]
             return Unquote(body)
         elif dotted_name == "mcpyrate.quotes.lift_sourcecode":  # `n[]`
