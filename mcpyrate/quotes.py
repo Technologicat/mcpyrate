@@ -1,7 +1,7 @@
 # -*- coding: utf-8; -*-
 """Quasiquotes. Build ASTs in your macros, using syntax that mostly looks like regular code.
 
-The macro operators `q`, `u`, `n`, `a`, `s`, `h` are the primary API.
+The macro operators `q`, `u`, `n`, `a`, `s`, `t`, `h` are the primary API.
 
 The functions `capture_value` and `capture_as_macro` are public, so you can get the
 benefits of hygienic capture also in old-school macros that build ASTs manually
