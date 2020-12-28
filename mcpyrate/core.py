@@ -99,7 +99,7 @@ class BaseMacroExpander(NodeTransformer):
 
         This is the standard visitor method; it continues an ongoing visit.
         """
-        if not self.bindings or type(tree) is Done:
+        if not self.bindings or isinstance(tree, Done):
             return tree
         if tree is None:
             return None
