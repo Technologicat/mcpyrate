@@ -53,6 +53,17 @@ class Unparser:
                  debug=False, color=False, expander=None):
         """Print the source for `tree` to `file`.
 
+        `tree`:  an AST, or a `list` of ASTs.
+
+                 If a `list`, each element is processed separately,
+                 preserving ordering. This can be used e.g. to look at
+                 the source code corresponding to a statement suite in
+                 an AST.
+
+        `file`:  where to send the unparsed source code. Must have `write`
+                 and `flush` methods. Typically something like `sys.stdout`,
+                 or an `io.StringIO` instance.
+
         `debug`: bool, print invisible nodes (`Module`, `Expr`).
 
                  For statement nodes, print also line numbers (`lineno`
@@ -73,7 +84,11 @@ class Unparser:
         self.expander = expander
         self.f = file
         self._indent = 0
-        self.dispatch(tree)
+        if isinstance(tree, list):  # statement suite (for unparsing those directly)
+            for elt in tree:
+                self.dispatch(elt)
+        else:
+            self.dispatch(tree)
         print("", file=self.f)
         self.f.flush()
 
