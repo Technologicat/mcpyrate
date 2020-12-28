@@ -17,6 +17,25 @@
     - For extracting results into the surrounding context, just assign them to variables inside the code snippet. The top level of the code snippet is the module's top level (and you have that module object available in the surrounding context, so you can access those variables as its attributes).
   - Full documentation is in docstrings for now, see [`mcpyrate.compiler`](mcpyrate/compiler.py). Usage examples can be found in [`mcpyrate.test.test_compiler`](mcpyrate/test/test_compiler.py).
 
+- The unparser now supports all three [top-level node types](https://greentreesnakes.readthedocs.io/en/latest/nodes.html#top-level-nodes), and supports also a `list` of AST nodes (e.g. a statement suite in an AST) as input.
+
+- The `StepExpansion` dialect now works in AST-only mode, too.
+  - It will enable `DialectExpander` debug mode in the source transform step, if that runs. If the AST transform step is reached and debug mode is still off, it will now enable debug mode at that time. Only one copy of the unprocessed code is printed regardless.
+
+- README: add instructions to configure Emacs syntax highlighting.
+
+- Add `unpyrate.bunch.bunchify` to convert an existing mapping instance into a `Bunch**.
+
+
+**Fixed**:
+
+- Fix https://github.com/INTI-CMNB/KiBot/issues/29, thanks to @skorokithakis and @set-soft.
+- Fix bug in `unastify`: drop the run-time part of `q`.
+- Fix bug in `rename`: handle also module name in `ImportFrom` nodes.
+- Fix `SourceLocationInfoValidator`.
+- `macropython` now reports `mcpyrate` version separately from the version of the `macropython` script itself when run with the `-v` (`--version`) command-line option.
+
+
 ---
 
 **3.0.1** (27 November 2020)
