@@ -7,7 +7,7 @@
 - The `mcpyrate` compiler (implementing [the import algorithm](doc/main.md#the-import-algorithm)) is now exposed in `mcpyrate.compiler` for run-time use.
   - You can just `expand`, or both expand and `compile` code, as needed.
   - It is now convenient to compile and run macro-enabled quoted code snippets (or source code) at run time, see `run` and `create_module`.
-    - This makes it easier to test macros that are best tested via the behavior of the run-time code they output. (It also makes macro-enabled Python into a poor man's staged language  [1](https://www.researchgate.net/publication/221024597_A_Gentle_Introduction_to_Multi-stage_Programming) [2](https://cs.stackexchange.com/questions/2869/what-are-staged-functions-conceptually).)
+    - This makes it easier to test macros that are best tested via the behavior of the run-time code they output. (It also makes macro-enabled Python into a poor man's staged language  [[1]](https://www.researchgate.net/publication/221024597_A_Gentle_Introduction_to_Multi-stage_Programming) [[2]](https://cs.stackexchange.com/questions/2869/what-are-staged-functions-conceptually).)
     - The system allows dynamically creating modules (for executing code snippets in) at run time, as well as running code in the namespace of an existing module.
       - These features combine, so you can let `run` automatically create a module the first time, and then re-use that module if you want.
       - You can also create a module with a specific dotted name in `sys.modules` (the multi-phase compiler actually uses this feature).
