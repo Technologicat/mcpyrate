@@ -14,8 +14,8 @@
     - Source code input supports dialects, macros, and multi-phase compilation. The source code represents a module.
     - Quoted AST input supports macros and multi-phase compilation. No source transforms for this kind of input, because the input is already an AST. (Dialect AST transformers and postprocessors should work.) The top level of the quoted block (i.e. the body of a `with q as quoted:`) is seen by the compiler as the top level of a module.
     - While the code snippet is running, the module's `__file__` and `__name__` attributes are available, as usual.
-    - For extracting results into the surrounding context, just assign them to variables inside the code snippet. The top level of the code snippet is the module's top level.
-  - Full documentation is in docstrings for now, see [`mcpyrate.compiler`](mcpyrate/compiler.py). Some usage examples can be found in [`mcpyrate.test.test_quotes`](mcpyrate/test/test_quotes.py).
+    - For extracting results into the surrounding context, just assign them to variables inside the code snippet. The top level of the code snippet is the module's top level (and you have that module object available in the surrounding context, so you can access those variables as its attributes).
+  - Full documentation is in docstrings for now, see [`mcpyrate.compiler`](mcpyrate/compiler.py). Usage examples can be found in [`mcpyrate.test.test_compiler`](mcpyrate/test/test_compiler.py).
 
 
 **3.0.1** (27 November 2020)
