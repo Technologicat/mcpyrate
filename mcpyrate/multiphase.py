@@ -352,6 +352,18 @@ def multiphase_expand(tree, *, filename, self_module, dexpander=None, _optimize=
     if debug:
         print(f"{c(CS.HEADING)}**Multi-phase compiling module {c(CS.TREEID)}'{self_module}' ({c(CS.SOURCEFILENAME)}{filename}{c(CS.TREEID)}){c()}", file=sys.stderr)
 
+    # Inject temporary module into `sys.modules`.
+    #
+    # Note that if the module already exists in `sys.modules`, its entry will be overwritten.
+    # We don't touch the parent module (if any), so that if it already refers to an old (but
+    # phase-0, fully compiled) version of this one, the reference won't be clobbered with one
+    # pointing to the temporary module.
+    #
+    # We must inject the temporary module only once, to keep the already compiled higher-phase
+    # stuff available in the module's namespace while the next phase is being compiled.
+    # (This matters when there are at least 3 phases, see `demo/let.py`.)
+    module = compiler.create_module(dotted_name=self_module, filename=filename, update_parent=False)
+
     for k in range(n, -1, -1):  # phase 0 is what a regular compile would do
         if debug:
             print(f"{c(CS.HEADING)}**AST for {c(CS.ATTENTION)}PHASE {k}{c(CS.HEADING)} of module {c(CS.TREEID)}'{self_module}' ({c(CS.SOURCEFILENAME)}{filename}{c(CS.TREEID)}){c()}", file=sys.stderr)
@@ -377,15 +389,9 @@ def multiphase_expand(tree, *, filename, self_module, dexpander=None, _optimize=
                 expansion = compiler.singlephase_expand(phase_k_tree, filename=filename, self_module=self_module, dexpander=dexpander)
                 break
 
-            # Inject temporary module into `sys.modules`. Compile the current tree, and run it in the
-            # namespace of the temporary module. This gives us the temporary higher-phase module,
-            # which allows us to compile the next phase.
-            #
-            # Note that if the module already exists in `sys.modules`, its entry will be overwritten.
-            # We don't touch the parent module (if any), so that if it already refers to an old (but
-            # phase-0, fully compiled) version of this one, the reference won't be clobbered with one
-            # pointing to the temporary module.
-            module = compiler.create_module(dotted_name=self_module, filename=filename, update_parent=False)
+            # Compile the current tree, and run it in the namespace of the temporary module. This
+            # gives us the temporary higher-phase module, which allows us to compile the next phase.
+            # At intermediate phases, some definitions overwrite previous ones - this is ok.
             compiler.run(phase_k_tree, module)
 
     # restore `sys.modules` to how it was before we began the multi-phase compile for this module
