@@ -24,7 +24,7 @@
 
 - README: add instructions to configure Emacs syntax highlighting.
 
-- Add `unpyrate.bunch.bunchify` to convert an existing mapping instance into a `Bunch**.
+- Add `unpyrate.bunch.bunchify` to convert an existing mapping instance into a `Bunch`.
 
 
 **Fixed**:
