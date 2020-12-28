@@ -17,11 +17,13 @@
     - For extracting results into the surrounding context, just assign them to variables inside the code snippet. The top level of the code snippet is the module's top level (and you have that module object available in the surrounding context, so you can access those variables as its attributes).
   - Full documentation is in docstrings for now, see [`mcpyrate.compiler`](mcpyrate/compiler.py). Usage examples can be found in [`mcpyrate.test.test_compiler`](mcpyrate/test/test_compiler.py).
 
+---
 
 **3.0.1** (27 November 2020)
 
 - Fix project metadata in `setup.py`.
 
+---
 
 **3.0.0** (27 November 2020) - *Arrr!* edition:
 
