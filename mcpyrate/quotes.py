@@ -665,7 +665,7 @@ def q(tree, *, syntax, expander, **kw):
     with _quotelevel.changed_by(+1):
         tree = _expand_quasiquotes(tree, expander)  # expand any inner quotes and unquotes first
         tree = astify(tree, expander)  # Magic part of `q`. Supply `expander` for `h[macro]` detection.
-        # `astify` should compile the unquote commands away, and `SpliceNodes`
+        # `astify` should compile the unquote command markers away, and `SpliceNodes`
         # markers only spring into existence when the run-time part of `a` runs
         # (for communication with the run-time part of the surrounding `q`).
         # So at this point, there should be no quasiquote markers in `tree`.
