@@ -125,7 +125,7 @@ def test():
     assert unparse(q[h[q][42]]).startswith("q_")
 
     # Unparsed source code can usually be eval'd (unless it has AST markers).
-    # Doing that is discouraged, though.
+    # Doing that is discouraged, though. See `mcpyrate.compiler.run` instead.
     result = eval(unparse(q[f"Cat is \"{cat}\",\ndog is '{dog}'."]),  # noqa: F821
                   {"cat": "tabby", "dog": "terrier"})
     assert result == "Cat is \"tabby\",\ndog is 'terrier'."
