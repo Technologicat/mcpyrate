@@ -112,11 +112,18 @@ def test():
     # A quoted expression can be unparsed into a source code representation.
     assert unparse(q[first[42]]) == "first[42]"
 
+    # Inner quotes are preserved literally
+    assert unparse(q[q[42]]) == "q[42]"
+
+    # Quote level is tracked, interpolation occurs when it hits zero
+    x = "hi"
+    assert unparse(q[u[x]]) == "'hi'"
+    assert unparse(q[q[u[x]]]) == "q[u[x]]"
+    assert unparse(q[q[u[u[x]]]]) == "q[u['hi']]"
+
     # TODO: This is testing, beside what we want, an implementation detail;
     # TODO: is there a better way?
     # TODO: Python 3.8: remove ast.Num
-    assert unparse(q[q[42]]) in (f"mcpyrate.quotes.splice_ast_literals(mcpyrate.quotes.ast.Num(n=42), '{__file__}')",
-                                 f"mcpyrate.quotes.splice_ast_literals(mcpyrate.quotes.ast.Constant(value=42), '{__file__}')")
     assert unparse(expand1rq[h[q][42]]) in (f"mcpyrate.quotes.splice_ast_literals(mcpyrate.quotes.ast.Num(n=42), '{__file__}')",
                                             "mcpyrate.quotes.splice_ast_literals(mcpyrate.quotes.ast.Constant(value=42), '{__file__}')")
 
@@ -188,7 +195,11 @@ def test():
 
     # Note the extra q[], this code is inside two levels of quoting.
     # We undo one level by `unastify`, so we're left with an AST.
-    assert unparse(unastify(q[q[foo(a, b=c, *lst, **dic)]])) == "foo(a, *lst, b=c, **dic)"  # noqa: F821
+    #
+    # Note the `unastify` runs at run time; so for this test to work,
+    # we must expand the inner `q` manually, and then quote the result
+    # (because a nested quote won't expand automatically).
+    assert unparse(unastify(expand1rq[q[foo(a, b=c, *lst, **dic)]])) == "foo(a, *lst, b=c, **dic)"  # noqa: F821
 
     # This should have the same result.
     assert unparse(q[foo(a, b=c, *lst, **dic)]) == "foo(a, *lst, b=c, **dic)"  # noqa: F821

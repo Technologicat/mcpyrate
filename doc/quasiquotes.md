@@ -792,7 +792,17 @@ don't need to be in the expander's bindings at the use site.
 ## Syntactically allowed positions for unquotes
 
 Unquote operators may only appear inside quasiquoted code. This is checked at
-macro expansion time.
+macro expansion time. If an unquote operator appears outside any quasiquote,
+it is a macro-expansion-time error.
+
+Quote level is tracked, and unquoting takes place when it hits zero.
+
+```python
+x = "hi"
+assert unparse(q[u[x]]) == "'hi'"
+assert unparse(q[q[u[x]]]) == "q[u[x]]"
+assert unparse(q[q[u[u[x]]]]) == "q[u['hi']]"
+```
 
 In quasiquoted code, unquote operators may appear anywhere a subscript expression
 is syntactically allowed.
@@ -823,16 +833,7 @@ with q as quoted:
 
 ## Quotes, unquotes, and macro expansion
 
-**In an unquote expression** inside quoted code, regardless of how many levels of
-quoting are present, macros are always fully expanded.
-
-(This may change in a future version; another reasonable strategy is that macros
-are only expanded when the quote level reaches zero. But that raises the question
-of what to do with the macro bindings of macros seen in quoted code when the quote
-level is nonzero. This is why 3.0.0 opts for the simpler, but not as flexible, solution.)
-
-Anywhere else **in quoted code**, macros are **not** expanded by default.
-Depending on what you want, you can:
+**In quoted code**, macros are **not** expanded by default. Depending on what you want, you can:
 
  - Just leave them for the expander to handle automatically, *in the use site's context*,
    after the macro using `q` has returned. Useful if you hygienically unquote any

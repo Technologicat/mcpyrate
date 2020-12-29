@@ -16,11 +16,12 @@ __all__ = ["capture_value", "capture_macro", "capture_as_macro",
            "q", "u", "n", "a", "s", "t", "h"]
 
 import ast
+import copy
 import pickle
 
 from .core import global_bindings, Done, MacroExpansionError
 from .expander import MacroExpander, isnamemacro
-from .markers import ASTMarker, check_no_markers_remaining
+from .markers import ASTMarker, check_no_markers_remaining, delete_markers
 from .unparser import unparse, unparse_with_fallbacks
 from .utils import gensym, scrub_uuid, flatten, extract_bindings, NestingLevelTracker
 
@@ -40,6 +41,19 @@ class SpliceNodes(QuasiquoteMarker):
 
     Command sent by `ast_literal` (run-time part of `a`)
     to `splice_ast_literals` (run-time part of the surrounding `q`).
+    """
+    pass
+
+class QuasiquoteSearchDone(Done):
+    """Marker used by nested quasiquotes to tell the expander a subtree is already done.
+
+    This inherits, but is separate, from the usual `Done`, because:
+
+      1. We need to tell the expander that is processing the nested quasiquotes
+         to stop expanding an invocation that has already been considered.
+
+      2. We need to be able to eliminate these (and only these) before
+         generating the final quoted output.
     """
     pass
 
@@ -657,13 +671,40 @@ def _expand_quasiquotes(tree, expander):
     bindings = extract_bindings(expander.bindings, q, u, n, a, s, t, h)
     return MacroExpander(bindings, expander.filename).visit(tree)
 
+# TODO: maybe make the rest of this a method of `MacroExpander`, and only wrap with `QuasiquoteSearchDone` here?
+def _replace_tree_in_macro_invocation(invocation, newtree):
+    """Helper function for handling nested quasiquotes.
 
-def q(tree, *, syntax, expander, **kw):
+    Output a new invocation of the same macro, but wrapped in `QuasiquoteSearchDone`,
+    and with the `tree` inside replaced by `newtree`.
+
+    `expr` and `block` modes are supported; this is autodetected from `invocation`.
+    """
+    new_invocation = copy.copy(invocation)
+    if type(new_invocation) is ast.Subscript:
+        new_invocation.slice = copy.copy(invocation.slice)
+        new_invocation.slice.value = newtree
+    elif type(new_invocation) is ast.With:
+        new_invocation.body = newtree
+    else:
+        raise NotImplementedError
+    return QuasiquoteSearchDone(body=new_invocation)
+
+
+def q(tree, *, syntax, expander, invocation, **kw):
     """[syntax, expr/block] quasiquote. Lift code into its AST representation."""
     if syntax not in ("expr", "block"):
         raise SyntaxError("`q` is an expr and block macro only")
     with _quotelevel.changed_by(+1):
-        tree = _expand_quasiquotes(tree, expander)  # expand any inner quotes and unquotes first
+        tree = _expand_quasiquotes(tree, expander)  # expand any unquotes corresponding to this level first
+        if _quotelevel.value > 1:  # nested inside an outer quote?
+            # TODO: Implications when in block mode and not the only context manager in the `with`?
+            # TODO: Probably doesn't work in that case. Document that `q`, when used,
+            # TODO: should be the only ctxmgr in that particular `with`.
+            return _replace_tree_in_macro_invocation(invocation, tree)
+
+        tree = delete_markers(tree, cls=QuasiquoteSearchDone)
+
         tree = astify(tree, expander)  # Magic part of `q`. Supply `expander` for `h[macro]` detection.
         # `astify` should compile the unquote command markers away, and `SpliceNodes`
         # markers only spring into existence when the run-time part of `a` runs
@@ -703,7 +744,7 @@ def q(tree, *, syntax, expander, **kw):
         return tree
 
 
-def u(tree, *, syntax, expander, **kw):
+def u(tree, *, syntax, expander, invocation, **kw):
     """[syntax, expr] unquote. Splice a simple value into a quasiquote.
 
     The value is lifted into an AST that re-constructs that value.
@@ -714,10 +755,12 @@ def u(tree, *, syntax, expander, **kw):
         raise SyntaxError("`u` encountered while quotelevel < 1")
     with _quotelevel.changed_by(-1):
         tree = expander.visit_recursively(tree)
+        if _quotelevel.value > 0:
+            return _replace_tree_in_macro_invocation(invocation, tree)
         return Unquote(tree)
 
 
-def n(tree, *, syntax, expander, **kw):
+def n(tree, *, syntax, expander, invocation, **kw):
     """[syntax, expr] name-unquote. Parse a string, as Python source code, into an AST.
 
     With `n[]`, you can e.g. compute a name (e.g. by `mcpyrate.gensym`) for a
@@ -741,10 +784,12 @@ def n(tree, *, syntax, expander, **kw):
         raise SyntaxError("`n` encountered while quotelevel < 1")
     with _quotelevel.changed_by(-1):
         tree = expander.visit_recursively(tree)
+        if _quotelevel.value > 0:
+            return _replace_tree_in_macro_invocation(invocation, tree)
         return LiftSourcecode(tree, expander.filename)
 
 
-def a(tree, *, syntax, expander, **kw):
+def a(tree, *, syntax, expander, invocation, **kw):
     """[syntax, expr/block] ast-unquote. Splice an AST into a quasiquote.
 
     **Expression mode**::
@@ -796,6 +841,9 @@ def a(tree, *, syntax, expander, **kw):
 
     with _quotelevel.changed_by(-1):
         tree = expander.visit_recursively(tree)
+        if _quotelevel.value > 0:
+            # TODO: implications for block mode?
+            return _replace_tree_in_macro_invocation(invocation, tree)
 
         if syntax == "expr":
             return ASTLiteral(tree, syntax)
@@ -823,7 +871,7 @@ def a(tree, *, syntax, expander, **kw):
         return ASTLiteral(ast.List(elts=out), syntax)
 
 
-def s(tree, *, syntax, expander, **kw):
+def s(tree, *, syntax, expander, invocation, **kw):
     """[syntax, expr] ast-list-unquote. Splice an iterable of ASTs, as an `ast.List`, into a quasiquote."""
     if syntax != "expr":
         raise SyntaxError("`s` is an expr macro only")
@@ -831,10 +879,12 @@ def s(tree, *, syntax, expander, **kw):
         raise SyntaxError("`s` encountered while quotelevel < 1")
     with _quotelevel.changed_by(-1):
         tree = expander.visit_recursively(tree)
+        if _quotelevel.value > 0:
+            return _replace_tree_in_macro_invocation(invocation, tree)
         return ASTList(tree)
 
 
-def t(tree, *, syntax, expander, **kw):
+def t(tree, *, syntax, expander, invocation, **kw):
     """[syntax, expr] ast-tuple-unquote. Splice an iterable of ASTs, as an `ast.Tuple`, into a quasiquote."""
     if syntax != "expr":
         raise SyntaxError("`t` is an expr macro only")
@@ -842,10 +892,12 @@ def t(tree, *, syntax, expander, **kw):
         raise SyntaxError("`t` encountered while quotelevel < 1")
     with _quotelevel.changed_by(-1):
         tree = expander.visit_recursively(tree)
+        if _quotelevel.value > 0:
+            return _replace_tree_in_macro_invocation(invocation, tree)
         return ASTTuple(tree)
 
 
-def h(tree, *, syntax, expander, **kw):
+def h(tree, *, syntax, expander, invocation, **kw):
     """[syntax, expr] hygienic-unquote. Splice any value, from the macro definition site, into a quasiquote.
 
     Supports also values that have no meaningful `repr`. The value is captured
@@ -871,6 +923,10 @@ def h(tree, *, syntax, expander, **kw):
     with _quotelevel.changed_by(-1):
         name = unparse(tree)
 
+        # TODO: This logic never does anything - any correctly placed `h[]`
+        # is always inside a `q`, which recurses with an expander that
+        # only knows about the quasiquote macros.
+
         # Expand macros in the unquoted expression. The only case we need to
         # look out for is a `@namemacro` if we have a `h[macroname]`. We're
         # only capturing it, so don't expand it just yet.
@@ -881,5 +937,8 @@ def h(tree, *, syntax, expander, **kw):
                 expand = False
         if expand:
             tree = expander.visit_recursively(tree)
+
+        if _quotelevel.value > 0:
+            return _replace_tree_in_macro_invocation(invocation, tree)
 
         return Capture(tree, name)

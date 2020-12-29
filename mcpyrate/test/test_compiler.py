@@ -148,10 +148,8 @@ def test():
     def test_dynamicmodule_macros_1():
         mymacros = create_module("mymacros")
         with q as quoted:
-            # Important to import this here to use it below. This is effectively a
-            # module top level, so `mcpyrate` (for `mcpyrate.quotes`, used by the
-            # run-time part of `q`) won't be defined at run time in this code if
-            # this import is missing.
+            # Important to import this here to use it below. This is quoted code,
+            # so the `q` in `testmacro` below isn't expanded in the surrounding context.
             from mcpyrate.quotes import macros, q  # noqa: F811, F401
 
             def testmacro(tree, **kw):
