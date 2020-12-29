@@ -44,7 +44,7 @@ class SpliceNodes(QuasiquoteMarker):
     """
     pass
 
-class QuasiquoteSearchDone(Done):
+class QuasiquoteSearchDone(Done, QuasiquoteMarker):
     """Marker used by nested quasiquotes to tell the expander a subtree is already done.
 
     This inherits, but is separate, from the usual `Done`, because:
