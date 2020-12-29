@@ -24,7 +24,22 @@
 
 - README: add instructions to configure Emacs syntax highlighting.
 
-- Add `unpyrate.bunch.bunchify` to convert an existing mapping instance into a `Bunch`.
+- Add `unpyrate.bunch.bunchify` to convert an existing mapping instance into a `Bunch**.
+
+
+**Changed**:
+
+- Nested quasiquotes now work properly.
+
+  Unquoting now only occurs when quote level hits zero. Inner quotes and unquotes are detected, for tracking the quote level, but are then left in the output as-is.
+
+  Note as-is means *"as unexpanded macro invocations"*. Because the quasiquote operators are just macros, and in macro-enabled Python, the tradition is that a function actually being a macro is a property of the *use site*, not of its definition site, it follows that there's no guarantee whether the quote operators are in the expander's bindings at any later time. Even if they are, there is no guarantee whether they still have the names they had at the time when the outermost quote expanded.
+
+  What we have now is the result of taking the current design to its logical extreme. A better solution (for next-next-gen) may need a break from tradition, in that maybe a function being a macro should be a property of its definition site, not of its use site. Also, maybe the quasiquote operators should be considered core functionality, and not be renameable (like regular macros are).
+
+  However, the current solution does give useful level separation that has real practical applications; see the dynamically generated module example in [`mcpyrate.test.test_compiler`](mcpyrate/test/test_compiler.py).
+
+  This is not considered a breaking change, because the previous behavior of nested quasiquotes didn't make any sense, so nothing useful could be built on it.
 
 
 **Fixed**:
