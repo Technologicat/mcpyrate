@@ -444,7 +444,8 @@ def astify(x, expander=None):  # like `macropy`'s `ast_repr`
 
         # We must support at least the `Done` AST marker, so that things like
         # coverage dummy nodes and expanded name macros can be astified.
-        elif isinstance(x, Done):
+        # (Note we support only exactly `Done`, not arbitrary descendants.)
+        elif T is Done:
             fields = [ast.keyword(a, recurse(b)) for a, b in ast.iter_fields(x)]
             node = ast.Call(_mcpyrate_quotes_attr("Done"),
                             [],
