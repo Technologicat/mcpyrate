@@ -523,12 +523,12 @@ def unastify(tree):
     our_module_globals = globals()
     def lookup_thing(dotted_name):
         if not dotted_name.startswith("mcpyrate.quotes"):
-            raise NotImplementedError
+            raise NotImplementedError(f"Don't know how to look up {repr(dotted_name)}")
         path = dotted_name.split(".")
         if not all(component.isidentifier() for component in path):
-            raise NotImplementedError
+            raise NotImplementedError(f"Dotted name {repr(dotted_name)} contains at least one non-identifier component")
         if len(path) < 3:
-            raise NotImplementedError
+            raise NotImplementedError(f"Dotted name {repr(dotted_name)} has fewer than two dots (expected 'mcpyrate.quotes.something')")
         name_of_thing = path[2]
         thing = our_module_globals[name_of_thing]
         if len(path) > 3:
