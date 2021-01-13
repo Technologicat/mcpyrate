@@ -23,7 +23,7 @@ from types import ModuleType, CodeType
 from .dialects import DialectExpander
 from .expander import find_macros, expand_macros
 from .markers import check_no_markers_remaining
-from .multiphase import ismultiphase, multiphase_expand
+from . import multiphase
 from .unparser import unparse
 from .utils import gensym, getdocstring
 
@@ -170,12 +170,12 @@ def expand(source, filename, optimize=-1, self_module=None):
             raise TypeError(f"module body has one or more elements that are not statement AST nodes: {invalid_inputs_msg}")
 
     # AST transforms: dialects, macros
-    if not ismultiphase(tree):
+    if not multiphase.ismultiphase(tree):
         expansion = singlephase_expand(tree, filename=filename, self_module=self_module, dexpander=dexpander)
     else:
         if not self_module:
             raise ValueError("`self_module` must be specified when multi-phase compiling.")
-        expansion = multiphase_expand(tree, filename=filename, self_module=self_module, dexpander=dexpander, _optimize=optimize)
+        expansion = multiphase.multiphase_expand(tree, filename=filename, self_module=self_module, dexpander=dexpander, _optimize=optimize)
 
     return expansion
 
