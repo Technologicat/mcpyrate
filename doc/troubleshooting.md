@@ -11,6 +11,7 @@
 **Table of Contents**
 
 - [General issues](#general-issues)
+    - [ImportError: cannot import name 'macros' from ...](#importerror-cannot-import-name-macros-from-)
     - [I just ran my program again and no macro expansion is happening?](#i-just-ran-my-program-again-and-no-macro-expansion-is-happening)
     - [How to debug macro transformations?](#how-to-debug-macro-transformations)
     - [Macro expansion time where exactly?](#macro-expansion-time-where-exactly)
@@ -44,6 +45,15 @@
 
 
 # General issues
+
+## ImportError: cannot import name 'macros' from ...
+
+This occurs when trying to run a macro-enabled program without macro support enabled, such as when trying to run a macro-enabled script from the command line with regular `python`.
+
+ - If you did `python myscript.py` or similar, retry with `macropython myscript.py`.
+ - If only a part of your code uses macros, and your main program is intended to be run with regular `python`, the problem could be that some module of your program is importing a module that uses macros, without first enabling macro support. Check if you have accidentally forgotten to `import mcpyrate.activate`.
+ - If you're using the advanced functions `deactivate` and `activate` from the module `mcpyrate.activate`, the likely reason is that macro support has been manually disabled by calling `deactivate`. Find the offending import, and call `mcpyrate.activate.activate` before invoking that import to re-enable macro support. If you don't need macro support after that import completes, it's then safe to again call `mcpyrate.activate.deactivate` (to make any remaining imports run slightly faster).
+
 
 ## I just ran my program again and no macro expansion is happening?
 
