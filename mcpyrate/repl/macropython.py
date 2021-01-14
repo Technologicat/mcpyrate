@@ -219,6 +219,13 @@ def main():
             if sys.path[0] != "":
                 sys.path.insert(0, "")
 
+        # https://www.python.org/dev/peps/pep-0582/
+        if sys.version_info >= (3, 8, 0):
+            local_pypackages_dir = pathlib.Path.cwd().expanduser().resolve() / "__pypackages__"
+            if local_pypackages_dir.is_dir():
+                # TODO: figure out correct insert index (spec: "after cwd, just before site packages")
+                sys.path.insert(1, str(local_pypackages_dir))
+
         import_module_as_main(opts.module, script_mode=False)
 
     else:  # no module, so use opts.filename
@@ -229,6 +236,13 @@ def main():
         containing_directory = str(fullpath.parent)
         if sys.path[0] != containing_directory:
             sys.path.insert(0, containing_directory)
+
+        # https://www.python.org/dev/peps/pep-0582/
+        if sys.version_info >= (3, 8, 0):
+            local_pypackages_dir = fullpath.parent / "__pypackages__"
+            if local_pypackages_dir.is_dir():
+                # TODO: figure out correct insert index (spec: "after cwd, just before site packages")
+                sys.path.insert(1, str(local_pypackages_dir))
 
         # This approach finds the standard loader even for macro-enabled scripts.
         # TODO: For mcpyrate, that could be ok, since we monkey-patch just that.
