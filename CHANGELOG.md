@@ -4,6 +4,8 @@
 
 **New**:
 
+- Add support for [PEP 582 - Python local packages directory](https://www.python.org/dev/peps/pep-0582/) in the `macropython` bootstrapper.
+
 - The `mcpyrate` compiler (implementing [the import algorithm](doc/main.md#the-import-algorithm)) is now exposed in `mcpyrate.compiler` for run-time use.
   - You can just `expand`, or both expand and `compile` code, as needed.
   - It is now convenient to compile and run macro-enabled quoted code snippets (or source code) at run time, see `run` and `create_module`.
