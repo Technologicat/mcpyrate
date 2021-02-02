@@ -19,11 +19,12 @@ import ast
 import copy
 import pickle
 
-from .core import global_bindings, Done, MacroExpansionError
+from .core import Done, MacroExpansionError, global_bindings
 from .expander import MacroExpander, isnamemacro
 from .markers import ASTMarker, check_no_markers_remaining, delete_markers
 from .unparser import unparse, unparse_with_fallbacks
-from .utils import gensym, scrub_uuid, flatten, extract_bindings, NestingLevelTracker
+from .utils import (NestingLevelTracker, extract_bindings, flatten, gensym,
+                    scrub_uuid)
 
 
 def _mcpyrate_quotes_attr(attr):
