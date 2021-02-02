@@ -27,9 +27,33 @@ from .utils import (NestingLevelTracker, extract_bindings, flatten, gensym,
                     scrub_uuid)
 
 
-def _mcpyrate_quotes_attr(attr):
-    """Create an AST that, when compiled and run, looks up `mcpyrate.quotes.attr`."""
-    mcpyrate_quotes_module = ast.Attribute(value=ast.Name(id="mcpyrate"), attr="quotes")
+def _mcpyrate_quotes_attr(attr, *, force_import=False):
+    """Create an AST that, when compiled and run, looks up `mcpyrate.quotes.attr`.
+
+    If `force_import` is `True`, use the builtin `__import__` function to
+    first import the `mcpyrate.quotes` module. This is useful for e.g.
+    implementing hygienically unquoted values, whose eventual use site
+    might not import any `mcpyrate` modules.
+    """
+    if not force_import:
+        mcpyrate_module = ast.Name(id="mcpyrate")
+    else:
+        # Issue #21: `mcpyrate` might not be in scope at the use site. Fortunately,
+        # `__import__` is a builtin, so we are guaranteed to always have that available.
+        globals_call = ast.Call(ast.Name(id="globals"),
+                                [],
+                                [])
+        import_call = ast.Call(ast.Name(id="__import__"),
+                               [ast.Constant(value="mcpyrate.quotes"),
+                                globals_call,  # globals (used for determining context)
+                                ast.Constant(value=None),  # locals (unused)
+                                ast.Tuple(elts=[]),  # fromlist
+                                ast.Constant(value=0)],  # level
+                               [])
+        # When compiled and run, the import call will evaluate to a reference
+        # to the top-level `mcpyrate` module.
+        mcpyrate_module = import_call
+    mcpyrate_quotes_module = ast.Attribute(value=mcpyrate_module, attr="quotes")
     return ast.Attribute(value=mcpyrate_quotes_module, attr=attr)
 
 
@@ -279,7 +303,7 @@ def capture_value(value, name):
     # and serialization.
     #
     frozen_value = pickle.dumps(value)
-    return ast.Call(_mcpyrate_quotes_attr("lookup_value"),
+    return ast.Call(_mcpyrate_quotes_attr("lookup_value", force_import=True),
                     [ast.Tuple(elts=[ast.Constant(value=name),
                                      ast.Constant(value=frozen_value)])],
                     [])
