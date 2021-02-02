@@ -20,6 +20,7 @@ import copy
 import pickle
 
 from .core import Done, MacroExpansionError, global_bindings
+from .coreutils import _mcpyrate_attr
 from .expander import MacroExpander, isnamemacro
 from .markers import ASTMarker, check_no_markers_remaining, delete_markers
 from .unparser import unparse, unparse_with_fallbacks
@@ -32,29 +33,10 @@ def _mcpyrate_quotes_attr(attr, *, force_import=False):
 
     If `force_import` is `True`, use the builtin `__import__` function to
     first import the `mcpyrate.quotes` module. This is useful for e.g.
-    implementing hygienically unquoted values, whose eventual use site
-    might not import any `mcpyrate` modules.
+    hygienically unquoted values, whose eventual use site might not import
+    any `mcpyrate` modules.
     """
-    if not force_import:
-        mcpyrate_module = ast.Name(id="mcpyrate")
-    else:
-        # Issue #21: `mcpyrate` might not be in scope at the use site. Fortunately,
-        # `__import__` is a builtin, so we are guaranteed to always have that available.
-        globals_call = ast.Call(ast.Name(id="globals"),
-                                [],
-                                [])
-        import_call = ast.Call(ast.Name(id="__import__"),
-                               [ast.Constant(value="mcpyrate.quotes"),
-                                globals_call,  # globals (used for determining context)
-                                ast.Constant(value=None),  # locals (unused)
-                                ast.Tuple(elts=[]),  # fromlist
-                                ast.Constant(value=0)],  # level
-                               [])
-        # When compiled and run, the import call will evaluate to a reference
-        # to the top-level `mcpyrate` module.
-        mcpyrate_module = import_call
-    mcpyrate_quotes_module = ast.Attribute(value=mcpyrate_module, attr="quotes")
-    return ast.Attribute(value=mcpyrate_quotes_module, attr=attr)
+    return _mcpyrate_attr(f"quotes.{attr}", force_import=force_import)
 
 
 class QuasiquoteMarker(ASTMarker):

@@ -44,15 +44,15 @@ import ast
 
 # Note we import some macros as regular functions. We just want their syntax transformers.
 from .astfixers import fix_locations  # noqa: F401, used in macro output.
+from .coreutils import _mcpyrate_attr
 from .debug import step_expansion  # noqa: F401, used in macro output.
 from .expander import MacroExpander, namemacro, parametricmacro
-from .quotes import q, astify, unastify, capture_value
+from .quotes import astify, capture_value, q, unastify
 
 
 def _mcpyrate_metatools_attr(attr):
     """Create an AST that, when compiled and run, looks up `mcpyrate.metatools.attr`."""
-    mcpyrate_metatools_module = ast.Attribute(value=ast.Name(id="mcpyrate"), attr="metatools")
-    return ast.Attribute(value=mcpyrate_metatools_module, attr=attr)
+    return _mcpyrate_attr(f"metatools.{attr}")
 
 # --------------------------------------------------------------------------------
 
