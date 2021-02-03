@@ -5,13 +5,13 @@ __all__ = ["UnparserError", "unparse", "unparse_with_fallbacks"]
 
 import ast
 import builtins
-from contextlib import contextmanager
 import io
 import sys
+from contextlib import contextmanager
 
-from .astdumper import dump  # fallback
-from .colorizer import setcolor, colorize, ColorScheme
 from . import markers
+from .astdumper import dump  # fallback
+from .colorizer import ColorScheme, colorize, setcolor
 
 # Large float and imaginary literals get turned into infinities in the AST.
 # We unparse those infinities to INFSTR.
