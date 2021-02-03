@@ -826,7 +826,7 @@ class Unparser:
     def _Ellipsis(self, t):  # up to Python 3.7
         self.write("...")
 
-    def _Index(self, t):
+    def _Index(self, t):  # up to Python 3.8; the Index wrapper is gone in Python 3.9
         self.dispatch(t.value)
 
     def _Slice(self, t):
@@ -839,7 +839,7 @@ class Unparser:
             self.write(":")
             self.dispatch(t.step)
 
-    def _ExtSlice(self, t):
+    def _ExtSlice(self, t):  # up to Python 3.8; Python 3.9 uses a Tuple instead
         interleave(lambda: self.write(", "), self.dispatch, t.dims)
 
     # argument
