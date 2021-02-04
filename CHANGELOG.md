@@ -47,6 +47,7 @@
 **Fixed**:
 
 - Fix https://github.com/INTI-CMNB/KiBot/issues/29, thanks to @skorokithakis and @set-soft.
+- Fix https://github.com/Technologicat/mcpyrate/issues/21. Thanks to @thirtythreeforty for reporting.
 - Fix bug in `unastify`: drop the run-time part of `q`.
 - Fix bug in `rename`: handle also module name in `ImportFrom` nodes.
 - Fix `SourceLocationInfoValidator`.
