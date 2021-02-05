@@ -18,6 +18,7 @@ __all__ = ["capture_value", "capture_macro", "capture_as_macro",
 import ast
 import copy
 import pickle
+import sys
 
 from .core import Done, MacroExpansionError, global_bindings
 from .coreutils import _mcpyrate_attr
@@ -689,8 +690,11 @@ def _replace_tree_in_macro_invocation(invocation, newtree):
     """
     new_invocation = copy.copy(invocation)
     if type(new_invocation) is ast.Subscript:
-        new_invocation.slice = copy.copy(invocation.slice)
-        new_invocation.slice.value = newtree
+        if sys.version_info >= (3, 9, 0):  # Python 3.9+: no ast.Index wrapper
+            new_invocation.slice = newtree
+        else:
+            new_invocation.slice = copy.copy(invocation.slice)
+            new_invocation.slice.value = newtree
     elif type(new_invocation) is ast.With:
         new_invocation.body = newtree
     else:

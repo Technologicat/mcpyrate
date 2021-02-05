@@ -107,7 +107,11 @@ def extract_phase(tree, *, phase=0):
         else:
             # Lifting to phase >= 1. Decrease the `n` in `with phase[n]`
             # by one, so the block gets processed again in the next phase.
-            macroarg = withphase.items[0].context_expr.slice.value
+            if sys.version_info >= (3, 9, 0):  # Python 3.9+: no ast.Index wrapper
+                macroarg = withphase.items[0].context_expr.slice
+            else:
+                macroarg = withphase.items[0].context_expr.slice.value
+
             if type(macroarg) is ast.Constant:
                 macroarg.value -= 1
             elif type(macroarg) is ast.Num:  # TODO: Python 3.8: remove ast.Num
