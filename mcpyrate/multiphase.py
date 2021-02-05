@@ -21,11 +21,11 @@ because Racket's phase level tower is the system that most resembles this one.
 __all__ = ["phase", "ismultiphase", "detect_highest_phase", "isdebug", "multiphase_expand"]
 
 import ast
-from copy import copy, deepcopy
 import sys
+from copy import copy, deepcopy
 
-from .colorizer import setcolor, ColorScheme
 from . import compiler
+from .colorizer import ColorScheme, setcolor
 from .coreutils import ismacroimport
 from .expander import destructure_candidate, namemacro, parametricmacro
 from .unparser import unparse_with_fallbacks

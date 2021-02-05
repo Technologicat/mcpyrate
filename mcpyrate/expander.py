@@ -51,13 +51,14 @@ __all__ = ["namemacro", "isnamemacro",
            "MacroExpander", "MacroCollector",
            "expand_macros", "find_macros"]
 
-from ast import (Name, Subscript, Tuple, Import, alias, AST, Assign, Store, Constant,
-                 Lambda, arguments, Call, copy_location, iter_fields, NodeVisitor)
+from ast import (AST, Assign, Call, Constant, Import, Lambda, Name,
+                 NodeVisitor, Store, Subscript, Tuple, alias, arguments,
+                 copy_location, iter_fields)
 from copy import copy
 from warnings import warn_explicit
 
-from .core import BaseMacroExpander, global_postprocess, Done
-from .coreutils import ismacroimport, get_macros
+from .core import BaseMacroExpander, Done, global_postprocess
+from .coreutils import get_macros, ismacroimport
 from .unparser import unparse_with_fallbacks
 from .utils import format_macrofunction
 
