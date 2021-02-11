@@ -23,10 +23,16 @@ try:
             if line.startswith("__version__"):
                 module = ast.parse(line)
                 expr = module.body[0]
+                assert isinstance(expr, ast.Expr)
                 v = expr.value
                 if type(v) is ast.Constant:
+                    # mypy understands `isinstance(..., ...)` but not `type(...) is ...`,
+                    # and we want to match on the exact type, not any subclass that might be
+                    # added in some future Python version.
+                    assert isinstance(v, ast.Constant)
                     version = v.value
                 elif type(v) is ast.Str:  # TODO: Python 3.8: remove ast.Str
+                    assert isinstance(v, ast.Str)  # mypy
                     version = v.s
                 break
 except FileNotFoundError:
