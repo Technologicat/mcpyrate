@@ -23,7 +23,7 @@ try:
             if line.startswith("__version__"):
                 module = ast.parse(line)
                 expr = module.body[0]
-                assert isinstance(expr, ast.Expr)
+                assert isinstance(expr, ast.Assign)
                 v = expr.value
                 if type(v) is ast.Constant:
                     # mypy understands `isinstance(..., ...)` but not `type(...) is ...`,
