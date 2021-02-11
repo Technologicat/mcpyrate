@@ -1,7 +1,10 @@
 #!/usr/bin/env python
 
+import ast
 import os
+
 from setuptools import setup
+
 
 def read(*relpath, **kwargs):
     with open(os.path.join(os.path.dirname(__file__), *relpath),
@@ -12,7 +15,6 @@ def read(*relpath, **kwargs):
 # (since it's not a good idea to actually run __init__.py during the build process).
 #
 # http://stackoverflow.com/questions/2058802/how-can-i-get-the-version-defined-in-setup-py-setuptools-in-my-package
-import ast
 init_py_path = os.path.join("mcpyrate", "__init__.py")
 version = None
 try:
