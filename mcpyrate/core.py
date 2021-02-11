@@ -7,6 +7,7 @@ __all__ = ["MacroExpansionError", "MacroExpanderMarker", "Done",
 from ast import AST, NodeTransformer
 from collections import ChainMap
 from contextlib import contextmanager
+from typing import Any, Callable, Dict
 
 from .astfixers import fix_ctx, fix_locations
 from .markers import ASTMarker, delete_markers
@@ -14,7 +15,11 @@ from .utils import flatten, format_location
 
 # Global macro bindings shared across all expanders in the current process.
 # This is used by `mcpyrate.quotes` for hygienically captured macro functions.
-global_bindings = {}
+#
+# TODO: In reality, a macro function is not just any callable, but it takes certain
+# (especially named) arguments, and its return type is `Union[AST, List[AST], None]`,
+# but as of 3.1.0, we skim over this detail.
+global_bindings: Dict[str, Callable[..., Any]] = {}
 
 class MacroExpansionError(Exception):
     """Base class for errors specific to macro expansion.
@@ -83,7 +88,7 @@ class BaseMacroExpander(NodeTransformer):
         filename: full path to `.py` file being expanded, for error reporting
     """
 
-    def __init__(self, bindings, filename):
+    def __init__(self, bindings: Dict[str, Callable[..., Any]], filename: str):
         self.local_bindings = bindings
         self.bindings = ChainMap(self.local_bindings, global_bindings)
         self.filename = filename
@@ -137,7 +142,7 @@ class BaseMacroExpander(NodeTransformer):
         with self._recursive_mode(False):
             return Done(self.visit(tree))
 
-    def _recursive_mode(self, isrecursive):
+    def _recursive_mode(self, isrecursive: bool):
         """Context manager. Change recursive mode, restoring the old mode when the context exits."""
         @contextmanager
         def recursive_mode():

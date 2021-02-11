@@ -10,7 +10,8 @@ __all__ = ["setcolor", "colorize", "ColorScheme",
            "Fore", "Back", "Style"]
 
 try:
-    from colorama import init as colorama_init, Fore, Back, Style
+    from colorama import Back, Fore, Style  # type: ignore[import]
+    from colorama import init as colorama_init  # type: ignore[import]
     colorama_init()
 except ImportError:  # pragma: no cover
     # The `ansi` module is a slightly modified, POSIX-only,
@@ -160,4 +161,4 @@ class ColorScheme(Bunch):
         self.NODETYPE = (Style.BRIGHT, Fore.LIGHTBLUE_EX)
         self.FIELDNAME = Fore.YELLOW
         self.BAREVALUE = Fore.GREEN
-ColorScheme = ColorScheme()
+ColorScheme = ColorScheme()  # type: ignore[assignment, misc]

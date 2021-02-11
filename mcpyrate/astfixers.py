@@ -7,6 +7,7 @@ from ast import (AnnAssign, Assign, AsyncFor, Attribute, AugAssign, Del,
                  Delete, For, Load, Store, Subscript, comprehension,
                  iter_child_nodes, withitem)
 from copy import copy
+from typing import Type
 
 from . import walkers
 
@@ -15,7 +16,7 @@ try:  # Python 3.8+
 except ImportError:
     class _NoSuchNodeType:
         pass
-    NamedExpr = _NoSuchNodeType
+    NamedExpr: Type = _NoSuchNodeType  # type: ignore[no-redef]
 
 
 class _CtxFixer(walkers.ASTTransformer):
