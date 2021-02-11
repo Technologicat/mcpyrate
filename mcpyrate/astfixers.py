@@ -3,14 +3,9 @@
 
 __all__ = ["fix_ctx", "fix_locations"]
 
-from ast import (Load, Store, Del,
-                 Assign, AnnAssign, AugAssign,
-                 Attribute, Subscript,
-                 comprehension,
-                 For, AsyncFor,
-                 withitem,
-                 Delete,
-                 iter_child_nodes)
+from ast import (AnnAssign, Assign, AsyncFor, Attribute, AugAssign, Del,
+                 Delete, For, Load, Store, Subscript, comprehension,
+                 iter_child_nodes, withitem)
 from copy import copy
 
 from . import walkers
