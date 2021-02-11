@@ -1,23 +1,23 @@
 # Changelog
 
-**3.1.0** (in progress)
+**3.1.0** (12 February 2021) - *Compiling on the high seas* edition:
 
 **New**:
 
-- Add support for [PEP 582 - Python local packages directory](https://www.python.org/dev/peps/pep-0582/) in the `macropython` bootstrapper.
-
 - The `mcpyrate` compiler (implementing [the import algorithm](doc/main.md#the-import-algorithm)) is now exposed in `mcpyrate.compiler` for run-time use.
   - You can just `expand`, or both expand and `compile` code, as needed.
-  - It is now convenient to compile and run macro-enabled quoted code snippets (or source code) at run time, see `run` and `create_module`.
+  - It is now convenient to compile and run macro-enabled quoted code snippets (or source code) at run time, see the functions `mcpyrate.compiler.run` and `mcpyrate.compiler.create_module`.
     - This makes it easier to test macros that are best tested via the behavior of the run-time code they output. (It also makes macro-enabled Python into a poor man's staged language  [[1]](https://www.researchgate.net/publication/221024597_A_Gentle_Introduction_to_Multi-stage_Programming) [[2]](https://cs.stackexchange.com/questions/2869/what-are-staged-functions-conceptually).)
     - The system allows dynamically creating modules (for executing code snippets in) at run time, as well as running code in the namespace of an existing module.
       - These features combine, so you can let `run` automatically create a module the first time, and then re-use that module if you want.
-      - You can also create a module with a specific dotted name in `sys.modules` (the multi-phase compiler actually uses this feature).
+      - You can also create a module with a specific dotted name in `sys.modules`. The multi-phase compiler itself uses this feature.
     - Source code input supports dialects, macros, and multi-phase compilation. The source code represents a module.
     - Quoted AST input supports macros and multi-phase compilation. No source transforms for this kind of input, because the input is already an AST. (Dialect AST transformers and postprocessors should work.) The top level of the quoted block (i.e. the body of a `with q as quoted:`) is seen by the compiler as the top level of a module.
     - While the code snippet is running, the module's `__file__` and `__name__` attributes are available, as usual.
-    - For extracting results into the surrounding context, just assign them to variables inside the code snippet. The top level of the code snippet is the module's top level (and you have that module object available in the surrounding context, so you can access those variables as its attributes).
+    - For extracting results into the surrounding context, just assign them to variables inside the code snippet. The top level of the code snippet is the module's top level. You have that module object available in the surrounding context (where you call `run`), so you can access those variables as its attributes.
   - Full documentation is in docstrings for now, see [`mcpyrate.compiler`](mcpyrate/compiler.py). Usage examples can be found in [`mcpyrate.test.test_compiler`](mcpyrate/test/test_compiler.py).
+
+- Add support for [PEP 582 - Python local packages directory](https://www.python.org/dev/peps/pep-0582/) in the `macropython` bootstrapper.
 
 - The unparser now supports all three [top-level node types](https://greentreesnakes.readthedocs.io/en/latest/nodes.html#top-level-nodes), and supports also a `list` of AST nodes (e.g. a statement suite in an AST) as input.
 
@@ -26,7 +26,7 @@
 
 - README: add instructions to configure Emacs syntax highlighting.
 
-- Add `unpyrate.bunch.bunchify` to convert an existing mapping instance into a `Bunch**.
+- Add `unpyrate.bunch.bunchify` to convert an existing mapping instance into a `Bunch`.
 
 
 **Changed**:
@@ -46,8 +46,8 @@
 
 **Fixed**:
 
-- Fix https://github.com/INTI-CMNB/KiBot/issues/29, thanks to @skorokithakis and @set-soft.
-- Fix https://github.com/Technologicat/mcpyrate/issues/21. Thanks to @thirtythreeforty for reporting.
+- Fix https://github.com/INTI-CMNB/KiBot/issues/29, with thanks to @skorokithakis and @set-soft.
+- Fix https://github.com/Technologicat/mcpyrate/issues/21, with thanks to @thirtythreeforty for reporting.
 - Fix bug in `unastify`: drop the run-time part of `q`.
 - Fix bug in `rename`: handle also module name in `ImportFrom` nodes.
 - Fix `SourceLocationInfoValidator`.
