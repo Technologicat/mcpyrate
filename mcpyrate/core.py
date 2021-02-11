@@ -4,9 +4,9 @@
 __all__ = ["MacroExpansionError", "MacroExpanderMarker", "Done",
            "BaseMacroExpander", "global_postprocess"]
 
-from ast import NodeTransformer, AST
-from contextlib import contextmanager
+from ast import AST, NodeTransformer
 from collections import ChainMap
+from contextlib import contextmanager
 
 from .astfixers import fix_ctx, fix_locations
 from .markers import ASTMarker, delete_markers
