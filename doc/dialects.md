@@ -3,6 +3,7 @@
 - [Main user manual](main.md)
 - [Quasiquotes and `mcpyrate.metatools`](quasiquotes.md)
 - [REPL and `macropython`](repl.md)
+- [The `mcpyrate` compiler](compiler.md)
 - [AST walkers](walkers.md)
 - **Dialects**
 - [Troubleshooting](troubleshooting.md)
@@ -181,7 +182,7 @@ Note that `postprocess_ast` receives, and must return, an AST consisting of **re
 
 # Dialect import algorithm
 
-Keep in mind the overall context of [`mcpyrate`'s import algorithm](main.md#the-import-algorithm).
+Keep in mind the overall context of [`mcpyrate`'s import algorithm](compiler.md#the-import-algorithm).
 
 Each [dialect class](#writing-dialects) is instantiated separately for the source and AST transformation steps. The AST postprocessing step reuses the instance that was created for the AST transformation step.
 

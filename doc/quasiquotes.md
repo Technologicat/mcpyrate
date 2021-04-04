@@ -3,6 +3,7 @@
 - [Main user manual](main.md)
 - **Quasiquotes and `mcpyrate.metatools`**
 - [REPL and `macropython`](repl.md)
+- [The `mcpyrate` compiler](compiler.md)
 - [AST walkers](walkers.md)
 - [Dialects](dialects.md)
 - [Troubleshooting](troubleshooting.md)

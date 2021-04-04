@@ -3,6 +3,7 @@
 - [Main user manual](main.md)
 - [Quasiquotes and `mcpyrate.metatools`](quasiquotes.md)
 - [REPL and `macropython`](repl.md)
+- [The `mcpyrate` compiler](compiler.md)
 - [AST walkers](walkers.md)
 - [Dialects](dialects.md)
 - **Troubleshooting**
@@ -86,7 +87,7 @@ We provide several utilities that show the steps of macro transformations, to he
 
  - To troubleshoot **dialect transformations**, see the dialect `StepExpansion` in `mcpyrate.debug`; just dialect-import it (`from mcpyrate.debug import dialects, StepExpansion`). It will step source and AST transformers as well as AST postprocessors in the dialect compiler, one step per transformer.
 
-When interpreting the output, keep in mind in which order various kinds of transformations occur; see [`mcpyrate`'s import algorithm](main.md#the-import-algorithm).
+When interpreting the output, keep in mind in which order various kinds of transformations occur; see [`mcpyrate`'s import algorithm](compiler.md#the-import-algorithm).
 
 
 ## Macro expansion time where exactly?
@@ -99,7 +100,7 @@ Any macros that `mymacro` invokes in its output AST are just data, to be spliced
 
 So the "time" must be considered separately for each source file.
 
-Furthermore, if you use [multi-phase compilation](main.md#multi-phase-compilation) (a.k.a. `with phase`), then in a particular source file, each phase will have its own macro-expansion time as well as its own run time. For any `k >= 0`, the run time of phase `k + 1` is the macro expansion time of phase `k`.
+Furthermore, if you use [multi-phase compilation](compiler.md#multi-phase-compilation) (a.k.a. `with phase`), then in a particular source file, each phase will have its own macro-expansion time as well as its own run time. For any `k >= 0`, the run time of phase `k + 1` is the macro expansion time of phase `k`.
 
 This is something to keep in mind when developing macros where the macro implementation itself is macro-enabled code (vs. just emitting macro invocations in the output AST). Since the [quasiquote system](quasiquotes.md) is built on macros, this includes any macros that use `q`.
 

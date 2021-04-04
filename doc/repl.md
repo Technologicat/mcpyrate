@@ -3,6 +3,7 @@
 - [Main user manual](main.md)
 - [Quasiquotes and `mcpyrate.metatools`](quasiquotes.md)
 - **REPL and `macropython`**
+- [The `mcpyrate` compiler](compiler.md)
 - [AST walkers](walkers.md)
 - [Dialects](dialects.md)
 - [Troubleshooting](troubleshooting.md)
@@ -188,11 +189,11 @@ The answer is twofold:
     Allowing to invoke a macro in the same source file where it is defined
     requires a multi-phase compilation strategy. `mcpyrate` **does** support
     this, but the syntax is a bit different; see [multi-phase
-    compilation](main.md#multi-phase-compilation) (a.k.a. *staging*).
+    compilation](compiler.md#multi-phase-compilation) (a.k.a. *staging*).
 
     The *self-macro-import* syntax, `from __self__ import macros, ...`,
-    which is used by `with phase`, is also available in the REPL, but that's
-    a bit long to type in an interactive session.
+    which is used in multi-phase compilation, is also available in the REPL,
+    but that's a bit long to type in an interactive session.
 
     So in the spirit of *practicality beats purity* - just as
     `from ... import *` is considered ok for interactive use - the `@macro`

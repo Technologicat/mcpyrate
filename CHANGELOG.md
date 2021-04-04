@@ -4,7 +4,7 @@
 
 **New**:
 
-- The `mcpyrate` compiler (implementing [the import algorithm](doc/main.md#the-import-algorithm)) is now exposed in `mcpyrate.compiler` for run-time use.
+- The `mcpyrate` compiler (implementing [the import algorithm](doc/compiler.md#the-import-algorithm)) is now exposed in `mcpyrate.compiler` for run-time use.
   - You can just `expand`, or both expand and `compile` code, as needed.
   - It is now convenient to compile and run macro-enabled quoted code snippets (or source code) at run time, see the functions `mcpyrate.compiler.run` and `mcpyrate.compiler.create_module`.
     - This makes it easier to test macros that are best tested via the behavior of the run-time code they output. (It also makes macro-enabled Python into a poor man's staged language  [[1]](https://www.researchgate.net/publication/221024597_A_Gentle_Introduction_to_Multi-stage_Programming) [[2]](https://cs.stackexchange.com/questions/2869/what-are-staged-functions-conceptually).)
@@ -71,7 +71,7 @@ We build on `mcpy` 2.0.0, but add a lot of new features.
 **New**:
 
 - **Agile development tools**.
-  - [Multi-phase compilation](doc/main.md#multi-phase-compilation): Use macros also in the same module where they are defined.
+  - [Multi-phase compilation](doc/compiler.md#multi-phase-compilation): Use macros also in the same module where they are defined.
   - Universal bootstrapper: `macropython`. Import and use macros in your main program.
   - Interactive console: `macropython -i`. Import, define and use macros in a console session.
     - Embeddable à la `code.InteractiveConsole`. See `mcpyrate.repl.console.MacroConsole`.

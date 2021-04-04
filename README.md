@@ -71,7 +71,7 @@ To run either example, `macropython -m application`, or `macropython application
 ## Features
 
 - **Agile development tools**.
-  - [Multi-phase compilation](doc/main.md#multi-phase-compilation): Use macros also in the same module where they are defined.
+  - [Multi-phase compilation](doc/compiler.md#multi-phase-compilation): Use macros also in the same module where they are defined.
   - Universal bootstrapper: `macropython`. Import and use macros in your main program.
   - Interactive console: `macropython -i`. Import, define and use macros in a console session.
     - Embeddable à la `code.InteractiveConsole`. See `mcpyrate.repl.console.MacroConsole`.
@@ -148,10 +148,11 @@ The full documentation of `mcpyrate` lives in the [`doc/`](doc/) subfolder. Some
 - [Main user manual](doc/main.md) - start here
   - [Using macros](doc/main.md#using-macros)
   - [Writing macros](doc/main.md#writing-macros) - starting with a short tour of useful modules in `mcpyrate`.
-  - [Multi-phase compilation](doc/main.md#multi-phase-compilation)
-  - [The import algorithm](doc/main.md#the-import-algorithm) - how macros, dialects and multi-phase compilation interact.
 - [Quasiquotes and `mcpyrate.metatools`](doc/quasiquotes.md)
 - [REPL and `macropython`](doc/repl.md)
+- [The `mcpyrate` compiler](doc/compiler.md)
+  - [The import algorithm](doc/compiler.md#the-import-algorithm) - how macros, dialects and multi-phase compilation interact.
+  - [Multi-phase compilation](doc/compiler.md#multi-phase-compilation) - how to use a macro in the same module where it is defined.
 - [AST walkers](doc/walkers.md)
 - [Dialects](doc/dialects.md)
 - [Troubleshooting](doc/troubleshooting.md)
