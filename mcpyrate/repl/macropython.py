@@ -6,17 +6,16 @@
 
 import argparse
 import atexit
-from importlib import import_module
-from importlib.util import resolve_name, module_from_spec
 import os
 import pathlib
 import sys
+from importlib import import_module
+from importlib.util import module_from_spec, resolve_name
 
-from ..coreutils import relativize
-from ..core import MacroApplicationError
-
-from .. import activate  # noqa: F401
 from .. import __version__ as __mcpyrate_version__
+from .. import activate  # noqa: F401
+from ..core import MacroApplicationError
+from ..coreutils import relativize
 
 __version__ = "3.0.0"
 
@@ -156,13 +155,14 @@ def main():
     opts = parser.parse_args()
 
     if opts.interactive:
-        from .console import MacroConsole
         import readline  # noqa: F401, side effect: enable GNU readline in input()
         import rlcompleter  # noqa: F401, side effects: readline tab completion
+
+        from .console import MacroConsole
         repl_locals = {}
         if opts.pylab:  # like IPython's pylab mode, but we keep things in separate namespaces.
-            import numpy
             import matplotlib.pyplot
+            import numpy
             repl_locals["np"] = numpy
             repl_locals["plt"] = matplotlib.pyplot
             matplotlib.pyplot.ion()
