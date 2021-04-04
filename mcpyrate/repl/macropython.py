@@ -17,7 +17,7 @@ from .. import activate  # noqa: F401
 from ..core import MacroApplicationError
 from ..coreutils import relativize
 
-__version__ = "3.0.0"
+__version__ = "3.1.0"
 
 _config_dir = "~/.config/mcpyrate"
 _macropython_module = None  # sys.modules doesn't always seem to keep it, so stash it locally too.
