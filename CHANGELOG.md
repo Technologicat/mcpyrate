@@ -1,5 +1,17 @@
 # Changelog
 
+**3.2.0** (in progress)
+
+**New**:
+
+- Add command-line option to `macropython` to delete bytecode caches:
+  - Use `macropython -c yourdirectory` (equivalent: `macropython --clean yourdirectory`), where `yourdirectory` is a path (can be relative or absolute).
+  - For a dry run, use `macropython -c yourdirectory -n` (equivalent: `macropython --clean yourdirectory --dry-run`), which just prints the full paths to the directories it would delete.
+- Documentation: [the staging compiler](doc/compiler.md) is now documented.
+
+
+---
+
 **3.1.0** (12 February 2021) - *Compiling on the high seas* edition:
 
 **New**:
