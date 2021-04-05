@@ -19,6 +19,7 @@
 - [Invoking the compiler at run time](#invoking-the-compiler-at-run-time)
     - [Overview](#overview)
     - [Modules and the compiler](#modules-and-the-compiler)
+    - [Roles of the compiler functions](#roles-of-the-compiler-functions)
 
 <!-- markdown-toc end -->
 
@@ -310,9 +311,9 @@ The common factor between the two senses of the word is that a `.py` file essent
 
 `mcpyrate` stirs this picture up a bit. We always parse in `"exec"` mode, so we always have a module (sense 1). But also, because macro bindings are established by macro-imports, the principle of least astonishment requires that macros are looked up in a module (sense 2) - and that module must be (or at least will have to become) available in `sys.modules`.
 
-What this means in practice is that in `mcpyrate`, to run a code snippet generated at run time, there has to be a module to run the code in. The function `mcpyrate.compiler.run` will auto-create one for you if needed, but in case you want more control, you can create a module object explicitly with `create_module`, and then pass that in to `run`.
+What this means in practice is that in `mcpyrate`, to run a code snippet generated at run time, there has to be a module to run the code in. The function `mcpyrate.compiler.run` will auto-create one for you if needed, but in case you want more control, you can create a module object explicitly with `create_module`, and then pass that in to `run`. The name for the auto-created module is gensymmed; but if you use `create_module`, the provided name is used as-is.
 
-This implies that, if you wish, you can first define one module at run time that defines some macros, and then in another run-time code snippet, import those macros from that dynamically generated module. Just use `create_module` to create the first module, to give it a known dotted name in `sys.modules`:
+Having the code snippet contained inside a module implies that, if you wish, you can first define one module at run time that defines some macros, and then in another run-time code snippet, import those macros from that dynamically generated module. Just use `create_module` to create the first module, to give it a known dotted name in `sys.modules`:
 
 ```python
 from mcpyrate.quotes import macros, q
@@ -329,7 +330,9 @@ with q as quoted:
 module = run(quoted)
 ```
 
-If you're worried about module name collisions, be aware that the default name for the new module is automatically gensymmed (you can also manually gensym your own custom one). But since the module name in an import statement must be literal, you'll then have to edit the second code snippet after it was generated (if you generated it via quasiquotes) to splice in the correct name for the first module to import the macros from::
+This may, however, lead to module name collisions. The proper solution is to manually gensym a custom name for the module, as shown below.
+
+Since the module name in an import statement must be literal, you'll then have to edit the second code snippet after it was generated (if you generated it via quasiquotes) to splice in the correct name for the first module to import the macros from::
 
 ```python
 from mcpyrate.quotes import macros, q
@@ -348,4 +351,86 @@ with q as quoted:
     ...
 rename("_xxx_", modname, quoted)
 module = run(quoted)
+```
+
+
+## Roles of the compiler functions
+
+For clarity of exposition, let us start by considering the **standard Python compilation workflow** (no macros):
+
+```
+┌──────────┐   ┌─────┐   ┌─────────────────┐ 
+│  source  │ → │ AST │ → │ Python bytecode │ 
+└──────────┘   └─────┘   └─────────────────┘ 
+```
+
+The Python language comes with the builtins `compile`, `exec` and `eval`, and the standard library provides `ast.parse`. The difference between `exec` and `eval` is the context; `exec` executes statements, whereas `eval` evaluates an expression. Because the `mcpyrate` compiler mainly deals with complete modules, and always uses `ast.parse` in `exec` mode, in this document we will not consider `eval` further.
+
+The standard functions `parse`, `compile` and `exec` hook into the standard workflow as follows:
+
+```
+┌──────────┐   ┌─────┐   ┌─────────────────┐ 
+│  source  │ → │ AST │ → │ Python bytecode │ 
+└──────────┘   └─────┘   └─────────────────┘ 
+
+   parse   ───────┤
+
+   compile ──────────────────────┤
+               compile ──────────┤
+
+   exec    ─────────────────────────────...  <run-time execution>
+               exec    ─────────────────...  <run-time execution>
+                                exec ───...  <run-time execution>
+```
+
+In the diagram, time flows from left to right. The function name appears below each box that represents a valid input type. The stop marker `┤` indicates the output of the function. The `exec` function does not have a meaningful return value; instead, it executes its input.
+
+Adding a macro expander inserts one more step. In `mcpyrate`, the **macro-enabled Python compilation workflow** is:
+
+```
+┌──────────┐   ┌───────────────────┐   ┌──────────────┐   ┌─────────────────┐ 
+│  source  │ → │ macro-enabled AST │ → │ expanded AST │ → │ Python bytecode │ 
+└──────────┘   └───────────────────┘   └──────────────┘   └─────────────────┘ 
+```
+
+The module `mcpyrate.compiler` exports four important public functions: `expand`, `compile`, `run`, and `create_module`. The last one is a utility that will be explained further below. The first three functions - namely `expand`, `compile`, and `run` - hook into the macro-enabled compilation workflow as follows:
+
+```
+┌──────────┐   ┌───────────────────┐   ┌──────────────┐   ┌─────────────────┐ 
+│  source  │ → │ macro-enabled AST │ → │ expanded AST │ → │ Python bytecode │ 
+└──────────┘   └───────────────────┘   └──────────────┘   └─────────────────┘ 
+
+   expand  ───────────────────────────────────┤
+                       expand  ───────────────┤
+
+   compile ───────────────────────────────────────────────────────┤
+                       compile ───────────────────────────────────┤
+                                           compile ───────────────┤
+
+   run     ──────────────────────────────────────────────────────────────...  <run-time execution>
+                       run     ──────────────────────────────────────────...  <run-time execution>
+                                           run     ──────────────────────...  <run-time execution>
+                                                                 run ────...  <run-time execution>
+```
+
+The `expand` function can be thought of as a macro-enabled `parse`, but with support also for dialects and multi-phase compilation. The return value is an expanded AST. Observe that because dialects may define source transformers, the input might not be meaningful for `ast.parse` until after all dialect source transformations have completed. Only at that point, `expand` calls `ast.parse` to produce the macro-enabled AST.
+
+Interaction between the compiler features - multi-phase compilation, dialects, and macros - makes the exact `expand` algorithm unwieldy to describe in a few sentences. The big picture is that then the [phase level countdown](#the-phase-level-countdown), dialect AST transformations, and macro expansion are interleaved in a very particular way to produce the expanded AST, which is the output of `expand`.
+
+For some more detail, see [the import algorithm](#the-import-algorithm) and [multi-phase compilation](#multi-phase-compilation); with the difference that unlike the importer, `expand` does not call the built-in `compile` on the result. For the really nitty, gritty details, the definitive reference is the compiler source code itself; see [mcpyrate/compiler.py](../mcpyrate/compiler.py) and [mcpyrate/multiphase.py](../mcpyrate/multiphase.py). (As of version 3.1.0, these files make up about 1000 lines in total.)
+
+The `compile` function first calls `expand`, and then proceeds to compile the result into Python bytecode. Important differences to the builtin `compile` are that `mcpyrate` always parses in `"exec"` mode, `dont_inherit` is always `True`, and flags (to the built-in `compile`) are not supported. The return value is a code object (representing Python bytecode).
+
+**For dynamically generated AST input, `compile` triggers line number generation.** If you just `expand` your dynamically generated AST, semantically that means you might still want to perform further transformations on it later. However, `compile` means that it's final, so it's safe to populate line numbers.
+
+As of `mcpyrate` 3.1.0, if the input to `compile` is an AST that did not come directly from a `.py` source file (i.e. it is a dynamically generated AST), it will be unparsed and re-parsed (before calling `expand`) to autogenerate the source location info. This is the most convenient way to do it, because in the standard compilation workflow, `ast.parse` is the step that produces the line numbers.
+
+So strictly speaking, also in `mcpyrate` it is `ast.parse` that actually produces the line numbers. But because it only does that for source code input (not ASTs), then, to enable its line number generator, our `compile` temporarily converts the AST back into source code.
+
+If you need to examine the source code corresponding to your dynamically generated AST (e.g. with regard to a stack trace), note that the autogenerated line numbers correspond to `unparse(tree)`, with no options. This snippet (where `tree` is the AST) will show them:
+
+```python
+from mcpyrate import unparse
+for lineno, code in enumerate(unparse(tree).split("\n"), start=1):
+    print(f"L{lineno:5d} {code}")
 ```
