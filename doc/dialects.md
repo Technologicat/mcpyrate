@@ -213,13 +213,13 @@ To enable debug mode, dialect-import the `StepExpansion` dialect, provided by `m
 from mcpyrate.debug import dialects, StepExpansion
 ```
 
-When the dialect expander invokes the source transformer of the `StepExpansion` dialect, this causes the dialect expander to enter debug mode from that point on. This dialect has no other effects.
+When the dialect expander invokes the source transformer of the `StepExpansion` dialect, this causes the dialect expander to enter debug mode from that point on. If source transformations are skipped for whatever reason (e.g. when compiling a dynamically generated AST), the AST transformer of the `StepExpansion` dialect has the same effect (only if the source transformer did not already enable debug mode). This dialect has no other effects.
 
 (Note this is different from the `step_expansion` macro, which steps *macro* expansion. Dialects are classes, hence the CamelCase name.)
 
-In debug mode, the dialect expander will show the source code (or unparsed AST, as appropriate) after each transformer.
+In debug mode, the dialect expander will show the source code (or unparsed AST, as appropriate) **after** each transformer.
 
-So, to see the whole chain, place the import for the `StepExpansion` dialect first; its source transformer, after enabling debug mode, just returns the original source, so you'll see the original source code as the first step.
+So, to see the whole chain, place the import for the `StepExpansion` dialect first; its source transformer, after enabling debug mode, just returns the original source, so you'll see the original source code as the first step. (Similarly, if source transformations are skipped, the AST transformer will return the unmodified AST, so you'll see an unparse of the original AST as the first step.)
 
 ## Automatic syntax highlighting
 
