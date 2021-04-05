@@ -453,6 +453,8 @@ If a module object (as in the values that live in `sys.modules`) or a dotted mod
 
 If no module was specified, a new module with a gensymmed name is automatically created and placed into `sys.modules`. This is done by automatically calling the fourth exported function, `create_module`, with no arguments.
 
+An important difference to the builtin `exec` is that whereas `exec` uses a bare dictionary as the namespace for the globals, our `run` uses a module ([sense 2, above](#modules-and-the-compiler)).
+
 There is one further important detail concerning module docstring processing.
 
 When the input to `run` is not yet compiled (i.e. is source code, a macro-enabled AST, or an expanded AST), and the first statement in it is a static string (i.e. no f-strings or string arithmetic), this string is assigned to the docstring (i.e. the `__doc__` attribute) of the module ([sense 2, above](#modules-and-the-compiler)) the code runs in. Otherwise the module docstring is set to `None`.
