@@ -22,6 +22,7 @@
     - [Roles of the compiler functions](#roles-of-the-compiler-functions)
         - [`expand`](#expand)
         - [`compile`](#compile)
+        - [`run`](#run)
 
 <!-- markdown-toc end -->
 
@@ -356,6 +357,8 @@ module = run(quoted)
 
 ## Roles of the compiler functions
 
+To begin with: **`run` and maybe also `create_module` are what you want 99% of the time.** For the remaining 1%, see `expand` and `compile`. In this section, we will explain all four functions.
+
 For clarity of exposition, let us start by considering the **standard Python compilation workflow** (no macros):
 
 ```
@@ -413,6 +416,7 @@ The module `mcpyrate.compiler` exports four important public functions: `expand`
                                                                  run ────...  <run-time execution>
 ```
 
+
 ### `expand`
 
 The `expand` function can be thought of as a macro-enabled `parse`, but with support also for dialects and multi-phase compilation. The return value is an expanded AST. Observe that because dialects may define source transformers, the input might not be meaningful for `ast.parse` until after all dialect source transformations have completed. Only at that point, `expand` calls `ast.parse` to produce the macro-enabled AST.
@@ -420,6 +424,7 @@ The `expand` function can be thought of as a macro-enabled `parse`, but with sup
 Interaction between the compiler features - multi-phase compilation, dialects, and macros - makes the exact `expand` algorithm unwieldy to describe in a few sentences. The big picture is that then the [phase level countdown](#the-phase-level-countdown), [dialect AST transformations](dialects.md#ast-transformers), macro expansion, and [dialect AST postprocessors](dialects.md#ast-postprocessors), are interleaved in a very particular way to produce the expanded AST, which is the output of `expand`.
 
 For some more detail, see [the import algorithm](#the-import-algorithm) and [multi-phase compilation](#multi-phase-compilation); with the difference that unlike the importer, `expand` does not call the built-in `compile` on the result. For the really nitty, gritty details, the definitive reference is the compiler source code itself; see [mcpyrate/compiler.py](../mcpyrate/compiler.py) and [mcpyrate/multiphase.py](../mcpyrate/multiphase.py). (As of version 3.1.0, these files make up about 1000 lines in total.)
+
 
 ### `compile`
 
@@ -438,3 +443,20 @@ from mcpyrate import unparse
 for lineno, code in enumerate(unparse(tree).split("\n"), start=1):
     print(f"L{lineno:5d} {code}")
 ```
+
+
+### `run`
+
+The `run` function calls `compile`, and then executes the resulting bytecode in a module's `__dict__`. The return value is the module object, after the code has been executed in its `__dict__`.
+
+If a module object (as in the values that live in `sys.modules`) or a dotted module name (as in the keys of `sys.modules`) was provided, that module is used.
+
+If no module was specified, a new module with a gensymmed name is automatically created and placed into `sys.modules`. This is done by automatically calling the fourth exported function, `create_module`, with no arguments.
+
+There is one further important detail concerning module docstring processing.
+
+When the input to `run` is not yet compiled (i.e. is source code, a macro-enabled AST, or an expanded AST), and the first statement in it is a static string (i.e. no f-strings or string arithmetic), this string is assigned to the docstring (i.e. the `__doc__` attribute) of the module ([sense 2, above](#modules-and-the-compiler)) the code runs in. Otherwise the module docstring is set to `None`.
+
+The docstring extraction is performed as part of compilation by using an internal function named `_compile` (as of version 3.1.0). Thus, calling `run` on a not-yet-compiled input does **not** have exactly the same effect as first calling `compile`, and then `run` on the bytecode result.
+
+**Therefore, prefer directly using `run` when possible**, so that `mcpyrate` will auto-assign the module docstring. This ensures that if your dynamically generated code happens to begin with a module docstring, the docstring will Just Work™ as expected.
