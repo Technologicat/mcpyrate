@@ -20,6 +20,8 @@
     - [Overview](#overview)
     - [Modules and the compiler](#modules-and-the-compiler)
     - [Roles of the compiler functions](#roles-of-the-compiler-functions)
+        - [`expand`](#expand)
+        - [`compile`](#compile)
 
 <!-- markdown-toc end -->
 
@@ -411,11 +413,15 @@ The module `mcpyrate.compiler` exports four important public functions: `expand`
                                                                  run ────...  <run-time execution>
 ```
 
+### `expand`
+
 The `expand` function can be thought of as a macro-enabled `parse`, but with support also for dialects and multi-phase compilation. The return value is an expanded AST. Observe that because dialects may define source transformers, the input might not be meaningful for `ast.parse` until after all dialect source transformations have completed. Only at that point, `expand` calls `ast.parse` to produce the macro-enabled AST.
 
 Interaction between the compiler features - multi-phase compilation, dialects, and macros - makes the exact `expand` algorithm unwieldy to describe in a few sentences. The big picture is that then the [phase level countdown](#the-phase-level-countdown), dialect AST transformations, macro expansion, and dialect AST postprocessors, are interleaved in a very particular way to produce the expanded AST, which is the output of `expand`.
 
 For some more detail, see [the import algorithm](#the-import-algorithm) and [multi-phase compilation](#multi-phase-compilation); with the difference that unlike the importer, `expand` does not call the built-in `compile` on the result. For the really nitty, gritty details, the definitive reference is the compiler source code itself; see [mcpyrate/compiler.py](../mcpyrate/compiler.py) and [mcpyrate/multiphase.py](../mcpyrate/multiphase.py). (As of version 3.1.0, these files make up about 1000 lines in total.)
+
+### `compile`
 
 The `compile` function first calls `expand`, and then proceeds to compile the result into Python bytecode. Important differences to the builtin `compile` are that `mcpyrate` always parses in `"exec"` mode, `dont_inherit` is always `True`, and flags (to the built-in `compile`) are not supported. The return value is a code object (representing Python bytecode).
 
