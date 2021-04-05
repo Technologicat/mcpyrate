@@ -330,9 +330,7 @@ with q as quoted:
 module = run(quoted)
 ```
 
-This may, however, lead to module name collisions. The proper solution is to manually gensym a custom name for the module, as shown below.
-
-Since the module name in an import statement must be literal, you'll then have to edit the second code snippet after it was generated (if you generated it via quasiquotes) to splice in the correct name for the first module to import the macros from::
+This may, however, lead to module name collisions. The proper solution is to manually gensym a custom name for the module, as shown below. Since the module name in an import statement must be literal, you'll then have to edit the second code snippet after it was generated (if you generated it via quasiquotes) to splice in the correct name for the first module to import the macros from:
 
 ```python
 from mcpyrate.quotes import macros, q
