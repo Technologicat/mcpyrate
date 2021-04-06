@@ -18,12 +18,12 @@ import ast
 import builtins
 import importlib.util
 import sys
-from types import ModuleType, CodeType
+from types import CodeType, ModuleType
 
-from .dialects import DialectExpander
-from .expander import find_macros, expand_macros
-from .markers import check_no_markers_remaining
 from . import multiphase
+from .dialects import DialectExpander
+from .expander import expand_macros, find_macros
+from .markers import check_no_markers_remaining
 from .unparser import unparse
 from .utils import gensym, getdocstring
 
