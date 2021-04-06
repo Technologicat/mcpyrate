@@ -23,6 +23,7 @@
         - [`expand`](#expand)
         - [`compile`](#compile)
         - [`run`](#run)
+        - [`create_module`](#create_module)
 
 <!-- markdown-toc end -->
 
@@ -462,3 +463,73 @@ When the input to `run` is not yet compiled (i.e. is source code, a macro-enable
 The docstring extraction is performed as part of compilation by using an internal function named `_compile` (as of version 3.1.0). Thus, calling `run` on a not-yet-compiled input does **not** have exactly the same effect as first calling `compile`, and then `run` on the bytecode result.
 
 **Therefore, prefer directly using `run` when possible**, so that `mcpyrate` will auto-assign the module docstring. This ensures that if your dynamically generated code happens to begin with a module docstring, the docstring will Just Work™ as expected.
+
+
+### `create_module`
+
+The `create_module` utility function creates a new blank module ([sense 2](#modules-and-the-compiler)) at run time, inserts it into `sys.modules`, and returns it. That module object can be then passed to `run` as the module to execute the code in.
+
+This closely emulates what Python's standard importer does, filling in some magic attributes of the module, particularly `__name__` and `__file__`. This also sets `__package__` when applicable.
+
+To keep things simple, when creating a submodule (defined as *a module whose name has at least one dot in it*), we require that its parent module must already exist in `sys.modules`. (You can first create it with `create_module`, if needed.)
+
+By default, when creating a submodule, the submodule is added to its parent's namespace, [like the standard importer does](http://python-notes.curiousefficiency.org/en/latest/python_concepts/import_traps.html). Almost always, to achieve least astonishment, this is the right thing to do; but in the 1% where it is not, this behavior can be disabled by passing the named argument `update_parent=False`.
+
+The main use case of `create_module` is advanced shenanigans with `run`. Putting the two together, here are some examples:
+
+```python
+from mcpyrate.quotes import macros, q
+
+import copy
+
+from mcpyrate.compiler import run, create_module
+from mcpyrate import gensym
+
+with q as quoted:
+    '''This quoted snippet is considered by `run` as a module.
+
+    You can put a module docstring here if you want.
+
+    This code can use macros and multi-phase compilation.
+    To do that, you have to import the macros (and/or enable
+    the multi-phase compiler) here, at the top level of the
+    quoted snippet. 
+    '''
+    x = 21
+
+module = run(quoted)  # run in a new module, don't care about name
+assert module.x == 21
+assert module.__doc__.startswith("This")  # docstring was auto-assigned by `run`
+
+with q as quoted:
+    x = 2 * x
+run(quoted, module)  # run in the namespace of an existing module
+assert module.x == 42
+
+# Run in a module with a custom dotted name and filename.
+# In this case the dotted name has no dots - it's a top-level module.
+mymodule = create_module("mymod", filename="some descriptive string")
+with q as quoted:
+    x = 17
+run(quoted, mymodule)
+assert mymodule.x == 17
+
+# Run in a temporary module, but always use the same one.
+# Don't care about the module filename.
+tempmodule = create_module(gensym("temporary_module"))
+for _ in range(10000):
+    run(quoted, tempmodule)
+
+# How to safely reset a temporary module between runs,
+# preserving metadata such as `__name__` and `__file__`.
+tempmodule = create_module(gensym("temporary_module"))
+metadata = copy.copy(tempmodule.__dict__)
+def reset():
+    tempmodule.__dict__.clear()
+    tempmodule.__dict__.update(metadata)
+for _ in range(10000):
+    reset()
+    run(quoted, tempmodule)
+```
+
+More examples, including advanced ones (e.g. a dynamically created module with multi-phase compilation), can be found in [`mcpyrate/test/test_compiler.py`](../mcpyrate/test/test_compiler.py).
