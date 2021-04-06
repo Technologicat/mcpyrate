@@ -48,9 +48,8 @@ def expand(source, filename, optimize=-1, self_module=None):
 
     `filename`:     Full path to the `.py` file being compiled.
 
-    `optimize`:     Passed to Python's built-in `compile` function, as well as to
-                    the multi-phase compiler. The multi-phase compiler uses the
-                    `optimize` setting for the temporary higher-phase modules.
+    `optimize`:     Passed to the multi-phase compiler. It uses the `optimize`
+                    setting for the temporary higher-phase modules.
 
     `self_module`:  Absolute dotted module name of the module being compiled.
                     Needed for modules that request multi-phase compilation.
@@ -192,6 +191,8 @@ def compile(source, filename, optimize=-1, self_module=None):
     that calls `expand`, and then passes the result to Python's built-in `compile`.
     The main reason for its existence is to provide a near drop-in replacement for
     the built-in `compile` for macro-enabled input.
+
+    The `optimize` parameter is passed to Python's built-in `compile` function.
 
     Currently the API differs from the built-in `compile` in that:
 
