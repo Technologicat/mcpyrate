@@ -457,7 +457,7 @@ An important difference to the builtin `exec` is that whereas `exec` uses a bare
 
 There is one further important detail concerning module docstring processing.
 
-When the input to `run` is not yet compiled (i.e. is source code, a macro-enabled AST, or an expanded AST), and the first statement in it is a static string (i.e. no f-strings or string arithmetic), this string is assigned to the docstring (i.e. the `__doc__` attribute) of the module ([sense 2, above](#modules-and-the-compiler)) the code runs in. Otherwise the module docstring is set to `None`.
+When the input to `run` is not yet compiled (i.e. is source code, a macro-enabled AST, or an expanded AST), and the first statement in it is a static string (i.e. no f-strings or string arithmetic), this string is assigned to the docstring (i.e. the `__doc__` attribute) of the module ([sense 2](#modules-and-the-compiler)) the code runs in. Otherwise the module docstring is set to `None`.
 
 The docstring extraction is performed as part of compilation by using an internal function named `_compile` (as of version 3.1.0). Thus, calling `run` on a not-yet-compiled input does **not** have exactly the same effect as first calling `compile`, and then `run` on the bytecode result.
 
