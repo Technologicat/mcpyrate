@@ -642,7 +642,7 @@ The recipe is as follows:
     - If you need to do the same on the expander from the macro expansion time of your macro definition (not the expander of your macro's *use site*, which is what the `expander` named argument refers to), see [`mcpyrate.metatools`](../mcpyrate/metatools.py), particularly the name macro `macro_bindings`. That will evaluate, at your macro's run time, to a snapshot of the bindings from the time the invocation of `macro_bindings` was macro-expanded. You can feed that snapshot to `extract_bindings`.
  3. In your macro, call `MacroExpander(modified_bindings, expander.filename).visit(tree)` to invoke a new expander instance with the modified bindings.
 
-The implementation of the quasiquote system has an example of this.
+The implementation of the quasiquote system has an example of this. See also [demo/anaphoric_if.py](../demo/anaphoric_if.py), for how it expands the anaphoric `it`.
 
 Obviously, if you want to expand just one layer with the second expander, use its `visit_once` method instead of `visit`. (And if you do that, you'll need to decide if you should keep the `Done` marker - to prevent further expansion in that subtree - or discard it and grab the real AST from its `body` attribute.)
 
