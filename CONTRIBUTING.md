@@ -2,7 +2,9 @@
 
 Code and/or documentation contributions are welcome!
 
-The preferred mechanism is a pull request on GitHub. [New to GitHub?](http://makeapullrequest.com/)
+This document is intended to benefit anyone who wishes to understand the `mcpyrate` codebase and/or documentation better, and/or contribute to the project. We believe the possibility to do so should be available to professional developers, hobby developers, academic researchers (particularly in fields other than [CS](https://en.wikipedia.org/wiki/Computer_science)), and students alike.
+
+The preferred contribution mechanism is a pull request on GitHub. [New to GitHub?](http://makeapullrequest.com/)
 
 <!-- markdown-toc start - Don't edit this section. Run M-x markdown-toc-refresh-toc -->
 **Table of Contents**
@@ -11,6 +13,10 @@ The preferred mechanism is a pull request on GitHub. [New to GitHub?](http://mak
     - [Understanding the code](#understanding-the-code)
     - [Code style](#code-style)
     - [Docstring and comment style](#docstring-and-comment-style)
+    - [Automated tests](#automated-tests)
+        - [Layout](#layout)
+        - [Why in-tree testing matters](#why-in-tree-testing-matters)
+        - [Why other forms of testing matter too](#why-other-forms-of-testing-matter-too)
 
 <!-- markdown-toc end -->
 
@@ -120,3 +126,65 @@ See also [Understanding the quasiquote system](doc/quasiquotes.md#understanding-
    - Don't capitalize a proper name that officially starts with a lowercase letter. This includes functions and their parameters.
      - Sometimes, this leads to a sentence starting in lowercase. That's ok.
      - If there's a convenient and equally clear alternative wording (which still directs the reader's attention to the important thing), feel free to use that. If not, just accept it.
+
+
+## Automated tests
+
+ - **Test what** the software should do, **not how** it does it. Avoid testing internal details.
+   - Particularly with macros, consider whether you should test the *behavior* of the outputted code, or its *form* as an expanded AST.
+   - In some advanced cases, to facilitate tests for behavior, [invoking the compiler at run time](doc/compiler.md#invoking-the-compiler-at-run-time) may help. See [`mcpyrate.test.test_compiler`](../mcpyrate/test/test_compiler.py) and [`mcpyrate.test.test_quotes`](../mcpyrate/test/test_quotes.py) for examples.
+
+ - Aim at clarity. Don't worry too much if you have to make the tests a little [DAMP](https://stackoverflow.com/questions/6453235/what-does-damp-not-dry-mean-when-talking-about-unit-tests).
+   - That is, prefer *Descriptive And Meaningful Phrases* over maximal [DRY](https://en.wikipedia.org/wiki/Don't_repeat_yourself)ness, because DRY tends to introduce a learning cost. Some repetition is fine, if it lets you omit defining an abstraction that's only needed for those particular tests.
+   - But that's not a hard rule, either. For example, if you can fit both the definition and all its uses onto the screen at once, and the result is both shorter and more easily understandable than without making that definition, then feel free to do that.
+
+ - Write tests that can double as usage examples.
+   - This yields complete code examples that can be linked to in the user manual, with the machine-checked guarantee that if tests pass, the examples are known to run on the version that was tested.
+
+ - Use common sense to focus test-writing effort where it matters most.
+   - Don't bother testing trivial things. For example, a test checking that a constructor assigns the instance attributes correctly is most often a symptom of [*testing like the TSA*](https://signalvnoise.com/posts/3159-testing-like-the-tsa), and causes [software ossification](https://news.ycombinator.com/item?id=19241283).
+   - Test nontrivial implementations, and particularly their interactions. Write tests that can double as advanced usage examples.
+   - Aim at testing edge and corner cases, particularly ones that could turn up in practice. Features should be orthogonal, and when not reasonably possible, they should interact sensibly (or alternatively, error out with a sensible message) when used together. Test that they do.
+
+
+### Layout
+
+As of 3.1.0, tests are contained inside the `mcpyrate` package, in `mcpyrate.test`, but they are not installed by `setup.py`. This goes against the commonly accepted wisdom on Python project directory layout: [Pytest's recommendations](https://docs.pytest.org/en/stable/goodpractices.html), and [IonelMC's famous blog post](https://blog.ionelmc.ro/2014/05/25/python-packaging/#the-structure).
+
+Tests are not installed simply because a typical use site does not need them; by the time `mcpyrate` is installed, it has already been tested. As for the tests living in a subpackage, for me this hasn't mattered that much in practice. The original motivation was to be able to change the project name easily during early development (using only relative imports), but that's moot by now.
+
+The important feature is to support some form of in-tree testing.
+
+As of 3.1.0, the tests are placed under a `test` subpackage of the package being tested, and the test modules use relative imports. The REPL subsystem, `mcpyrate.repl`, currently has no automated tests associated with it. If added later, those should be placed in `mcpyrate.repl.test`.
+
+Individual test modules are expected to be invoked from the project top level as `python3 -m mcpyrate.repl.macropython -m mcpyrate.test.test_somemodule`. Here the first `-m` goes to `python3`, whereas the second one goes to `macropython`. Note this explicitly invokes the in-tree `macropython`, instead of an installed copy (if any).
+
+A future possibility is to change the project structure to use a separate test folder, and use absolute imports in the test modules. By invoking the test runner as a script from the project top level, its containing directory will end up as the topmost entry on `sys.path`, thus resolving those absolute imports as pointing to the source tree (instead of to an installed copy, if any).
+
+
+### Why in-tree testing matters
+
+Quite simply, it allows quick testing of changes to the codebase without installing it, thus speeding up the edit-run cycle.
+
+I think a fast edit-run cycle is crucial. If this cycle is slow, it encourages the bad practice of making many unrelated changes at once, to amortize the (perceived) waiting cost at the *run* step.
+
+By "fast", I mean that the *run* step (including compilation!) should complete in a couple of seconds at most, preferably less. Keep in mind that **one** second is [Nielsen's oft-quoted limit](https://www.nngroup.com/articles/response-times-3-important-limits/) for avoiding interruption of the thought process. In my opinion that's not too much to ask; software development does not need to be that CPU-hungry. Using available machine resources intelligently, it's perfectly achievable in many cases to invoke a relevant testset, and get the results in less than a second.
+
+In my opinion, this level of performance should be the norm. Near-realtime feedback is crucial if the computer is to act as an [intelligence amplifier](http://www.loper-os.org/?p=8). It's all about the *kind* of conversation you can have with your ideas as you elaborate on them, down to the level of detail required to make them machine-executable. Being able to run everything in-tree facilitates, in effect, a face-to-face conversation with the computer. The powerful thing is, you don't need a fully formed idea before you present it to the computer; you can sketch, and experiment on the smallest details, and the machine will respond near-instantly. This is a particularly nice workflow for building any non-trivial design.
+
+This is also the reason why the test modules are designed to be executable individually. There is no point in running the whole (potentially time-expensive) test suite right away, until the module being worked on passes its own unit tests. The full test suite is just the *second* step of verification.
+
+(A variant of the *different kind of conversation* remark was originally famously made by Paul Graham, in [*On Lisp*](http://www.paulgraham.com/onlisp.html). See [relevant quotation](https://www.ics.uci.edu/~pattis/quotations.html#G).)
+
+
+### Why other forms of testing matter too
+
+The drawbacks of in-tree testing are well known:
+
+ - The developer's machine is far from a standard pristine installation environment. There may be subtle but important differences between what the developer *thinks* they have versus what they actually *do* have; e.g. library versions may differ from the expected ones, or additional libraries may be present.
+ - There is no guarantee that the package installs correctly, or at all, because the install step is not tested.
+ - There is no guarantee that the installed copy runs correctly, or at all. The project folder may contain important files that are accidentally omitted from the install, or in extreme cases, even from version control.
+
+All three can be addressed by complementing in-tree testing with some form of [CI](https://en.wikipedia.org/wiki/Continuous_integration). As of 3.1.0, `mcpyrate` does not yet have a CI workflow; however, adding one is on the long-term roadmap. See issue [#5](https://github.com/Technologicat/mcpyrate/issues/5).
+
+The reason it's on the *long-term* roadmap is that this will first require extending the test suite toward a reasonable coverage, to avoid a false sense of security. Or in other words, the code shouldn't get an automated stamp of approval until that stamp actually means something. Also, while extending tests, we must consider which parts of the library are stable enough to justify drawing a semi-permanent interface line, because introducing tests also introduces a significant amount of ossification.
