@@ -10,6 +10,11 @@
 - Documentation: [the staging compiler](doc/compiler.md) is now documented.
 
 
+**Fixed**:
+
+- Fix https://github.com/Technologicat/mcpyrate/issues/20, with thanks to @thirtythreeforty for reporting. **`mcpyrate` should now support Python 3.9.**
+
+
 ---
 
 **3.1.0** (12 February 2021) - *Compiling on the high seas* edition:
