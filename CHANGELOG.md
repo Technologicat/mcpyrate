@@ -13,6 +13,7 @@
 **Fixed**:
 
 - Fix https://github.com/Technologicat/mcpyrate/issues/20, with thanks to @thirtythreeforty for reporting. **`mcpyrate` should now support Python 3.9.**
+- Fix a crash in the generation of some error messages in `mcpyrate.coreutils.get_macros`. Particularly, the crash could occur if the module is not found in `sys.modules`, or if an as-import of a macro is attempted with a concrete expander type that doesn't support that feature.
 
 
 ---
