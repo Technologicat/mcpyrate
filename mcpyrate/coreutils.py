@@ -147,6 +147,8 @@ def get_macros(macroimport, *, filename, reload=False, allow_asname=True, self_m
         try:
             module = sys.modules[module_absname]
         except KeyError:
+            approx_sourcecode = unparse_with_fallbacks(macroimport, debug=True, color=True)
+            loc = format_location(filename, macroimport, approx_sourcecode)
             raise ModuleNotFoundError(f"{loc}\nModule {module_absname} not found in `sys.modules`")
 
     # regular macro-import
@@ -166,6 +168,8 @@ def get_macros(macroimport, *, filename, reload=False, allow_asname=True, self_m
     bindings = {}
     for name in macroimport.names[1:]:
         if not allow_asname and name.asname is not None:
+            approx_sourcecode = unparse_with_fallbacks(macroimport, debug=True, color=True)
+            loc = format_location(filename, macroimport, approx_sourcecode)
             raise ImportError(f"{loc}\nThis expander (see traceback) does not support as-naming macro-imports.")
 
         try:
