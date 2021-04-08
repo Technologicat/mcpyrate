@@ -58,7 +58,7 @@ def splice_expression(expr, template, tag="__paste_here__"):
         raise TypeError(f"`template` must be an AST or `list`; got {type(template)} with value {repr(template)}")
 
     def ispastehere(tree):
-        return type(tree) is ast.Expr and type(tree.value) is ast.Name and tree.value.id == tag
+        return type(tree) is ast.Name and tree.id == tag
 
     class ExpressionSplicer(ASTTransformer):
         def __init__(self):
