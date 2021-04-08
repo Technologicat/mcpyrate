@@ -1,18 +1,21 @@
 # Changelog
 
-**3.2.0** (in progress)
+**3.2.0** (in progress) - *X marks the spot* edition:
 
 **New**:
 
+- Documentation: [the staging compiler](doc/compiler.md) is now documented.
+- Documentation: [contribution guidelines](CONTRIBUTING.md) now include a section on automated tests.
 - Add command-line option to `macropython` to delete bytecode caches:
   - Use `macropython -c yourdirectory` (equivalent: `macropython --clean yourdirectory`), where `yourdirectory` is a path (can be relative or absolute).
   - For a dry run, use `macropython -c yourdirectory -n` (equivalent: `macropython --clean yourdirectory --dry-run`), which just prints the full paths to the directories it would delete.
-- Documentation: [the staging compiler](doc/compiler.md) is now documented.
+  - If you need programmatic access to this functionality, see `mcpyrate.pycachecleaner`.
 
 
 **Fixed**:
 
 - Fix https://github.com/Technologicat/mcpyrate/issues/20, with thanks to @thirtythreeforty for reporting. **`mcpyrate` should now support Python 3.9.**
+- Fix bug in `mcpyrate.splicing.splice_expression`. (Only affected that function; the expression mode of `a[]` uses a different code path.)
 - Fix a crash in the generation of some error messages in `mcpyrate.coreutils.get_macros`. Particularly, the crash could occur if the module is not found in `sys.modules`, or if an as-import of a macro is attempted with a concrete expander type that doesn't support that feature.
 
 
