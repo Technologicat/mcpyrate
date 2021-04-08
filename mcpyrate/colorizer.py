@@ -161,4 +161,11 @@ class ColorScheme(Bunch):
         self.NODETYPE = (Style.BRIGHT, Fore.LIGHTBLUE_EX)
         self.FIELDNAME = Fore.YELLOW
         self.BAREVALUE = Fore.GREEN
+
+        # ------------------------------------------------------------
+        # runtests
+        self.TESTHEADING = self.HEADING
+        self.TESTPASS = (Style.BRIGHT, Fore.GREEN)
+        self.TESTFAIL = (Style.BRIGHT, Fore.RED)
+        self.TESTERROR = (Style.BRIGHT, Fore.YELLOW)
 ColorScheme = ColorScheme()  # type: ignore[assignment, misc]

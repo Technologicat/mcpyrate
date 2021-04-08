@@ -19,10 +19,12 @@ import copy
 from textwrap import dedent
 
 # `expand` and `compile` aren't tested separately, but `run` is built on them, so meh.
-from ..compiler import run, create_module
+from ..colorizer import ColorScheme, colorize
+from ..compiler import create_module, run
 from ..utils import gensym, rename
 
-def test():
+
+def runtests():
     def test_create_module():
         # `create_module` with custom dotted names obeys Python's package semantics.
         try:
@@ -198,7 +200,7 @@ def test():
         module = run(quoted)  # noqa: F841
     test_dynamicmodule_multiphase()
 
-    print("All tests PASSED")
+    print(colorize("All tests PASSED", ColorScheme.TESTPASS))
 
 if __name__ == '__main__':
-    test()
+    runtests()

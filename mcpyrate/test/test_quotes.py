@@ -1,13 +1,14 @@
 # -*- coding: utf-8 -*-
 
-from ..metatools import (macros, expands, expand1s, expandsq, expand1sq,  # noqa: F811
-                         expandr, expand1r, expandrq, expand1rq)
 from ..quotes import macros, q, u, n, a, s, t, h  # noqa: F811
-from .macros import (macros, test_q, test_hq,  # noqa: F401, F811
-                     first, second, third)
+from .macros import (macros, first, second, test_hq,  # noqa: F401, F811
+                     test_q, third)
+from ..metatools import (macros, expand1r, expand1rq, expand1s,  # noqa: F401, F811
+                         expand1sq, expandr, expandrq, expands, expandsq)
 
 import ast
 
+from ..colorizer import ColorScheme, colorize
 from ..compiler import run
 from ..quotes import unastify
 from ..unparser import unparse
@@ -17,7 +18,7 @@ def f():
     return "f from macro use site"
 
 
-def test():
+def runtests():
     # q: quasiquote (has both expr and block modes)
 
     # expr mode: expression -> AST
@@ -125,7 +126,8 @@ def test():
     # TODO: is there a better way?
     # TODO: Python 3.8: remove ast.Num
     assert unparse(expand1rq[h[q][42]]) in (f"mcpyrate.quotes.splice_ast_literals(mcpyrate.quotes.ast.Num(n=42), '{__file__}')",
-                                            "mcpyrate.quotes.splice_ast_literals(mcpyrate.quotes.ast.Constant(value=42), '{__file__}')")
+                                            f"mcpyrate.quotes.splice_ast_literals(mcpyrate.quotes.ast.Constant(value=42), '{__file__}')",
+                                            f"mcpyrate.quotes.splice_ast_literals(mcpyrate.quotes.ast.Constant(value=42, kind=None), '{__file__}')")
 
     # Macro names can be hygienically captured, too. The name becomes "originalname_uuid".
     assert unparse(q[h[first][42]]).startswith("first_")
@@ -204,7 +206,7 @@ def test():
     # This should have the same result.
     assert unparse(q[foo(a, b=c, *lst, **dic)]) == "foo(a, *lst, b=c, **dic)"  # noqa: F821
 
-    print("All tests PASSED")
+    print(colorize("All tests PASSED", ColorScheme.TESTPASS))
 
 if __name__ == '__main__':
-    test()
+    runtests()
