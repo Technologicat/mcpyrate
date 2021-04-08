@@ -9,9 +9,7 @@ __all__ = ["ASTMarker", "get_markers", "delete_markers", "check_no_markers_remai
 
 import ast
 
-from . import core
-from . import utils
-from . import walkers
+from . import core, utils, walkers
 
 
 class ASTMarker(ast.AST):
