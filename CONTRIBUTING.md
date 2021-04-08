@@ -71,7 +71,7 @@ See also [Understanding the quasiquote system](doc/quasiquotes.md#understanding-
      - Really, **anything**: named parameters of functions, functions, classes, modules, even packages.
      - Try to get the names right before publishing a release. This is important.
        - Not getting the names right and then keeping them gave us Common Lisp. `terpri`? `flet`? `letf`? `labels`?
-       - But we don't want to bump from version `X.Y` to `(X+1).0` just because some names need changing for clarity.
+       - But we don't want to bump from version `X.Y` to `(X+1).0` just because some names needed changing for clarity.
    - Avoid reusing the name of a module for a thing inside that module. Hence e.g. `unparser`, which provides `unparse`.
      - [Nick Coghlan: Traps for the Unwary in Python's Import System](http://python-notes.curiousefficiency.org/en/latest/python_concepts/import_traps.html#the-submodules-are-added-to-the-package-namespace-trap)
 
@@ -135,7 +135,7 @@ See also [Understanding the quasiquote system](doc/quasiquotes.md#understanding-
    - In some advanced cases, to facilitate tests for behavior, [invoking the compiler at run time](doc/compiler.md#invoking-the-compiler-at-run-time) may help. See [`mcpyrate.test.test_compiler`](../mcpyrate/test/test_compiler.py) and [`mcpyrate.test.test_quotes`](../mcpyrate/test/test_quotes.py) for examples.
 
  - Aim at clarity. Don't worry too much if you have to make the tests a little [DAMP](https://stackoverflow.com/questions/6453235/what-does-damp-not-dry-mean-when-talking-about-unit-tests).
-   - That is, prefer *Descriptive And Meaningful Phrases* over maximal [DRY](https://en.wikipedia.org/wiki/Don't_repeat_yourself)ness, because DRY tends to introduce a learning cost. Some repetition is fine, if it lets you omit defining an abstraction that's only needed for those particular tests.
+   - That is, prefer *Descriptive And Meaningful Phrases* over maximal elimination of repetition, because [DRY](https://en.wikipedia.org/wiki/Don't_repeat_yourself) tends to introduce a learning cost. Some repetition is fine, if it lets you omit defining an abstraction that's only needed for those particular tests.
    - But that's not a hard rule, either. For example, if you can fit both the definition and all its uses onto the screen at once, and the result is both shorter and more easily understandable than without making that definition, then feel free to do that.
 
  - Write tests that can double as usage examples.
