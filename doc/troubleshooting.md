@@ -64,7 +64,7 @@ Even if you use [`sys.dont_write_bytecode = True`](https://docs.python.org/3/lib
 
 If you want to force all of your code to be macro-expanded again, delete your bytecode cache (`.pyc`) files; they'll be re-generated automatically. Typically, they can be found in a folder named `__pycache__`, at each level of your source tree.
 
-To delete bytecode caches conveniently, you can use the shell command `macropython -c yourdirectory` (equivalent: `macropython --clean yourdirectory`), where `yourdirectory` is a path (can be relative or absolute). If you're wary of allowing a script to delete directories, you can first use `macropython -c yourdirectory -n` (equivalent: `macropython --clean yourdirectory --dry-run`), which just prints the full paths to the directories it would delete.
+To delete bytecode caches conveniently, you can use the shell command `macropython -c yourdirectory` (equivalent: `macropython --clean yourdirectory`), where `yourdirectory` is a path (can be relative or absolute). If you're wary of allowing a script to delete directories, you can first use `macropython -c yourdirectory -n` (equivalent: `macropython --clean yourdirectory --dry-run`), which just prints the full paths to the directories it would delete. If you need programmatic access to this functionality, see `mcpyrate.pycachecleaner`.
 
 Normally there is no need to delete bytecode caches manually.
 
