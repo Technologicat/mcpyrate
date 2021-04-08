@@ -8,6 +8,7 @@ import traceback
 from importlib import import_module
 
 from mcpyrate.colorizer import ColorScheme, colorize
+from mcpyrate.pycachecleaner import deletepycachedirs
 
 import mcpyrate.activate  # noqa: F401, this enables the macro expander.
 
@@ -18,10 +19,7 @@ def listtestmodules(path):
     return list(sorted(testmodules))
 
 def listtestfiles(path, prefix="test_", suffix=".py"):
-    try:
-        return [fn for fn in os.listdir(path) if fn.startswith(prefix) and fn.endswith(suffix)]
-    except FileNotFoundError:
-        return []
+    return [fn for fn in os.listdir(path) if fn.startswith(prefix) and fn.endswith(suffix)]
 
 def modname(path, filename):  # some/dir/mod.py --> some.dir.mod
     modpath = re.sub(os.path.sep, r".", path)
@@ -30,9 +28,13 @@ def modname(path, filename):  # some/dir/mod.py --> some.dir.mod
 
 def main():
     errors = 0
-    testsets = (("main", (listtestmodules(os.path.join("mcpyrate", "test")) +
-                          listtestmodules(os.path.join("mcpyrate", "repl", "test")))),)
-    for tsname, modnames in testsets:
+    testsets = (("main", os.path.join("mcpyrate", "test")),
+                ("repl", os.path.join("mcpyrate", "repl", "test")))
+    for tsname, path in testsets:
+        if not os.path.isdir(path):
+            continue
+        modnames = listtestmodules(path)
+        deletepycachedirs(path)
         for m in modnames:
             try:
                 # TODO: We're not inside a package, so we currently can't use a relative import.
