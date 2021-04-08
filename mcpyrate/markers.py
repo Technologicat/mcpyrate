@@ -77,7 +77,6 @@ def check_no_markers_remaining(tree, *, filename, cls=None):
     `filename` is the full path to the `.py` file, for error reporting.
 
     Convenience function.
-
     """
     cls = cls or ASTMarker
     remaining_markers = get_markers(tree, cls)
