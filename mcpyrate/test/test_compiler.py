@@ -16,6 +16,7 @@ Contains some advanced usage examples.
 from ..quotes import macros, q, u  # noqa: F401
 
 import copy
+import sys
 from textwrap import dedent
 
 # `expand` and `compile` aren't tested separately, but `run` is built on them, so meh.
@@ -38,6 +39,13 @@ def runtests():
         assert flip.__package__ is None
         assert flop.__package__ == "flip"
         assert flip.flop is flop  # submodule is added to the package namespace
+
+        # We must clean up so that the second-pass test works too.
+        try:
+            del sys.modules["flip.flop"]
+            del sys.modules["flip"]
+        except KeyError:
+            pass
     test_create_module()
 
     def test_dynamicmodule_from_source():

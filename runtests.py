@@ -57,8 +57,9 @@ def listalldemofiles(demoroot):
 #     return out
 
 
-def runtests():
-    print(colorize("Testing started.", ColorScheme.TESTHEADING), file=sys.stderr)
+def runtests(clear_bytecode_cache=True):
+    cache_note = "Bytecode cache will be cleared." if clear_bytecode_cache else "Using existing bytecode."
+    print(colorize(f"Testing started. {cache_note}", ColorScheme.TESTHEADING), file=sys.stderr)
     errors = 0
     # Each submodule of `mcpyrate` should have an entry here, regardless of if it currently has tests or not.
     testsets = (("main", os.path.join("mcpyrate", "test")),
@@ -67,7 +68,8 @@ def runtests():
         if not os.path.isdir(path):  # skip empty testsets
             continue
         modnames = filenames_to_modulenames(path, listtestfiles(path))
-        deletepycachedirs(path)
+        if clear_bytecode_cache:
+            deletepycachedirs(path)
         for m in modnames:
             try:
                 # TODO: We're not inside a package, so we can't use a relative import.
@@ -116,11 +118,13 @@ def runtests():
 
 # UGH! We can't currently import demos as modules, since they may depend on other modules
 # in their containing directory. So let's run them like a shell script would.
-def rundemos():
-    print(colorize("Demos started.", ColorScheme.TESTHEADING), file=sys.stderr)
+def rundemos(clear_bytecode_cache=True):
+    cache_note = "Bytecode cache will be cleared." if clear_bytecode_cache else "Using existing bytecode."
+    print(colorize(f"Demos started. {cache_note}", ColorScheme.TESTHEADING), file=sys.stderr)
     errors = 0
     demofiles = listalldemofiles("demo")
-    deletepycachedirs("demo")
+    if clear_bytecode_cache:
+        deletepycachedirs("demo")
     for fn in demofiles:
         print(colorize(f"  Running file '{fn}'...", ColorScheme.TESTHEADING),
               file=sys.stderr)
@@ -144,5 +148,9 @@ def rundemos():
     return all_passed
 
 if __name__ == '__main__':
-    if not (runtests() and rundemos()):
+    t1 = runtests(True)
+    t2 = runtests(False)
+    t3 = rundemos(True)
+    t4 = rundemos(False)
+    if not (t1 and t2 and t3 and t4):
         sys.exit(1)  # pragma: no cover, this only runs when the tests fail.
