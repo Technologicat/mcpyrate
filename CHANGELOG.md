@@ -1,5 +1,12 @@
 # Changelog
 
+**3.2.1** (10 April 2021)
+
+- Fix version metadata in `__init__.py`.
+
+---
+
+
 **3.2.0** (10 April 2021) - *X marks the spot* edition:
 
 **New**:
