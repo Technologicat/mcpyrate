@@ -8,7 +8,6 @@ from ..metatools import (macros, expand1r, expand1rq, expand1s,  # noqa: F401, F
 
 import ast
 
-from ..colorizer import ColorScheme, colorize
 from ..compiler import run
 from ..quotes import unastify
 from ..unparser import unparse
@@ -205,8 +204,6 @@ def runtests():
 
     # This should have the same result.
     assert unparse(q[foo(a, b=c, *lst, **dic)]) == "foo(a, *lst, b=c, **dic)"  # noqa: F821
-
-    print(colorize("All tests PASSED", ColorScheme.TESTPASS))
 
 if __name__ == '__main__':
     runtests()

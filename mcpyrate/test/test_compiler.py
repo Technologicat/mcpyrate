@@ -19,7 +19,6 @@ import copy
 from textwrap import dedent
 
 # `expand` and `compile` aren't tested separately, but `run` is built on them, so meh.
-from ..colorizer import ColorScheme, colorize
 from ..compiler import create_module, run
 from ..utils import gensym, rename
 
@@ -199,8 +198,6 @@ def runtests():
             assert testmacro["blah"] == "success"
         module = run(quoted)  # noqa: F841
     test_dynamicmodule_multiphase()
-
-    print(colorize("All tests PASSED", ColorScheme.TESTPASS))
 
 if __name__ == '__main__':
     runtests()
