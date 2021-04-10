@@ -92,6 +92,12 @@ If you just want to run all tests, `python3 runtests.py`.
   - IPython extension `mcpyrate.repl.iconsole`. Import, define and use macros in an IPython session.
   - See [full documentation of the REPL system](doc/repl.md).
 
+- **Run-time compiler access**.
+  - Expand, compile and run macro-enabled code snippets on the fly.
+  - Accepts source code and AST inputs. (Use quasiquotes to conveniently create ASTs.)
+  - Dynamically created code snippets support all the same features as importing code from a source file on disk.
+  - See [full documentation of the compiler](doc/compiler.md). Examples can be found in [mcpyrate/test/test_compiler.py](mcpyrate/test/test_compiler.py).
+
 - **Testing and debugging**.
   - Statement coverage is correctly reported by tools such as [`Coverage.py`](https://github.com/nedbat/coveragepy/).
   - Macro expansion errors are reported at macro expansion time, with use site traceback.
