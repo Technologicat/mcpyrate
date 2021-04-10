@@ -142,7 +142,7 @@ See also [Understanding the quasiquote system](doc/quasiquotes.md#understanding-
    - This yields complete code examples that can be linked to in the user manual, with the machine-checked guarantee that if tests pass, the examples are known to run on the version that was tested.
 
  - Use common sense to focus test-writing effort where it matters most.
-   - Don't bother testing trivial things. For example, a test checking that a constructor assigns the instance attributes correctly is most often a symptom of [*testing like the TSA*](https://signalvnoise.com/posts/3159-testing-like-the-tsa), and causes [software ossification](https://news.ycombinator.com/item?id=19241283).
+   - Don't bother testing trivial things. For example, a test checking that a constructor assigns the instance attributes correctly is most often a symptom of [*testing like the TSA*](https://signalvnoise.com/posts/3159-testing-like-the-tsa), and causes [software ossification](https://news.ycombinator.com/item?id=19241283) for no benefit.
    - Test nontrivial implementations, and particularly their interactions. Write tests that can double as advanced usage examples.
    - Aim at testing edge and corner cases, particularly ones that could turn up in practice. Features should be orthogonal, and when not reasonably possible, they should interact sensibly (or alternatively, error out with a sensible message) when used together. Test that they do.
 
@@ -181,10 +181,10 @@ This is also the reason why the test modules are designed to be executable indiv
 
 The drawbacks of in-tree testing are well known:
 
- - The developer's machine is far from a standard pristine installation environment. There may be subtle but important differences between what the developer *thinks* they have versus what they actually *do* have; e.g. library versions may differ from the expected ones, or additional libraries may be present.
+ - A developer's machine is far from a pristine installation environment. There may be subtle but important differences between what the developer *thinks* they have versus what they actually *do* have; e.g. library versions may differ from the expected ones, or additional libraries may be present.
  - There is no guarantee that the package installs correctly, or at all, because the install step is not tested.
  - There is no guarantee that the installed copy runs correctly, or at all. The project folder may contain important files that are accidentally omitted from the install, or in extreme cases, even from version control.
 
 All three can be addressed by complementing in-tree testing with some form of [CI](https://en.wikipedia.org/wiki/Continuous_integration). As of 3.1.0, `mcpyrate` does not yet have a CI workflow; however, adding one is on the long-term roadmap. See issue [#5](https://github.com/Technologicat/mcpyrate/issues/5).
 
-The reason it's on the *long-term* roadmap is that this will first require extending the test suite toward a reasonable coverage, to avoid a false sense of security. Or in other words, the code shouldn't get an automated stamp of approval until that stamp actually means something. Also, while extending tests, we must consider which parts of the library are stable enough to justify drawing a semi-permanent interface line, because introducing tests also introduces a significant amount of ossification.
+The reason it's on the *long-term* roadmap is that this will first require extending the test suite toward a reasonable coverage, to avoid a false sense of security. Or in other words, the code shouldn't get an automated stamp of approval until that stamp actually means something. Also, while extending tests, we must consider which parts of the library are stable enough to justify drawing a semi-permanent interface line, because introducing tests tends to ossify the design of the system being tested.
