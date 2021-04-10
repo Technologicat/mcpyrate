@@ -1,6 +1,6 @@
 # Changelog
 
-**3.2.0** (in progress) - *X marks the spot* edition:
+**3.2.0** (10 April 2021) - *X marks the spot* edition:
 
 **New**:
 
