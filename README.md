@@ -75,7 +75,7 @@ More examples can be found in the [`demo/`](demo/) subfolder. To run the demos a
 
 The tests contain even more usage examples, including advanced ones. See the [`mcpyrate/test/`](mcpyrate/test/) subfolder.
 
-Tests must be run using the `mcpyrate` in the source tree (instead of the installed one, if any), because they expect to live in the module `mcpyrate.test`, but the `test` subfolder is not part of the installation. Thus, if the `mcpyrate` top-level module name resolves to the installed copy, there won't be a module named `mcpyrate.test`.
+Tests must be run using the `mcpyrate` in the source tree (instead of any installed one), because they expect to live in the module `mcpyrate.test`, but the `test` subfolder is not part of the installation. Thus, if the `mcpyrate` top-level module name resolves to an installed copy, there won't be a module named `mcpyrate.test`.
 
 To run with the `mcpyrate` in the source tree, replace `macropython` with `python3 -m mcpyrate.repl.macropython`. For example, to run a demo, `python3 -m mcpyrate.repl.macropython demo/anaphoric_if.py`, or to run a test, `python3 -m mcpyrate.repl.macropython -m mcpyrate.test.test_compiler`. Here the first `-m` goes to `python3`, whereas the second one goes to `macropython`.
 
