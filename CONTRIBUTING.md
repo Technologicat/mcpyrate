@@ -159,6 +159,8 @@ As of 3.1.0, the tests are placed under a `test` subpackage of the package being
 
 Individual test modules are expected to be invoked from the project top level as `python3 -m mcpyrate.repl.macropython -m mcpyrate.test.test_somemodule`. Here the first `-m` goes to `python3`, whereas the second one goes to `macropython`. Note this explicitly invokes the in-tree `macropython`, instead of an installed copy (if any).
 
+To run all tests, at the project top level, `python3 runtests.py`.
+
 A future possibility is to change the project structure to use a separate test folder, and use absolute imports in the test modules. By invoking the test runner as a script from the project top level, its containing directory will end up as the topmost entry on `sys.path`, thus resolving those absolute imports as pointing to the source tree (instead of to an installed copy, if any).
 
 
