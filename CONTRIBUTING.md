@@ -14,6 +14,8 @@ The preferred contribution mechanism is a pull request on GitHub. [New to GitHub
     - [Code style](#code-style)
     - [Docstring and comment style](#docstring-and-comment-style)
     - [Automated tests](#automated-tests)
+        - [Test framework](#test-framework)
+            - [The test runner `runtests.py`](#the-test-runner-runtestspy)
         - [Layout](#layout)
         - [Why in-tree testing matters](#why-in-tree-testing-matters)
         - [Why other forms of testing matter too](#why-other-forms-of-testing-matter-too)
@@ -132,7 +134,7 @@ See also [Understanding the quasiquote system](doc/quasiquotes.md#understanding-
 
  - **Test what** the software should do, **not how** it does it. Avoid testing internal details.
    - Particularly with macros, consider whether you should test the *behavior* of the outputted code, or its *form* as an expanded AST.
-   - In some advanced cases, to facilitate tests for behavior, [invoking the compiler at run time](doc/compiler.md#invoking-the-compiler-at-run-time) may help. See [`mcpyrate.test.test_compiler`](../mcpyrate/test/test_compiler.py) and [`mcpyrate.test.test_quotes`](../mcpyrate/test/test_quotes.py) for examples.
+   - To facilitate tests for macro behavior, [invoking the compiler at run time](doc/compiler.md#invoking-the-compiler-at-run-time) may help. See [`mcpyrate.test.test_compiler`](../mcpyrate/test/test_compiler.py) and [`mcpyrate.test.test_quotes`](../mcpyrate/test/test_quotes.py) for examples.
 
  - Aim at clarity. Don't worry too much if you have to make the tests a little [DAMP](https://stackoverflow.com/questions/6453235/what-does-damp-not-dry-mean-when-talking-about-unit-tests).
    - That is, prefer *Descriptive And Meaningful Phrases* over maximal elimination of repetition, because [DRY](https://en.wikipedia.org/wiki/Don't_repeat_yourself) tends to introduce a learning cost. Some repetition is fine, if it lets you omit defining an abstraction that's only needed for those particular tests.
@@ -145,6 +147,46 @@ See also [Understanding the quasiquote system](doc/quasiquotes.md#understanding-
    - Don't bother testing trivial things. For example, a test checking that a constructor assigns the instance attributes correctly is most often a symptom of [*testing like the TSA*](https://signalvnoise.com/posts/3159-testing-like-the-tsa), and causes [software ossification](https://news.ycombinator.com/item?id=19241283) for no benefit.
    - Test nontrivial implementations, and particularly their interactions. Write tests that can double as advanced usage examples.
    - Aim at testing edge and corner cases, particularly ones that could turn up in practice. Features should be orthogonal, and when not reasonably possible, they should interact sensibly (or alternatively, error out with a sensible message) when used together. Test that they do.
+
+
+### Test framework
+
+The tests are based on a minimalistic *no-framework* (cf. NoSQL) approach, using `assert` statements, and a (very short) custom test runner, `runtests.py`.
+
+The reason `mcpyrate` does not use a standard test framework is that the standard library's [`unittest`](https://docs.python.org/3/library/unittest.html) is far too verbose to use (for my tastes), and the otherwise excellent, de facto standard [Pytest](https://docs.pytest.org/en/latest/) installs an import hook (to redefine the semantics of `assert`), so it can't work when a macro expander is in use.
+
+For these same reasons, I have actually developed a macro-enabled test framework, [`unpythonic.test.fixtures`](https://github.com/Technologicat/unpythonic/blob/master/doc/macros.md#testing-and-debugging). I would love to refactor it into `mcpyrate`, but that's a chicken-and-egg problem. The framework requires macros, so it can't be used for testing a macro expander. It also requires [conditions and restarts](https://github.com/Technologicat/unpythonic/blob/master/doc/features.md#handlers-restarts-conditions-and-restarts) (à la [Common Lisp](http://www.gigamonkeys.com/book/beyond-exception-handling-conditions-and-restarts.html)), which is a language extension orthogonal to macros, and so belongs in a separate library. So, currently the framework lives in [`unpythonic`](https://github.com/Technologicat/unpythonic).
+
+As someone once said, *I've never seen a system that bootstraps elegantly*. So we test this low-level layer using `assert`; it's good enough.
+
+
+#### The test runner `runtests.py`
+
+Test discovery is automatic. Test execution order:
+
+ - Test directories are detected **top-down**, and sorted **alphabetically** at each level.
+   - Any directory, at any level, whose name is `test`, is considered as a test directory.
+ - In each directory, the test modules run alphabetically.
+   - Test modules are those `.py` files whose filenames match the shellglob `test_*.py`.
+
+Each test module is imported as a Python module (with `mcpyrate` active), and its `runtests` function is called, with no arguments. Normal termination indicates that tests passed, and the runner will report so. On `AssertionError` it will report a test failure, and on any other uncaught exception, an error.
+
+**NOTE**: When examining test results, check first that `test_quotes` and `test_compiler` pass. Most test cases in the `mcpyrate` codebase rely on these features, so if they don't work properly, likely nothing else will either.
+
+Demos run after the tests, sorted top-down alphabetically, just like the tests. Demos are run automatically to ensure that the demo examples are sufficiently up to date in order not to crash on the version of `mcpyrate` being tested.
+
+Demos may use asserts similarly to tests. This may be beneficial to improve the human-readability of expectations regarding what the demo example is supposed to do, and is recommended.
+
+Demos live in the `demo/` subfolder of the project top level. Each demo is either:
+
+ - A directory with an entry point, `demo.py`.
+    - The entry point runs as a Python script, as if it was invoked as `macropython demo.py`.
+    - Any other files and subdirectories can be used by the demo itself for whatever purposes it needs to.
+      - Some demos may have a `run.py` for running them with bare `python3`; it is also ignored.
+ - A single `.py` file, possibly in the same directory with other single-file demos.
+   - In this case subdirectories are automatically scanned for more demos.
+
+During demos, any uncaught exception is reported as a failure.
 
 
 ### Layout
