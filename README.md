@@ -206,7 +206,7 @@ To uninstall:
 pip uninstall mcpyrate
 ```
 
-but first, make sure you're not in a folder that has an `mcpyrate` subfolder - `pip` will think it got a folder name instead of a package name, and become confused.
+but first, make sure you're not in a folder that has a `mcpyrate` subfolder - `pip` will think it got a folder name instead of a package name, and become confused.
 
 
 ## Understanding the implementation
