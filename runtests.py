@@ -13,61 +13,83 @@ from mcpyrate.pycachecleaner import deletepycachedirs
 
 import mcpyrate.activate  # noqa: F401, this enables the macro expander.
 
+# --------------------------------------------------------------------------------
 
-# "some/dir", "mod.py" --> "some.dir.mod"
 def filename_to_modulename(path, filename):
+    """Convert .py filename to module name.
+
+    Example::
+        "some/dir", "mod.py" --> "some.dir.mod"
+    """
     modpath = re.sub(os.path.sep, r".", path)
     themod = re.sub(r"\.py$", r"", filename)
     return ".".join([modpath, themod])
 
-# "some/dir", ["mod1.py", "mod2.py", ...] --> ["some.dir.mod1", "some.dir.mod2", ...]
 def filenames_to_modulenames(path, filenames):
+    """Convert .py filenames to module names.
+
+    Example::
+        "some/dir", ["mod1.py", "mod2.py", ...] --> ["some.dir.mod1", "some.dir.mod2", ...]
+    """
     return list(sorted(filename_to_modulename(path, fn) for fn in filenames))
 
+# --------------------------------------------------------------------------------
+# In the `mcpyrate` codebase, test modules are placed in "test/" subfolders,
+# and follow the naming pattern "test_*.py".
 
-# In the `mcpyrate` codebase, tests follow the naming pattern "test_*.py".
-def listtestfiles(path, prefix="test_", suffix=".py"):
-    return [fn for fn in os.listdir(path) if fn.startswith(prefix) and fn.endswith(suffix)]
+def discovertestdirectories(root):
+    pattern = f"{os.path.sep}test"
+    out = []
+    for path, dirs, files in os.walk(root):
+        if path.endswith(pattern):
+            out.append(path)
+    return list(sorted(out))
 
-# In the `mcpyrate` codebase, a demo is either:
+def discovertestfiles_in(path):
+    return [fn for fn in os.listdir(path) if fn.startswith("test_") and fn.endswith(".py")]
+
+# --------------------------------------------------------------------------------
+# In the `mcpyrate` codebase, demos live in the "demo/" subfolder of the project top level.
+#
+# Each demo is either:
 #  - A directory with a main script "demo.py" and a bunch of auxiliary files
 #    (where the auxiliary files are not meant to be called by the runner).
 #    - Some demos may have a `run.py` for running with bare `python3`; doesn't matter here.
 #  - A single .py file, possibly in the same directory with other single-file demos.
-def listdemofiles(path):
-    if os.path.isfile(os.path.join(path, "demo.py")):
-        return ["demo.py"]
-    return [fn for fn in os.listdir(path) if fn.endswith(".py")]
 
-
-def listalldemofiles(demoroot):
+def discoverdemofiles(root):
     out = []
-    for path, dirs, files in os.walk(demoroot):
-        demos = listdemofiles(path)
+    for path, dirs, files in os.walk(root):
+        demos = discoverdemofiles_in(path)
         if demos:
-            out.extend(os.path.join(path, filename) for filename in demos)
+            relpath = os.path.relpath(path)
+            out.extend(os.path.join(relpath, filename) for filename in demos)
+        # don't descend into internal subdirectories of individual demos
+        if "demo.py" in files:
+            dirs.clear()
     return list(sorted(out))
 
-# def listalldemomodules(demoroot):
+# def discoverdemomodules(root):
 #     out = []
-#     for path, dirs, files in os.walk(demoroot):
-#         demos = filenames_to_modulenames(path, listdemofiles(path))
+#     for path, dirs, files in os.walk(root):
+#         demos = filenames_to_modulenames(os.path.relpath(path), discoverdemofiles_in(path))
 #         if demos:
 #             out.extend(demos)
 #     return out
 
+def discoverdemofiles_in(path):
+    if os.path.isfile(os.path.join(path, "demo.py")):
+        return ["demo.py"]
+    return [fn for fn in os.listdir(path) if fn.endswith(".py")]
+
+# --------------------------------------------------------------------------------
 
 def runtests(clear_bytecode_cache=True):
     cache_note = "Bytecode cache will be cleared." if clear_bytecode_cache else "Using existing bytecode."
     print(colorize(f"Testing started. {cache_note}", ColorScheme.TESTHEADING), file=sys.stderr)
     errors = 0
-    # Each submodule of `mcpyrate` should have an entry here, regardless of if it currently has tests or not.
-    testsets = (("main", os.path.join("mcpyrate", "test")),
-                ("repl", os.path.join("mcpyrate", "repl", "test")))
-    for testsetname, path in testsets:
-        if not os.path.isdir(path):  # skip empty testsets
-            continue
-        modnames = filenames_to_modulenames(path, listtestfiles(path))
+    for path in discovertestdirectories("."):
+        modnames = filenames_to_modulenames(os.path.relpath(path), discovertestfiles_in(path))
         if clear_bytecode_cache:
             deletepycachedirs(path)
         for m in modnames:
@@ -103,11 +125,13 @@ def runtests(clear_bytecode_cache=True):
 
 # This just checks that all the demos run without crashing on the version being tested,
 # so that they are likely to be up to date.
-# def rundemos():
-#     print(colorize("Demos started.", ColorScheme.TESTHEADING), file=sys.stderr)
+# def rundemos(clear_bytecode_cache=True):
+#     cache_note = "Bytecode cache will be cleared." if clear_bytecode_cache else "Using existing bytecode."
+#     print(colorize(f"Demos started. {cache_note}", ColorScheme.TESTHEADING), file=sys.stderr)
 #     errors = 0
-#     demomodules = listalldemomodules("demo")
-#     deletepycachedirs("demo")
+#     demomodules = discoverdemomodules("demo")
+#     if clear_bytecode_cache:
+#         deletepycachedirs("demo")
 #     for m in demomodules:
 #         print(colorize(f"  Running '{m}'...", ColorScheme.TESTHEADING),
 #               file=sys.stderr)
@@ -118,11 +142,12 @@ def runtests(clear_bytecode_cache=True):
 
 # UGH! We can't currently import demos as modules, since they may depend on other modules
 # in their containing directory. So let's run them like a shell script would.
+# (Alternatively, we could tweak `sys.path`.)
 def rundemos(clear_bytecode_cache=True):
     cache_note = "Bytecode cache will be cleared." if clear_bytecode_cache else "Using existing bytecode."
     print(colorize(f"Demos started. {cache_note}", ColorScheme.TESTHEADING), file=sys.stderr)
     errors = 0
-    demofiles = listalldemofiles("demo")
+    demofiles = discoverdemofiles("demo")
     if clear_bytecode_cache:
         deletepycachedirs("demo")
     for fn in demofiles:
