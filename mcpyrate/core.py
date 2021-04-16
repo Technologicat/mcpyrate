@@ -7,6 +7,7 @@ __all__ = ["MacroExpansionError", "MacroExpanderMarker", "Done",
 from ast import AST, NodeTransformer
 from collections import ChainMap
 from contextlib import contextmanager
+from copy import deepcopy
 from typing import Any, Callable, Dict
 
 from .astfixers import fix_ctx, fix_locations
@@ -93,6 +94,7 @@ class BaseMacroExpander(NodeTransformer):
         self.bindings = ChainMap(self.local_bindings, global_bindings)
         self.filename = filename
         self.recursive = True
+        self._debughook = None  # see `mcpyrate.debug.step_expansion`
 
     def visit(self, tree):
         """Expand macros in `tree`, using current setting for recursive mode.
@@ -154,6 +156,30 @@ class BaseMacroExpander(NodeTransformer):
                 self.recursive = wasrecursive
         return recursive_mode()
 
+    def debughook(self, hook: Callable[..., None]):
+        """Context manager. Temporarily set a debug hook, restoring the old one when the context exits.
+
+        The debug hook, if one is installed, is called whenever a macro expands.
+
+        The hook receives the following arguments, passed positionally in this order:
+            invocationsubtreeid: int, the `id()` of the *original* macro invocation subtree
+                                 before anything was done to it.
+            invocationtree:      AST, (a deepcopy of) the macro invocation subtree before expansion.
+            expandedtree:        AST, the replacement subtree after expanding once. It's the actual live copy.
+            macroname:           str, name of the macro that was applied, as it appears in this expander's
+                                 bindings.
+            macrofunction:       callable, the macro function that was applied.
+        """
+        @contextmanager
+        def debughook_context():
+            oldhook = self._debughook
+            try:
+                self._debughook = hook
+                yield
+            finally:
+                self._debughook = oldhook
+        return debughook_context()
+
     def expand(self, syntax, target, macroname, tree, sourcecode, kw=None):
         """Expand a macro invocation.
 
@@ -185,7 +211,21 @@ class BaseMacroExpander(NodeTransformer):
 
                           Very rarely needed; if you need it, you'll know.
 
-                          **CAUTION**: not a copy, or at most a shallow copy.
+                          **CAUTION**: Not a copy, or at most a shallow copy.
+
+                          **CAUTION**: The caller, i.e. the concrete expander's
+                                       visit method that corresponds to the macro
+                                       invocation `syntax` being processed,
+                                       is responsible for providing a complete,
+                                       unmodified `invocation`.
+
+                                       So for example, if your concrete expander
+                                       needs to pop a block macro, be sure to stash
+                                       an appropriately prepared copy of the invocation
+                                       (so that it looks like the original one)
+                                       before you edit the original. This is used for
+                                       debug purposes, so preserving the appearance
+                                       of the original invocation is important.
 
         To send additional named arguments from the actual expander to the
         macro function, place them in a dictionary and pass that dictionary
@@ -205,7 +245,7 @@ class BaseMacroExpander(NodeTransformer):
                 raise MacroApplicationError(f"{loc}\nin {syntax} macro invocation for '{macroname}': the name '{macroname}' is not bound to a macro.")
 
             # Expand the macro.
-            expansion = _apply_macro(macro, tree, kw)
+            expansion = self._apply_macro(macro, tree, kw, macroname, target)
 
             # Convert possible iterable result to `list`, then typecheck macro output.
             try:
@@ -259,6 +299,32 @@ class BaseMacroExpander(NodeTransformer):
 
         return self._visit_expansion(expansion, target)
 
+    def _apply_macro(self, macro, tree, kw, macroname, target):
+        """Execute `macro` on `tree`, with the dictionary `kw` unpacked into macro's named arguments.
+
+        `macro` is the macro function.
+
+        `tree` is the AST to apply the macro to. This is what the macro gets as its `tree` argument.
+
+        `kw` is a dictionary-like, unpacked into the macro's named arguments.
+
+        `macroname` is the name (str) the macro function `macro` is bound as in this expander.
+
+        `target` is the whole macro invocation AST. A deepcopy is passed to the debug hook (if installed).
+        """
+        # There's no guarantee whether `macro` edits the AST in-place or produces a new tree,
+        # so to produce reliable debug information, we should take the old `id` and a deep copy
+        # of the macro invocation.
+        if self._debughook:
+            oldid = id(target)
+            oldtree = deepcopy(target)  # including the macro invocation itself
+
+        newtree = macro(tree, **kw)
+
+        if self._debughook:
+            self._debughook(oldid, oldtree, newtree, macroname, macro)
+        return newtree
+
     def _visit_expansion(self, expansion, target):
         """Perform local postprocessing.
 
@@ -282,10 +348,6 @@ class BaseMacroExpander(NodeTransformer):
         if name in bindings:
             return bindings[name]
         return False
-
-def _apply_macro(macro, tree, kw):
-    """Execute `macro` on `tree`, with the dictionary `kw` unpacked into macro's named arguments."""
-    return macro(tree, **kw)
 
 
 # Final postprocessing for the top-level walk can't be done at the end of the

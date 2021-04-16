@@ -30,10 +30,10 @@ def step_expansion(tree, *, args, syntax, expander, **kw):
     Syntax::
 
         step_expansion[...]
-        step_expansion[mode][...]
+        step_expansion[arg, ...][...]
         with step_expansion:
             ...
-        with step_expansion[mode]:
+        with step_expansion[arg, ...]:
             ...
 
     This calls `expander.visit_once` in a loop, discarding the `Done` markers,
@@ -45,6 +45,9 @@ def step_expansion(tree, *, args, syntax, expander, **kw):
     before returning control; if it does `expander.visit_recursively(subtree)`,
     then that subtree will be expanded, in a single step, until no macros remain.
 
+    However, the argument `"detailed"` can be used to report all macro expansions
+    within each step, including those done by `expander.visit(subtree)`.
+
     Since this is a debugging utility, the source code is rendered in the debug
     mode of `unparse`, which prints also invisible nodes such as `Module` and
     `Expr` (as well as any AST markers) in a Python-like pseudocode notation.
@@ -52,57 +55,90 @@ def step_expansion(tree, *, args, syntax, expander, **kw):
     The source code is rendered with syntax highlighting suitable for terminal
     output.
 
-    The optional macro argument `mode`, if present, sets the renderer mode.
-    It must be one of the strings `"unparse"` (default) or `"dump"`.
-    If `"unparse"`, then at each step, the AST will be shown as source code.
-    If `"dump"`, then at each step, the AST will be shown as a raw AST dump.
+    Supported macro arguments (can be given in any order):
+
+      - One of the strings `"unparse"` (default) or `"dump"` sets the renderer mode.
+
+        If `"unparse"`, then at each step, the AST will be shown as source code.
+        If `"dump"`, then at each step, the AST will be shown as a raw AST dump.
+
+      - One of the strings `"summary"` (default) or `"detailed"` sets the report
+        detail level.
+
+        If `"summary"`, then the whole tree is printed once per step.
+        If `"detailed"`, also each macro expansion in each step is reported,
+        by printing the relevant subtree before and after expansion.
 
     This macro steps the expansion at macro expansion time. If you have a
     run-time AST value (such as a quasiquoted tree), and want to step the
     expansion of that at run time, see the `stepr` macro in `mcpyrate.metatools`.
+    It supports the same arguments as `step_expansion`.
     """
     if syntax not in ("expr", "block"):
         raise SyntaxError("`step_expansion` is an expr and block macro only")
 
+    supported_args = ("unparse", "dump", "detailed", "summary")
     formatter = functools.partial(unparse_with_fallbacks, debug=True, color=True,
                                   expander=expander)
-    if args:
-        if len(args) != 1:
-            raise SyntaxError("expected `step_expansion` or `step_expansion['mode_str']`")
-        arg = args[0]
+    print_details = False
+    for arg in args:
         if type(arg) is ast.Constant:
-            mode = arg.value
+            v = arg.value
         elif type(arg) is ast.Str:  # up to Python 3.7
-            mode = arg.s
+            v = arg.s
         else:
-            raise TypeError(f"expected mode_str, got {repr(arg)} {unparse_with_fallbacks(arg)}")
-        if mode not in ("unparse", "dump"):
-            raise ValueError(f"expected mode_str either 'unparse' or 'dump', got {repr(mode)}")
-        if mode == "dump":
+            raise TypeError(f"expected str argument, got {repr(arg)} {unparse_with_fallbacks(arg)}")
+
+        if v not in supported_args:
+            raise ValueError(f"unknown argument {repr(v)}")
+
+        if v == "dump":
             formatter = functools.partial(dump, include_attributes=True, color=True)
+        elif v == "detailed":
+            print_details = True
 
     c, CS = setcolor, ColorScheme
 
-    with _step_expansion_level.changed_by(+1):
+    with _step_expansion_level.changed_by(+1):  # The level is used for nested invocations of `step_expansion`.
         indent = 2 * _step_expansion_level.value
         stars = indent * '*'
         codeindent = indent
         tag = id(tree)
+
         print(f"{c(CS.HEADING)}{stars}Tree {c(CS.TREEID)}0x{tag:x} ({expander.filename}) {c(CS.HEADING)}before macro expansion:{c()}",
               file=stderr)
-        print(textwrap.indent(formatter(tree), codeindent * ' '), file=stderr)
-        mc = MacroCollector(expander)
-        mc.visit(tree)
+        print(textwrap.indent(f"{formatter(tree)}", codeindent * ' '), file=stderr)
+
         step = 0
-        while mc.collected:
-            step += 1
-            tree = expander.visit_once(tree)  # -> Done(body=...)
-            tree = tree.body
-            print(f"{c(CS.HEADING)}{stars}Tree {c(CS.TREEID)}0x{tag:x} ({expander.filename}) {c(CS.HEADING)}after step {step}:{c()}",
-                  file=stderr)
-            print(textwrap.indent(formatter(tree), codeindent * ' '), file=stderr)
-            mc.clear()
+        def doit():
+            nonlocal step
+            nonlocal tree
+            mc = MacroCollector(expander)
             mc.visit(tree)
+            while mc.collected:
+                step += 1
+                tree = expander.visit_once(tree)  # -> Done(body=...)
+                tree = tree.body
+                print(f"{c(CS.HEADING)}{stars}Tree {c(CS.TREEID)}0x{tag:x} ({expander.filename}) {c(CS.HEADING)}after step {step}:{c()}",
+                      file=stderr)
+                print(textwrap.indent(formatter(tree), codeindent * ' '), file=stderr)
+                mc.clear()
+                mc.visit(tree)
+
+        if print_details:
+            def print_step(invocationsubtreeid, invocationtree, expandedtree, macroname, macrofunction):
+                print(f"{c(CS.HEADING)}{stars}Tree {c(CS.TREEID)}0x{tag:x} ({expander.filename}) {c(CS.HEADING)}processing step {step}:",
+                      file=stderr)
+                print(textwrap.indent(f"{c(CS.TREEID)}Applying {c(CS.MACRONAME)}{macroname}{c(CS.TREEID)} at subtree 0x{invocationsubtreeid:x}:{c()}", codeindent * ' '), file=stderr)
+                print(textwrap.indent(f"{formatter(invocationtree)}", (codeindent + 2) * ' '), file=stderr)
+                print(textwrap.indent(f"{c(CS.TREEID)}Result:{c()}", codeindent * ' '), file=stderr)
+                print(textwrap.indent(f"{formatter(expandedtree)}", (codeindent + 2) * ' '), file=stderr)
+
+            with expander.debughook(print_step):
+                doit()
+        else:
+            doit()
+
         plural = "s" if step != 1 else ""
         print(f"{c(CS.HEADING)}{stars}Tree {c(CS.TREEID)}0x{tag:x} ({expander.filename}) {c(CS.HEADING)}macro expansion complete after {step} step{plural}.{c()}",
               file=stderr)
