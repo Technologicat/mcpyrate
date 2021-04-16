@@ -1,8 +1,28 @@
 # Changelog
 
-**3.2.2** (in progress)
+**3.2.2** (in progress) - *Captain Debughook* edition:
 
-(no noteworthy user-visible changes yet)
+**New**:
+
+- Debug hook added to `mcpyrate.core.BaseMacroExpander` to see what the macro expander is doing. The `step_expansion` macro now uses it (which see for usage), but you can also hook your own functions to it.
+
+
+**Changed**:
+
+- `step_expansion` and `stepr` now accept the string `"detailed"` as a macro argument (in addition to the earlier `"dump"` that selects the AST dump renderer).
+
+  When `"detailed"` is given, they will report every macro expansion using the debug hook. This facilitates debugging of macros that expand inside-out (using explicit recursion). The definition of *step* remains the same: the `step` counter is incremented whenever the debug stepper gets control back. Just as previously, **inside-out expansion therefore occurs within one step**, but now you can see the subtree of each inner macro invocation just before and after that macro expands.
+
+  In block mode `with step_expansion`, one complete step is defined as expanding each statement in the suite by one step.
+
+  The macro arguments for `step_expansion` and `stepr` can be passed in any order.
+
+
+**Fixed**:
+
+- Fix subscript slice handling in unparser for Python 3.9 and later. Now that `ast.Index` and `ast.ExtSlice` are gone, an `ast.Tuple` may appear directly in the slice position, representing multi-dimensional indexing. Such a tuple must be rendered without surrounding parentheses, because the notation `a[1,2:5]` is fine, but `a[(1,2:5)]` is a syntax error. See https://bugs.python.org/issue34822
+- Fix bug in copy support of `ASTMarker` objects. Now it is possible to deepcopy ASTs that contain markers.
+
 
 ---
 
