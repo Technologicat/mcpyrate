@@ -1,5 +1,9 @@
 # -*- coding: utf-8; -*-
-"""Back-convert a Python AST into source code. Original formatting is disregarded."""
+"""Back-convert a Python AST into source code. Original formatting is disregarded.
+
+Python 3.9+ provides `ast.unparse`, but ours comes with some additional features,
+notably syntax highlighting and debug rendering of invisible AST nodes.
+"""
 
 __all__ = ["UnparserError", "unparse", "unparse_with_fallbacks"]
 
@@ -194,7 +198,7 @@ class Unparser:
         # that "source code" containing AST markers cannot be eval'd.
         # If you need to get rid of them, see `mcpyrate.markers.delete_markers`.
 
-        header = self.maybe_colorize(f"$ASTMarker", ColorScheme.ASTMARKER)
+        header = self.maybe_colorize("$ASTMarker", ColorScheme.ASTMARKER)
         if isinstance(tree.body, ast.stmt):
             print_mode = "stmt"
             self.fill(header, lineno_node=tree)
@@ -681,15 +685,23 @@ class Unparser:
         interleave(lambda: self.write(", "), write_pair, zip(t.keys, t.values))
         self.write("}")
 
+    # Python 3.9+: we must emit the parentheses separate from the main logic,
+    # because a Tuple directly inside a Subscript slice should be rendered
+    # without parentheses; so our `_Subscript` method special-cases that.
+    # This is important, because the notation `a[1,2:5]` is fine, but
+    # `a[(1,2:5)]` is a syntax error. See https://bugs.python.org/issue34822
     def _Tuple(self, t):
         self.write("(")
+        self.__Tuple_helper(t)
+        self.write(")")
+
+    def __Tuple_helper(self, t):
         if len(t.elts) == 1:
             (elt,) = t.elts
             self.dispatch(elt)
             self.write(",")
         else:
             interleave(lambda: self.write(", "), self.dispatch, t.elts)
-        self.write(")")
 
     unop = {"Invert": "~", "Not": "not", "UAdd": "+", "USub": "-"}
     def _UnaryOp(self, t):
@@ -815,7 +827,12 @@ class Unparser:
     def _Subscript(self, t):
         self.dispatch(t.value)
         self.write("[")
-        self.dispatch(t.slice)
+        # Python 3.9+: Omit parentheses for a tuple directly inside a Subscript slice.
+        # See https://bugs.python.org/issue34822
+        if type(t.slice) is ast.Tuple:
+            self.__Tuple_helper(t.slice)
+        else:
+            self.dispatch(t.slice)
         self.write("]")
 
     def _Starred(self, t):
