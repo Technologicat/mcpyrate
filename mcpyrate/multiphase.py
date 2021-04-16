@@ -354,7 +354,7 @@ def multiphase_expand(tree, *, filename, self_module, dexpander=None, _optimize=
         original_module = None
 
     if debug:
-        print(f"{c(CS.HEADING)}**Multi-phase compiling module {c(CS.TREEID)}'{self_module}' ({c(CS.SOURCEFILENAME)}{filename}{c(CS.TREEID)}){c()}", file=sys.stderr)
+        print(f"{c(CS.HEADING1)}**Multi-phase compiling module {c(CS.HEADING2)}'{self_module}' ({c(CS.SOURCEFILENAME)}{filename}{c(CS.HEADING2)}){c()}", file=sys.stderr)
 
     # Inject temporary module into `sys.modules`.
     #
@@ -370,7 +370,7 @@ def multiphase_expand(tree, *, filename, self_module, dexpander=None, _optimize=
 
     for k in range(n, -1, -1):  # phase 0 is what a regular compile would do
         if debug:
-            print(f"{c(CS.HEADING)}**AST for {c(CS.ATTENTION)}PHASE {k}{c(CS.HEADING)} of module {c(CS.TREEID)}'{self_module}' ({c(CS.SOURCEFILENAME)}{filename}{c(CS.TREEID)}){c()}", file=sys.stderr)
+            print(f"{c(CS.HEADING1)}**AST for {c(CS.ATTENTION)}PHASE {k}{c(CS.HEADING1)} of module {c(CS.HEADING2)}'{self_module}' ({c(CS.SOURCEFILENAME)}{filename}{c(CS.HEADING2)}){c()}", file=sys.stderr)
 
         phase_k_tree = extract_phase(tree, phase=k)
         if phase_k_tree.body:

@@ -114,7 +114,7 @@ class Dialect:
         return NotImplemented
 
 
-_message_header = colorize("**StepExpansion: ", ColorScheme.HEADING)
+_message_header = colorize("**StepExpansion: ", ColorScheme.HEADING1)
 class StepExpansion(Dialect):  # actually part of public API of mcpyrate.debug, for discoverability
     """[dialect] Show each step of expansion while dialect-expanding the module.
 
@@ -150,7 +150,7 @@ class StepExpansion(Dialect):  # actually part of public API of mcpyrate.debug, 
     def _enable_debugmode(self):
         self.expander.debugmode = True
         c, CS = setcolor, ColorScheme
-        msg = f"{c(CS.SOURCEFILENAME)}{self.expander.filename} {c(CS.HEADING)}enabled {c(CS.ATTENTION)}DialectExpander debug mode {c(CS.HEADING)}while taking step {self.expander._step + 1}.{c()}"
+        msg = f"{c(CS.SOURCEFILENAME)}{self.expander.filename} {c(CS.HEADING1)}enabled {c(CS.ATTENTION)}DialectExpander debug mode {c(CS.HEADING1)}while taking step {self.expander._step + 1}.{c()}"
         print(_message_header + msg, file=stderr)
 
 # --------------------------------------------------------------------------------
@@ -210,7 +210,7 @@ class DialectExpander:
         c, CS = setcolor, ColorScheme
         if self.debugmode:
             plural = "s" if self._step != 1 else ""
-            msg = f"{c(CS.SOURCEFILENAME)}{self.filename} {c(CS.HEADING)}before dialect {c(CS.TRANSFORMERKIND)}{kind} {c(CS.HEADING)}transformers ({self._step} step{plural} total):{c()}\n"
+            msg = f"{c(CS.SOURCEFILENAME)}{self.filename} {c(CS.HEADING1)}before dialect {c(CS.TRANSFORMERKIND)}{kind} {c(CS.HEADING1)}transformers ({self._step} step{plural} total):{c()}\n"
             print(_message_header + msg, file=stderr)
             print(format_for_display(content), file=stderr)
 
@@ -262,13 +262,13 @@ class DialectExpander:
                 self._step += 1
 
                 if self.debugmode:
-                    msg = f"{c(CS.SOURCEFILENAME)}{self.filename} {c(CS.HEADING)}after {c(CS.DIALECTTRANSFORMERNAME)}{module_absname}.{dialectname}.{transform} {c(CS.HEADING)}(step {self._step}):{c()}\n"
+                    msg = f"{c(CS.SOURCEFILENAME)}{self.filename} {c(CS.HEADING1)}after {c(CS.DIALECTTRANSFORMERNAME)}{module_absname}.{dialectname}.{transform} {c(CS.HEADING1)}(step {self._step}):{c()}\n"
                     print(_message_header + msg, file=stderr)
                     print(format_for_display(content), file=stderr)
 
         if self.debugmode:
             plural = "s" if self._step != 1 else ""
-            msg = f"{c(CS.SOURCEFILENAME)}{self.filename} {c(CS.HEADING)}completed all dialect {c(CS.TRANSFORMERKIND)}{kind} {c(CS.HEADING)}transforms ({self._step} step{plural} total).{c()}"
+            msg = f"{c(CS.SOURCEFILENAME)}{self.filename} {c(CS.HEADING1)}completed all dialect {c(CS.TRANSFORMERKIND)}{kind} {c(CS.HEADING1)}transforms ({self._step} step{plural} total).{c()}"
             print(_message_header + msg, file=stderr)
 
         return content, dialect_instances
@@ -283,7 +283,7 @@ class DialectExpander:
         c, CS = setcolor, ColorScheme
         if self.debugmode:
             plural = "s" if self._step != 1 else ""
-            msg = f"{c(CS.SOURCEFILENAME)}{self.filename} {c(CS.HEADING)}before dialect {c(CS.TRANSFORMERKIND)}AST postprocessors {c(CS.HEADING)}({self._step} step{plural} total):{c()}\n"
+            msg = f"{c(CS.SOURCEFILENAME)}{self.filename} {c(CS.HEADING1)}before dialect {c(CS.TRANSFORMERKIND)}AST postprocessors {c(CS.HEADING1)}({self._step} step{plural} total):{c()}\n"
             print(_message_header + msg, file=stderr)
             print(format_for_display(tree), file=stderr)
 
@@ -308,13 +308,13 @@ class DialectExpander:
             self._step += 1
 
             if self.debugmode:
-                msg = f"{c(CS.SOURCEFILENAME)}{self.filename} {c(CS.HEADING)}after {c(CS.DIALECTTRANSFORMERNAME)}{format_macrofunction(dialect)}.postprocess_ast {c(CS.HEADING)}(step {self._step}):{c()}\n"
+                msg = f"{c(CS.SOURCEFILENAME)}{self.filename} {c(CS.HEADING1)}after {c(CS.DIALECTTRANSFORMERNAME)}{format_macrofunction(dialect)}.postprocess_ast {c(CS.HEADING1)}(step {self._step}):{c()}\n"
                 print(_message_header + msg, file=stderr)
                 print(format_for_display(content), file=stderr)
 
         if self.debugmode:
             plural = "s" if self._step != 1 else ""
-            msg = f"{c(CS.SOURCEFILENAME)}{self.filename} {c(CS.HEADING)}completed all dialect {c(CS.TRANSFORMERKIND)}AST postprocessors {c(CS.HEADING)}({self._step} step{plural} total).{c()}"
+            msg = f"{c(CS.SOURCEFILENAME)}{self.filename} {c(CS.HEADING1)}completed all dialect {c(CS.TRANSFORMERKIND)}AST postprocessors {c(CS.HEADING1)}({self._step} step{plural} total).{c()}"
             print(_message_header + msg, file=stderr)
 
         return content

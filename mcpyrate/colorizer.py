@@ -141,17 +141,15 @@ class ColorScheme(Bunch):
         # ------------------------------------------------------------
         # format_bindings, step_expansion, StepExpansion
 
-        self.HEADING = (Style.BRIGHT, Fore.LIGHTBLUE_EX)
+        self.HEADING1 = (Style.BRIGHT, Fore.LIGHTBLUE_EX)  # main heading
+        self.HEADING2 = Fore.LIGHTBLUE_EX  # subheading (filenames, tree ids, ...)
         self.SOURCEFILENAME = Style.BRIGHT
 
         # format_bindings
         self.GREYEDOUT = Style.DIM  # if no bindings
 
-        # step_expansion
-        self.TREEID = Fore.LIGHTBLUE_EX
-
         # StepExpansion
-        self.ATTENTION = (Style.BRIGHT, Fore.GREEN)  # "DialectExpander debug mode"
+        self.ATTENTION = (Style.BRIGHT, Fore.GREEN)  # "DialectExpander debug mode", "PHASE 0"
         self.TRANSFORMERKIND = (Style.BRIGHT, Fore.GREEN)  # "source", "AST"
         self.DIALECTTRANSFORMERNAME = (Style.BRIGHT, Fore.YELLOW)
 
@@ -164,7 +162,7 @@ class ColorScheme(Bunch):
 
         # ------------------------------------------------------------
         # runtests
-        self.TESTHEADING = self.HEADING
+        self.TESTHEADING = self.HEADING1
         self.TESTPASS = (Style.BRIGHT, Fore.GREEN)
         self.TESTFAIL = (Style.BRIGHT, Fore.RED)
         self.TESTERROR = (Style.BRIGHT, Fore.YELLOW)
