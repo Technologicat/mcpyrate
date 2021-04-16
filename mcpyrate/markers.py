@@ -34,7 +34,9 @@ class ASTMarker(ast.AST):
     section. So just before the quote operator exits, it checks that all
     quasiquote markers within that section have been compiled away.
     """
-    def __init__(self, body):
+    # TODO: Silly default `None`, because `copy` and `deepcopy` call `__init__` without arguments,
+    # TODO: though the docs say they behave like `pickle` (and wouldn't thus need to call __init__ at all!).
+    def __init__(self, body=None):
         """body: the actual AST that is annotated by this marker"""
         self.body = body
         self._fields = ["body"]  # support ast.iter_fields
