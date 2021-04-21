@@ -23,6 +23,7 @@
 **Fixed**:
 
 - Fix subscript slice handling in unparser for Python 3.9 and later. Now that `ast.Index` and `ast.ExtSlice` are gone, an `ast.Tuple` may appear directly in the slice position, representing multi-dimensional indexing. Such a tuple must be rendered without surrounding parentheses, because the notation `a[1,2:5]` is fine, but `a[(1,2:5)]` is a syntax error. See https://bugs.python.org/issue34822
+
 - Fix bug in copy support of `ASTMarker` objects. Now it is possible to deepcopy ASTs that contain markers.
 
 
