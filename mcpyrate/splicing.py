@@ -46,7 +46,6 @@ def splice_expression(expr, template, tag="__paste_here__"):
 
     Returns `template` with `expr` spliced in. Note `template` is **not** copied,
     and will be mutated in-place.
-
     """
     if not template:
         return expr
