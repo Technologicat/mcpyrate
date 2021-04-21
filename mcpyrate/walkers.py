@@ -1,4 +1,37 @@
 # -*- coding: utf-8; -*-
+"""AST walkers.
+
+These have a state stack and a node collector, and accept also a `list` of statements.
+Otherwise they work like `ast.NodeVisitor` and `ast.NodeTransformer`.
+
+Basic usage summary::
+
+    def kittify(mytree):
+        class Kittifier(ASTTransformer):
+            def transform(self, tree):
+                if type(tree) is ast.Constant:
+                    self.collect(tree.value)
+                    tree.value = "meow!" if self.state.meows % 2 == 0 else "miaow!"
+                    self.state.meows += 1
+                return self.generic_visit(tree)  # recurse
+        w = Kittifier(meows=0)    # set the initial state here
+        mytree = w.visit(mytree)  # it's basically an ast.NodeTransformer
+        print(w.collected)        # collected values, in the order visited
+        return mytree
+
+    def getmeows(mytree):
+        class MeowCollector(ASTVisitor):
+            def examine(self, tree):
+                if type(tree) is ast.Constant and tree.value in ("meow!", "miaow!"):
+                    self.collect(tree)
+                self.generic_visit(tree)
+        w = MeowCollector()
+        w.visit(mytree)
+        print(w.collected)
+        return w.collected
+
+For an example of `withstate`, see `mcpyrate.astfixers`.
+"""
 
 __all__ = ["ASTVisitor", "ASTTransformer"]
 
