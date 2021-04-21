@@ -8,9 +8,10 @@ from ..metatools import (macros, expand1r, expand1rq, expand1s,  # noqa: F401, F
 
 import ast
 
-from ..compiler import run
-from ..quotes import unastify
+from ..compiler import run, expand
+from ..quotes import unastify, is_captured_value, lookup_value, is_captured_macro
 from ..unparser import unparse
+from ..walkers import ASTVisitor
 
 
 def f():
@@ -204,6 +205,56 @@ def runtests():
 
     # This should have the same result.
     assert unparse(q[foo(a, b=c, *lst, **dic)]) == "foo(a, *lst, b=c, **dic)"  # noqa: F821
+
+    # --------------------------------------------------------------------------------
+    # Advanced macrology: detecting hygienic captures
+
+    quoted = q[print]
+    assert not is_captured_value(quoted)
+
+    quoted = q[h[print]]
+    key = is_captured_value(quoted)
+    assert key
+    assert lookup_value(key) is print  # *our* binding for `print`, since we're the use site of `q`.
+
+    quoted = q[h[first][21]]
+    assert type(quoted.value) is ast.Name and quoted.value.id.startswith("first")  # already injected
+
+    # Testing `is_captured_macro` is trickier, because `lookup_macro` disappears when
+    # the use site of `q` reaches run time. So let's use a quoted block and `expand` it manually.
+    #
+    # The node to detect is then somewhere inside the expanded AST. In order to not bother
+    # hardcoding its expected location, let's scan the output and see if there is exactly
+    # one matching node.
+    #
+    def count_matching_nodes(matcher, tree):  # matcher: AST -> bool
+        class DetectoCounter3000(ASTVisitor):
+            def examine(self, tree):
+                if matcher(tree):
+                    self.state.count += 1
+                self.generic_visit(tree)
+        counter = DetectoCounter3000(count=0)
+        counter.visit(tree)
+        return counter.state.count
+
+    with q as quoted:
+        # It doesn't matter what macro we `h[...]`, as long as it can be imported from here.
+        # Let's use `n` for the test. (The target macro must be imported, so that it will be
+        # in the expander's bindings when the `h[]` sees it. Otherwise a regular run-time value
+        # capture will occur.)
+        from mcpyrate.quotes import macros, q, h, n  # noqa: F401, F811, this is in a new module.
+        quoted2 = q[h[n]["catfood"]]  # noqa: F841, we're not going to use it, this snippet is just for analysis.
+    quoted = expand(quoted, "fake filename for testing by test_quotes")
+    assert count_matching_nodes(is_captured_macro, quoted) == 1
+    assert count_matching_nodes(is_captured_value, quoted) == 0
+
+    # If h[]'ing something that's not in the expander's bindings, the result is a run-time value capture.
+    with q as quoted:
+        from mcpyrate.quotes import macros, q, h  # noqa: F401, F811, this is in a new module.
+        quoted2 = q[h[n]["catfood"]]  # noqa: F841, we're not going to use it, this snippet is just for analysis.
+    quoted = expand(quoted, "fake filename for testing by test_quotes")
+    assert count_matching_nodes(is_captured_macro, quoted) == 0
+    assert count_matching_nodes(is_captured_value, quoted) == 1
 
 if __name__ == '__main__':
     runtests()

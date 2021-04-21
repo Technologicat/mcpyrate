@@ -12,6 +12,7 @@ and uncompiler, respectively.
 """
 
 __all__ = ["capture_value", "capture_macro", "capture_as_macro",
+           "is_captured_value", "is_captured_macro",
            "astify", "unastify",
            "q", "u", "n", "a", "s", "t", "h"]
 
@@ -298,8 +299,29 @@ def lookup_value(key):
 
     Usually there's no need to call this function manually; `capture_value`
     (and thus also `h[]`) will generate an AST that calls this automatically.
+
+    **NOTE**: For advanced macrology: if your own macros need to detect hygienic
+    captures using `is_captured_value`, and you want to look up the captured
+    value based on a key returned by that function, be aware that `lookup_value`
+    will only succeed if a value has been captured.
+
+    Trying to look up a key that was extracted from a pre-capture AST
+    raises `ValueError`. In terms of the discussion in the docstring of
+    `is_captured_value`, you need a `lookup_value` AST for a value to
+    be present; a `capture_value` AST is too early. The transition occurs
+    when the use site of `q` runs.
+
+    In that scenario, before you call `lookup_value` on your key, check that
+    `frozen_value is not None` (see docstring of `is_captured_value`);
+    that indicates that a value has been captured and can be decoded by
+    this function.
     """
     name, frozen_value = key
+
+    # Trying to look up a result of `is_captured_value` that isn't captured yet.
+    if frozen_value is None:
+        raise ValueError(f"The given key does not (yet) point to a value: {repr(key)}")
+
     cachekey = (name, id(frozen_value))  # id() so each capture instance behaves independently
     if cachekey not in _lookup_cache:
         _lookup_cache[cachekey] = pickle.loads(frozen_value)
@@ -341,7 +363,7 @@ def capture_as_macro(macro):
 
     Like `capture_macro`, but with one less level of delay. This injects the
     macro into the expander's global bindings table immediately, and returns
-    the uniqified `ast.Name` that can be used to refer to it.
+    the uniqified `ast.Name` that can be used to refer to it hygienically.
 
     The name is taken automatically from the name of the macro function.
     """
@@ -365,6 +387,229 @@ def lookup_macro(key):
     if unique_name not in global_bindings:
         global_bindings[unique_name] = pickle.loads(frozen_macro)
     return ast.Name(id=unique_name)
+
+
+# --------------------------------------------------------------------------------
+# Advanced macrology support.
+
+def is_captured_value(tree):
+    """Test whether `tree` is a hygienically captured run-time value.
+
+    This function is sometimes useful for advanced macrology. It facilitates
+    user-defined macros to work together in an environment where hygienic
+    captures are present. One macro, using quasiquotes, builds an AST, and
+    another macro analyzes the expanded AST later.
+
+    Consider first, however, if you can arrange things so that the second macro
+    could analyze an *unexpanded* AST; that's often much easier. When the first
+    macro simply must expand first (for whatever reason), that's where this function
+    comes in.
+
+    With this function, you can check (either by name or by value) whether some
+    `q[h[myfunction]]` points to the desired `"myfunction"`, so that e.g. the AST
+    produced by `q[h[myfunction](a0, ...)]` can be recognized as a call to your
+    `myfunction`. This allows your second macro to know it's `myfunction`,
+    so that it'll know how to interpret the args of that call.
+
+    Real-world examples of where this is useful are too unwieldy to explain
+    here, but can be found in `unpythonic.syntax`. Particularly, see any use
+    sites of the helper function `unpythonic.syntax.nameutil.isx`.
+
+    To detect a hygienically captured *macro*, use `is_captured_macro` instead.
+
+    Return value:
+
+      - On no match, return `False`.
+
+      - On match, return a tuple `(name, frozen_value)`, where:
+
+        - `name` (str) is the name of the captured identifier, or when the captured
+          value is from an arbitrary expression, the unparsed source code of that
+          expression. There is no name mangling for identifiers; it's the exact
+          original name that appeared in the source code.
+
+        - `frozen_value` is either a `bytes` object that stores the frozen value
+          as opaque binary data, or `None` if the value has not been captured yet.
+
+        The `bytes` object can be decoded by passing the whole return value as `key`
+        to `lookup_value`. That function will decode the data and return the actual
+        value, just as if the hygienic reference was decoded normally at run time.
+
+    **NOTE**:
+
+    Stages in the life of a hygienically captured *run-time value* in `mcpyrate`:
+
+      1. When the surrounding `q` expands, it first expands any unquotes nested
+         within it, but only those where the quote level hits zero. The `h[]` is
+         converted into a `Capture` AST marker; see the `h` operator for details.
+
+      2. Then, still while the surrounding `q` expands, `q` compiles quasiquote
+         markers. A `Capture` marker, in particular, compiles into a call to
+         the function `capture_value`. This is the output at macro expansion time
+         (of the use site of `q`).
+
+      3. When the use site of `q` reaches run time, the `capture_value` runs
+         (thus actually performing the capture), and replaces itself (in the
+         AST that was produced by `q`) with a call to the function `lookup_value`.
+         That `lookup_value` call is still an AST node.
+
+      4. In typical usage, that use site of `q` is inside the implementation
+         of some user-defined macro. When *that macro's use site* reaches run
+         time, the `lookup_value` runs (each time that expression is executed).
+
+    So in the macro expansion of `q`, we have a call to `capture_value`
+    representing the hygienically captured run-time value. But once the macro
+    that uses `q` has returned its output, then we instead have a call to
+    `lookup_value`. The latter is the most likely scenario for advanced
+    user-defined macros that work together.
+    """
+    if type(tree) is not ast.Call:
+        return False
+
+    # The format is one of:
+    #
+    #   - direct reference: `(mcpyrate.quotes).xxx`
+    #   - reference by import: `(__import__("mcpyrate.quotes", ...).quotes).xxx`
+    #
+    # First check the `xxx` part:
+    callee = tree.func
+    if not (type(callee) is ast.Attribute and callee.attr in ("capture_value", "lookup_value")):
+        return False
+    # Then the rest:
+    if not _is_mcpyrate_quotes_reference(callee.value):
+        return False
+
+    # This AST destructuring and constant extraction must match the format
+    # of the argument lists produced by the quasiquote system for calls to
+    # `capture_value` and `lookup_value`.
+    if callee.attr == "capture_value":  # the call is `capture_value(..., name)`
+        name_node = tree.args[1]
+        assert type(name_node) is ast.Constant and type(name_node.value) is str
+        return (name_node.value, None)  # the value hasn't been captured yet
+    elif callee.attr == "lookup_value":  # the call is `lookup_value(key)`
+        key_node = tree.args[0]
+        name_node, frozen_value_node = key_node.elts
+        assert type(name_node) is ast.Constant and type(name_node.value) is str
+        assert type(frozen_value_node) is ast.Constant and type(frozen_value_node.value) is bytes
+        return (name_node.value, frozen_value_node.value)
+
+    assert False  # cannot happen
+
+
+def is_captured_macro(tree):
+    """Just like `is_captured_value`, but detect a hygienically captured macro instead.
+
+    To detect a hygienically captured *run-time value*, use `is_captured_value` instead.
+
+    Return value:
+
+      - On no match, return `False`.
+
+      - On match, return a tuple `(name, unique_name, frozen_macro)`, where:
+
+        - `name` (str) is the name of the macro, as it appeared in the bindings
+          of the expander instance it was captured from.
+
+        - `unique_name` (str) is `name` with an underscore and UUID appended,
+          to make it unique. This is the name the macro will be injected as
+          into the expander's global bindings table.
+
+          (By unique, we mean "universally unique anywhere for approximately
+           the next one thousand years"; see `mcpyrate.gensym`, which links to
+           the UUID spec used by the implementation.)
+
+        - `frozen_macro` is either `bytes` object that stores a reference to the
+          frozen macro function as opaque binary data.
+
+        The `bytes` object can be decoded by passing the whole return value as `key`
+        to `lookup_macro`. That function will decode the data, inject the macro into
+        the expander's global bindings table (if not already there), and give you an
+        `ast.Name` node whose `id` attribute contains the unique name (str), just as
+        if the hygienic reference was decoded normally at macro expansion time.
+
+        Then, once the injection has taken place, you can obtain the actual macro
+        function object by calling `expander.isbound(id)`.
+
+    **NOTE**:
+
+    Stages in the life of a hygienically captured *macro* in `mcpyrate` are as follows.
+    Note that unlike `capture_value`, a call to `capture_macro` never appears in the AST.
+
+      1. When the surrounding `q` expands, it first expands any unquotes nested
+         within it, but only those where the quote level hits zero. The `h[]` is
+         converted into a `Capture` AST marker; see the `h` operator for details.
+
+      2. Then, still while the surrounding `q` expands, `q` compiles quasiquote
+         markers. A `Capture` marker for a macro, in particular, triggers an
+         immediate call to the function `capture_macro`. The result is an AST
+         representing a call to the function `lookup_macro`. This gets injected
+         into the AST produced by `q`.
+
+      3. When the use site of `q` reaches run time, the `lookup_macro` runs,
+         injecting the macro (under its unique name) into the expander's global
+         bindings table. The `lookup_macro` call replaces itself with an `ast.Name`
+         whose `id` attribute contains the unique name of the macro.
+
+      4. In typical usage, that use site of `q` is inside the implementation
+         of some user-defined macro. Upon further macro expansion of *that macro's
+         use site*, the expander finds the now-bound unique name of the macro, and
+         proceeds to expand that macro.
+
+    So in the macro expansion of `q`, we have a call to `lookup_macro`
+    representing the hygienically captured macro. But this disappears after
+    a very brief window of time, namely when the use site of `q` reaches run
+    time. Thus, this function likely has much fewer use cases than
+    `is_captured_value`, but is provided for completeness.
+
+    (The point of hygienic macro capture is that a macro can safely return a further
+    macro invocation, and guarantee that this will invoke the intended macro - without
+    requiring the user to import that other macro, and without being forced to expand
+    it away before returning from the original macro.)
+    """
+    if type(tree) is not ast.Call:
+        return False
+
+    callee = tree.func
+    if not (type(callee) is ast.Attribute and callee.attr == "lookup_macro"):
+        return False
+    if not _is_mcpyrate_quotes_reference(callee.value):
+        return False
+
+    # This AST destructuring and constant extraction must match the format
+    # of the argument lists produced by the quasiquote system for calls to
+    # `lookup_macro`.
+    key_node = tree.args[0]  # the call is `lookup_macro(key)`
+    name_node, unique_name_node, frozen_macro_node = key_node.elts
+    assert type(name_node) is ast.Constant and type(name_node.value) is str
+    assert type(unique_name_node) is ast.Constant and type(unique_name_node.value) is str
+    assert type(frozen_macro_node) is ast.Constant and type(frozen_macro_node.value) is bytes
+    return (name_node.value, unique_name_node.value, frozen_macro_node.value)
+
+
+def _is_mcpyrate_quotes_reference(tree):
+    """Detect whether `tree` is a reference to `mcpyrate.quotes`.
+
+    This matches the ASTs corresponding to:
+      - direct reference: `mcpyrate.quotes`
+      - reference by import: `__import__("mcpyrate.quotes", ...).quotes`
+
+    Note `__import__` of a dotted module name returns the top-level module,
+    so we have the name `quotes` appear twice in different places.
+
+    See `_mcpyrate_quotes_attr` and `mcpyrate.coreutils._mcpyrate_attr`.
+    """
+    if not (type(tree) is ast.Attribute and tree.attr == "quotes"):
+        return False
+    moduleref = tree.value
+    if type(moduleref) is ast.Name and moduleref.id == "mcpyrate":
+        return "direct"  # ok, direct reference
+    elif (type(moduleref) is ast.Call and type(moduleref.func) is ast.Name and
+          moduleref.func.id == "__import__" and type(moduleref.args[0]) is ast.Constant and
+          moduleref.args[0].value == "mcpyrate.quotes"):
+        return "import"  # ok, reference by import
+    else:
+        return False
+
 
 # --------------------------------------------------------------------------------
 # The quasiquote compiler and uncompiler.
@@ -469,6 +714,7 @@ def astify(x, expander=None):  # like `macropy`'s `ast_repr`
         # (Note we support only exactly `Done`, not arbitrary descendants.)
         elif T is Done:
             fields = [ast.keyword(a, recurse(b)) for a, b in ast.iter_fields(x)]
+            # We have imported `Done`, so we can refer to it as `mcpyrate.quotes.Done`.
             node = ast.Call(_mcpyrate_quotes_attr("Done"),
                             [],
                             fields)
