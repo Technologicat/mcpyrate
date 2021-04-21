@@ -52,7 +52,7 @@ __all__ = ["namemacro", "isnamemacro",
            "expand_macros", "find_macros"]
 
 import sys
-from ast import (AST, Assign, Call, Constant, Import, Lambda, Name,
+from ast import (AST, Assign, Call, Starred, Constant, Import, Lambda, Name,
                  NodeVisitor, Store, Subscript, Tuple, alias, arguments,
                  copy_location, iter_fields)
 from copy import copy
@@ -111,6 +111,16 @@ def destructure_candidate(tree):
         else:  # anything that doesn't have at least one comma at the top level
             macroargs = [macroargs]
         return tree.value.id, macroargs
+    # Up to Python 3.8, decorators cannot be subscripted.
+    #
+    # To work around this, we allow passing macro arguments also using parentheses
+    # (like in MacroPy). Note macro arguments must still be passed positionally!
+    elif type(tree) is Call and type(tree.func) is Name and not tree.keywords:
+        # For uniformity: do not accept starred items, because subscript slices
+        # don't accept them either (at least up to Python 3.9).
+        if any(type(arg) is Starred for arg in tree.args):
+            raise ValueError("*args not supported when passing macro arguments")
+        return tree.func.id, tree.args
     return None, None  # not a macro invocation
 
 

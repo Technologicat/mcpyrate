@@ -26,6 +26,8 @@
 
 - Fix bug in copy support of `ASTMarker` objects. Now it is possible to deepcopy ASTs that contain markers.
 
+- Up to Python 3.8, items in the decorator list cannot be subscripted, so decorator macros could not take macro arguments. In 3.9 this has been fixed, as implied by [the grammar](https://docs.python.org/3/reference/grammar.html). To work around this issue in earlier supported Python versions (3.6, 3.7, 3.8), we now support parentheses as an alternative syntax for passing macro arguments, like in MacroPy. Note that macro arguments must in any case be passed positionally! (Reasons documented in the comments of `mcpyrate.expander`.)
+
 
 ---
 
