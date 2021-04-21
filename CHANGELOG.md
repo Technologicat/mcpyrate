@@ -1,10 +1,12 @@
 # Changelog
 
-**3.2.2** (in progress) - *Captain Debughook* edition:
+**3.2.2** (in progress, updated 21 April 2021) - *Captain Debughook* edition:
 
 **New**:
 
 - Debug hook added to `mcpyrate.core.BaseMacroExpander` to see what the macro expander is doing. The `step_expansion` macro now uses it (which see for usage), but you can also hook your own functions to it.
+
+- Public function `mcpyrate.quotes.is_captured_value` for advanced macrology. This allows your own macros to detect expansions of `q[h[somename]]` in the AST, and grab `somename` (original name, no name mangling) as well as the corresponding value. (There is also `is_captured_macro`, but the use cases of that are much more limited.) Detailed explanation in docstrings for now. Usage examples in the tests for the `quotes` module.
 
 
 **Changed**:
