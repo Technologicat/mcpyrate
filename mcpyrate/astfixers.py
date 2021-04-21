@@ -67,6 +67,7 @@ class _CtxFixer(walkers.ASTTransformer):
             # `AugStore` and `AugLoad` are for internal use only, not even
             # meant to be exposed to the user; the compiler expects `Store`
             # and `Load` here. https://bugs.python.org/issue39988
+            # Those internal classes are indeed deprecated in Python 3.9.
             self.withstate(tree.target, ctxclass=Store)
             self.withstate(tree.value, ctxclass=Load)
 
