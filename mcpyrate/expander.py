@@ -115,7 +115,7 @@ def destructure_candidate(tree):
     # decorator macros that would like to have macro arguments.
     #
     # To work around this, we allow passing macro arguments also using parentheses
-    # (like in MacroPy). Note macro arguments must still be passed positionally!
+    # (like in `macropy`). Note macro arguments must still be passed positionally!
     #
     # For uniformity, we limit to a subset of the function call syntax that
     # remains valid if you replace the parentheses with brackets in Python 3.9.
