@@ -175,6 +175,7 @@ The full documentation of `mcpyrate` lives in the [`doc/`](doc/) subfolder. Some
   - [Multi-phase compilation](doc/compiler.md#multi-phase-compilation) - how to use a macro in the same module where it is defined.
   - [Invoking the compiler at run time](#invoking-the-compiler-at-run-time)
 - [AST walkers](doc/walkers.md)
+  - [`macropy` `@Walker` porting guide](doc/walkers.md#macropy-walker-porting-guide)
 - [Dialects](doc/dialects.md)
 - [Troubleshooting](doc/troubleshooting.md)
 

@@ -15,6 +15,7 @@
 - [Attributes](#attributes)
 - [Methods](#methods)
 - [Terminating an ongoing visit](#terminating-an-ongoing-visit)
+- [`macropy` `@Walker` porting guide](#macropy-walker-porting-guide)
 
 <!-- markdown-toc end -->
 
@@ -70,8 +71,7 @@ Unless otherwise stated, each attribute is present in both `ASTVisitor` and `AST
    `self.state.x` instead of `self.state['x']`.
 
    If you're familiar with `macropy`'s `Walker`, this replaces the `set_ctx`,
-   `set_ctx_for` mechanism. Mutating the state directly is equivalent to
-   `set_ctx`, and `self.withstate(tree, k0=v0, ...)` is equivalent to `set_ctx_for`.
+   `set_ctx_for` mechanism. For details, see [the porting guide](#macropy-walker-porting-guide) below.
 
  - `collected`: a `list` of collected values, in the order collected.
 
@@ -189,21 +189,29 @@ Unless otherwise stated, each method is present in both `ASTVisitor` and `ASTTra
    states are kept on a stack.
 
  - `generic_withstate(tree, k0=v0, ...)`: use an updated state while in the
-   **children** of `tree` only. *Added in v3.2.2.*
+   **children** of `tree` only.
+   
+   *Added in v3.2.2.*
 
    Note the children are iterated over when you call `generic_withstate`;
    the walker behaves just as if `withstate` was called for each of those
-   children. It won't notice if you then swap out or insert some children.
+   children. It won't notice if you then swap out some children or insert
+   new ones.
+   
+   The point is to save you the trouble of worrying about the names of the
+   attributes holding child nodes or lists of child nodes, if you just want
+   to set a new state for all children; this iterates over them automatically.
 
    This implies also that you then have to either `generic_visit(tree)` or
-   visit those children explicitly in order for the state update to take place.
-   (That is, if you skip a level in the AST, the state won't update, because
-   the node for which the state update was registered was then never visited.)
+   visit those children explicitly in order for the state update to trigger.
+   That is, if you skip a level in the AST by visiting a grandchild directly,
+   the state won't update, because the node the state update was registered for
+   is then never visited.
 
    The state instance is shared between the children (just like when calling
    `withstate` for a statement suite).
 
-   This function has a silly name, because it relates to `withstate` as
+   This method has a silly name, because it relates to `withstate` as
    the standard `generic_visit` relates to the standard `visit`.
 
    Generally speaking:
@@ -214,7 +222,7 @@ Unless otherwise stated, each method is present in both `ASTVisitor` and `ASTTra
      - `withstate(subtree, ...)` should be used if you then intend to
        `visit(subtree)`, which recurses into that node (or suite) only.
 
-   It is possible to mix and match, but think through what you're doing.
+   It is possible to mix and match if you think through what you're doing.
 
  - `reset(k0=v0, ...)`: clear the whole state stack and `self.collected`.
 
@@ -249,3 +257,131 @@ def getmeows(mytree):
         return True
     return False
 ```
+
+
+# `macropy` `@Walker` porting guide
+
+If you're a seasoned `macropy` user with lots of AST-walking macro code based on `macropy.core.walkers.Walker` that you'd like to port to use `mcpyrate`, this section may help. These notes arose from my experiences with porting `unpythonic.syntax` [[docs](https://github.com/Technologicat/unpythonic/blob/master/doc/macros.md)] [[source code](https://github.com/Technologicat/unpythonic/tree/master/unpythonic/syntax)], a rather large kitchen-sink language-extension macro package, to use `mcpyrate` as the macro expander.
+
+This section summarizes the important points. For many real-world examples, look at `unpythonic.syntax`, particularly any use sites of `ASTTransformer` and `ASTVisitor`.
+
+
+- **Starting point**: you have something like this `macropy` code:
+
+  ```python
+  from macropy.core.walkers import Walker
+
+  @Walker
+  def transform(tree, ..., **kw)
+      ...
+
+  tree = transform.recurse(tree)
+  ```
+
+  To port this to `mcpyrate`, start with:
+
+  ```python
+  from mcpyrate.walkers import ASTTransformer
+
+  class MyTransformer(ASTTransformer):
+      def transform(self, tree):
+          ...  # paste implementation here and then modify
+
+  tree = MyTransformer().visit(tree)
+  ```
+
+  Keep in mind the above documentation on `mcpyrate`'s walkers. This is the exam. ;)
+
+  The abstraction is more explicit than `macropy`'s, along the lines of the standard `ast.NodeTransformer`, but `ASTTransformer` has the extra bells and whistles that allow it to do the same things `macropy`'s `Walker` does.
+
+  You may also want an `ASTVisitor` instead (and implement `examine` instead of `transform`), if you're just collecting stuff from the AST; then there's no danger of accidentally mutating the input.
+
+- When invoking the walker (to start it up, from the outside), there's no `recurse`, `collect`, or `recurse_collect`.
+
+  To **visit and collect** (equivalent to `collect`):
+
+  ```python
+  class MyVisitor(ASTVisitor):
+      ...
+  mv = MyVisitor()
+  mv.visit(tree)  # tree is not modified
+  collected = mv.collected
+  ```
+
+  To **transform and collect** (equivalent to `recurse_and_collect`):
+
+  ```python
+  class MyTransformer(ASTTransformer):
+      ...
+  mt = MyTransformer()
+  tree = mt.visit(tree)
+  collected = mt.collected 
+  ```
+
+  To **just transform** (equivalent to `recurse`):
+
+  ```python
+  class MyTransformer(ASTTransformer):
+      ...
+  tree = MyTransformer().visit(tree)
+  ```
+
+- When invoking the walker from the inside, to recurse explicitly, use `self.visit` or `self.generic_visit`, as appropriate. There is no need to manage collected items when doing so; these are retained across the whole walk.
+  - This also implies that if you want to use the same walker instance to process another, unrelated tree, `reset()` it first.
+
+- For stateful walkers, initial state is loaded using constructor arguments. For example:
+
+  ```python
+  tree = MyTransformer(kittiness=0).visit(tree)
+  ```
+
+  This sets `self.state.kittiness = 0` at the start of the visit.
+
+- **There are no kwargs** to the `transform` (or `examine`) method.
+  - Particularly, `collect(thing)` becomes `self.collect(thing)`. Once done, the results are in the `collected` attribute of your walker instance.
+
+  - **There is no `stop()`**, because there is no automatic recursion. Instead, `mcpyrate` expects you to explicitly tell it where to recurse.
+    
+    **This is the part where you may have to stop and think**, because this may require inverting some logic or arranging things differently.
+
+    - Each code path in your `macropy` implementation that calls `stop()`, in `mcpyrate` should end with `return tree` or something similar. This means recursion on all children is **not** desired on that code path.
+      - Usually before that code path returns, it will also want to `self.visit` some particular subtrees to recurse selectively, for example `tree.body = self.visit(tree.body)`.
+    - Each code path in your `macropy` implementation that **doesn't** call `stop()`, in `mcpyrate` should end with `return self.generic_visit(tree)` or something similar. This explicitly recurses on all children of `tree`.
+      - Especially, this includes the default do-nothing path that triggers when `tree` does not match what you want to modify or look at. That is, the default case should usually be `return self.generic_visit(tree)`.
+
+- **Management of the walker state** is the other part where you may have to stop and think.
+  - State is passed to the walker function differently.
+    - In `macropy`, the walker state is automatically copied into local variables, simply by virtue of that state being passed in to the walker function as arguments.
+    - In `mcpyrate`, `self.state` is global across the whole walk (unless overridden), so if you mutate it, the mutations will persist over the walk. Often this is not what you want.
+    - To obtain `macropy`-like behavior in `mcpyrate`, you can explicitly copy from attributes of `self.state` into local variables at the start of your `transform` (or `examine`) function, for example `kittiness = self.state.kittiness`.
+
+  - The API to process a subtree with temporarily updated state is different.
+    - `set_ctx(k0=v0)` often becomes `self.generic_withstate(tree, k0=v0)`. There is no concept of *current tree*, so you are expected to pass `tree` explicitly.
+      - You can also use `self.withstate(somesubtree, k0=v0)` if you only need the new state for some particular subtree, not for all children of `tree`.
+      - If you need to set several state variables (in the example, not just `k0` but also `k1`, `k2`, ...), they must be passed as kwargs **in the same call**. Each call to `withstate` or `generic_withstate`, that registers a new state for the same AST nodes, will **completely override** the previously registered state. This is different from `macropy` where you would send one binding per call to `set_ctx`.
+      - Make note of the difference between `withstate` and `generic_withstate`, and think through which to use where. In short, `generic_withstate` relates to `withstate` as `generic_visit` relates to `visit`.
+
+    - `set_ctx_for(subtree, k0=v0)` becomes `self.withstate(subtree, k0=v0)`.
+
+    - In `macropy`, when you use `stop()`, you'll often explicitly recurse selectively, and while doing so, pass updated state variables directly to `recurse`, `collect` or `recurse_collect`, for example:
+
+      ```python
+      stop()
+
+      tree.body = transform.recurse(tree.body, k0=v0, k1=v1)
+  
+      return tree  # does not recurse, because `stop()` has been called
+      ```
+
+      In `mcpyrate` this becomes:
+
+      ```python
+      # `mcpyrate` does not use stop()
+  
+      self.withstate(tree.body, k0=v0, k1=v1)
+      tree.body = self.visit(tree.body)
+  
+      return tree  # does not recurse, because no explicit recursion call!
+      ```
+
+    - Note that you can `visit` a statement suite directly (no need to iterate over nodes in it), since `ASTTransformer` handles this detail.
