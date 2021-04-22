@@ -173,6 +173,7 @@ The full documentation of `mcpyrate` lives in the [`doc/`](doc/) subfolder. Some
 - [The `mcpyrate` compiler](doc/compiler.md)
   - [The import algorithm](doc/compiler.md#the-import-algorithm) - how macros, dialects and multi-phase compilation interact.
   - [Multi-phase compilation](doc/compiler.md#multi-phase-compilation) - how to use a macro in the same module where it is defined.
+  - [Invoking the compiler at run time](#invoking-the-compiler-at-run-time)
 - [AST walkers](doc/walkers.md)
 - [Dialects](doc/dialects.md)
 - [Troubleshooting](doc/troubleshooting.md)
