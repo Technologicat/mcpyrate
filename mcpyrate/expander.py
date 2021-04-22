@@ -111,15 +111,19 @@ def destructure_candidate(tree):
         else:  # anything that doesn't have at least one comma at the top level
             macroargs = [macroargs]
         return tree.value.id, macroargs
-    # Up to Python 3.8, decorators cannot be subscripted.
+    # Up to Python 3.8, decorators cannot be subscripted. This is a problem for
+    # decorator macros that would like to have macro arguments.
     #
     # To work around this, we allow passing macro arguments also using parentheses
     # (like in MacroPy). Note macro arguments must still be passed positionally!
+    #
+    # For uniformity, we limit to a subset of the function call syntax that
+    # remains valid if you replace the parentheses with brackets in Python 3.9.
     elif type(tree) is Call and type(tree.func) is Name and not tree.keywords:
-        # For uniformity: do not accept starred items, because subscript slices
-        # don't accept them either (at least up to Python 3.9).
-        if any(type(arg) is Starred for arg in tree.args):
-            raise ValueError("*args not supported when passing macro arguments")
+        if not tree.args:  # reject empty args
+            raise SyntaxError("must provide at least one argument when passing macro arguments")
+        if any(type(arg) is Starred for arg in tree.args):  # reject starred items
+            raise SyntaxError("unpacking (splatting) not supported in macro argument position")
         return tree.func.id, tree.args
     return None, None  # not a macro invocation
 
