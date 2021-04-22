@@ -188,6 +188,34 @@ Unless otherwise stated, each method is present in both `ASTVisitor` and `ASTTra
    Nested subtrees can be `withstate`'d. The temporarily stashed previous
    states are kept on a stack.
 
+ - `generic_withstate(tree, k0=v0, ...)`: use an updated state while in the
+   **children** of `tree` only. *Added in v3.2.2.*
+
+   Note the children are iterated over when you call `generic_withstate`;
+   the walker behaves just as if `withstate` was called for each of those
+   children. It won't notice if you then swap out or insert some children.
+
+   This implies also that you then have to either `generic_visit(tree)` or
+   visit those children explicitly in order for the state update to take place.
+   (That is, if you skip a level in the AST, the state won't update, because
+   the node for which the state update was registered was then never visited.)
+
+   The state instance is shared between the children (just like when calling
+   `withstate` for a statement suite).
+
+   This function has a silly name, because it relates to `withstate` as
+   the standard `generic_visit` relates to the standard `visit`.
+
+   Generally speaking:
+
+     - `generic_withstate(tree, ...)` should be used if you then intend to
+       `generic_visit(tree)`, which recurses into the children of `tree`.
+
+     - `withstate(subtree, ...)` should be used if you then intend to
+       `visit(subtree)`, which recurses into that node (or suite) only.
+
+   It is possible to mix and match, but think through what you're doing.
+
  - `reset(k0=v0, ...)`: clear the whole state stack and `self.collected`.
 
    Load the given bindings into the new, otherwise blank initial state. 

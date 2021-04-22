@@ -8,6 +8,8 @@
 
 - Public function `mcpyrate.quotes.is_captured_value` for advanced macrology. This allows your own macros to detect expansions of `q[h[somename]]` in the AST, and grab `somename` (original name, no name mangling) as well as the corresponding value. (There is also `is_captured_macro`, but the use cases of that are much more limited.) Detailed explanation in docstrings for now. Usage examples in the tests for the `quotes` module.
 
+- `mcpyrate.walkers.ASTTransformer` and `ASTVisitor` now have a method `generic_withstate`, to temporarily replace the state when visiting the direct children of the given node. (This is a closer equivalent for MacroPy's `set_ctx`, sometimes useful for writing custom walkers.)
+
 
 **Changed**:
 
