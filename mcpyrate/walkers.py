@@ -36,7 +36,7 @@ For an example of `withstate`, see `mcpyrate.astfixers`.
 __all__ = ["ASTVisitor", "ASTTransformer"]
 
 from abc import ABCMeta, abstractmethod
-from ast import NodeVisitor, NodeTransformer
+from ast import NodeVisitor, NodeTransformer, iter_child_nodes
 
 from .bunch import Bunch
 from . import utils
@@ -67,6 +67,19 @@ class BaseASTWalker:
         `tree` can be an AST node or a statement suite (`list` of AST nodes).
         It is identified by `id(tree)` at enter time. Bindings update a copy
         of `self.state`.
+
+        If several `withstate` calls are made for the same `tree`, the last one
+        overrides.
+
+        Generally speaking:
+
+        `withstate(subtree, ...)` should be used if you then intend to
+        `visit(subtree)`, which recurses into that node (or suite) only.
+
+        `generic_withstate(tree, ...)` should be used if you then intend to
+        `generic_visit(tree)`, which recurses into the children of `tree`.
+
+        (It is possible to mix and match, but think through what you're doing.)
         """
         newstate = self.state.copy()
         newstate.update(**bindings)
@@ -78,6 +91,33 @@ class BaseASTWalker:
             for elt in tree:
                 self._subtree_overrides[id(elt)] = newstate
         else:
+            self._subtree_overrides[id(tree)] = newstate
+
+    def generic_withstate(self, tree, **bindings):
+        """Like `withstate`, but set up the new state for all children of `tree`.
+
+        The same state instance is shared between the child nodes.
+
+        If several `generic_withstate` calls are made for the same `tree`, the
+        last one overrides (assuming the list of children has not changed in between).
+
+        The silly name is because this relates to `withstate` as `generic_visit`
+        relates to `visit`.
+
+        Generally speaking:
+
+        `generic_withstate(tree, ...)` should be used if you then intend to
+        `generic_visit(tree)`, which recurses into the children of `tree`.
+
+        `withstate(subtree, ...)` should be used if you then intend to
+        `visit(subtree)`, which recurses into that node (or suite) only.
+
+        (It is possible to mix and match, but think through what you're doing.)
+        """
+        newstate = self.state.copy()
+        newstate.update(**bindings)
+
+        for node in iter_child_nodes(tree):
             self._subtree_overrides[id(tree)] = newstate
 
     def collect(self, value):
