@@ -10,6 +10,8 @@
 
 - `mcpyrate.walkers.ASTTransformer` and `ASTVisitor` now have a method `generic_withstate`, to temporarily replace the state when visiting the direct children of the given node. (This is a closer equivalent for `macropy`'s `set_ctx`, sometimes useful for writing custom walkers.)
 
+- Improve documentation on creating magic variables: add another major strategy, and explain both strategies in more detail.
+
 
 **Changed**:
 
