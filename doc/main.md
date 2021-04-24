@@ -572,8 +572,31 @@ The run-time result of an identifier macro cannot be subscripted in place, becau
 
 ### Creating a magic variable
 
-Here's the pattern for creating a magic variable that may appear only in certain
-contexts:
+It is useful to be able to create a magic expr macro or magic name (a.k.a. *magic variable*) that may appear only in certain surrounding contexts. These contexts are often other macro invocations. If the magic thing occurs anywhere else, we would like it to trigger a compile-time error, to facilitate [fail-fast](https://en.wikipedia.org/wiki/Fail-fast).
+
+There are two main strategies to achieve this, depending on what you need:
+
+ 1. **The magic thing, when it appears in a valid context, is never intended to hit the macro expander.** It only acts as a pattern in the AST, to be matched and manually transformed away by the surrounding macro.
+
+    In this case, you can just make a regular expr macro or name macro that unconditionally raises `SyntaxError`, with a descriptive message. The unconditional error ensures that if the magic thing occurs outside a valid context, the error is reported at compile time (strictly speaking, at macro expansion time, when the expander attempts to expand that macro).
+
+    In `macropy`, this was done by introducing a `@macro_stub`. **In `mcpyrate`, just make a regular macro, which explicitly raises an error.**
+
+    The limitation is the same in both expanders: the compile-time error can only be generated if the magic macro (whose sole purpose is to error out) is loaded into the expander's bindings, so that the expander will attempt to expand any misplaced mentions of it.
+
+    So, it is important to mention in your docs that whenever your user intends to use whatever macro is the valid context for your magic thing, they should import both the context macro and the magic macro.
+
+ 2. **The magic thing is intended to be expanded normally, by the macro expander.** In this case, the macro must be able to expand normally when it appears in a valid context, but it must error out when it appears anywhere else.
+
+    This requires the context and magic macros to work together to some extent. **It also relies on an outside-in expansion order.** The context macro (which expands first, because it is on the outside) should manipulate some appropriate global state, and then explicitly recurse to expand any mentions of the magic macro inside the lexical extent controlled by that context (i.e. inside the AST it got as its `tree` argument). You can store the state at the top level of the macro definition module, so both macros have access to it.
+
+    This strategy has the advantage that the magic macro has access to all features of the macro expander. This is convenient especially if it needs to take macro arguments, because then you don't have to destructure the AST yourself, and your magic macro is guaranteed to always support the same argument passing syntax as any other macro. This also allows better modularity, since the magic macro can be separated from the implementation of the surrounding context.
+
+    The quasiquote system in `mcpyrate` uses this strategy for the unquote operators; they are macros in their own right, but they are only allowed to occur when inside at least one level of quasiquoting.
+
+    A special case worth mentioning is when a name, that is **not** intended to be transformed away, is only allowed to appear in certain contexts. Anaphoric if's `it` is an example. There is a special feature in `mcpyrate` that was made specifically for this use case: in a name macro, you can `return tree` to tell the expander to consider that particular occurrence done, while leaving the name node as-is. (Technically, it will be wrapped with a `Done` AST marker, so that the expander won't visit it further.) So when the magic macro expands, it can look at the global state (that is managed by its context macro), and then decide whether to `return tree` or error out.
+
+Here's a sketch of the pattern for the last case. We have chosen this example, because it's probably the most difficult to get right:
 
 ```python
 from mcpyrate import namemacro
@@ -585,6 +608,8 @@ def mymacro(tree, *, syntax, expander, **kw):
     """[syntax, expr] The construct where the magic variable `it` may appear."""
     if syntax != "expr":
         raise SyntaxError("`mymacro` is an expr macro only")
+    # The global state should be managed using a context manager,
+    # so that even if things go south, the state always resets properly.
     with _mymacro_level.changed_by(+1):
         tree = expander.visit(tree)  # this expands any `it` inside
         # Macro code goes here. You'll want it to define an actual
@@ -603,11 +628,11 @@ def it(tree, *, syntax, **kw):
     return tree
 ```
 
-This way any invalid, stray mentions of the magic variable `it` trigger an error at macro expansion time. (It's not quite [`syntax-parameterize`](https://docs.racket-lang.org/reference/stxparam.html), but it'll do for Python.)
+This way any invalid, stray mentions of the magic variable `it` trigger an error at macro expansion time. This isn't quite Racket's [`syntax-parameterize`](https://docs.racket-lang.org/reference/stxparam.html), but this'll do for Python.
 
-If you want to expand only `it` inside an invocation of `mymacro[...]` (thus checking that the mentions are valid), leaving other nested macro invocations untouched, that's also possible. See below how to expand only macros in a given set (from which you can omit everything but `it`).
+If you want to expand only `it` inside an invocation of `mymacro[...]` (thus checking that the mentions are valid), leaving other nested macro invocations untouched, that's also possible - and strongly recommended! See below how to expand only macros in a given set, from which you can omit everything but `it`.
 
-The above explanation is slightly simplified; look at [`demo/anaphoric_if.py`](../demo/anaphoric_if.py) for actual working code.
+The above example code is slightly simplified; look at [`demo/anaphoric_if.py`](../demo/anaphoric_if.py) for actual working code.
 
 
 ## Expand macros inside-out
