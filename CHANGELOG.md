@@ -1,6 +1,6 @@
 # Changelog
 
-**3.2.2** (in progress, updated 21 April 2021) - *Captain Debughook* edition:
+**3.3.0** (in progress, updated 21 April 2021) - *Captain Debughook* edition:
 
 **New**:
 
