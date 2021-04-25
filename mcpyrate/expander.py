@@ -96,7 +96,7 @@ def isparametricmacro(function):
 
 # --------------------------------------------------------------------------------
 
-def destructure_candidate(tree):
+def destructure_candidate(tree, *, _validate_call_syntax=True):
     """Destructure a macro call candidate AST, `macroname` or `macroname[arg0, ...]`."""
     if type(tree) is Name:
         return tree.id, []
@@ -120,10 +120,14 @@ def destructure_candidate(tree):
     # For uniformity, we limit to a subset of the function call syntax that
     # remains valid if you replace the parentheses with brackets in Python 3.9.
     elif type(tree) is Call and type(tree.func) is Name and not tree.keywords:
-        if not tree.args:  # reject empty args
-            raise SyntaxError("must provide at least one argument when passing macro arguments")
-        if any(type(arg) is Starred for arg in tree.args):  # reject starred items
-            raise SyntaxError("unpacking (splatting) not supported in macro argument position")
+        # `MacroExpander._detect_macro_items` needs to perform a preliminary check
+        # without full validation when it is trying to detect which `with` items
+        # and decorators are in fact macro invocations.
+        if _validate_call_syntax:
+            if not tree.args:  # reject empty args
+                raise SyntaxError("must provide at least one argument when passing macro arguments")
+            if any(type(arg) is Starred for arg in tree.args):  # reject starred items
+                raise SyntaxError("unpacking (splatting) not supported in macro argument position")
         return tree.func.id, tree.args
     return None, None  # not a macro invocation
 
@@ -302,7 +306,7 @@ class MacroExpander(BaseMacroExpander):
                 candidate = item.context_expr
             else:
                 candidate = item
-            macroname, macroargs = destructure_candidate(candidate)
+            macroname, macroargs = destructure_candidate(candidate, _validate_call_syntax=False)
 
             # warn about likely mistake
             if (macroname and self.isbound(macroname) and
