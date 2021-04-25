@@ -173,11 +173,18 @@ def get_macros(macroimport, *, filename, reload=False, allow_asname=True, self_m
             raise ImportError(f"{loc}\nThis expander (see traceback) does not support as-naming macro-imports.")
 
         try:
-            bindings[name.asname or name.name] = getattr(module, name.name)
+            macro = getattr(module, name.name)
         except AttributeError as err:
             approx_sourcecode = unparse_with_fallbacks(macroimport, debug=True, color=True)
             loc = format_location(filename, macroimport, approx_sourcecode)
             raise ImportError(f"{loc}\ncannot import name '{name.name}' from module {module_absname}") from err
+
+        if not callable(macro):
+            approx_sourcecode = unparse_with_fallbacks(macroimport, debug=True, color=True)
+            loc = format_location(filename, macroimport, approx_sourcecode)
+            raise ImportError(f"{loc}\nname '{name.name}' in module {module_absname} is not a callable object (got {type(macro)} with value {repr(macro)}), so it cannot be imported as a macro.")
+
+        bindings[name.asname or name.name] = macro
 
     return module_absname, bindings
 
