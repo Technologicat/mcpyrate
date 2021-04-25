@@ -216,6 +216,10 @@ def format_location(filename, tree, sourcecode):
 
 def format_macrofunction(function):
     """Format the fully qualified name of a macro function, for error messages."""
+    # Catch broken bindings due to erroneous imports in user code
+    # (e.g. accidentally to a module object instead of to a function object)
+    if not (hasattr(function, "__module__") and hasattr(function, "__qualname__")):
+        return repr(function)
     if not function.__module__:  # Macros defined in the REPL have `__module__=None`.
         return function.__qualname__
     return f"{function.__module__}.{function.__qualname__}"

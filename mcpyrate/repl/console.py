@@ -199,6 +199,10 @@ class MacroConsole(code.InteractiveConsole):
         self._macro_bindings_changed = False
 
         for asname, function in self.expander.bindings.items():
+            # Catch broken bindings due to erroneous imports in user code
+            # (e.g. accidentally to a module object instead of to a function object)
+            if not (hasattr(function, "__module__") and hasattr(function, "__qualname__")):
+                continue
             if not function.__module__:    # Macros defined in the REPL have `__module__=None`.
                 continue
             try:

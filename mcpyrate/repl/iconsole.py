@@ -211,7 +211,11 @@ class IMcpyrateExtension:
                                    silent=True)
 
         for asname, function in self.macro_transformer.expander.bindings.items():
-            if not function.__module__:
+            # Catch broken bindings due to erroneous imports in user code
+            # (e.g. accidentally to a module object instead of to a function object)
+            if not (hasattr(function, "__module__") and hasattr(function, "__qualname__")):
+                continue
+            if not function.__module__:  # Macros defined in the REPL have `__module__=None`.
                 continue
             commands = ["%%ignore_importerror",
                         f"from {function.__module__} import {function.__qualname__} as {asname}"]
