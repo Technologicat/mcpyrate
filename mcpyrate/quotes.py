@@ -696,7 +696,7 @@ def astify(x, expander=None):  # like `macropy`'s `ast_repr`
 
         # Builtin types. Mainly support for `u[]`, but also used by the
         # general case for AST node fields that contain bare values.
-        elif T in (int, float, str, bytes, bool, type(None)):
+        elif T in (int, float, str, bytes, bool, type(None), type(...)):
             return ast.Constant(value=x)
 
         elif T is list:

@@ -28,6 +28,8 @@
 
 - Fix subscript slice handling in unparser for Python 3.9 and later. Now that `ast.Index` and `ast.ExtSlice` are gone, an `ast.Tuple` may appear directly in the slice position, representing multi-dimensional indexing. Such a tuple must be rendered without surrounding parentheses, because the notation `a[1,2:5]` is fine, but `a[(1,2:5)]` is a syntax error. See https://bugs.python.org/issue34822
 
+- Fix bug in quasiquoting of constants: support also `...` (the `Ellipsis` singleton).
+
 - Fix bug in copy support of `ASTMarker` objects. Now it is possible to deepcopy ASTs that contain markers.
 
 - Up to Python 3.8, items in the decorator list cannot be subscripted, so decorator macros could not take macro arguments. In 3.9 this has been fixed, as implied by [the grammar](https://docs.python.org/3/reference/grammar.html). To work around this issue in earlier supported Python versions (3.6, 3.7, 3.8), we now support parentheses as an alternative syntax for passing macro arguments, like in `macropy`. Note that macro arguments must in any case be passed positionally! (Reasons documented in the comments of `mcpyrate.expander`.)
