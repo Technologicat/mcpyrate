@@ -26,6 +26,7 @@
 - [Compile-time errors](#compile-time-errors)
     - [Error in `compile`, an AST node is missing the required field `lineno`?](#error-in-compile-an-ast-node-is-missing-the-required-field-lineno)
         - [Unexpected bare value](#unexpected-bare-value)
+        - [Unexpected list](#unexpected-list)
         - [Wrong type of list](#wrong-type-of-list)
         - [Wrong type of AST node](#wrong-type-of-ast-node)
         - [The notorious invisible `ast.Expr` statement](#the-notorious-invisible-astexpr-statement)
@@ -238,6 +239,22 @@ So let's look at the likely causes.
 ### Unexpected bare value
 
 Is your macro placing AST nodes where the compiler expects those, and not accidentally using bare run-time values? (This gets tricky if you're delaying something until run time. You might need a `mcpyrate.quotes.astify` there.)
+
+### Unexpected list
+
+If you're handling a statement suite, and adding more statements to the end:
+
+```python
+tree.body = ...  # some statement suite
+
+with q as quoted:
+    some_statement
+tree.body.extend(quoted)
+```
+
+then **make sure you use `extend`**, not `append`. Even if there is just one statement in the quoted block, the block mode `q` always produces a list.
+
+Accidentally using `append` causes a `list` to appear in the AST where an AST node is expected. This will hide that node from the line number auto-populating logic, as well as likely confuse Python's compiler later.
 
 ### Wrong type of list
 
