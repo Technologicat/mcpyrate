@@ -1006,13 +1006,26 @@ In `mcpyrate`, all quote and unquote operators have single-character names by de
 
 In `mcpyrate`, there is **just one *quote* operator**, `q[]`, although just like in `macropy`, there are several different *unquote* operators, depending on what you want to do. In `mcpyrate`, there is no `unhygienic` operator, because there is no separate `hq` quote.
 
-For [macro hygiene](https://en.wikipedia.org/wiki/Hygienic_macro), we provide a **hygienic unquote** operator, `h[]`. So instead of implicitly hygienifying all `Name` nodes inside a `hq[]` like `macropy` does, `mcpyrate` instead expects the user to use the regular `q[]`, and explicitly say which subexpressions to hygienify, by unquoting each of those separately with `h[]`. The hygienic unquote operator captures expressions by snapshotting a value; it does not care about names, except for human-readable output.
+For [macro hygiene](https://en.wikipedia.org/wiki/Hygienic_macro), we provide a **hygienic unquote** operator, `h[]`. So instead of implicitly hygienifying all `Name` nodes inside a `hq[]` like `macropy` does, `mcpyrate` instead expects the user to use the regular `q[]`, and explicitly say which subexpressions to hygienify, by unquoting each of those separately with `h[]`. The hygienic unquote operator captures expressions by snapshotting a value; it does not care about names, except for human-readable output. Hygienically capturing an identifier snapshots its current value when the use site of the surrounding `q` reaches run time.
+
+In `mcpyrate`, hygienically captured values are represented in the AST as a `Call` node that matches `mcpyrate.quotes.is_captured_value`. That function (added in `mcpyrate` 3.3.0) is the public API to detect and destructure them.
+
+If, in your `macropy` code, you have a `@Walker` macro that manipulates `Call` nodes, and you port it to use `mcpyrate`'s `ASTTransformer`, you may need to:
+```python
+if is_captured_value(tree):
+    return tree  # don't recurse!
+```
+in order to avoid destroying the capture. The important point is, it's a `Call`, but it's not playing the role of a call; it's really just the plumbing that makes the captured value magically appear at run time. In 99% of cases, the wisest course of action is to leave it alone.
+
+If you need to analyze the captured name or expression, and/or the actual snapshotted value, the unparsed source code for the name or expression that was captured by `h[]` is in the return value of `mcpyrate.quotes.is_captured_value` (whenever there was a match; i.e. the return value is not `False`). The captured value can be looked up by passing the whole return value to `mcpyrate.quotes.lookup_value`. This can be useful if you e.g. need to see which function a hygienically unquoted function name points to. See the docstrings of `is_captured_value` and `lookup_value` for details.
 
 In `mcpyrate`, also macro names can be captured hygienically.
 
 In `mcpyrate`, there is no `expose_unhygienic`, and no names are reserved for the macro system. (You can call a variable `ast` if you want, and it won't shadow anything important.)
 
 The `expose_unhygienic` mechanism is not needed, because in `mcpyrate`, each macro-import is transformed into a regular import of the module the macros are imported from. So the macros can refer to anything in the top-level namespace of their module as attributes of that module object. (As usual in Python, this includes any imports. For example, `mcpyrate.quotes` refers to the stdlib `ast` module in the macro expansions as `mcpyrate.quotes.ast` for this reason.)
+
+If you need to expose some name to allow the user to override it locally (e.g. a callback function, to be overridden in a block macro invocation), consider *dynamic assignment* (a.k.a. dynamic variables), such as that provided by our sister project [`unpythonic`](https://github.com/Technologicat/unpythonic/blob/master/doc/features.md#dyn-dynamic-assignment), as [`unpythonic.dyn`](https://github.com/Technologicat/unpythonic/blob/master/doc/features.md#dyn-dynamic-assignment). You can then set a default (`make_dynvar(cat="tabby")`) and let the user override it at run time (`with dyn.let(cat="scottishfold")`).
 
 In `mcpyrate`, the `a` operator has also a block mode (`with a`), which unquotes *statement* AST nodes.
 
