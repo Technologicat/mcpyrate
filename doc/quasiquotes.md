@@ -1008,18 +1008,24 @@ In `mcpyrate`, there is **just one *quote* operator**, `q[]`, although just like
 
 For [macro hygiene](https://en.wikipedia.org/wiki/Hygienic_macro), we provide a **hygienic unquote** operator, `h[]`. So instead of implicitly hygienifying all `Name` nodes inside a `hq[]` like `macropy` does, `mcpyrate` instead expects the user to use the regular `q[]`, and explicitly say which subexpressions to hygienify, by unquoting each of those separately with `h[]`. The hygienic unquote operator captures expressions by snapshotting a value; it does not care about names, except for human-readable output. Hygienically capturing an identifier snapshots its current value when the use site of the surrounding `q` reaches run time.
 
-In `mcpyrate`, hygienically captured values are represented in the AST as a `Call` node that matches `mcpyrate.quotes.is_captured_value`. That function (added in `mcpyrate` 3.3.0) is the public API to detect and destructure them.
+In `mcpyrate`, also macro names can be captured hygienically.
 
-If, in your `macropy` code, you have a `@Walker` macro that manipulates `Call` nodes, and you port it to use `mcpyrate`'s `ASTTransformer`, you may need to:
+In `mcpyrate`, hygienically captured run-time values are represented in the AST as a `Call` node that matches `mcpyrate.quotes.is_captured_value`. That function (added in `mcpyrate` 3.3.0) is the public API to detect and destructure them.
+
+If you have code-walking macros (particularly, any `macropy` `@Walker`s you intend to port to use `mcpyrate`'s `ASTTransformer`), you may need to:
 ```python
 if is_captured_value(tree):
     return tree  # don't recurse!
 ```
-in order to avoid destroying the capture. The important point is, it's a `Call`, but it's not playing the role of a call; it's really just the plumbing that makes the captured value magically appear at run time. In 99% of cases, the wisest course of action is to leave it alone.
+before any other AST pattern matching, in order to avoid destroying the capture. In 99% of cases, the wisest course of action is to not edit the hygienic capture node, and not recurse there.
 
-If you need to analyze the captured name or expression, and/or the actual snapshotted value, the unparsed source code for the name or expression that was captured by `h[]` is in the return value of `mcpyrate.quotes.is_captured_value` (whenever there was a match; i.e. the return value is not `False`). The captured value can be looked up by passing the whole return value to `mcpyrate.quotes.lookup_value`. This can be useful if you e.g. need to see which function a hygienically unquoted function name points to. See the docstrings of `is_captured_value` and `lookup_value` for details.
+The important point is, the capture looks like a `Call`, but it's not really playing the role of a function call. That call is really just part of the plumbing that makes the captured value magically appear at run time. To keep things simple and explicit, it's not hidden from your macros; but this does mean you need to be aware of this detail.
 
-In `mcpyrate`, also macro names can be captured hygienically.
+(From another viewpoint, the hygienic capture is a higher-level abstraction. It doesn't matter what AST node types it uses; the particular AST pattern is an implementation detail. Hence it should be matched first, before any AST node types in their usual roles.)
+
+The difference to `macropy` is that `macropy` represents hygienically captured identifiers as `Name` nodes, and its machinery jumps through more hoops to retain the illusion they are regular names. It will rename them to avoid name conflicts, though; `mcpyrate` doesn't need to rename anything due to the different capture mechanism.
+
+In `mcpyrate`, if you need to analyze the captured name or expression, and/or the actual snapshotted value, the unparsed source code for the name or expression that was captured by `h[]` is in the return value of `mcpyrate.quotes.is_captured_value` (whenever there was a match; i.e. the return value is not `False`). The captured value can be looked up by passing the whole return value to `mcpyrate.quotes.lookup_value`. This can be useful if you e.g. need to see which function a hygienically unquoted function name points to. See the docstrings of `is_captured_value` and `lookup_value` for details.
 
 In `mcpyrate`, there is no `expose_unhygienic`, and no names are reserved for the macro system. (You can call a variable `ast` if you want, and it won't shadow anything important.)
 
