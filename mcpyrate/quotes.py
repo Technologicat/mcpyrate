@@ -392,6 +392,12 @@ def lookup_macro(key):
 # --------------------------------------------------------------------------------
 # Advanced macrology support.
 
+# TODO: In a future version, do we want to add an ASTMarker for captured values
+# TODO: that are ready for consumption? We could save the actual AST (which is
+# TODO: now detected directly) into the `body` attribute of the marker, and make
+# TODO: the compiler delete `HygienicValue` markers (replacing each by its `.body`)
+# TODO: as the last step before handing the AST over to Python.
+
 def is_captured_value(tree):
     """Test whether `tree` is a hygienically captured run-time value.
 
