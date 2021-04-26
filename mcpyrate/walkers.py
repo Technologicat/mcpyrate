@@ -118,7 +118,7 @@ class BaseASTWalker:
         newstate.update(**bindings)
 
         for node in iter_child_nodes(tree):
-            self._subtree_overrides[id(tree)] = newstate
+            self._subtree_overrides[id(node)] = newstate
 
     def collect(self, value):
         """Collect a value. The values are placed in the list `self.collected`."""
