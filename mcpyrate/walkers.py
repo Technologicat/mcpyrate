@@ -184,10 +184,10 @@ class ASTTransformer(BaseASTWalker, NodeTransformer, metaclass=ABCMeta):
         try:
             if isinstance(tree, list):
                 new_tree = utils.flatten(self.visit(elt) for elt in tree)
-                if new_tree:
-                    tree[:] = new_tree
-                    return tree
-                return None
+                if not new_tree:
+                    new_tree = []  # preserve the type of `tree`; an empty list shouldn't turn into `None`
+                tree[:] = new_tree
+                return tree
             return self.transform(tree)
         finally:
             if newstate:

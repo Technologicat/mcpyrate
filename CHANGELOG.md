@@ -30,6 +30,8 @@
 
 - Fix bug in quasiquoting of constants: support also `...` (the `Ellipsis` singleton).
 
+- Fix bug in type preservation of empty list in `ASTTransformer`.
+
 - Fix bug in copy support of `ASTMarker` objects. Now it is possible to deepcopy ASTs that contain markers.
 
 - Fix bug that caused the `mcpyrate.debug.show_bindings` macro or the REPL consoles to crash upon a specific kind of broken imports in user code. (E.g. accidentally binding a macro name to a module object instead of a function object.) 
