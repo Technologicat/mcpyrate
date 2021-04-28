@@ -56,6 +56,8 @@ The selling points of both are `withstate`, `state`, `collect`, `collected`, whi
 
 For a realistic example, see [`mcpyrate.astfixers`](../mcpyrate/astfixers.py), or grep the `mcpyrate` codebase for other uses of `ASTVisitor` and `ASTTransformer` (there are a few).
 
+Also, if you use quasiquotes, read [Treating hygienically captured values in AST walkers](quasiquotes.md#treating-hygienically-captured-values-in-ast-walkers).
+
 
 # Attributes
 

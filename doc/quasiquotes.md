@@ -31,6 +31,7 @@
         - [Hygienically captured run-time values](#hygienically-captured-run-time-values)
         - [Hygienically captured macros](#hygienically-captured-macros)
         - [Hygienic macro recursion](#hygienic-macro-recursion)
+        - [Treating hygienically captured values in AST walkers](#treating-hygienically-captured-values-in-ast-walkers)
     - [Syntactically allowed positions for unquotes](#syntactically-allowed-positions-for-unquotes)
     - [Quotes, unquotes, and macro expansion](#quotes-unquotes-and-macro-expansion)
 - [The `expand` family of macros](#the-expand-family-of-macros)
@@ -790,6 +791,24 @@ as demonstrated above. Using that, the macros invoked hygienically in the output
 don't need to be in the expander's bindings at the use site.
 
 
+### Treating hygienically captured values in AST walkers
+
+In `mcpyrate`, hygienically captured run-time values are represented in the AST as a `Call` node that matches `mcpyrate.quotes.is_captured_value`. That function (added in `mcpyrate` 3.3.0) is the public API to detect and destructure them.
+
+If you have code-walking macros - particularly, any `macropy` `@Walker`s you intend to port to use `mcpyrate`'s `ASTTransformer` - you may need to:
+```python
+if is_captured_value(tree):
+    return tree  # don't recurse!
+```
+in order to avoid destroying the capture. In 99% of cases, this should be done before any other AST pattern matching, and the wisest course of action is to not edit the hygienic capture node, and not recurse there. (Our sister project [`unpythonic`](https://github.com/Technologicat/unpythonic/blob/master/doc/features.md#dyn-dynamic-assignment) contains some examples of the 1% where we need to do something else. See use sites of `is_captured_value`, particularly the syntax transformer for `unpythonic.syntax.lazify`.)
+
+The important point is, the capture looks like a `Call`, but it's not really playing the role of a function call. That call is really just part of the plumbing that makes the captured value magically appear at run time. To keep things simple and explicit, it's not hidden from your macros; but this does mean you need to be aware of this detail.
+
+From another viewpoint, the hygienic capture is a higher-level abstraction. It doesn't matter what AST node types it uses; the particular AST pattern is an implementation detail. Hence it should usually be matched first, before any AST node types in their usual roles.
+
+If you need to analyze the captured name or expression, and/or the actual snapshotted value, the unparsed source code for the name or expression that was captured by `h[]` is in the return value of `mcpyrate.quotes.is_captured_value` (whenever there was a match; i.e. the return value is not `False`). The captured value can be looked up by passing the whole return value to `mcpyrate.quotes.lookup_value`. This can be useful if you e.g. need to see which function a hygienically unquoted function name points to. See the docstrings of `is_captured_value` and `lookup_value` for details.
+
+
 ## Syntactically allowed positions for unquotes
 
 Unquote operators may only appear inside quasiquoted code. This is checked at
@@ -1010,22 +1029,7 @@ For [macro hygiene](https://en.wikipedia.org/wiki/Hygienic_macro), we provide a 
 
 In `mcpyrate`, also macro names can be captured hygienically.
 
-In `mcpyrate`, hygienically captured run-time values are represented in the AST as a `Call` node that matches `mcpyrate.quotes.is_captured_value`. That function (added in `mcpyrate` 3.3.0) is the public API to detect and destructure them.
-
-If you have code-walking macros (particularly, any `macropy` `@Walker`s you intend to port to use `mcpyrate`'s `ASTTransformer`), you may need to:
-```python
-if is_captured_value(tree):
-    return tree  # don't recurse!
-```
-before any other AST pattern matching, in order to avoid destroying the capture. In 99% of cases, the wisest course of action is to not edit the hygienic capture node, and not recurse there.
-
-The important point is, the capture looks like a `Call`, but it's not really playing the role of a function call. That call is really just part of the plumbing that makes the captured value magically appear at run time. To keep things simple and explicit, it's not hidden from your macros; but this does mean you need to be aware of this detail.
-
-(From another viewpoint, the hygienic capture is a higher-level abstraction. It doesn't matter what AST node types it uses; the particular AST pattern is an implementation detail. Hence it should be matched first, before any AST node types in their usual roles.)
-
-The difference to `macropy` is that `macropy` represents hygienically captured identifiers as `Name` nodes, and its machinery jumps through more hoops to retain the illusion they are regular names. It will rename them to avoid name conflicts, though; `mcpyrate` doesn't need to rename anything due to the different capture mechanism.
-
-In `mcpyrate`, if you need to analyze the captured name or expression, and/or the actual snapshotted value, the unparsed source code for the name or expression that was captured by `h[]` is in the return value of `mcpyrate.quotes.is_captured_value` (whenever there was a match; i.e. the return value is not `False`). The captured value can be looked up by passing the whole return value to `mcpyrate.quotes.lookup_value`. This can be useful if you e.g. need to see which function a hygienically unquoted function name points to. See the docstrings of `is_captured_value` and `lookup_value` for details.
+In `mcpyrate`, hygienically captured run-time values are represented in the AST as a `Call` node that matches `mcpyrate.quotes.is_captured_value`. In `macropy`, hygienically captured identifiers are represented as `Name` nodes, and its machinery jumps through more hoops to retain the illusion they are regular names. It will rename them to avoid name conflicts, though; `mcpyrate` doesn't need to rename anything due to the different capture mechanism.
 
 In `mcpyrate`, there is no `expose_unhygienic`, and no names are reserved for the macro system. (You can call a variable `ast` if you want, and it won't shadow anything important.)
 

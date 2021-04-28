@@ -390,7 +390,7 @@ def log(expr, **kw):
 
 Here `q[]` quasiquotes an expression, `u[]` unquotes a simple value, and `a[]` unquotes an expression AST. If you're worried that `print` may refer to something else at the use site of `log[]`, you can hygienically capture the function with `h[]`: `q[h[print](u[label], a[expr])]`.
 
-If you are familiar with `macropy`'s quasiquotes, be aware that there are some important differences; see [differences to `macropy`](quasiquotes.md#differences-to-macropy).
+If you are familiar with `macropy`'s quasiquotes, be aware that there are some important differences; see [differences to `macropy`](quasiquotes.md#differences-to-macropy) and [Treating hygienically captured values in AST walkers](quasiquotes.md#treating-hygienically-captured-values-in-ast-walkers).
 
 
 ## Get the source of an AST
