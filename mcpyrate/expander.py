@@ -217,6 +217,28 @@ class MacroExpander(BaseMacroExpander):
         do anything it wants to its input tree. Any remaining block macro
         invocations are attached to the `With` node, so if that is removed,
         they will be skipped.
+
+        **NOTE**: At least up to v3.3.0, if there are three or more macro
+        invocations in the same `with` statement::
+
+            with macro1, macro2, macro3:
+                ...
+
+        this is equivalent with::
+
+            with macro1:
+                with macro2, macro3:
+                    ...
+
+        and **not** equivalent with::
+
+            with macro1:
+                with macro2:
+                    with macro3:
+                        ...
+
+        which may be important if `macro1` needs to scan for invocations of
+        `macro2` and `macro3` to work together with them.
         """
         macros, others = self._detect_macro_items(withstmt.items, "block")
         if not macros:
