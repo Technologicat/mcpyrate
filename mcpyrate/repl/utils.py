@@ -27,7 +27,7 @@ def _get_source(obj):
     raise NotImplementedError
 
 
-def doc(obj, *, file=None, endl="\n"):
+def doc(obj, *, file=None, end="\n"):
     """Print an object's docstring non-interactively.
 
     If available, print also the filename and the starting line number
@@ -37,10 +37,10 @@ def doc(obj, *, file=None, endl="\n"):
     possible overrides); to override, use the `file` parameter, which works
     like in the builtin `print`.
 
-    The `endl` parameter is passed to `print` as-is.
+    The `end` parameter is passed to `print` as-is.
     """
     file = file or sys.stderr
-    printer = partial(print, file=file, endl=endl)
+    printer = partial(print, file=file, end=end)
     try:
         filename, source, firstlineno = _get_source(obj)
         printer(colorize(f"{filename}:{firstlineno}", ColorScheme.SOURCEFILENAME))
@@ -52,7 +52,7 @@ def doc(obj, *, file=None, endl="\n"):
     print(inspect.cleandoc(obj.__doc__), file=file)
 
 
-def sourcecode(obj, *, file=None, endl=None):
+def sourcecode(obj, *, file=None, end=None):
     """Print an object's source code to `sys.stderr`, non-interactively.
 
     If available, print also the filename and the starting line number
@@ -62,10 +62,10 @@ def sourcecode(obj, *, file=None, endl=None):
     possible overrides); to override, use the `file` argument, which works
     like in the builtin `print`.
 
-    The `endl` parameter is passed to `print` as-is.
+    The `end` parameter is passed to `print` as-is.
     """
     file = file or sys.stderr
-    printer = partial(print, file=file, endl=endl)
+    printer = partial(print, file=file, end=end)
     try:
         filename, source, firstlineno = _get_source(obj)
         printer(colorize(f"{filename}:{firstlineno}", ColorScheme.SOURCEFILENAME))
