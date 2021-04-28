@@ -30,6 +30,8 @@
 
 - Fix bug in quasiquoting of constants: support also `...` (the `Ellipsis` singleton).
 
+- Fix bug in `splice_ast_literals` (a.k.a. run-time part of `q`) that made it crash on `ast.Nonlocal` and `ast.Global` nodes.
+
 - Fix bug in type preservation of empty list in `ASTTransformer`.
 
 - Fix bug in copy support of `ASTMarker` objects. Now it is possible to deepcopy ASTs that contain markers.

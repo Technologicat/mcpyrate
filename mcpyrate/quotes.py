@@ -216,6 +216,10 @@ def splice_ast_literals(tree, filename):
                     doit(item)
                     newthing.append(item)
             thing[:] = newthing
+        # As of Python 3.9, `Global` and `Nonlocal` are the only AST node types
+        # where a field contains a `list` of bare strings.
+        elif isinstance(thing, (ast.Global, ast.Nonlocal)):
+            pass
         elif isinstance(thing, ast.AST):
             for fieldname, value in ast.iter_fields(thing):
                 if isinstance(value, list):
