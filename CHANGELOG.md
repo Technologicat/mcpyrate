@@ -36,6 +36,8 @@
 
 - Fix bug that caused the `mcpyrate.debug.show_bindings` macro or the REPL consoles to crash upon a specific kind of broken imports in user code. (E.g. accidentally binding a macro name to a module object instead of a function object.) 
 
+- Fix bug failing to honor possible overrides to `sys.stderr` in various debug-printing facilities. Always `import sys` and refer to `sys.stderr` to resolve the current value, never `from sys import stderr`.
+
 - Up to Python 3.8, items in the decorator list cannot be subscripted, so decorator macros could not take macro arguments. In 3.9 this has been fixed, as implied by [the grammar](https://docs.python.org/3/reference/grammar.html). To work around this issue in earlier supported Python versions (3.6, 3.7, 3.8), we now support parentheses as an alternative syntax for passing macro arguments, like in `macropy`. Note that macro arguments must in any case be passed positionally! (Reasons documented in the comments of `mcpyrate.expander`.)
 
 

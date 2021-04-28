@@ -8,7 +8,7 @@ __all__ = ["step_expansion", "StepExpansion", "step_phases",
 import ast
 import functools
 import io
-from sys import stderr
+import sys
 import textwrap
 
 from .astdumper import dump
@@ -106,8 +106,8 @@ def step_expansion(tree, *, args, syntax, expander, **kw):
         tag = id(tree)
 
         print(f"{c(CS.HEADING1)}{stars}Tree {c(CS.HEADING2)}0x{tag:x} ({expander.filename}) {c(CS.HEADING1)}before macro expansion:{c()}",
-              file=stderr)
-        print(textwrap.indent(f"{formatter(tree)}", codeindent * ' '), file=stderr)
+              file=sys.stderr)
+        print(textwrap.indent(f"{formatter(tree)}", codeindent * ' '), file=sys.stderr)
 
         step = 0
         def doit():
@@ -120,19 +120,19 @@ def step_expansion(tree, *, args, syntax, expander, **kw):
                 tree = expander.visit_once(tree)  # -> Done(body=...)
                 tree = tree.body
                 print(f"{c(CS.HEADING1)}{stars}Tree {c(CS.HEADING2)}0x{tag:x} ({expander.filename}) {c(CS.HEADING1)}after step {step}:{c()}",
-                      file=stderr)
-                print(textwrap.indent(formatter(tree), codeindent * ' '), file=stderr)
+                      file=sys.stderr)
+                print(textwrap.indent(formatter(tree), codeindent * ' '), file=sys.stderr)
                 mc.clear()
                 mc.visit(tree)
 
         if print_details:
             def print_step(invocationsubtreeid, invocationtree, expandedtree, macroname, macrofunction):
                 print(f"{c(CS.HEADING1)}{stars}Tree {c(CS.HEADING2)}0x{tag:x} ({expander.filename}) {c(CS.HEADING1)}processing step {step}:",
-                      file=stderr)
-                print(textwrap.indent(f"{c(CS.HEADING2)}Applying {c(CS.MACRONAME)}{macroname}{c(CS.HEADING2)} at subtree 0x{invocationsubtreeid:x}:{c()}", codeindent * ' '), file=stderr)
-                print(textwrap.indent(f"{formatter(invocationtree)}", (codeindent + 2) * ' '), file=stderr)
-                print(textwrap.indent(f"{c(CS.HEADING2)}Result:{c()}", codeindent * ' '), file=stderr)
-                print(textwrap.indent(f"{formatter(expandedtree)}", (codeindent + 2) * ' '), file=stderr)
+                      file=sys.stderr)
+                print(textwrap.indent(f"{c(CS.HEADING2)}Applying {c(CS.MACRONAME)}{macroname}{c(CS.HEADING2)} at subtree 0x{invocationsubtreeid:x}:{c()}", codeindent * ' '), file=sys.stderr)
+                print(textwrap.indent(f"{formatter(invocationtree)}", (codeindent + 2) * ' '), file=sys.stderr)
+                print(textwrap.indent(f"{c(CS.HEADING2)}Result:{c()}", codeindent * ' '), file=sys.stderr)
+                print(textwrap.indent(f"{formatter(expandedtree)}", (codeindent + 2) * ' '), file=sys.stderr)
 
             with expander.debughook(print_step):
                 doit()
@@ -141,7 +141,7 @@ def step_expansion(tree, *, args, syntax, expander, **kw):
 
         plural = "s" if step != 1 else ""
         print(f"{c(CS.HEADING1)}{stars}Tree {c(CS.HEADING2)}0x{tag:x} ({expander.filename}) {c(CS.HEADING1)}macro expansion complete after {step} step{plural}.{c()}",
-              file=stderr)
+              file=sys.stderr)
     return tree
 
 
@@ -174,7 +174,7 @@ def show_bindings(tree, *, syntax, expander, **kw):
     """
     if syntax != "name":
         raise SyntaxError("`show_bindings` is an identifier macro only")
-    print(format_bindings(expander, globals_too=False, color=True), file=stderr)
+    print(format_bindings(expander, globals_too=False, color=True), file=sys.stderr)
     return None
 
 

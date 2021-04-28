@@ -6,7 +6,7 @@ __all__ = ["Dialect", "DialectExpander"]
 import ast
 import functools
 import re
-from sys import stderr
+import sys
 
 from .colorizer import setcolor, colorize, ColorScheme
 from .coreutils import ismacroimport, get_macros
@@ -151,7 +151,7 @@ class StepExpansion(Dialect):  # actually part of public API of mcpyrate.debug, 
         self.expander.debugmode = True
         c, CS = setcolor, ColorScheme
         msg = f"{c(CS.SOURCEFILENAME)}{self.expander.filename} {c(CS.HEADING1)}enabled {c(CS.ATTENTION)}DialectExpander debug mode {c(CS.HEADING1)}while taking step {self.expander._step + 1}.{c()}"
-        print(_message_header + msg, file=stderr)
+        print(_message_header + msg, file=sys.stderr)
 
 # --------------------------------------------------------------------------------
 
@@ -211,8 +211,8 @@ class DialectExpander:
         if self.debugmode:
             plural = "s" if self._step != 1 else ""
             msg = f"{c(CS.SOURCEFILENAME)}{self.filename} {c(CS.HEADING1)}before dialect {c(CS.TRANSFORMERKIND)}{kind} {c(CS.HEADING1)}transformers ({self._step} step{plural} total):{c()}\n"
-            print(_message_header + msg, file=stderr)
-            print(format_for_display(content), file=stderr)
+            print(_message_header + msg, file=sys.stderr)
+            print(format_for_display(content), file=sys.stderr)
 
         # We collect and return the dialect object instances so that both
         # `transform_ast` and `postprocess_ast` can use the same instances. The
@@ -263,13 +263,13 @@ class DialectExpander:
 
                 if self.debugmode:
                     msg = f"{c(CS.SOURCEFILENAME)}{self.filename} {c(CS.HEADING1)}after {c(CS.DIALECTTRANSFORMERNAME)}{module_absname}.{dialectname}.{transform} {c(CS.HEADING1)}(step {self._step}):{c()}\n"
-                    print(_message_header + msg, file=stderr)
-                    print(format_for_display(content), file=stderr)
+                    print(_message_header + msg, file=sys.stderr)
+                    print(format_for_display(content), file=sys.stderr)
 
         if self.debugmode:
             plural = "s" if self._step != 1 else ""
             msg = f"{c(CS.SOURCEFILENAME)}{self.filename} {c(CS.HEADING1)}completed all dialect {c(CS.TRANSFORMERKIND)}{kind} {c(CS.HEADING1)}transforms ({self._step} step{plural} total).{c()}"
-            print(_message_header + msg, file=stderr)
+            print(_message_header + msg, file=sys.stderr)
 
         return content, dialect_instances
 
@@ -284,8 +284,8 @@ class DialectExpander:
         if self.debugmode:
             plural = "s" if self._step != 1 else ""
             msg = f"{c(CS.SOURCEFILENAME)}{self.filename} {c(CS.HEADING1)}before dialect {c(CS.TRANSFORMERKIND)}AST postprocessors {c(CS.HEADING1)}({self._step} step{plural} total):{c()}\n"
-            print(_message_header + msg, file=stderr)
-            print(format_for_display(tree), file=stderr)
+            print(_message_header + msg, file=sys.stderr)
+            print(format_for_display(tree), file=sys.stderr)
 
         content = tree
         for dialect in dialect_instances:
@@ -309,13 +309,13 @@ class DialectExpander:
 
             if self.debugmode:
                 msg = f"{c(CS.SOURCEFILENAME)}{self.filename} {c(CS.HEADING1)}after {c(CS.DIALECTTRANSFORMERNAME)}{format_macrofunction(dialect)}.postprocess_ast {c(CS.HEADING1)}(step {self._step}):{c()}\n"
-                print(_message_header + msg, file=stderr)
-                print(format_for_display(content), file=stderr)
+                print(_message_header + msg, file=sys.stderr)
+                print(format_for_display(content), file=sys.stderr)
 
         if self.debugmode:
             plural = "s" if self._step != 1 else ""
             msg = f"{c(CS.SOURCEFILENAME)}{self.filename} {c(CS.HEADING1)}completed all dialect {c(CS.TRANSFORMERKIND)}AST postprocessors {c(CS.HEADING1)}({self._step} step{plural} total).{c()}"
-            print(_message_header + msg, file=stderr)
+            print(_message_header + msg, file=sys.stderr)
 
         return content
 

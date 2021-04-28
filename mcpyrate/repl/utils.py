@@ -3,8 +3,9 @@
 
 __all__ = ["doc", "sourcecode", "get_makemacro_sourcecode"]
 
+from functools import partial
 import inspect
-from sys import stderr
+import sys
 import textwrap
 
 from ..colorizer import colorize, ColorScheme
@@ -26,41 +27,54 @@ def _get_source(obj):
     raise NotImplementedError
 
 
-def doc(obj):
-    """Print an object's docstring, non-interactively.
+def doc(obj, *, file=None, endl="\n"):
+    """Print an object's docstring non-interactively.
 
     If available, print also the filename and the starting line number
     of the definition of `obj`.
+
+    The default is to print to `sys.stderr` (resolved at call time, to respect
+    possible overrides); to override, use the `file` parameter, which works
+    like in the builtin `print`.
+
+    The `endl` parameter is passed to `print` as-is.
     """
+    file = file or sys.stderr
+    printer = partial(print, file=file, endl=endl)
     try:
         filename, source, firstlineno = _get_source(obj)
-        print(colorize(f"{filename}:{firstlineno}", ColorScheme.SOURCEFILENAME),
-              file=stderr)
+        printer(colorize(f"{filename}:{firstlineno}", ColorScheme.SOURCEFILENAME))
     except NotImplementedError:
         pass
     if not hasattr(obj, "__doc__") or not obj.__doc__:
-        print(colorize("<no docstring>", ColorScheme.GREYEDOUT),
-              file=stderr)
+        printer(colorize("<no docstring>", ColorScheme.GREYEDOUT))
         return
-    print(inspect.cleandoc(obj.__doc__), file=stderr)
+    print(inspect.cleandoc(obj.__doc__), file=file)
 
 
-def sourcecode(obj):
-    """Print an object's source code, non-interactively.
+def sourcecode(obj, *, file=None, endl=None):
+    """Print an object's source code to `sys.stderr`, non-interactively.
 
     If available, print also the filename and the starting line number
     of the definition of `obj`.
+
+    Default is to print to `sys.stderr` (resolved at call time, to respect
+    possible overrides); to override, use the `file` argument, which works
+    like in the builtin `print`.
+
+    The `endl` parameter is passed to `print` as-is.
     """
+    file = file or sys.stderr
+    printer = partial(print, file=file, endl=endl)
     try:
         filename, source, firstlineno = _get_source(obj)
-        print(colorize(f"{filename}:{firstlineno}", ColorScheme.SOURCEFILENAME),
-              file=stderr)
+        printer(colorize(f"{filename}:{firstlineno}", ColorScheme.SOURCEFILENAME))
         # TODO: No syntax highlighting for now, because we'd have to parse and unparse,
         # TODO: which loses the original formatting and comments.
         for line in source:
-            print(line.rstrip("\n"))
+            printer(line.rstrip("\n"))
     except NotImplementedError:
-        print(colorize("<no source code available>", ColorScheme.GREYEDOUT))
+        printer(colorize("<no source code available>", ColorScheme.GREYEDOUT))
 
 
 def get_makemacro_sourcecode():
