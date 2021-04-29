@@ -1,5 +1,12 @@
 # Changelog
 
+**3.3.1** (in progress)
+
+*Pre-emptive version bump. No user-visible changes yet.*
+
+---
+
+
 **3.3.0** (29 April 2021) - *Captain Debughook* edition:
 
 **New**:
