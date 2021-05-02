@@ -1,6 +1,6 @@
 # Changelog
 
-**3.4.0** (in progress, updated 2 May 2021)
+**3.4.0** (2 May 2021) - *Quasiquotes ahoy* edition:
 
 **New**:
 
@@ -27,6 +27,10 @@
 
 - The importer now reports the source location if destructuring a macro invocation candidate fails.
   - Some internal functions, including `mcpyrate.expander.destructure_candidate`, now take a mandatory `filename` kwarg for this purpose.
+
+- Fix detection of globally bound macro invocations (hygienic macro captures) in the helper method `mcpyrate.expander.ismacrocall`.
+
+- Fix syntax analysis for detecting `expr` macro invocations in `mcpyrate.expander.destructure_candidate`. Version 3.3.0 (and only that version) errored out on the AST for `f()[...]` even if `f` was not bound as a macro.
 
 
 ---
