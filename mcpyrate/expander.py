@@ -61,7 +61,7 @@ from warnings import warn_explicit
 from .core import BaseMacroExpander, Done, global_postprocess
 from .coreutils import get_macros, ismacroimport
 from .unparser import unparse_with_fallbacks
-from .utils import format_macrofunction
+from .utils import format_location, format_macrofunction
 
 
 def namemacro(function):
@@ -96,7 +96,7 @@ def isparametricmacro(function):
 
 # --------------------------------------------------------------------------------
 
-def destructure_candidate(tree, *, _validate_call_syntax=True):
+def destructure_candidate(tree, *, filename, _validate_call_syntax=True):
     """Destructure a macro call candidate AST, `macroname` or `macroname[arg0, ...]`."""
     if type(tree) is Name:
         return tree.id, []
@@ -125,9 +125,13 @@ def destructure_candidate(tree, *, _validate_call_syntax=True):
         # and decorators are in fact macro invocations.
         if _validate_call_syntax:
             if not tree.args:  # reject empty args
-                raise SyntaxError("must provide at least one argument when passing macro arguments")
+                approx_sourcecode = unparse_with_fallbacks(tree, debug=True, color=True)
+                loc = format_location(filename, tree, approx_sourcecode)
+                raise SyntaxError(f"{loc}\nmust provide at least one argument when passing macro arguments")
             if any(type(arg) is Starred for arg in tree.args):  # reject starred items
-                raise SyntaxError("unpacking (splatting) not supported in macro argument position")
+                approx_sourcecode = unparse_with_fallbacks(tree, debug=True, color=True)
+                loc = format_location(filename, tree, approx_sourcecode)
+                raise SyntaxError(f"{loc}\nunpacking (splatting) not supported in macro argument position")
         return tree.func.id, tree.args
     return None, None  # not a macro invocation
 
@@ -162,7 +166,7 @@ class MacroExpander(BaseMacroExpander):
         # because things like `(some_expr_macro[tree])[subscript_expression]` are valid. This
         # is actually exploited by `h`, as in `q[h[target_macro][tree_for_target_macro]]`.
         candidate = subscript.value
-        macroname, macroargs = destructure_candidate(candidate)
+        macroname, macroargs = destructure_candidate(candidate, filename=self.filename)
         if self.ismacrocall(macroname, macroargs, "expr"):
             kw = {"args": macroargs}
             if sys.version_info >= (3, 9, 0):  # Python 3.9+: no ast.Index wrapper
@@ -245,7 +249,7 @@ class MacroExpander(BaseMacroExpander):
             return self.generic_visit(withstmt)
         with_item = macros[0]
         candidate = with_item.context_expr
-        macroname, macroargs = destructure_candidate(candidate)
+        macroname, macroargs = destructure_candidate(candidate, filename=self.filename)
 
         # let the source code and `invocation` see also the withitem we pop away
         sourcecode = unparse_with_fallbacks(withstmt, debug=True, color=True, expander=self)
@@ -299,7 +303,7 @@ class MacroExpander(BaseMacroExpander):
         if not macros:
             return self.generic_visit(decorated)
         innermost_macro = macros[-1]
-        macroname, macroargs = destructure_candidate(innermost_macro)
+        macroname, macroargs = destructure_candidate(innermost_macro, filename=self.filename)
 
         # let the source code and `invocation` see also the decorator we pop away
         sourcecode = unparse_with_fallbacks(decorated, debug=True, color=True, expander=self)
@@ -328,7 +332,8 @@ class MacroExpander(BaseMacroExpander):
                 candidate = item.context_expr
             else:
                 candidate = item
-            macroname, macroargs = destructure_candidate(candidate, _validate_call_syntax=False)
+            macroname, macroargs = destructure_candidate(candidate, filename=self.filename,
+                                                         _validate_call_syntax=False)
 
             # warn about likely mistake
             if (macroname and self.isbound(macroname) and
@@ -399,7 +404,11 @@ class MacroCollector(NodeVisitor):
     Sister class of the actual `MacroExpander`, mirroring its syntax detection.
     """
     def __init__(self, expander):
-        """`expander`: a `MacroExpander` instance to query macro bindings from."""
+        """`expander`: a `MacroExpander` instance to query macro bindings from.
+
+        `filename`: full path to `.py` file being expanded, for error reporting.
+                    Only used for errors during `destructure_candidate`.
+        """
         self.expander = expander
         self.clear()
 
@@ -428,7 +437,7 @@ class MacroCollector(NodeVisitor):
 
     def visit_Subscript(self, subscript):
         candidate = subscript.value
-        macroname, macroargs = destructure_candidate(candidate)
+        macroname, macroargs = destructure_candidate(candidate, filename=self.expander.filename)
         if self.expander.ismacrocall(macroname, macroargs, "expr"):
             key = (macroname, "expr")
             if key not in self._seen:
@@ -449,7 +458,7 @@ class MacroCollector(NodeVisitor):
         if macros:
             for with_item in macros:
                 candidate = with_item.context_expr
-                macroname, macroargs = destructure_candidate(candidate)
+                macroname, macroargs = destructure_candidate(candidate, filename=self.expander.filename)
                 key = (macroname, "block")
                 if key not in self._seen:
                     self.collected.append(key)
@@ -471,7 +480,7 @@ class MacroCollector(NodeVisitor):
         macros, others = self.expander._detect_macro_items(decorated.decorator_list, "decorator")
         if macros:
             for macro in macros:
-                macroname, macroargs = destructure_candidate(macro)
+                macroname, macroargs = destructure_candidate(macro, filename=self.expander.filename)
                 key = (macroname, "decorator")
                 if key not in self._seen:
                     self.collected.append(key)

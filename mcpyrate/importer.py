@@ -165,7 +165,7 @@ def path_stats(path, _stats_cache=None):
                     macroimports.append(stmt)
                 elif ismacroimport(stmt, magicname="dialects"):
                     dialectimports.append(stmt)
-                elif iswithphase(stmt):  # for multi-phase compilation: scan also inside top-level `with phase`
+                elif iswithphase(stmt, filename=path):  # for multi-phase compilation: scan also inside top-level `with phase`
                     scan(stmt)
         scan(tree)
 

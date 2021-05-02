@@ -34,7 +34,7 @@ from .utils import getdocstring
 # --------------------------------------------------------------------------------
 # Private utilities.
 
-def iswithphase(stmt):
+def iswithphase(stmt, *, filename):
     """Check if AST node `stmt` is a `with phase[n]`, where `n >= 1` is an integer.
 
     Return `n`, or `False`.
@@ -52,7 +52,7 @@ def iswithphase(stmt):
     if type(candidate) is not ast.Subscript:
         return False
 
-    macroname, macroargs = destructure_candidate(candidate)
+    macroname, macroargs = destructure_candidate(candidate, filename=filename)
     if macroname != "phase":
         return False
     if not macroargs or len(macroargs) != 1:  # exactly one macro-argument
@@ -72,7 +72,7 @@ def iswithphase(stmt):
     return n
 
 
-def extract_phase(tree, *, phase=0):
+def extract_phase(tree, *, filename, phase=0):
     """Split `tree` into given `phase` and remaining parts.
 
     Primarily meant to be called with `tree` the AST of a module that
@@ -99,7 +99,7 @@ def extract_phase(tree, *, phase=0):
 
     remaining = []
     def lift(withphase):  # Lift a `with phase[n]` code block to phase `n - 1`.
-        original_phase = iswithphase(withphase)
+        original_phase = iswithphase(withphase, filename=filename)
         assert original_phase
         if original_phase == 1:
             # Lifting to phase 0. Drop the `with phase` wrapper.
@@ -120,7 +120,7 @@ def extract_phase(tree, *, phase=0):
 
     thisphase = []
     for stmt in tree.body:
-        if iswithphase(stmt) == phase:
+        if iswithphase(stmt, filename=filename) == phase:
             thisphase.extend(stmt.body)
             lift(stmt)
         else:
@@ -241,7 +241,7 @@ def ismultiphase(tree):
     return False
 
 
-def detect_highest_phase(tree):
+def detect_highest_phase(tree, *, filename):
     """Scan a module body for `with phase[n]` statements and return highest `n`, or `None`.
 
     Primarily meant to be called with `tree` the AST of a module that
@@ -252,7 +252,7 @@ def detect_highest_phase(tree):
     """
     maxn = None
     for stmt in tree.body:
-        n = iswithphase(stmt)
+        n = iswithphase(stmt, filename=filename)
         if maxn is None or (n is not None and n > maxn):
             maxn = n
     return maxn
@@ -340,7 +340,7 @@ def multiphase_expand(tree, *, filename, self_module, dexpander=None, _optimize=
 
     Return value is the final phase-0 `tree`, after macro expansion.
     """
-    n = detect_highest_phase(tree)
+    n = detect_highest_phase(tree, filename=filename)
     debug = isdebug(tree)
     c, CS = setcolor, ColorScheme
 
@@ -372,7 +372,7 @@ def multiphase_expand(tree, *, filename, self_module, dexpander=None, _optimize=
         if debug:
             print(f"{c(CS.HEADING1)}**AST for {c(CS.ATTENTION)}PHASE {k}{c(CS.HEADING1)} of module {c(CS.HEADING2)}'{self_module}' ({c(CS.SOURCEFILENAME)}{filename}{c(CS.HEADING2)}){c()}", file=sys.stderr)
 
-        phase_k_tree = extract_phase(tree, phase=k)
+        phase_k_tree = extract_phase(tree, filename=filename, phase=k)
         if phase_k_tree.body:
             # inject `__phase__ = k` for introspection (at run time of the phase being compiled now)
             tgt = ast.Name(id="__phase__", ctx=ast.Store(), lineno=1, col_offset=1)
