@@ -367,7 +367,8 @@ def capture_as_macro(macro):
 
     Like `capture_macro`, but with one less level of delay. This injects the
     macro into the expander's global bindings table immediately, and returns
-    the uniqified `ast.Name` that can be used to refer to it hygienically.
+    the uniqified `ast.Name` that can be used to refer to it hygienically,
+    using `a[]`.
 
     The name is taken automatically from the name of the macro function.
     """
