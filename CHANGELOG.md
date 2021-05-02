@@ -23,6 +23,12 @@
     ```
 
 
+**Fixed**:
+
+- The importer now reports the source location if destructuring a macro invocation candidate fails.
+  - Some internal functions, including `mcpyrate.expander.destructure_candidate`, now take a mandatory `filename` kwarg for this purpose.
+
+
 ---
 
 
