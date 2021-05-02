@@ -143,13 +143,13 @@ class MacroExpander(BaseMacroExpander):
         """Shorthand to check `destructure_candidate` output.
 
         Return whether that output is a macro call to a macro (of invocation
-        type `syntax`) bound in this expander.
+        type `syntax`) bound in this expander or globally.
         """
         if not (macroname and self.isbound(macroname)):
             return False
         if syntax == 'name':
-            return isnamemacro(self.bindings[macroname])
-        return not macroargs or isparametricmacro(self.bindings[macroname])
+            return isnamemacro(self.isbound(macroname))
+        return not macroargs or isparametricmacro(self.isbound(macroname))
 
     def visit_Subscript(self, subscript):
         """Detect an expression (expr) macro invocation.
