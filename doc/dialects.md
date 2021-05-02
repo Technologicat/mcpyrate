@@ -67,7 +67,7 @@ So at that point, the only thing the dialect expander can rely on is the literal
 
 When the **AST** transformers run, each dialect-import is transformed into `import ...`, where `...` is the absolute dotted name of the module the dialects (in that dialect-import statement) are being imported from.
 
-Until we get [`unpythonic`](https://github.com/Technologicat/unpythonic) ported to use `mcpyrate`, see [`pydialect`](https://github.com/Technologicat/pydialect) for old example dialects.
+See the `dialects` module in [`unpythonic`](https://github.com/Technologicat/unpythonic) for example dialects.
 
 
 ## Code layout (style guidelines)
@@ -148,15 +148,13 @@ Injecting code that invokes macros, and injecting macro-imports, **is** allowed.
 
 To easily splice `tree.body` (the module body) into your dialect code template AST, see the utility [`mcpyrate.splicing.splice_dialect`](../mcpyrate/splicing.py). It lets you specify where to paste the code in your template, while automatically lifting macro-imports, dialect-imports, the magic `__all__`, and the module docstring (from the input module body) into the appropriate places in the transformed module body.
 
-As an example, for now, until we get [`unpythonic`](https://github.com/Technologicat/unpythonic) ported to use `mcpyrate`, see the example dialects in [`pydialect`](https://github.com/Technologicat/pydialect), which are implemented using this exact strategy, but with the older `macropy` macro expander, the older `pydialect` dialect system, and `unpythonic`.
-
-To give a flavor, *Lispython* is essentially Python with automatic TCO, and implicit `return` in tail position:
+As an example, see the `dialects` module in [`unpythonic`](https://github.com/Technologicat/unpythonic) for example dialects. To give a flavor, *Lispython* is essentially Python with automatic TCO, and implicit `return` in tail position:
 
 ```python
 # -*- coding: utf-8; -*-
 """Lispython example."""
 
-from mylibrary import dialects, Lispython
+from unpythonic.dialects import dialects, Lispython
 
 def fact(n):
     def f(k, acc):

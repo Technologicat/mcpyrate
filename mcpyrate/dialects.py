@@ -83,20 +83,17 @@ class Dialect:
         `mcpyrate.splicing.splice_dialect` (it automatically handles macro-imports,
         dialect-imports, the magic `__all__`, and the module docstring).
 
-        As an example, for now, until `unpythonic` is ported to `mcpyrate`, see the
-        example dialects in `pydialect`, which are implemented using this exact
-        strategy, but with the older `macropy` macro expander, the older `pydialect`
-        dialect system, and `unpythonic`.
+        As an example, see the `dialects` module in `unpythonic` for example dialects.
 
-            https://github.com/Technologicat/pydialect
+            https://github.com/Technologicat/unpythonic
 
-        To give a flavor; once we get that ported, we'll have *Lispython*, which is
-        essentially Python with TCO, and implicit `return` in tail position::
+        To give a flavor, *Lispython* is essentially Python with TCO, and implicit
+        `return` in tail position::
 
             # -*- coding: utf-8; -*-
             '''Lispython example.'''
 
-            from mylibrary import dialects, Lispython
+            from unpythonic.dialects import dialects, Lispython
 
             def fact(n):
                 def f(k, acc):
