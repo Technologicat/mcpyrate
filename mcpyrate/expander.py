@@ -166,8 +166,11 @@ class MacroExpander(BaseMacroExpander):
         # because things like `(some_expr_macro[tree])[subscript_expression]` are valid. This
         # is actually exploited by `h`, as in `q[h[target_macro][tree_for_target_macro]]`.
         candidate = subscript.value
-        macroname, macroargs = destructure_candidate(candidate, filename=self.filename)
+        macroname, macroargs = destructure_candidate(candidate, filename=self.filename,
+                                                     _validate_call_syntax=False)
         if self.ismacrocall(macroname, macroargs, "expr"):
+            # Now we know it's a macro invocation, so we can validate the parenthesis syntax to pass arguments.
+            macroname, macroargs = destructure_candidate(candidate, filename=self.filename)
             kw = {"args": macroargs}
             if sys.version_info >= (3, 9, 0):  # Python 3.9+: no ast.Index wrapper
                 tree = subscript.slice
