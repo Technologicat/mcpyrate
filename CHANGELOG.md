@@ -1,5 +1,12 @@
 # Changelog
 
+**3.4.1** (in progress, updated 2 May 2021):
+
+*Pre-emptive version bump, no user-visible changes yet.*
+
+
+---
+
 **3.4.0** (2 May 2021) - *Quasiquotes ahoy* edition:
 
 **New**:

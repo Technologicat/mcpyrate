@@ -5,4 +5,4 @@ from .expander import namemacro, parametricmacro  # noqa: F401
 from .unparser import unparse  # noqa: F401
 from .utils import gensym  # noqa: F401
 
-__version__ = "3.4.0"
+__version__ = "3.4.1"
