@@ -1,8 +1,27 @@
 # Changelog
 
-**3.3.1** (in progress)
+**3.4.0** (in progress, updated 2 May 2021)
 
-*Pre-emptive version bump. No user-visible changes yet.*
+**New**:
+
+- The unparser now recognizes hygienic captures and destructures them in debug mode. This makes the result much more readable when you unparse an AST that uses a lot of hygienic unquotes.
+  - To see it in action, use `mcpyrate.debug.step_expansion` macro on [`unpythonic.syntax.tests.test_lazify`](https://github.com/Technologicat/unpythonic/blob/master/unpythonic/syntax/tests/test_lazify.py). See particularly the *HasThon* test; both the autocurry and the lazifier produce many hygienic captures.
+
+    Without this helpful destructuring, the macro-expanded code is completely unreadable, but with this, it only exhibits mild symptoms of parenthesitis. For example, this snippet:
+    ```python
+    filename=callsite_filename()
+    ```
+    becomes, after autocurry and lazification,
+    ```python
+    filename=$h[Lazy]((lambda: $h[maybe_force_args]($h[force]($h[currycall]),
+                                                    $h[Lazy]((lambda: $h[force]($h[callsite_filename]))))))
+    ```
+    Here each `$h[...]` is a hygienic capture. That's seven captures for this very simple input! Compare this notation to the actual AST representation of, e.g., `$h[Lazy]`:
+    ```python
+    __import__('mcpyrate.quotes', globals(), None, (), 0).quotes.lookup_value(('Lazy',
+        b'\x80\x04\x95 \x00\x00\x00\x00\x00\x00\x00\x8c\x13unpythonic.lazyutil\x94\x8c\x04Lazy\x94\x93\x94.'))
+    ```
+
 
 ---
 

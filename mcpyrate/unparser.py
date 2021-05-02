@@ -16,6 +16,7 @@ from contextlib import contextmanager
 from . import markers
 from .astdumper import dump  # fallback
 from .colorizer import ColorScheme, colorize, setcolor
+quotes = None  # HACK: avoid circular import
 
 # Large float and imaginary literals get turned into infinities in the AST.
 # We unparse those infinities to INFSTR.
@@ -82,6 +83,10 @@ class Unparser:
         `expander`: optional `BaseMacroExpander` instance. If provided,
                     used for syntax highlighting macro names.
         """
+        # HACK: avoid circular import
+        global quotes
+        from . import quotes
+
         self.debug = debug
         self.color = color
         self._color_override = False  # for syntax highlighting of decorators
@@ -166,6 +171,12 @@ class Unparser:
             for t in tree:
                 self.dispatch(t)
             return
+        if self.debug and quotes.is_captured_value(tree):
+            self.captured_value(tree)
+            return
+        if self.debug and quotes.is_captured_macro(tree):
+            self.captured_macro(tree)
+            return
         if isinstance(tree, markers.ASTMarker):  # mcpyrate and macro communication internal
             self.astmarker(tree)
             return
@@ -245,6 +256,20 @@ class Unparser:
         self.leave()
         if print_mode == "expr":
             self.write(")")
+
+    def captured_value(self, t):  # hygienic capture; output of `mcpyrate.quotes.h`; only emitted in debug mode
+        name, _ignored_value = quotes.is_captured_value(t)
+        self.write(self.maybe_colorize("$h", ColorScheme.ASTMARKER))
+        self.write(self.maybe_colorize("[", ColorScheme.ASTMARKER))
+        self.write(name)
+        self.write(self.maybe_colorize("]", ColorScheme.ASTMARKER))
+
+    def captured_macro(self, t):  # hygienic capture; output of `mcpyrate.quotes.h`; only emitted in debug mode
+        name, _ignored_unique_name, _ignored_value = quotes.is_captured_macro(t)
+        self.write(self.maybe_colorize("$h", ColorScheme.ASTMARKER))
+        self.write(self.maybe_colorize("[", ColorScheme.ASTMARKER))
+        self.write(self.maybe_colorize(name, ColorScheme.MACRONAME))
+        self.write(self.maybe_colorize("]", ColorScheme.ASTMARKER))
 
     # top level nodes
     def _Module(self, t):  # ast.parse(..., mode="exec")
