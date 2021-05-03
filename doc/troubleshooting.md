@@ -14,6 +14,7 @@
 - [General issues](#general-issues)
     - [ImportError: cannot import name 'macros' from ...](#importerror-cannot-import-name-macros-from-)
     - [I just ran my program again and no macro expansion is happening?](#i-just-ran-my-program-again-and-no-macro-expansion-is-happening)
+    - [I'm hacking a macro and my changes don't take?](#im-hacking-a-macro-and-my-changes-dont-take)
     - [How to debug macro transformations?](#how-to-debug-macro-transformations)
     - [Macro expansion time where exactly?](#macro-expansion-time-where-exactly)
     - [My macro needs to fill in `lineno` recursively, any recommendations?](#my-macro-needs-to-fill-in-lineno-recursively-any-recommendations)
@@ -72,6 +73,19 @@ Normally there is no need to delete bytecode caches manually.
 However, there is an edge case. If you hygienically capture a value that was imported (to the macro definition site) from another module, and that other module is not a macro-dependency, then - if the class definition of the hygienically captured value changes on disk, that is not detected.
 
 This can be a problem, because hygienic value storage uses `pickle`, which in order to unpickle the value, expects to be able to load the original (or at least a data-compatible) class definition from the same place where it was defined when the value was pickled. If this happens, then delete the bytecode cache (`.pyc`) files, and the program should work again once the macros re-expand.
+
+
+## I'm hacking a macro and my changes don't take?
+
+Most likely, there is a stale bytecode cache that isn't being detected.
+
+This could happen for example if, like in our sister project [`unpythonic`](https://github.com/Technologicat/unpythonic), the project hosts a lot of macros. For organization and clarity, `unpythonic` defines its macros in various modules (`unpythonic.syntax.whatever`), but to present a simple, flat interface to the user, they are gathered into a centralized macro interface module (`unpythonic.syntax`, specifically its `__init__.py`) by importing them there for re-export purposes.
+
+Because those imports are just regular imports (because we want to export the macro functions, not invoke them as macros), the macro-dependency analyzer in the importer won't even look at them. For performance reasons, it only considers the macro-import dependency graph, not the full dependency graph. (This may change in a future release, but if so, the importer will become a lot slower than it needs to be in most circumstances.)
+
+Hence, the importer won't notice that a user program (or, say, a unit test module) using a macro from `unpythonic/syntax/whatever.py` should be recompiled when `whatever.py` has changed, because the program imports that macro from the top-level interface `unpythonic.syntax` - which has not changed, and has no macro-imports itself.
+
+Clearing the bytecode cache with `macropython -c .` should help; this will force a recompile of the `.py` files the next time they are loaded.
 
 
 ## How to debug macro transformations?
