@@ -155,7 +155,7 @@ def path_stats(path, _stats_cache=None):
         # TODO: Or just document it, that the dialect definition module *must* macro-import those macros
         # TODO: even if it just injects them in the template?
         with tokenize.open(path) as sourcefile:
-            tree = ast.parse(sourcefile.read())
+            tree = ast.parse(sourcefile.read(), filename=path)
 
         macroimports = []
         dialectimports = []

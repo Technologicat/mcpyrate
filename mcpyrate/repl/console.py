@@ -110,7 +110,7 @@ class MacroConsole(code.InteractiveConsole):
         This bypasses `runsource`, so it too can use this function.
         """
         source = textwrap.dedent(source)
-        tree = ast.parse(source)
+        tree = ast.parse(source, self.filename)
         tree = ast.Interactive(tree.body)
         code = compile(tree, "<console internal>", "single", self.compile.compiler.flags, 1)
         self.runcode(code)
@@ -151,7 +151,7 @@ class MacroConsole(code.InteractiveConsole):
         try:
             # TODO: If we want to support dialects in the REPL, this is where to do it.
             #       Look at `mcpyrate.compiler.compile`.
-            tree = ast.parse(source)
+            tree = ast.parse(source, self.filename)
 
             # macro-imports (this will import the modules)
             sys.modules[_magic_module_name].__dict__.clear()

@@ -111,7 +111,7 @@ class AstMagics(Magics):
     def dump_ast(self, line, cell):
         """Parse the code in the cell, and pretty-print the AST."""
         args = magic_arguments.parse_argstring(self.dump_ast, line)
-        tree = ast.parse(cell, mode=args.mode)
+        tree = ast.parse(cell, filename=_placeholder, mode=args.mode)
         if args.expand != "no":
             tree = _instance.macro_transformer.visit(tree)
         print(dump(tree))
@@ -123,7 +123,7 @@ class InteractiveMacroTransformer(ast.NodeTransformer):
     def __init__(self, extension_instance, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self._ipyextension = extension_instance
-        self.expander = MacroExpander(bindings={}, filename="<ipython-session>")
+        self.expander = MacroExpander(bindings={}, filename=_placeholder)
 
     def visit(self, tree):
         try:

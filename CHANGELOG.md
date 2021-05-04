@@ -6,6 +6,10 @@
 
 - Update docs: as of `unpythonic` 0.15, it runs on `mcpyrate`, and provides fully functional example dialects based on a whole-module AST transformation.
 
+**Fixed**:
+
+- Now we pass a filename to `ast.parse` everywhere. This allows e.g. `SyntaxError` during macro-import scanning (in the macro-import dependency graph analyzer), and possible internal errors in the interactive consoles, to report the filename correctly.
+
 
 ---
 
