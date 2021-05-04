@@ -19,6 +19,17 @@ except ImportError:  # pragma: no cover
     # images that don't have the library available.
     from .ansi import Fore, Back, Style  # noqa: F811
 
+# TODO: Get rid of this hack if Colorama adds these styles later.
+# Inject some styles missing from Colorama 0.4.4
+_additional_styles = (("ITALIC", "\33[3m"),
+                      ("URL", "\33[4m"),  # underline plus possibly a special color (depends on terminal app)
+                      ("BLINK", "\33[5m"),
+                      ("BLINK2", "\33[6m"))  # same effect as BLINK?
+for _name, _value in _additional_styles:
+    if not hasattr(Style, _name):
+        setattr(Style, _name, _value)
+del _name, _value
+
 from .bunch import Bunch
 
 
