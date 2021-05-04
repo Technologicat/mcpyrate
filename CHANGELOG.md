@@ -1,10 +1,11 @@
 # Changelog
 
-**3.4.1** (in progress, updated 2 May 2021):
+**3.4.1** (4 May 2021):
 
 **Changed**:
 
 - Update docs: as of `unpythonic` 0.15, it runs on `mcpyrate`, and provides fully functional example dialects based on a whole-module AST transformation.
+- The colorizer now injects some styles to `Style` that are missing from `colorama` 0.4.4, particularly `ITALIC`.
 
 **Fixed**:
 
