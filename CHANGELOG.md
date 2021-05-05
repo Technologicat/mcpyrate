@@ -1,5 +1,12 @@
 # Changelog
 
+**3.4.2** (in progress)
+
+*Pre-emptive version bump. No user-visible changes yet.*
+
+
+---
+
 **3.4.1** (4 May 2021):
 
 **Changed**:
