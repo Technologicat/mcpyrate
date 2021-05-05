@@ -142,7 +142,7 @@ def lift_sourcecode(value, filename="<unknown>"):
     """
     if not isinstance(value, str):
         raise TypeError(f"`n[]`: expected an expression that evaluates to str, result was {type(value)} with value {repr(value)}")
-    return ast.parse(value, filename=filename, mode="eval").body
+    return ast.parse(value, filename=f"<invocation of n[] in '{filename}'>", mode="eval").body
 
 
 def _typecheck(node, cls, macroname):

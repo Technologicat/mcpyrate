@@ -2,7 +2,9 @@
 
 **3.4.2** (in progress)
 
-*Pre-emptive version bump. No user-visible changes yet.*
+**Fixed**:
+
+- Run-time part of `n[]`: make it clearer in the error message that what was being compiled was an invocation of `n[]`, not the whole source file. (Usually `lineno` will be `1`, which otherwise looks confusing.)
 
 
 ---
