@@ -1,6 +1,10 @@
 # Changelog
 
-**3.4.2** (in progress)
+**3.5.0** (in progress)
+
+**New**:
+
+- Add `temporary_module`, a context manager that uses `create_module`, and automatically removes the temporary module from `sys.modules` when the context exits.
 
 **Fixed**:
 

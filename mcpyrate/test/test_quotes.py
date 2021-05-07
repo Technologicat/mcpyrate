@@ -8,7 +8,7 @@ from ..metatools import (macros, expand1r, expand1rq, expand1s,  # noqa: F401, F
 
 import ast
 
-from ..compiler import run, expand
+from ..compiler import temporary_module, run, expand
 from ..quotes import unastify, is_captured_value, lookup_value, is_captured_macro
 from ..unparser import unparse
 from ..walkers import ASTVisitor
@@ -67,21 +67,23 @@ def runtests():
 
     # Thanks to the ctx fixer, `n[]` can also appear on the LHS of an assignment.
     # (Indeed, any unquote can, if the end result makes sense syntactically.)
-    with q as quoted:
-        n[nom] = 42
+    #
     # Because we're not in a macro (that could just return `tree` to the
     # importer), we have to compile and exec `tree`. For this use case,
     # we have `mcpyrate.compiler.run`.
-    module = run(quoted)  # create new module, run the code in it
-    assert hasattr(module, "x")
-    assert module.x == 42
+    with temporary_module() as module:
+        with q as quoted:
+            n[nom] = 42
+        run(quoted, module)
+        assert hasattr(module, "x")
+        assert module.x == 42
 
-    # `n[]` can also appear in a `del`:
-    assert hasattr(module, "x")
-    with q as quoted:
-        del n[nom]
-    run(quoted, module)  # run in existing module
-    assert not hasattr(module, "x")
+        # `n[]` can also appear in a `del`:
+        assert hasattr(module, "x")
+        with q as quoted:
+            del n[nom]
+        run(quoted, module)
+        assert not hasattr(module, "x")
 
     # a[]: AST literal
     nam = ast.Name(id=nom)

@@ -12,10 +12,12 @@ We also provide a public API to compile and run macro-enabled code at run time.
 
 __all__ = ["expand", "compile",
            "singlephase_expand",
-           "run", "create_module"]
+           "run", "create_module",
+           "temporary_module"]
 
 import ast
 import builtins
+from contextlib import contextmanager
 import importlib.util
 import sys
 from types import CodeType, ModuleType
@@ -543,3 +545,42 @@ def create_module(dotted_name=None, filename=None, *, update_parent=True):
 
     sys.modules[dotted_name] = module
     return module
+
+
+@contextmanager
+def temporary_module(dotted_name=None, filename=None, *, update_parent=True):
+    """Context manager. Create and destroy a temporary module.
+
+    Usage::
+
+        with temporary_module(name, filename) as module:
+            ...
+
+    Arguments are passed to `create_module`. The created module is
+    automatically inserted to `sys.modules`, and then assigned to
+    the as-part.
+
+    When the context exits, the temporary module is removed from
+    `sys.modules`. If the `update_parent` optional kwarg is `True`,
+    it is also removed from the parent package's namespace, for
+    symmetry.
+
+    This is useful for sandboxed testing of macros, because the
+    temporary modules will not pollute `sys.modules` beyond their
+    useful lifetime.
+    """
+    try:
+        module = create_module(dotted_name, filename, update_parent=update_parent)
+        yield module
+    finally:
+        try:
+            del sys.modules[dotted_name]
+
+            # The standard importer doesn't do this, but it seems nice for symmetry,
+            # considering the use case.
+            if update_parent and dotted_name.find(".") != -1:
+                packagename, finalcomponent = dotted_name.rsplit(".", maxsplit=1)
+                package = sys.modules.get(packagename, None)
+                delattr(package, finalcomponent)
+        except BaseException:
+            pass
