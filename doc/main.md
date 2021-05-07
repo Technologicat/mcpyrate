@@ -343,8 +343,9 @@ When calling a macro function to expand a macro, the expander passes certain nam
 
 Full list as of v3.0.0, in alphabetical order:
 
- - `args`: macro argument ASTs, if the invocation provided any. If not, `args = []`.
+ - `args`: `list` of macro argument ASTs, if the invocation provided any. If not, `args = []`.
    - A macro function only accepts macro arguments if declared `@parametricmacro`. For non-parametric macros (default), `args=[]`.
+   - For the sake of uniformity, `args` is always a `list`, even when there is exactly one argument.
  - `expander`: the macro expander instance.
    - To expand macro invocations inside the current one, use `expander.visit(tree)`, or in special use cases (when you know why), `expander.visit_recursively(tree)` or `expander.visit_once(tree)`.
      - These methods will use the macro bindings *from the use site of your macro*. If you instead need to use the macro bindings *from the definition site of your macro*, see the `expand` family of macros in [`mcpyrate.metatools`](../mcpyrate/metatools.py). [Full documentation](quasiquotes.md#the-expand-family-of-macros).
