@@ -63,7 +63,7 @@ def delete_markers(tree, cls=ASTMarker):
     class ASTMarkerDeleter(walkers.ASTTransformer):
         def transform(self, tree):
             if isinstance(tree, cls):
-                tree = tree.body
+                return self.visit(tree.body)
             return self.generic_visit(tree)
     return ASTMarkerDeleter().visit(tree)
 

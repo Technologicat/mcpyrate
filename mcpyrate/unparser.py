@@ -199,7 +199,10 @@ class Unparser:
 
     def astmarker(self, tree):
         def write_astmarker_field_value(v):
-            if isinstance(v, ast.AST):
+            if isinstance(v, list):  # statement suite
+                for item in v:
+                    self.dispatch(item)
+            elif isinstance(v, ast.AST):
                 self.dispatch(v)
             else:
                 self.write(repr(v))
@@ -210,7 +213,7 @@ class Unparser:
         # If you need to get rid of them, see `mcpyrate.markers.delete_markers`.
 
         header = self.maybe_colorize("$ASTMarker", ColorScheme.ASTMARKER)
-        if isinstance(tree.body, ast.stmt):
+        if isinstance(tree.body, (ast.stmt, list)):
             print_mode = "stmt"
             self.fill(header, lineno_node=tree)
         else:

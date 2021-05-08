@@ -14,6 +14,10 @@
 
 - Fix error message in run-time typecheck of `a` (ast-unquote). Now it mentions correctly what was expected.
 
+- Now `ASTMarker` may contain a statement suite (`list` of AST nodes) as its `body`.
+  - The debug mode of `mcpyrate.unparse` now renders such bodies correctly.
+  - `mcpyrate.markers.delete_markers` now deletes such markers correctly, splicing in the `list` of AST nodes where the marker was.
+
 
 ---
 
