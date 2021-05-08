@@ -8,7 +8,7 @@
 
 **Fixed**:
 
-- Run-time part of `n[]`: make it clearer in the error message that what was being compiled was an invocation of `n[]`, not the whole source file. (Usually `lineno` will be `1`, which otherwise looks confusing.)
+- Run-time part of `n[]`: upon a parse error, make it clearer in the error message that what was being compiled was an invocation of `n[]`, not the whole source file. (Because these expressions are often one-liners, usually `lineno` will be `1`, which otherwise looks confusing.)
 
 
 ---
