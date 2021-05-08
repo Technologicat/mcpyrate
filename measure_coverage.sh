@@ -1,4 +1,5 @@
 #!/bin/bash
+# This measures the coverage for all automated tests.
 
 # https://github.com/nedbat/coveragepy
 # pip install coverage
