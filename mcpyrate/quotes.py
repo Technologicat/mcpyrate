@@ -146,9 +146,16 @@ def lift_sourcecode(value, filename="<unknown>"):
 
 
 def _typecheck(node, cls, macroname):
-    body = node.body if isinstance(node, ASTMarker) else node
-    if not isinstance(body, cls):
-        raise TypeError(f"{macroname}: expected {cls}, got {type(body)} with value {repr(body)}")
+    if isinstance(node, ASTMarker):
+        if isinstance(node.body, list):  # statement suite inside a marker
+            for child in node.body:
+                _typecheck(child, cls, macroname)
+            return
+        # single AST node inside a marker
+        _typecheck(node.body, cls, macroname)
+        return
+    if not isinstance(node, cls):
+        raise TypeError(f"{macroname}: expected {cls}, got {type(node)} with value {repr(node)}")
 
 def _flatten_and_typecheck_iterable(nodes, cls, macroname):
     try:
