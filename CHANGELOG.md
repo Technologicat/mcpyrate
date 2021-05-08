@@ -1,6 +1,6 @@
 # Changelog
 
-**3.5.0** (in progress)
+**3.5.0** (9 May 2021)
 
 **New**:
 
