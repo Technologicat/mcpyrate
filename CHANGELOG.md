@@ -12,6 +12,8 @@
 
 - Run-time part of `n[]`: upon a parse error, make it clearer in the error message that what was being compiled was an invocation of `n[]`, not the whole source file. (Because these expressions are often one-liners, usually `lineno` will be `1`, which otherwise looks confusing.)
 
+- Fix error message in run-time typecheck of `a` (ast-unquote). Now it mentions correctly what was expected.
+
 
 ---
 
