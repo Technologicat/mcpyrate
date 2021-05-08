@@ -6,6 +6,8 @@
 
 - Add `temporary_module`, a context manager that uses `create_module`, and automatically removes the temporary module from `sys.modules` when the context exits.
 
+- Add a global postprocessor hook facility. Hooks are called, in the order registered, by `global_postprocess` when the macro expansion of a module is otherwise done. This e.g. allows a macro library to use its own `ASTMarker` subclasses for internal communication between macros, and delete (only) its own markers when done. See `add_postprocessor` and `remove_postprocessor` in `mcpyrate.core`.
+
 **Fixed**:
 
 - Run-time part of `n[]`: upon a parse error, make it clearer in the error message that what was being compiled was an invocation of `n[]`, not the whole source file. (Because these expressions are often one-liners, usually `lineno` will be `1`, which otherwise looks confusing.)

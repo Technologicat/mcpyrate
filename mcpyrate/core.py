@@ -2,13 +2,14 @@
 """Expander core; essentially, how to apply a macro invocation."""
 
 __all__ = ["MacroExpansionError", "MacroExpanderMarker", "Done",
-           "BaseMacroExpander", "global_postprocess"]
+           "BaseMacroExpander", "global_postprocess",
+           "add_postprocessor", "remove_postprocessor"]
 
 from ast import AST, NodeTransformer
 from collections import ChainMap
 from contextlib import contextmanager
 from copy import deepcopy
-from typing import Any, Callable, Dict
+from typing import Any, Callable, Dict, List
 
 from .astfixers import fix_ctx, fix_locations
 from .markers import ASTMarker, delete_markers
@@ -21,6 +22,9 @@ from .utils import flatten, format_location
 # (especially named) arguments, and its return type is `Union[AST, List[AST], None]`,
 # but as of 3.1.0, we skim over this detail.
 global_bindings: Dict[str, Callable[..., Any]] = {}
+
+# User function hook for `global_postprocess`.
+global_postprocessors: List[Callable[..., Any]] = []
 
 class MacroExpansionError(Exception):
     """Base class for errors specific to macro expansion.
@@ -363,8 +367,35 @@ def global_postprocess(tree):
     to Python's `compile`.
     """
     tree = delete_markers(tree, cls=MacroExpanderMarker)
+
     # A name macro, appearing as an assignment target, gets the wrong ctx,
     # because when expanding the name macro, the expander sees only the Name
     # node, and thus puts an `ast.Load` there as the ctx.
     tree = fix_ctx(tree, copy_seen_nodes=True)
+
+    # Run the user hooks, if any.
+    for custom_postprocessor in global_postprocessors:
+        tree = custom_postprocessor(tree)
+
     return tree
+
+def add_postprocessor(function):
+    """Add a custom postprocessor for the top-level expansion.
+
+    `function` must accept `AST` and `list` of `AST`, and return
+    the same type.
+
+    Custom postprocessors are called by `global_postprocess`,
+    in the order they were registered by calling `add_postprocessor`.
+
+    This e.g. allows a macro library to use its own `ASTMarker`
+    subclasses for internal communication between macros, and
+    delete (only) its own markers when done.
+    """
+    if function not in global_postprocessors:
+        global_postprocessors.append(function)
+
+def remove_postprocessor(function):
+    """Remove a previously added custom postprocessor."""
+    if function in global_postprocessors:
+        global_postprocessors.remove(function)
