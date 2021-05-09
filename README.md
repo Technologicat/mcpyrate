@@ -175,9 +175,35 @@ The full documentation of `mcpyrate` lives in the [`doc/`](doc/) subfolder. Some
   - [Multi-phase compilation](doc/compiler.md#multi-phase-compilation) - how to use a macro in the same module where it is defined.
   - [Invoking the compiler at run time](#invoking-the-compiler-at-run-time)
 - [AST walkers](doc/walkers.md)
-  - [`macropy` `@Walker` porting guide](doc/walkers.md#macropy-walker-porting-guide)
 - [Dialects](doc/dialects.md)
 - [Troubleshooting](doc/troubleshooting.md)
+
+`mcpyrate` is not drop-in compatible with `macropy` or `mcpy`. Summary of differences:
+
+- Differences to [`macropy`](https://github.com/azazel75/macropy):
+  - No macro registry; each macro function is its own dispatcher. See the `syntax` named parameter.
+  - In `mcpyrate`, macros expand outside-in (and only outside-in) by default.
+    - No `yield`. To expand inside-out, recurse explicitly in your macro implementation at the point where you want to switch to inside-out processing. See the [main user manual](doc/main.md).
+  - [Named parameters filled by expander](doc/main.md#named-parameters-filled-by-expander) (`**kw` in the macro definition) are almost totally different.
+    - No `gen_sym` parameter; use the function `mcpyrate.gensym`. We use UUIDs, avoiding the need for a lexical scan.
+  - [Macro arguments](doc/main.md#differences-to-macropy)
+    - Passed using brackets.
+  - [Macro expansion error reporting](doc/main.md#differences-to-macropy-1)
+    - Raise an exception as usual, don't `assert False`.
+  - [Quasiquotes](doc/quasiquotes.md#differences-to-macropy)
+    - Quasiquoted code isn't automatically macro-expanded.
+    - Hygienic quasiquoting works differently.
+      - You can capture arbitrary expressions, not just identifiers.
+      - You can capture macro names, too.
+    - The equivalents of `ast_literal` and `name` have additional features, and an operator to interpolate a `list` of ASTs as an `ast.Tuple` has been added (one use case is to splice in a variable number of macro arguments to a quasiquoted macro invocation).
+  - [AST walkers](doc/walkers.md#macropy-walker-porting-guide)
+    - Similar in spirit to `ast.NodeTransformer` and `ast.NodeVisitor`, but with functionality equivalent to that of `macropy.core.walkers.Walker`.
+    - Explicit recursion; no `stop`.
+
+- Differences to [`mcpy`](https://github.com/delapuente/mcpy):
+  - [Named parameters filled by expander](doc/main.md#differences-to-mcpy)
+
+In addition, we provide many advanced features not available in previous macro expanders for Python, such as dialects (full-module transforms), multi-phase compilation, and run-time compiler access (with dynamic module creation).
 
 *We aim at complete documentation.* If you find something is missing, please [file an issue](https://github.com/Technologicat/mcpyrate/issues/new). (And if you already figured out the thing that was missing from the docs, a documentation PR is also welcome!)
 
