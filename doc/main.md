@@ -240,6 +240,41 @@ def log(expr, **kw):
                 keywords=[])
 ```
 
+As your macros grow more complex, it may be useful to separate the actual syntax transformer(s) from the macro interface:
+
+```python
+def mac(tree, *, syntax, **kw):
+    """[syntax, expr/block] Macro docstring goes here."
+    if syntax not in ("expr", "block"):
+        raise SyntaxError("`mac` is an expr and block macro only")
+    if syntax == "expr":
+        return _mac_expr(tree)
+    return _mac_block(tree)
+
+def _mac_expr(tree):
+    ...
+
+def _mac_block(tree):
+    ...
+```
+
+This helps especially if there are sub-operations needed by several macros - these can often be made into their own syntax transformers or analyzers. In other words, the usual practices of organizing code apply to writing macros, too.
+
+If you want to invoke another macro as part of the expansion of your own macro, that is also possible:
+
+```python
+from mcpyrate.quotes import macros, q, a, h
+
+from mymacropackage import macros, kittify  # noqa: F401, used in a macro expansion.
+
+def cheese(tree, *, **kw):
+    return q[h[kittify][a[tree]]]
+```
+
+The `h[kittify]` captures the `kittify` macro hygienically. Note that macro must be bound in the macro expander that is expanding the use site of `h[]` (so that the name actually has a meaning that can be captured hygienically!); that's why we macro-import `kittify` in the example. For much more details, see [the quasiquote system](https://github.com/Technologicat/mcpyrate/blob/master/doc/quasiquotes.md).
+
+For advanced use cases (such as hygienic macro recursion), see the [demos](../demo/).
+
 
 ## Macro-writing utilities in `mcpyrate`
 
