@@ -41,6 +41,7 @@
         - [Creating a magic variable](#creating-a-magic-variable)
     - [Expand macros inside-out](#expand-macros-inside-out)
     - [Expand macros inside-out, but only those in a given set](#expand-macros-inside-out-but-only-those-in-a-given-set)
+    - [AST markers](#ast-markers)
 - [Multi-phase compilation](#multi-phase-compilation)
 - [Dialects](#dialects)
 - [Macro expansion error reporting](#macro-expansion-error-reporting)
@@ -673,6 +674,72 @@ The recipe is as follows:
 The implementation of the quasiquote system has an example of this. See also [demo/anaphoric_if.py](../demo/anaphoric_if.py), for how it expands the anaphoric `it`.
 
 Obviously, if you want to expand just one layer with the second expander, use its `visit_once` method instead of `visit`. (And if you do that, you'll need to decide if you should keep the `Done` marker - to prevent further expansion in that subtree - or discard it and grab the real AST from its `body` attribute.)
+
+
+## AST markers
+
+AST markers are objects that behave like AST nodes. They are meant for data-driven communication between macros that need to work together. This need mostly comes up in large-ish macro packages, which must consider interactions between features.
+
+Some markers are also used by the macro expander internally. Particularly, `mcpyrate.core.Done` tells the expander not to expand a particular subtree further.
+
+For example, if `with mac` needs to know it's looking at an expanded `with cheese`, to enable some special processing for that block of code, that is done by making the `with cheese` expand into an AST marker, with the actual expanded AST contained inside the marker. Once macro expansion is done, the marker can then be deleted (splicing its contents to replace it) just before the code is handed to Python's compiler.
+
+Some examples of real use cases of AST markers can be found in our sister project, the kitchen-sink language extension package [`unpythonic`](https://github.com/Technologicat/unpythonic):
+
+ - The `with tco` macro needs to know it's looking at an expanded `with continuations` (which also enables TCO), to avoid inserting another layer of TCO.
+ - `with continuations` has a helper expr macro `call_cc[]`, which expands into a marker, which is then compiled away by the syntax transformer of `with continuations`.
+    - The macros `with continuations` and `call_cc[]` also co-operate by using a `mcpyrate.util.NestingLevelTracker`, allowing us to enforce the rule that `call_cc[]` may only appear lexically inside `with continuations` (and anywhere else, it is considered a `SyntaxError` at macro expansion time).
+
+An AST marker is an AST node, but neither an expression nor a statement. It may appear anywhere in the AST, in a position where the contents of its `body` attribute would be admissible. Particularly, note that a `list` of AST nodes (in any position where that is admissible in the AST) may be replaced by a marker node containing such a `list`. The actual `list` is spliced in from its `body` when the code finishes macro expansion.
+
+AST markers have no surface syntax representation. To emphasize this, `mcpyrate.unparse` displays them as `$ASTMarker<SomeMarkerType>` (the dollar sign preventing `eval`/`exec`).
+
+An AST marker always has a `body` attribute. The `body` is an AST node, or where admissible in a Python AST, a `list` of AST nodes. Semantically, the marker indicates that its `body` has some compile-time feature that is relevant to communication between macros. For example:
+
+- `mcpyrate` itself uses `mcpyrate.core.Done` to mark a subtree for which no further macro expansion should be performed.
+- `unpythonic`'s `ExpandedContinuationsMarker` says that the `body` is an expanded `with continuations` block.
+- `unpythonic`'s `CallCcMarker` says that the `body` contains the arguments for a `call/cc` invocation.
+
+An AST marker may contain arbitrary other attributes. For example, `mcpyrate`'s quasiquote system defines a `LiftSourcecode` marker that represents an invocation of `n[]` during macro expansion. Beside `body`, it has a `filename` field, because later steps in the expansion process for `n[]` need that for error reporting. Similarly, the ast-unquote `a` is represented by an `ASTLiteral` marker that has a `syntax` field, so later steps in the expansion process for `a` can know whether the invocation was an `a[]` or a `with a`.
+
+**AST markers absolutely must conform to the `ast.AST` API**, so that they support `ast.iter_fields`. This is important for the AST walkers and the unparser. Basically, this means that the `_fields` attribute must contain a `list`, which holds the names of attributes that store important information. The default list is `["body"]`.
+
+Often *important information* means "child nodes", but not always. For example, of Python's standard node types, `ast.Constant` has a `value` field that stores a bare object that represents the constant value. In practice, it is safe to store at least instances of (a subclass of) `ast.AST`, `str`, `int`, `bool`, `NoneType`, `Ellipsis` and `list` in an attribute that is listed in `_fields`.
+
+`mcpyrate`'s AST walkers and the unparser only care whether a field contains a `list`, an `ast.AST`, or "other" (treated as a bare value), but obviously as a third-party author, we make no guarantees what Python itself allows. As of Python 3.8, looking at the source code of `ast.iter_fields` and `ast.NodeTransformer`, at least the types listed above should be safe to store in a field.
+
+Finally, note that **when macro expansion is done, all AST markers must be removed from the AST** before handing the code to Python's compiler. Never mind there being no surface syntax for AST markers; even an *AST* containing markers cannot be `eval`'d or `exec`'d, or indeed `compile`d. `mcpyrate` removes its own markers automatically, in `global_postprocess`.
+
+If your macro library defines its own AST markers, there are two main points to note:
+
+ 1. For clarity, it is recommended to define a class hierarchy for your own markers. The top-level base class should inherit from `mcpyrate.markers.ASTMarker`, and everything else from (possibly a subclass of) that. For example:
+
+    ```python
+    from mcpyrate.markers import ASTMarker
+
+    class MyMarkerBase(ASTMarker):
+        pass
+
+    class ExpandedKittifyMarker(MyMarkerBase):
+        pass
+
+    class SomeSubsystemMarkerBase(MyMarkerBase):
+        pass
+    class InterestingFeatureMarker(SomeSubsystemMarkerBase):
+        pass
+    ```
+
+    Following this convention, it is possible to programmatically inspect which markers come from which macro library (and possibly, which subsystem therein). As of 3.5.0, `mcpyrate` doesn't currently use that information, but error reporting may be extended in the future to display the MRO of the offending nodes, if markers are still present in the tree when it is being handed to Python's `compile`.
+
+ 2. To remove your markers when done, register a custom AST postprocessor with `mcpyrate.core.add_postprocessor`. The function `mcpyrate.markers.delete_markers` will come in handy for defining that custom postprocessor; it can remove all markers, or descendants of a specific subclass only. See the docstring of `add_postprocessor` for an example.
+
+Note that postprocessor registration is global; all postprocessors (that have been registered during the current Python session) run for all modules compiled by `mcpyrate`, in the order they were registered.
+
+It is also possible to remove a previously registered postprocessor; see `mcpyrate.core.remove_postprocessor`.
+
+If you have a set of modules that need a locally different postprocessor, consider using [the dialect system](dialects.md). Defining a dialect that has the `postprocess_ast` method, and then dialect-importing that dialect, has the effect of running your postprocessor on the AST (of the module that imports the dialect) after macro expansion is done.
+
+The AST marker feature was inspired by a similar mechanism that is used by Python itself to implement some features internally in the `ast` module, and the internals of `macropy`'s quasiquote system.
 
 
 # Multi-phase compilation
