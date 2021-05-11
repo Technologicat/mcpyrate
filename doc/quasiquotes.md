@@ -19,12 +19,15 @@
     - [Advanced uses of non-hygienic quasiquoting](#advanced-uses-of-non-hygienic-quasiquoting)
 - [Reference manual](#reference-manual)
     - [`q`: quasiquote](#q-quasiquote)
-    - [`u`: unquote](#u-unquote)
-    - [`n`: name-unquote](#n-name-unquote)
-    - [`a`: ast-unquote](#a-ast-unquote)
         - [Expression mode](#expression-mode)
         - [Block mode](#block-mode)
         - [Notes](#notes)
+    - [`u`: unquote](#u-unquote)
+    - [`n`: name-unquote](#n-name-unquote)
+    - [`a`: ast-unquote](#a-ast-unquote)
+        - [Expression mode](#expression-mode-1)
+        - [Block mode](#block-mode-1)
+        - [Notes](#notes-1)
     - [`s`: ast-list-unquote](#s-ast-list-unquote)
     - [`t`: ast-tuple-unquote](#t-ast-tuple-unquote)
     - [`h`: hygienic-unquote](#h-hygienic-unquote)
@@ -40,7 +43,7 @@
     - [Using the `expand` macros](#using-the-expand-macros)
 - [Understanding the quasiquote system](#understanding-the-quasiquote-system)
     - [How `q` arranges hygienic captures](#how-q-arranges-hygienic-captures)
-- [Notes](#notes-1)
+- [Notes](#notes-2)
     - [Difference between `h[]` and `u[]`](#difference-between-h-and-u)
     - [Differences to Common Lisp](#differences-to-common-lisp)
     - [Differences to `macropy`](#differences-to-macropy)
@@ -252,12 +255,29 @@ site of `q`, i.e. when your macro reaches run time.
 
 ## `q`: quasiquote
 
-`q[expr]` lifts the expression `expr` into an AST. E.g. `q[42]` becomes
-`ast.Constant(value=42)`.
+The quasiquote supports both expression and block modes.
 
-To lift statements, use block mode. `with q as quoted` lifts the `with` block
-body into a `list` of AST nodes. The list is assigned to the name given as the
-asname (in the example, `quoted`).
+### Expression mode
+
+```python
+q[expr]
+```
+
+Lift the expression `expr` into an AST. E.g. `q[42]` becomes `ast.Constant(value=42)`.
+
+### Block mode
+
+```python
+with q as quoted:
+    body0
+    ...
+```
+
+To lift statements, use block mode. The `with q as quoted` construct lifts the
+`with` block body into a `list` of AST nodes. The list is assigned to the name
+given as the asname (in the example, `quoted`).
+
+### Notes
 
 In both expression and block modes, any names in the quoted code remain exactly
 as they appear in the source. This may cause name conflicts with names already
