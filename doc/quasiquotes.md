@@ -353,7 +353,7 @@ except-as, imports, ...).
 
 Essentially, `n[code]` is defined as `a[ast.parse(code, mode="eval").body]`,
 but it will also automatically set the `filename` argument of `ast.parse`
-to the `.py` filename the invocation of `n[]` appears in.
+based on the `.py` filename the invocation of `n[]` appears in.
 
 Finally, observe that `q[n["x"]]` is the name `x` at the macro use site. It's
 the same as just `q[x]`. This is a useless use of `n[]`. The reason `n[]` exists
