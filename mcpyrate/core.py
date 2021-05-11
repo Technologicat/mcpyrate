@@ -385,17 +385,35 @@ def add_postprocessor(function):
     `function` must accept `AST` and `list` of `AST`, and return
     the same type.
 
-    Custom postprocessors are called by `global_postprocess`,
-    in the order they were registered by calling `add_postprocessor`.
+    Custom postprocessors are automatically called by `global_postprocess`
+    (which is called just after macro expansion for a module ends), in the
+    order they were registered by calling `add_postprocessor`.
 
-    This e.g. allows a macro library to use its own `ASTMarker`
-    subclasses for internal communication between macros, and
-    delete (only) its own markers when done.
+    This e.g. allows a macro library to use its own `ASTMarker` subclasses
+    for internal communication between macros, and delete (only) its own
+    markers when done.
+
+    Put something like this somewhere in your library initialization code
+    (preferably somewhere it's easy to discover for someone reading your
+    code, such as in a package `__init__.py`):
+
+        from functools import partial
+
+        import mcpyrate.core
+        from mcpyrate.markers import delete_markers
+
+        _delete_my_markers = partial(delete_markers,
+                                     cls=MyCustomMarkerBase)
+        mcpyrate.core.add_postprocessor(_delete_my_markers)
     """
     if function not in global_postprocessors:
         global_postprocessors.append(function)
 
 def remove_postprocessor(function):
-    """Remove a previously added custom postprocessor."""
+    """Remove a previously added custom postprocessor.
+
+    The `function` is the callable object that was registered as a
+    postprocessor using `add_postprocessor`.
+    """
     if function in global_postprocessors:
         global_postprocessors.remove(function)
