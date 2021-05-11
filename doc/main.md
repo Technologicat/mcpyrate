@@ -244,7 +244,7 @@ As your macros grow more complex, it may be useful to separate the actual syntax
 
 ```python
 def mac(tree, *, syntax, **kw):
-    """[syntax, expr/block] Macro docstring goes here."
+    """[syntax, expr/block] Macro docstring goes here."""
     if syntax not in ("expr", "block"):
         raise SyntaxError("`mac` is an expr and block macro only")
     if syntax == "expr":
