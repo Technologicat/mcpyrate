@@ -292,7 +292,9 @@ Despite their [fearsome](http://www.greghendershott.com/fear-of-macros/) reputat
 
      As [the Racket guide notes](https://docs.racket-lang.org/guide/pattern-macros.html), this is especially convenient for language-level features not approved by some other language designer. Macros allow users to [extend](https://docs.racket-lang.org/guide/languages.html) the language. [Dialects](doc/dialects.md) take that idea one step further.
 
-  5. **[Embedded domain-specific languages (eDSLs)](https://en.wikipedia.org/wiki/Domain-specific_language#External_and_Embedded_Domain_Specific_Languages)**.
+  5. **Compile-time validation**. See e.g. [Alexis King (2016): Simple, safe multimethods in Racket](https://lexi-lambda.github.io/blog/2016/02/18/simple-safe-multimethods-in-racket/). Our sister project [`unpythonic`](https://github.com/Technologicat/unpythonic) also uses macros to perform some simple checks for whether certain helper constructs appear in a valid position, and when not, errors out at compile time.
+
+  6. **[Embedded domain-specific languages (eDSLs)](https://en.wikipedia.org/wiki/Domain-specific_language#External_and_Embedded_Domain_Specific_Languages)**.
 
      Here *embedded* means the DSL seamlessly integrates into the surrounding programming language (the host language). With embedded DSLs, there is no need to implement a whole new parser for the DSL, and many operations can be borrowed from the host language. Infix arithmetic notation and regular expressions are common examples of eDSLs that come embedded in many programming languages.
 
@@ -300,7 +302,7 @@ Despite their [fearsome](http://www.greghendershott.com/fear-of-macros/) reputat
 
      The embedded approach significantly decreases the effort needed to implement a DSL, thus making small DSLs an attractive solution for a class of design problems. A language construction kit [can be much more useful](https://beautifulracket.com/appendix/why-racket-why-lisp.html#a_pwJR1) than how it may sound at first.
 
-  6. **[Mobile code](https://macropy3.readthedocs.io/en/latest/discussion.html#mobile-code)**, as pioneered by `macropy`. Shuttle code between domains, while still allowing it to be written together in a single code base.
+  7. **[Mobile code](https://macropy3.readthedocs.io/en/latest/discussion.html#mobile-code)**, as pioneered by `macropy`. Shuttle code between domains, while still allowing it to be written together in a single code base.
 
 That said, [*macros are the 'nuclear option' of software development*](https://www.factual.com/blog/thinking-in-clojure-for-java-programmers-part-2/). Often a good strategy is to implement as much as regular functions as reasonably possible, and then a small macro on top, for the parts that would not be possible (or overly verbose, or overly complex, or just overly hacky) otherwise. [Our delayed evaluation demo](demo/promise.py) is a small example of this strategy.
 
