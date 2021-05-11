@@ -265,7 +265,7 @@ If you want to invoke another macro as part of the expansion of your own macro, 
 ```python
 from mcpyrate.quotes import macros, q, a, h
 
-from mymacropackage import macros, kittify  # noqa: F401, used in a macro expansion.
+from mymacropackage import macros, kittify
 
 def cheese(tree, *, **kw):
     return q[h[kittify][a[tree]]]
@@ -273,7 +273,7 @@ def cheese(tree, *, **kw):
 
 The `h[kittify]` captures the `kittify` macro hygienically. Note that macro must be bound in the macro expander that is expanding the use site of `h[]` (so that the name actually has a meaning that can be captured hygienically!); that's why we macro-import `kittify` in the example. For much more details, see [the quasiquote system](https://github.com/Technologicat/mcpyrate/blob/master/doc/quasiquotes.md).
 
-For advanced use cases (such as hygienic macro recursion), see the [demos](../demo/).
+For advanced use cases (such as [hygienic macro recursion](quasiquotes.md#hygienic-macro-recursion)), there are code examples in the [demos](../demo/).
 
 
 ## Macro-writing utilities in `mcpyrate`
