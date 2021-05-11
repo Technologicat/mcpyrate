@@ -407,8 +407,9 @@ with a:
 ```
 
 Each `stmts` must evaluate, at run time at the use site of the surrounding `q`,
-to a *statement* AST node, an AST marker containing a *statement* AST node in
-its `body` attribute, or a `list` of such values.
+to a *statement* AST node, an AST marker containing a *statement* AST node
+(or a `list` of statement AST nodes) in its `body` attribute, or a `list`
+of such values.
 
 Typically, `stmts` is the name of a variable that holds such data, but it
 doesn't have to be; any expression that evaluates to acceptable data is fine.
