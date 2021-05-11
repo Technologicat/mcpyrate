@@ -2,10 +2,12 @@
 
 **3.5.1** (in progress)
 
-*Pre-emptive version bump; no user-visible changes yet.*
+**Changed**:
+
+- Documentation improved. Particularly, AST markers are now documented (in the main user manual).
+
 
 ---
-
 
 **3.5.0** (9 May 2021)
 
