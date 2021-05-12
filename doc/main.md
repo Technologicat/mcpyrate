@@ -739,7 +739,17 @@ An AST marker may contain arbitrary other attributes. For example, `mcpyrate`'s 
 
 **AST markers absolutely must conform to the `ast.AST` API**, so that they support `ast.iter_fields`. This is important for the AST walkers and the unparser. Basically, this means that the `_fields` attribute must contain a `list`, which holds the names of attributes that store important information. The default list is `["body"]`.
 
-Often *important information* means "child nodes", but not always. For example, of Python's standard node types, `ast.Constant` has a `value` field that stores a bare object that represents the constant value. In practice, it is safe to store at least instances of (a subclass of) `ast.AST`, `str`, `int`, `bool`, `NoneType`, `Ellipsis` and `list` in an attribute that is listed in `_fields`.
+It's easier to make an `ast.AST`-conformant node type with custom fields than it sounds. Here's a marker that, beside `body`, has a custom field named `myfield`:
+
+```python
+class MyMarker(ASTMarker):
+    def __init__(self, body, myfield):
+        super().__init__(body)
+        self.myfield = myfield
+        self._fields += ["myfield"]  # note the `+=`!
+```
+
+What you store in your custom fields is up to you. Often *important information* above means "child nodes", but not always. For example, of Python's standard node types, `ast.Constant` has a `value` field that stores a bare object that represents the constant value. In practice, it is safe to store at least instances of (a subclass of) `ast.AST`, `str`, `int`, `bool`, `NoneType`, `Ellipsis` and `list` in an attribute that is listed in `_fields`.
 
 `mcpyrate`'s AST walkers and the unparser only care whether a field contains a `list`, an `ast.AST`, or "other" (treated as a bare value), but obviously as a third-party author, we make no guarantees what Python itself allows. As of Python 3.8, looking at the source code of `ast.iter_fields` and `ast.NodeTransformer`, at least the types listed above should be safe to store in a field.
 
