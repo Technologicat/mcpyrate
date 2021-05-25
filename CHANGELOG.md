@@ -1,6 +1,6 @@
 # Changelog
 
-**3.5.1** (in progress)
+**3.5.1** (26 May 2021) - *Detailed logbook* edition:
 
 **Changed**:
 
