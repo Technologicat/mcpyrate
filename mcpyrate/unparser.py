@@ -616,6 +616,8 @@ class Unparser:
                 v = self.maybe_colorize(v, ColorScheme.NAMECONSTANT)
             elif type(t.value) in (str, bytes):
                 v = self.maybe_colorize(v, ColorScheme.STRING)
+            else:  # pragma: no cover
+                raise UnparserError(f"Don't know how to unparse Constant with value of type {type(t.value)}, got {repr(t.value)}")
         self.write(v)
 
     def _Bytes(self, t):  # up to Python 3.7
