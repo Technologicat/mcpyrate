@@ -734,12 +734,12 @@ class Unparser:
     unop = {"Invert": "~", "Not": "not", "UAdd": "+", "USub": "-"}
     def _UnaryOp(self, t):
         self.write("(")
-        # if it's an English keyword, highlight it.
+        # If it's an English keyword, highlight it, and add a space.
         if t.op.__class__.__name__ == "Not":
             self.write(self.maybe_colorize_python_keyword(self.unop[t.op.__class__.__name__]))
+            self.write(" ")
         else:
             self.write(self.unop[t.op.__class__.__name__])
-        self.write(" ")
         self.dispatch(t.operand)
         self.write(")")
 
