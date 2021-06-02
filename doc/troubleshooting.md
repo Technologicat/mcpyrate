@@ -24,6 +24,7 @@
     - [Can I use the `step_expansion` macro to report steps with `expander.visit(tree)`?](#can-i-use-the-step_expansion-macro-to-report-steps-with-expandervisittree)
     - [`step_expansion` and `stepr` report different results?](#step_expansion-and-stepr-report-different-results)
     - [My macro crashes with a call stack overflow, but the error goes away if I `step_expansion` it?](#my-macro-crashes-with-a-call-stack-overflow-but-the-error-goes-away-if-i-step_expansion-it)
+    - [My macro usually works fine, but inner macro invocations fail to expand if I `step_expansion` it?](#my-macro-usually-works-fine-but-inner-macro-invocations-fail-to-expand-if-i-step_expansion-it)
 - [Compile-time errors](#compile-time-errors)
     - [Error in `compile`, an AST node is missing the required field `lineno`?](#error-in-compile-an-ast-node-is-missing-the-required-field-lineno)
         - [Unexpected bare value](#unexpected-bare-value)
@@ -236,6 +237,32 @@ Whereas unquotes are processed at run time of the use site of `q` (see [the quas
 That's some deep recursion right there! The reason it works with `step_expansion` is that `step_expansion` converts the recursive calls to the expander into a while loop in expand-once mode.
 
 If you need to do the same, look at [its source code](../mcpyrate/debug.py).
+
+
+## My macro usually works fine, but inner macro invocations fail to expand if I `step_expansion` it?
+
+A likely reason is that you are using `expander.visit` in your macro, to expand inside-out. Note that `step_expansion` actually uses the expander's expand-once mode. Consider:
+
+```python
+with mac:
+    with cheese:
+        pepperoni[...]
+```
+
+where `mac` is some macro that expands **inside-out** (i.e. **uses** explicit recursion), and `cheese` is a macro that expands **outside-in** (i.e. **does not** use explicit recursion). Now, if `mac` uses `expander.visit`, the above snippet will behave differently from:
+
+```python
+with step_expansion:
+    with mac:
+        with cheese:
+            pepperoni[...]
+```
+
+If it is important to have both versions behave the same (e.g. if `mac` edits `Subscript` nodes, and assumes those are subscripting operations, not macro invocations), then `mac` should actually use `expander.visit_recursively`. This ensures that **all** inner macro invocations will expand, regardless of which mode the expander is in when it encounters the `with mac` invocation.
+
+Here this is particularly important for `pepperoni[...]`, which is inside two levels of nesting: because `cheese` expands outside-in, the `pepperoni[...]` will only get expanded once the expander's recursive mode hits it. If `mac` uses the regular `expander.visit`, this will occur **after** `mac` has already performed its AST edits.
+
+There is a real-world use case in `unpythonic.syntax.lazify` (see [`unpythonic`](https://github.com/Technologicat/unpythonic), and the [unit tests for `lazify`](https://github.com/Technologicat/unpythonic/blob/master/unpythonic/syntax/tests/test_lazify.py)), that led to the discovery of this [Heisenbug](https://en.wikipedia.org/wiki/Heisenbug).
 
 
 # Compile-time errors

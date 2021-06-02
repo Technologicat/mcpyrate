@@ -8,6 +8,8 @@
   - No space after unary `+`, `-` or `~`.
   - Future-proofing: yell if an unsupported constant value type is encountered.
 
+- Add a new troubleshooting item on another [Heisenbug](https://en.wikipedia.org/wiki/Heisenbug) that can occur when buggy macros are used inside a `with step_expansion`.
+
 
 ---
 
