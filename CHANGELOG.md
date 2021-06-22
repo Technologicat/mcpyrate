@@ -1,5 +1,13 @@
 # Changelog
 
+**3.5.3** (in progress):
+
+*Pre-emptive version bump. No user-visible changes yet.*
+
+
+---
+
+
 **3.5.2** (22 June 2021)- *Midsummer's eve edition*:
 
 **Changed**:
