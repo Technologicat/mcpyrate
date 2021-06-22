@@ -8,7 +8,7 @@
 ---
 
 
-**3.5.2** (22 June 2021)- *Midsummer's eve edition*:
+**3.5.2** (22 June 2021) - *Midsummer's eve edition*:
 
 **Changed**:
 
