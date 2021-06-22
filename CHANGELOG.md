@@ -1,6 +1,6 @@
 # Changelog
 
-**3.5.2** (in progress)
+**3.5.2** (22 June 2021)- *Midsummer's eve edition*:
 
 **Changed**:
 
