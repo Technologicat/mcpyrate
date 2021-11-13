@@ -71,6 +71,9 @@ def iswithphase(stmt, *, filename):
 
     return n
 
+def isfutureimport(tree):
+    """Return whether `tree` is a `from __future__ import ...`."""
+    return isinstance(tree, ast.ImportFrom) and tree.module == "__future__"
 
 def extract_phase(tree, *, filename, phase=0):
     """Split `tree` into given `phase` and remaining parts.
@@ -125,12 +128,48 @@ def extract_phase(tree, *, filename, phase=0):
             thisphase.extend(stmt.body)
             lift(stmt)
         else:
+            # Issue #28: `__future__` imports.
+            #
+            # `__future__` imports should affect all phases, because they change
+            # the semantics of the module they appear in. Essentially, they are
+            # a kind of dialect defined by the Python core itself.
+            if isfutureimport(stmt):
+                thisphase.append(stmt)
             remaining.append(stmt)
     tree.body[:] = remaining
 
     newmodule = copy(tree)
     newmodule.body = thisphase
     return newmodule
+
+def split_futureimports(body):
+    """Split `body` into `__future__` imports and everything else.
+
+    `body`: list of `ast.stmt`, the suite representing a module top level.
+
+    Returns `[future_imports, the_rest]`.
+    """
+    k = -1  # ensure `k` gets defined even if `body` is empty
+    for k, bstmt in enumerate(body):
+        if not isfutureimport(bstmt):
+            break
+    if k >= 0:
+        return body[:k], body[k:]
+    return [], body
+
+def inject_after_futureimports(stmt, body):
+    """Inject a statement into `body` after `__future__` imports.
+
+    `body`: list of `ast.stmt`, the suite representing a module top level.
+    `stmt`: `ast.stmt`, the statement to inject.
+    """
+    if getdocstring(body):
+        docstring, *body = body
+        futureimports, body = split_futureimports(body)
+        return [docstring] + futureimports + [stmt] + body
+    else:  # no docstring
+        futureimports, body = split_futureimports(body)
+        return futureimports + [stmt] + body
 
 # --------------------------------------------------------------------------------
 # Public utilities.
@@ -380,11 +419,9 @@ def multiphase_expand(tree, *, filename, self_module, dexpander=None, _optimize=
             val = ast.Constant(value=k, lineno=1, col_offset=13)
             assignment = ast.Assign(targets=[tgt], value=val, lineno=1, col_offset=1)
 
-            if getdocstring(phase_k_tree.body):
-                docstring, *body = phase_k_tree.body
-                phase_k_tree.body = [docstring, assignment] + body
-            else:  # no docstring
-                phase_k_tree.body = [assignment] + phase_k_tree.body
+            # Issue #28: `__future__` imports.
+            # They must be the first statements after the module docstring, if any. So we inject after them.
+            phase_k_tree.body = inject_after_futureimports(assignment, phase_k_tree.body)
 
             if debug:
                 print(unparse_with_fallbacks(phase_k_tree, debug=True, color=True), file=sys.stderr)
