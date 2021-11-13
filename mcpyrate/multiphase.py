@@ -88,7 +88,8 @@ def extract_phase(tree, *, filename, phase=0):
 
     The lifted AST is deep-copied to minimize confusion, since it may get
     edited by macros during macro expansion. (This guarantees that
-    macro-expanding it, in either phase, gives the same result.)
+    macro-expanding it, in either phase, gives the same result,
+    up to and including any side effects of the macros.)
     """
     if not isinstance(phase, int):
         raise TypeError(f"`phase` must be `int`, got {type(phase)} with value {repr(phase)}")
