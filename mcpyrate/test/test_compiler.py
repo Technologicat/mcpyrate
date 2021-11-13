@@ -245,5 +245,36 @@ def runtests():
                 pass
     test_dynamicmodule_multiphase()
 
+    def test_futureimports_multiphase_nodocstring():
+        try:
+            with q as quoted:
+                from __future__ import annotations
+                from mcpyrate.multiphase import macros, phase
+                with phase[1]:
+                    x = 42
+            module = run(quoted)
+        finally:
+            try:
+                del sys.modules[module.__name__]
+            except KeyError:
+                pass
+    test_futureimports_multiphase_nodocstring()
+
+    def test_futureimports_multiphase_withdocstring():
+        try:
+            with q as quoted:
+                """Works with a module docstring, too."""
+                from __future__ import annotations
+                from mcpyrate.multiphase import macros, phase
+                with phase[1]:
+                    x = 42
+            module = run(quoted)
+        finally:
+            try:
+                del sys.modules[module.__name__]
+            except KeyError:
+                pass
+    test_futureimports_multiphase_withdocstring()
+
 if __name__ == '__main__':
     runtests()
