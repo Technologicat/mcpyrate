@@ -1,8 +1,17 @@
 # Changelog
 
-**3.5.3** (in progress):
+**3.5.4** (in progress):
 
-*Pre-emptive version bump. No user-visible changes yet.*
+*Pre-emptive version bump. No user-visible changes yet.**
+
+
+---
+
+**3.5.3** (14 November 2021):
+
+**Fixed**:
+
+- Fix https://github.com/Technologicat/mcpyrate/issues/28, with thanks to @geezmolycos for reporting. Using `__future__` imports when multiphase compilation is enabled no longer causes `SyntaxError`.
 
 
 ---
