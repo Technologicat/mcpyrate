@@ -247,12 +247,13 @@ def runtests():
 
     def test_futureimports_multiphase_nodocstring():
         try:
-            with q as quoted:
-                from __future__ import annotations
-                from mcpyrate.multiphase import macros, phase
-                with phase[1]:
-                    x = 42
-            module = run(quoted)
+            source = dedent("""
+            from __future__ import annotations
+            from mcpyrate.multiphase import macros, phase
+            with phase[1]:
+                x = 42
+            """)
+            module = run(source)
         finally:
             try:
                 del sys.modules[module.__name__]
@@ -262,13 +263,14 @@ def runtests():
 
     def test_futureimports_multiphase_withdocstring():
         try:
-            with q as quoted:
-                """Works with a module docstring, too."""
-                from __future__ import annotations
-                from mcpyrate.multiphase import macros, phase
-                with phase[1]:
-                    x = 42
-            module = run(quoted)
+            source = dedent("""
+            '''Works with a module docstring, too.'''
+            from __future__ import annotations
+            from mcpyrate.multiphase import macros, phase
+            with phase[1]:
+                x = 42
+            """)
+            module = run(source)
         finally:
             try:
                 del sys.modules[module.__name__]
