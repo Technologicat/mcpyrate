@@ -191,8 +191,11 @@ def runtests():
         finally:
             try:
                 del sys.modules[mymacros.__name__]
+            except (NameError, KeyError):
+                pass
+            try:
                 del sys.modules[module.__name__]
-            except KeyError:
+            except (NameError, KeyError):
                 pass
     test_dynamicmodule_macros_1()
 
@@ -215,8 +218,11 @@ def runtests():
         finally:
             try:
                 del sys.modules[mymacros.__name__]
+            except (NameError, KeyError):
+                pass
+            try:
                 del sys.modules[module.__name__]
-            except KeyError:
+            except (NameError, KeyError):
                 pass
     test_dynamicmodule_macros_2()
 
@@ -241,7 +247,7 @@ def runtests():
         finally:
             try:
                 del sys.modules[module.__name__]
-            except KeyError:
+            except (NameError, KeyError):
                 pass
     test_dynamicmodule_multiphase()
 
@@ -254,10 +260,12 @@ def runtests():
                 x = 42
             """)
             module = run(source)
+        except SyntaxError:  # Python 3.6 has no "annotations" future feature
+            pass
         finally:
             try:
                 del sys.modules[module.__name__]
-            except KeyError:
+            except (NameError, KeyError):
                 pass
     test_futureimports_multiphase_nodocstring()
 
@@ -271,10 +279,12 @@ def runtests():
                 x = 42
             """)
             module = run(source)
+        except SyntaxError:  # Python 3.6 has no "annotations" future feature
+            pass
         finally:
             try:
                 del sys.modules[module.__name__]
-            except KeyError:
+            except (NameError, KeyError):
                 pass
     test_futureimports_multiphase_withdocstring()
 
