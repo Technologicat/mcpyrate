@@ -90,6 +90,15 @@ def ismacroimport(statement, magicname='macros'):
 def get_macros(macroimport, *, filename, reload=False, allow_asname=True, self_module=None):
     """Get absolute module name, macro names and macro functions from a macro-import.
 
+    A macro-import is a statement of the form::
+
+        from ... import macros, ...
+
+    where `macros` is the magic name that your actual macro expander uses to recognize
+    a macro-import (see `ismacroimport`). This function does not care about what the
+    actual magic name is, and simply ignores the first name that is imported by the
+    import statement.
+
     As a side effect, import the macro definition module.
 
     Return value is `module_absname, {macroname0: macrofunction0, ...}`.
