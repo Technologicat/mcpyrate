@@ -123,6 +123,8 @@ See also [Understanding the quasiquote system](doc/quasiquotes.md#understanding-
      - Repetitive use of the same word (or phrase) is a non-issue, but lack of precision causes bugs.
    - Quotes belong around the whole quoted thing, whether or not it contains punctuation, and whether or not punctuation immediately follows the quote.
      - "`"Meow, the cat said.", said the docstring.`" is correct.
+   - Splitting an infinitive often improves clarity.
+     - "`Zorblifying causes the resulting list to not have AST markers...`" makes it explicit the `not` applies locally to the `to have`, removing the need to scan the whole following phrase.
 
  - In headings, capitalize the first word only, as well as any proper names. Combined with font styles, this eases [scanning](https://www.teachingenglish.org.uk/article/scanning).
    - Don't capitalize a proper name that officially starts with a lowercase letter. This includes functions and their parameters.
