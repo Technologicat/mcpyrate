@@ -126,7 +126,7 @@ See also [Understanding the quasiquote system](doc/quasiquotes.md#understanding-
    - Splitting an infinitive often improves clarity.
      - "`Zorblifying causes the resulting list to not have AST markers...`" makes it explicit the `not` applies locally to the `to have`, removing the need to scan the whole following phrase.
 
- - In headings, capitalize the first word only, as well as any proper names. Combined with font styles, this eases [scanning](https://www.teachingenglish.org.uk/article/scanning).
+ - In headings, capitalize the first word only, as well as any proper names. Do not use [title case](https://en.wikipedia.org/wiki/Title_case). Combined with font styles, this eases [scanning](https://www.teachingenglish.org.uk/article/scanning).
    - Don't capitalize a proper name that officially starts with a lowercase letter. This includes functions and their parameters.
      - Sometimes, this leads to a sentence starting in lowercase. That's ok.
      - If there's a convenient and equally clear alternative wording (which still directs the reader's attention to the important thing), feel free to use that. If not, just accept it.
