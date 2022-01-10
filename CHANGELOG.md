@@ -1,8 +1,10 @@
 # Changelog
 
-**3.5.4** (in progress):
+**3.6.0** (in progress, last updated 10 January 2022) *New Year's edition*:
 
-*Pre-emptive version bump. No user-visible changes yet.**
+**Fixed**:
+
+- Fix https://github.com/Technologicat/mcpyrate/issues/29, with thanks to @set-soft and @brathis for reporting. **`mcpyrate` should now support Python 3.10.**
 
 
 ---
