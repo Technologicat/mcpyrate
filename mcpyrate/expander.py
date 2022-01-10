@@ -649,7 +649,9 @@ def find_macros(tree, *, filename, reload=False, self_module=None, transform=Tru
                 else:
                     # Remove all names to prevent macros being used as regular run-time objects.
                     # Always use an absolute import, for the unhygienic expose API guarantee.
-                    tree.body[index] = copy_location(Import(names=[alias(name=module_absname, asname=None)]),
+                    thealias = copy_location(alias(name=module_absname, asname=None),
+                                             statement)
+                    tree.body[index] = copy_location(Import(names=[thealias]),
                                                      statement)
     for index in reversed(stmts_to_delete):
         tree.body.pop(index)
