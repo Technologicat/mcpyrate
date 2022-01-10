@@ -166,7 +166,7 @@ def get_macros(macroimport, *, filename, reload=False, allow_asname=True, self_m
             module = importlib.reload(module)
 
     bindings = {}
-    for name in macroimport.names[1:]:
+    for name in macroimport.names[1:]:  # skip the "macros" in `from ... import macros, ...`
         if not allow_asname and name.asname is not None:
             approx_sourcecode = unparse_with_fallbacks(macroimport, debug=True, color=True)
             loc = format_location(filename, macroimport, approx_sourcecode)
