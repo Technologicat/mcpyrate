@@ -215,7 +215,10 @@ def format_location(filename, tree, sourcecode):
 
 
 def format_macrofunction(function):
-    """Format the fully qualified name of a macro function, for error messages."""
+    """Format the fully qualified name of a macro function, for error messages.
+
+    Return value is an `str` with the fully qualified name.
+    """
     # Catch broken bindings due to erroneous imports in user code
     # (e.g. accidentally to a module object instead of to a function object)
     if not (hasattr(function, "__module__") and hasattr(function, "__qualname__")):
@@ -226,7 +229,13 @@ def format_macrofunction(function):
 
 
 def format_context(tree, *, n=5):
-    """Format up to the first `n` lines of source code of `tree`."""
+    """Format up to the first `n` lines of source code of `tree`.
+
+    The source code is produced from `tree` by unparsing.
+
+    Return value is an `str` containing colored text with syntax highlighting,
+    suitable for terminal output.
+    """
     code_lines = unparser.unparse_with_fallbacks(tree, debug=True, color=True).split("\n")
     code = "\n".join(code_lines[:n])
     if len(code_lines) > n:
