@@ -9,6 +9,7 @@ from copy import deepcopy
 from .astfixers import fix_locations
 from .coreutils import ismacroimport, split_futureimports
 from .markers import ASTMarker
+from .utils import getdocstring
 from .walkers import ASTTransformer
 
 
@@ -243,7 +244,20 @@ def splice_dialect(body, template, tag="__paste_here__"):
 
     user_docstring, user_futureimports, body = split_futureimports(body)
     template_docstring, template_futureimports, template = split_futureimports(template)
-    docstring = user_docstring or template_docstring  # There Can Be Only One
+
+    # Combine user and template docstrings if both are defined.
+    if user_docstring and template_docstring:
+        # We must extract the bare strings, combine them, and then pack the result into an AST node.
+        user_doc = getdocstring(user_docstring)
+        template_doc = getdocstring(template_docstring)
+        sep = "\n" + ("-" * 79) + "\n"
+        new_doc = user_doc + sep + template_doc
+        new_docstring = ast.copy_location(ast.Constant(value=new_doc),
+                                          user_docstring[0])
+        docstring = [new_docstring]
+    else:
+        docstring = user_docstring or template_docstring
+
     futureimports = template_futureimports + user_futureimports
 
     def extract_magic_all(tree):
