@@ -388,7 +388,8 @@ class DialectExpander:
                                               reload=False, allow_asname=False)
         # Remove all names to prevent dialects being used as regular run-time objects.
         # Always use an absolute import, for the unhygienic expose API guarantee.
-        thealias = ast.copy_location(ast.alias(name=module_absname, asname=None))
+        thealias = ast.copy_location(ast.alias(name=module_absname, asname=None),
+                                     statement)
         tree.body[index] = ast.copy_location(ast.Import(names=[thealias]),
                                              statement)
         return module_absname, bindings
