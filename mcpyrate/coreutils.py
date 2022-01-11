@@ -263,15 +263,14 @@ def split_futureimports(body):
 
     `body`: list of `ast.stmt`, the suite representing a module top level.
 
-    Return value is `[docstring_node_or_None, future_imports, the_rest]`, where:
-        `docstring_node_or_None`: `ast.stmt` or bare `None`
-        `future_imports`: list of `ast.stmt`
-        `the_rest`: list of `ast.stmt`
+    Return value is `[docstring, future_imports, the_rest]`, where each item
+    is a list of `ast.stmt` (possibly empty).
     """
     if getdocstring(body):
         docstring, *body = body
+        docstring = [docstring]
     else:
-        docstring = None
+        docstring = []
 
     k = -1  # ensure `k` gets defined even if `body` is empty
     for k, bstmt in enumerate(body):
@@ -302,6 +301,4 @@ def inject_after_futureimports(stmts, body):
             raise TypeError(f"`stmts` must be `ast.stmt` or a `list` of `ast.stmt`, got {type(stmts)} with value {repr(stmts)}")
         stmts = [stmts]
     docstring, futureimports, body = split_futureimports(body)
-    if docstring:
-        return [docstring] + futureimports + stmts + body
-    return futureimports + stmts + body
+    return docstring + futureimports + stmts + body
