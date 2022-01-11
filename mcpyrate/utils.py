@@ -2,7 +2,7 @@
 """General utilities. Can be useful for writing both macros as well as macro expanders."""
 
 __all__ = ["gensym", "scrub_uuid", "flatten", "rename", "extract_bindings", "getdocstring",
-           "format_location", "format_macrofunction", "format_context",
+           "get_lineno", "format_location", "format_macrofunction", "format_context",
            "NestingLevelTracker"]
 
 import ast
@@ -188,30 +188,59 @@ def getdocstring(body):
 
 # --------------------------------------------------------------------------------
 
+def get_lineno(tree):
+    """Extract the source line number from `tree`.
+
+    `tree`: AST node, list of AST nodes, or an AST marker.
+
+    `tree` is searched recursively (depth first) until a `lineno` attribute is found;
+    its value is then returned.
+
+    If no `lineno` attribute is found anywhere inside `tree`, the return value is `None`.
+    """
+    if hasattr(tree, "lineno"):
+        return tree.lineno
+    elif isinstance(tree, markers.ASTMarker) and hasattr(tree, "body"):  # look inside AST markers
+        return get_lineno(tree.body)
+    elif isinstance(tree, ast.AST):  # look inside AST nodes
+        # Note `iter_fields` ignores attribute fields such as line numbers and column offsets,
+        # so we don't recurse into those.
+        for fieldname, node in ast.iter_fields(tree):
+            lineno = get_lineno(node)
+            if lineno:
+                return lineno
+    elif isinstance(tree, list):  # look inside statement suites
+        for node in tree:
+            lineno = get_lineno(node)
+            if lineno:
+                return lineno
+    return None
+
+
 def format_location(filename, tree, sourcecode):
     """Format a source code location in a standard way, for error messages.
 
     `filename`: full path to `.py` file.
-    `tree`: AST node to get source line number from. (Looks inside AST markers.)
+    `tree`: AST node to get source line number from. (Looks inside automatically if needed.)
     `sourcecode`: source code (typically, to get this, `unparse(tree)`
                   before expanding it), or `None` to omit it.
-    """
-    lineno = None
-    if hasattr(tree, "lineno"):
-        lineno = tree.lineno
-    elif isinstance(tree, markers.ASTMarker) and hasattr(tree, "body"):
-        if hasattr(tree.body, "lineno"):
-            lineno = tree.body.lineno
-        elif isinstance(tree.body, list) and tree.body and hasattr(tree.body[0], "lineno"):  # e.g. `SpliceNodes`
-            lineno = tree.body[0].lineno
 
+    Return value is an `str` containing colored text, suitable for terminal output.
+    Example outputs for single-line and multiline source code::
+
+        /path/to/hello.py:42: print("hello!")
+
+        /path/to/hello.py:1337:
+        if helloing:
+            print("hello!")
+    """
     if sourcecode:
         sep = " " if "\n" not in sourcecode else "\n"
         source_with_sep = f"{sep}{sourcecode}"
     else:
         source_with_sep = ""
 
-    return f'{colorize(filename, ColorScheme.SOURCEFILENAME)}:{lineno}:{source_with_sep}'
+    return f'{colorize(filename, ColorScheme.SOURCEFILENAME)}:{get_lineno(tree)}:{source_with_sep}'
 
 
 def format_macrofunction(function):
