@@ -80,8 +80,8 @@ class Dialect:
         Output should be the transformed AST.
 
         To easily splice `tree.body` into your template, see the utility
-        `mcpyrate.splicing.splice_dialect` (it automatically handles macro-imports,
-        dialect-imports, the magic `__all__`, and the module docstring).
+        `mcpyrate.splicing.splice_dialect` (it automatically handles future-imports,
+        macro-imports, dialect-imports, the magic `__all__`, and the module docstring).
 
         As an example, see the `dialects` module in `unpythonic` for example dialects.
 
