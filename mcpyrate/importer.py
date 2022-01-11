@@ -103,6 +103,7 @@ def path_stats(path, _stats_cache=None):
 
     Beside the source file `path` itself, we look at any macro definition files
     the source file imports macros from, recursively, in a `make`-like fashion.
+    Dialect-imports, if any, are treated the same way.
 
     `_stats_cache` is used internally to speed up the computation, in case the
     dependency graph hits the same source file multiple times.
