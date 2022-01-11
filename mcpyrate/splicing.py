@@ -215,7 +215,10 @@ def splice_dialect(body, template, tag="__paste_here__"):
     for stmt in template:
         fix_locations(stmt, body[0], mode="overwrite")
 
-    docstring, futureimports, body = split_futureimports(body)
+    user_docstring, user_futureimports, body = split_futureimports(body)
+    template_docstring, template_futureimports, template = split_futureimports(template)
+    docstring = user_docstring or template_docstring  # There Can Be Only One
+    futureimports = template_futureimports + user_futureimports
 
     def extract_magic_all(tree):
         def ismagicall(tree):
