@@ -7,9 +7,8 @@ import ast
 from copy import deepcopy
 
 from .astfixers import fix_locations
-from .coreutils import ismacroimport
+from .coreutils import ismacroimport, split_futureimports
 from .markers import ASTMarker
-from .utils import getdocstring
 from .walkers import ASTTransformer
 
 
@@ -216,11 +215,7 @@ def splice_dialect(body, template, tag="__paste_here__"):
     for stmt in template:
         fix_locations(stmt, body[0], mode="overwrite")
 
-    if getdocstring(body):
-        docstring, *body = body
-        docstring = [docstring]
-    else:
-        docstring = []
+    docstring, futureimports, body = split_futureimports(body)
 
     def extract_magic_all(tree):
         def ismagicall(tree):
@@ -257,6 +252,7 @@ def splice_dialect(body, template, tag="__paste_here__"):
 
     finalbody = splice_statements(body, template, tag)
     return (docstring +
+            futureimports +
             user_magic_all +
             template_dialect_imports + user_dialect_imports +
             template_macro_imports + user_macro_imports +
