@@ -1,6 +1,6 @@
 # Changelog
 
-**3.6.0** (in progress, last updated 11 January 2022) *New Year's edition**:
+**3.6.0** (in progress, last updated 11 January 2022) *New Year's edition*:
 
 **Added**:
 
