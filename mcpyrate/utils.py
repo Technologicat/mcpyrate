@@ -255,7 +255,17 @@ class NestingLevelTracker:
     value = property(fget=_get_value, doc="The current level. Read-only. Use `set_to` or `change_by` to change.")
 
     def set_to(self, value):
-        """Context manager. Run a section of code with the level set to `value`."""
+        """Context manager. Run a section of code with the level set to `value`.
+
+        Example::
+
+            t = NestingLevelTracker()
+            assert t.value == 0
+            with t.set_to(42):
+                assert t.value == 42
+                ...
+            assert t.value == 0
+        """
         if not isinstance(value, int):
             raise TypeError(f"Expected integer `value`, got {type(value)} with value {repr(value)}")
         if value < 0:
@@ -271,5 +281,18 @@ class NestingLevelTracker:
         return _set_to()
 
     def changed_by(self, delta):
-        """Context manager. Run a section of code with the level incremented by `delta`."""
+        """Context manager. Run a section of code with the level incremented by `delta`.
+
+        Example::
+
+            t = NestingLevelTracker()
+            assert t.value == 0
+            with t.changed_by(+21):
+                assert t.value == 21
+                with t.changed_by(+21):
+                    assert t.value == 42
+                    ...
+                assert t.value == 21
+            assert t.value == 0
+        """
         return self.set_to(self.value + delta)
