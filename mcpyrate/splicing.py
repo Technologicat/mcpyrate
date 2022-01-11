@@ -162,23 +162,50 @@ def splice_dialect(body, template, tag="__paste_here__"):
     On top of what `splice_statements` does, this function handles macro-imports
     and dialect-imports specially, gathering them all at the top level of the
     final module body, so that mcpyrate sees them when the module is sent to
-    the macro expander.
+    the macro expander. This is to allow a dialect template to splice the body
+    into the inside of a `with` block (e.g. to invoke some code-walking macro
+    that changes the language semantics, such as an auto-TCO or a lazifier),
+    without breaking macro-imports (and further dialect-imports) introduced
+    by user code in the body.
 
     Any dialect-imports in the template are placed first (in the order they
     appear in the template), followed by any dialect-imports in the user code
     (in the order they appear in the user code), followed by macro-imports in
     the template, then macro-imports in the user code.
 
-    This also handles the module docstring and the magic `__all__` (if any)
-    from `body`. The docstring comes first, before dialect-imports. The magic
-    `__all__` is placed after dialect-imports, before macro-imports.
+    We also handle the module docstring, future-imports, and the magic `__all__`.
+
+    If both `body` and `template` have a module docstring, they are concatenated
+    to produce the module docstring for the result. If only one of them has a
+    module docstring, that docstring is used as-is. If neither has a module docstring,
+    the docstring is omitted.
+
+    The primary use of a module docstring in a dialect template is to be able to say
+    that the program was written in dialect X, more information on which can be found at...
+
+    Future-imports from `template` and `body` are concatenated.
+
+    The magic `__all__` is taken from `body`; if `body` does not define it,
+    it is omitted.
+
+    In the result, the ordering is::
+
+        docstring
+        template future-imports
+        body future-imports
+        __all__ (if defined in body)
+        template dialect-imports
+        body dialect-imports
+        template macro-imports
+        body macro-imports
+        the rest
 
     Parameters:
 
-        `body`: `list` of statements
+        `body`: `list` of `ast.stmt`, or a single `ast.stmt`
             Original module body from the user code (input).
 
-        `template`: `list` of statements
+        `template`: `list` of `ast.stmt`, or a single `ast.stmt`
             Template for the final module body (output).
 
             Must contain a paste-here indicator as in `splice_statements`.
@@ -186,11 +213,10 @@ def splice_dialect(body, template, tag="__paste_here__"):
         `tag`: `str`
             The name of the paste-here indicator in `template`.
 
-    Returns `template` with `body` spliced in. Note `template` is **not** copied,
-    and will be mutated in-place.
+    Return value is `template` with `body` spliced in.
 
-    Also `body` is mutated, to remove macro-imports, `__all__` and the module
-    docstring; these are pasted into the final result.
+    Note `template` and `body` are **not** copied, and **both** will be mutated
+    during the splicing process.
     """
     if isinstance(body, ast.AST):
         body = [body]
