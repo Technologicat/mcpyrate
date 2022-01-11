@@ -1,10 +1,15 @@
 # Changelog
 
-**3.6.0** (in progress, last updated 10 January 2022) *New Year's edition*:
+**3.6.0** (in progress, last updated 11 January 2022) *New Year's edition**:
+
+**Added**:
+
+- Python 3.10 support.
 
 **Fixed**:
 
 - Fix https://github.com/Technologicat/mcpyrate/issues/29, with thanks to @set-soft and @brathis for reporting. **`mcpyrate` should now support Python 3.10.**
+- Fix https://github.com/Technologicat/mcpyrate/issues/30, thus extending the fix of #28 (in the previous release) into the dialect subsystem, too. `__future__` imports are accounted for both the dialect template and in user code that invokes the template. This is implemented in the utility function `mcpyrate.splicing.splice_dialect`, so if your dialect definition uses that function in its AST transformer, your dialect should now work correctly with `__future__` imports.
 
 
 ---
