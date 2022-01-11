@@ -159,7 +159,7 @@ class DialectExpander:
 
     Due to modularity requirements introduced by `mcpyrate`'s support for
     multi-phase compilation (see the module `mcpyrate.multiphase`), this
-    class is a bit technical to use. See `mcpyrate.importer`. Roughly,
+    class is a bit technical to use. See `mcpyrate.compiler`. Roughly,
     for a single-phase compile::
 
         dexpander = DialectExpander(filename=...)
