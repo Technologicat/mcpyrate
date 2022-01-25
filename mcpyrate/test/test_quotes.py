@@ -220,7 +220,8 @@ def runtests():
     assert lookup_value(key) is print  # *our* binding for `print`, since we're the use site of `q`.
 
     quoted = q[h[first][21]]
-    assert type(quoted.value) is ast.Name and quoted.value.id.startswith("first")  # already injected
+    assert type(quoted) is ast.Subscript  # represents a macro invocation
+    assert type(quoted.value) is ast.Name and quoted.value.id.startswith("first")  # uniqified name already injected
 
     # Testing `is_captured_macro` is trickier, because `lookup_macro` disappears when
     # the use site of `q` reaches run time. So let's use a quoted block and `expand` it manually.
