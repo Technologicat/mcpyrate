@@ -1,10 +1,11 @@
 # Changelog
 
-**3.6.0** (in progress, last updated 11 January 2022) *New Year's edition*:
+**3.6.0** (in progress, last updated 26 January 2022) *New Year's edition*:
 
 **Added**:
 
 - Python 3.10 support.
+- Add block macro `mcpyrate.metatools.expand_first`. This can be used to force, within the `with expand_first[macro0, ...]:` block, the given macros to expand before others. Macros can be specified either by name (will be looked up in the current expander's bindings) or by hygienic capture.
 
 **Fixed**:
 

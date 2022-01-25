@@ -4,7 +4,8 @@ from ..quotes import macros, q, u, n, a, s, t, h  # noqa: F811
 from .macros import (macros, first, second, test_hq,  # noqa: F401, F811
                      test_q, third)
 from ..metatools import (macros, expand1r, expand1rq, expand1s,  # noqa: F401, F811
-                         expand1sq, expandr, expandrq, expands, expandsq)
+                         expand1sq, expandr, expandrq, expands, expandsq,
+                         expand_first)
 
 import ast
 
@@ -258,6 +259,29 @@ def runtests():
     quoted = expand(quoted, "fake filename for testing by test_quotes")
     assert count_matching_nodes(is_captured_macro, quoted) == 0
     assert count_matching_nodes(is_captured_value, quoted) == 1
+
+    # --------------------------------------------------------------------------------
+    # expand_first: in a block, force given macros to expand before others
+
+    # Here we test by expanding just one step; this expands the `expand_first`,
+    # which causes (recursive) expansion of the given macros only.
+
+    with expand1rq as quoted:
+        with expand_first[second]:  # only the macro `second` gets expanded in the first step
+            third[second[42]]
+    assert unparse(quoted) == "third[third[42]]"  # second[...] -> third[...]
+
+    with expand1rq as quoted:
+        with expand_first[third]:  # only the macro `third` gets expanded in the first step
+            third[second[42]]
+    assert unparse(quoted) == "(2 * second[42])"  # third[...] -> (2 * ...)
+
+    # Hygienic macro captures are also accepted.
+    # Note here we are inside one level of quoting from the `expand1rq`.
+    with expand1rq as quoted:
+        with expand_first[h[second]]:
+            third[h[second][42]]
+    assert unparse(quoted) == "third[third[42]]"
 
 if __name__ == '__main__':
     runtests()

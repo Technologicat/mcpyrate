@@ -38,7 +38,8 @@ __all__ = ["macro_bindings",
            "expand1s", "expands",
            "expand1rq", "expandrq",
            "expand1r", "expandr",
-           "stepr"]
+           "stepr",
+           "expand_first"]
 
 import ast
 
@@ -48,6 +49,8 @@ from .coreutils import _mcpyrate_attr
 from .debug import step_expansion  # noqa: F401, used in macro output.
 from .expander import MacroExpander, namemacro, parametricmacro
 from .quotes import astify, capture_value, q, unastify
+from .unparser import unparse_with_fallbacks
+from .utils import extract_bindings
 
 
 def _mcpyrate_metatools_attr(attr):
@@ -447,3 +450,78 @@ def stepr(tree, *, args, syntax, expander, **kw):
                     [ast.keyword("args", astify(args)),
                      ast.keyword("syntax", astify(syntax)),
                      ast.keyword("expander", expander_node)])
+
+# --------------------------------------------------------------------------------
+
+@parametricmacro
+def expand_first(tree, *, args, syntax, expander, **kw):
+    """[syntax, block] Force given macros to expand before other macros.
+
+    Usage::
+
+        with expand_first[macro0, ...]:
+            ...
+
+    Each argument can be either a bare macro name, e.g. `macro0`, or a
+    hygienically unquoted macro, e.g. `q[h[macro0]]`.
+
+    As an example, consider::
+
+        with your_block_macro:
+            macro0[expr]
+
+    In this case, if `your_block_macro` expands outside-in, it will transform the
+    `expr` inside the `macro0[expr] before `macro0` even sees the AST. If the test
+    fails or errors, the error message will contain the expanded version of `expr`,
+    not the original one. Now, if we change the example to::
+
+        with expand_first[macro0]:
+            with your_block_macro:
+                macro0[expr]
+
+    In this case, `expand_first` arranges things so that `macro0[expr]` expands first
+    (even if `your_block_macro` expands outside-in), so it will see the original,
+    unexpanded AST.
+
+    This does imply that `your_block_macro` will then receive the expanded form of
+    `macro0[expr]` as input, but that's macros for you.
+
+    There is no particular ordering in which the given set of macros expands;
+    they are handled by one expander with bindings registered for all of them.
+    (So the expansion order is determined by the order their use sites are
+     encountered; the ordering of the names in the argument list does not matter.)
+    """
+    if syntax != "block":
+        raise SyntaxError("expand_first is a block macro only")  # pragma: no cover
+    if syntax == "block" and kw['optional_vars'] is not None:
+        raise SyntaxError("expand_first does not take an as-part")  # pragma: no cover
+    if not args:
+        raise SyntaxError("expected a comma-separated list of `macroname` or `q[h[macroname]]` in `with expand_first[macro0, ...]:`; no macro arguments were given")
+
+    # Expand macros in `args` to handle `q[h[somemacro]]`.
+    #
+    # We must use the full `bindings`, not only those of the quasiquote operators
+    # (see `mcpyrate.quotes._expand_quasiquotes`), so that the expander recognizes
+    # which hygienic captures are macros.
+    args = MacroExpander(expander.bindings, filename=expander.filename).visit(args)
+
+    # In the arguments, we should now have `Name` nodes only.
+    invalid_args = [node for node in args if type(node) is not ast.Name]
+    if invalid_args:
+        invalid_args_str = ", ".join(unparse_with_fallbacks(node, color=True, debug=True)
+                                     for node in invalid_args)
+        raise SyntaxError(f"expected a comma-separated list of `macroname` or `q[h[macroname]]` in `with expand_first[macro0, ...]:`; invalid args: {invalid_args_str}")
+
+    # Furthermore, all the specified names must be bound as macros in the current expander.
+    invalid_args = [name_node for name_node in args if name_node.id not in expander.bindings]
+    if invalid_args:
+        invalid_args_str = ", ".join(unparse_with_fallbacks(node, color=True, debug=True)
+                                     for node in invalid_args)
+        raise SyntaxError(f"all macro names in `with expand_first[macro0, ...]:` must be bound in the current expander; the following are not: {invalid_args_str}")
+
+    # All ok. First map the names to macro functions:
+    macros = [expander.bindings[name_node.id] for name_node in args]
+
+    # Then map the macro functions to *all* their names in `expander`:
+    macro_bindings = extract_bindings(expander.bindings, *macros)
+    return MacroExpander(macro_bindings, filename=expander.filename).visit(tree)
