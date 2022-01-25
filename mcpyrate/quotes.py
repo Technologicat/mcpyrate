@@ -536,7 +536,7 @@ def is_captured_macro(tree):
            the next one thousand years"; see `mcpyrate.gensym`, which links to
            the UUID spec used by the implementation.)
 
-        - `frozen_macro` is either `bytes` object that stores a reference to the
+        - `frozen_macro` is a `bytes` object that stores a reference to the
           frozen macro function as opaque binary data.
 
         The `bytes` object can be decoded by passing the whole return value as `key`
