@@ -18,6 +18,7 @@
     - [How to debug macro transformations?](#how-to-debug-macro-transformations)
     - [Macro expansion time where exactly?](#macro-expansion-time-where-exactly)
     - [My macro needs to fill in `lineno` recursively, any recommendations?](#my-macro-needs-to-fill-in-lineno-recursively-any-recommendations)
+        - [How to list the whole public API, and only the public API?](#how-to-list-the-whole-public-api-and-only-the-public-api)
 - [Expansion stepping](#expansion-stepping)
     - [My own macros are working, but I'm not seeing any output from `step_expansion` (or `show_bindings`)?](#my-own-macros-are-working-but-im-not-seeing-any-output-from-step_expansion-or-show_bindings)
     - [`step_expansion` is treating the `expands` family of macros as a single step?](#step_expansion-is-treating-the-expands-family-of-macros-as-a-single-step)
@@ -140,6 +141,63 @@ from ast import walk, copy_location
 for node in walk(tree):
     copy_location(node, reference_node)
 ```
+
+
+### How to list the whole public API, and only the public API?
+
+In short, use Python's introspection capabilities. There are some subtleties here; below are some recipes.
+
+To view **the public API of a given submodule**:
+
+```python
+import sys
+print(sys.modules["mcpyrate.debug"].__all__)  # for example
+```
+
+If the `__all__` attribute for some submodule is missing, that submodule has no public API.
+
+To view **the whole public API**, grouped by submodule:
+
+```python
+import sys
+
+import mcpyrate
+
+submodules = [name for name in dir(mcpyrate)
+              if f"mcpyrate.{name}" in sys.modules]
+
+for name in submodules:
+    module = sys.modules[f"mcpyrate.{name}"]
+    if hasattr(module, "__all__"):  # has a public API?
+        print("=" * 79)
+        print(f"Public API of 'mcpyrate.{name}':")
+        print(module.__all__)
+```
+
+**Do not** do this to retrieve the submodules:
+
+```python
+import types
+submodules_wrong = [name for name in dir(mcpyrate)
+                    if issubclass(type(getattr(mcpyrate, name)), types.ModuleType)] 
+```
+
+because generally speaking, it is subtly wrong. If there happens to be an object imported from a submodule that has the same name as the submodule itself, that submodule will be missing from the list, because the object overrides the submodule in the parent module's namespace. The first approach is correct and always works.
+
+
+To view **the whole public API** available in the top-level namespace:
+
+```python
+import types
+
+import mcpyrate
+
+non_module_names = [name for name in dir(mcpyrate)
+                    if not issubclass(type(getattr(mcpyrate, name)), types.ModuleType)]
+print(non_module_names)
+```
+
+Now be very very careful: for the same reason as above, for the correct semantics we must use `issubclass(..., types.ModuleType)`, not `... in sys.modules`. Here we want to list each symbol in the top-level namespace of `mcpyrate` that does not point to a module; **including** any objects that override a module in the top-level namespace.
 
 
 # Expansion stepping
