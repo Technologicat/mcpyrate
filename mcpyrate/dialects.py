@@ -15,10 +15,22 @@ from .utils import format_macrofunction
 
 
 class Dialect:
-    """Base class for dialects."""
+    """Base class for dialects.
+
+    `expander`: the `DialectExpander` instance. The expander provides this automatically.
+                Stored as `self.expander`.
+
+    During dialect expansion, the source location info of the dialect-import statement
+    that invoked this dialect-import is available as `self.lineno` and `self.col_offset`.
+
+    You can pass those to `mcpyrate.splicing.splice_dialect` to automatically mark the
+    lines from your dialect template as coming from that dialect-import in the user
+    source code.
+    """
     def __init__(self, expander):
-        """`expander`: the `DialectExpander` instance. The expander provides this automatically."""
         self.expander = expander
+        self.lineno = None
+        self.col_offset = None
 
     def transform_source(self, text):
         """Override this to add a whole-module source transformer to your dialect.
@@ -27,10 +39,10 @@ class Dialect:
         tells the expander this dialect does not provide a source transformer.
 
         Rarely needed. Because we don't (yet) have a generic, extensible
-        tokenizer for "Python-plus" with extended surface syntax, this is
-        currently essentially a per-module hook to plug in a transpiler
-        that compiles source code from some other programming language
-        into macro-enabled Python.
+        tokenizer for "Python-plus" with extended surface syntax, not to mention that
+        none of the available Python dev tools support any such, this is currently
+        essentially a per-module hook to plug in a transpiler that compiles
+        source code from some other programming language into macro-enabled Python.
 
         The dialect system autodetects the text encoding the same way Python itself
         does. That is, it reads the magic comment at the top of the source file
@@ -221,11 +233,11 @@ class DialectExpander:
         # state is so last decade.
         dialect_instances = []
         while True:
-            module_absname, bindings = find_dialectimport(content)
-            if not module_absname:  # no more dialects
+            theimport = find_dialectimport(content)
+            if theimport:
+                module_absname, bindings, lineno, col_offset = theimport
+            else:  # no more dialects
                 break
-            if not bindings:
-                continue
 
             for dialectname, cls in bindings.items():
                 if not (isinstance(cls, type) and issubclass(cls, Dialect)):
@@ -235,6 +247,9 @@ class DialectExpander:
                     dialect = cls(expander=self)
                 except Exception as err:
                     raise ImportError(f"Unexpected exception while instantiating dialect `{module_absname}.{dialectname}`") from err
+                # make the dialect-import source location info available to the transformers
+                dialect.lineno = lineno
+                dialect.col_offset = col_offset
 
                 try:
                     transformer_method = getattr(dialect, transform)
@@ -338,9 +353,24 @@ class DialectExpander:
         So we can only rely on the literal text "from ... import dialects, ...",
         similarly to how Racket heavily constrains the format of its `#lang` line.
 
-        Return value is a dict `{dialectname: class, ...}` with all collected bindings
-        from that one dialect-import. Each binding is a dialect, so usually there is
-        just one.
+        Return value is the tuple `(module_absname, bindings, lineno, col_offset)`:
+
+            - `module_absname` is the absolute module name referred to by the import
+            - `bindings` is a dict `{dialectname: class, ...}`, with all bindings
+              collected from that one dialect-import statement. Each binding is a
+              dialect, so usually there is just one.
+            - `lineno` is the line number of the import statement, determined by
+              counting the lines of `text`.
+            - `col_offset` is the corresponding column offset.
+              Currently not extracted; is always set to 0.
+
+        The return value refers to the first not-yet-seen dialect-import (according
+        to the private cache `self._seen`). Note that this does not transform away
+        the dialect-imports, because the expander still needs to see them in the
+        AST transformation step.
+
+        If there are no more dialect-imports that have not been seen already,
+        the return value is `None`.
         """
         matches = _dialectimport.finditer(text)
         try:
@@ -349,15 +379,17 @@ class DialectExpander:
                 statement = match.group(0).strip()
                 if statement not in self._seen:  # apply each unique dialect-import once
                     self._seen.add(statement)
+                    lineno = 1 + text[0:match.start()].count("\n")  # https://stackoverflow.com/a/48647994
+                    col_offset = 0  # TODO: extract the correct column offset
                     break
         except StopIteration:
-            return "", {}
+            return None
 
         dummy_module = ast.parse(statement, filename=self.filename, mode="exec")
         dialectimport = dummy_module.body[0]
         module_absname, bindings = get_macros(dialectimport, filename=self.filename,
                                               reload=False, allow_asname=False)
-        return module_absname, bindings
+        return module_absname, bindings, lineno, col_offset
 
     def find_dialectimport_ast(self, tree):
         """Find the first dialect-import statement by scanning the AST `tree`.
@@ -374,15 +406,26 @@ class DialectExpander:
 
             from ... import dialects, ...
 
-        Return value is a dict `{dialectname: class, ...}` with all collected bindings
-        from that one dialect-import. Each binding is a dialect, so usually there is
-        just one.
+        Return value is the tuple `(module_absname, bindings, lineno)`, where:
+
+            - `module_absname` is the absolute module name referred to by the import
+            - `bindings` is a dict `{dialectname: class, ...}`, with all bindings
+              collected from that one dialect-import statement. Each binding is a
+              dialect, so usually there is just one.
+            - `lineno` is the line number from the import statement node,
+              or `None` if the statement had no `lineno` attribute.
+            - `col_offset` is the corresponding column offset.
+              It is also taken from the same import statement node.
+
+        The return value refers to the first dialect-import that has not yet been
+        transformed away. If there are no more dialect-imports, the return value
+        is `None`.
         """
         for index, statement in enumerate(tree.body):
             if ismacroimport(statement, magicname="dialects"):
                 break
         else:
-            return "", {}
+            return None
 
         module_absname, bindings = get_macros(statement, filename=self.filename,
                                               reload=False, allow_asname=False)
@@ -392,4 +435,9 @@ class DialectExpander:
                                      statement)
         tree.body[index] = ast.copy_location(ast.Import(names=[thealias]),
                                              statement)
-        return module_absname, bindings
+
+        # Get source location info
+        lineno = statement.lineno if hasattr(statement, "lineno") else None
+        col_offset = statement.col_offset if hasattr(statement, "col_offset") else None
+
+        return module_absname, bindings, lineno, col_offset

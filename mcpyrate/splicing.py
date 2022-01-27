@@ -157,7 +157,7 @@ def splice_statements(body, template, tag="__paste_here__"):
     return StatementSplicer().visit(template)
 
 
-def splice_dialect(body, template, tag="__paste_here__"):
+def splice_dialect(body, template, tag="__paste_here__", lineno=None, col_offset=None):
     """In a dialect AST transformer, splice module `body` into `template`.
 
     On top of what `splice_statements` does, this function handles macro-imports
@@ -175,6 +175,14 @@ def splice_dialect(body, template, tag="__paste_here__"):
     the template, then macro-imports in the user code.
 
     We also handle the module docstring, future-imports, and the magic `__all__`.
+
+    The optional `lineno` and `col_offset` parameters can be used to tell
+    `splice_dialect` the source location info of the dialect-import (in the
+    unexpanded source code) that triggered this template. If specified, they
+    are used to mark all the lines coming from the template as having come
+    from that dialect-import statement. During dialect expansion, you can
+    get these from the `lineno` and `col_offset` attributes of your dialect
+    instance (these attributes are filled in by `DialectExpander`).
 
     If both `body` and `template` have a module docstring, they are concatenated
     to produce the module docstring for the result. If only one of them has a
@@ -214,6 +222,10 @@ def splice_dialect(body, template, tag="__paste_here__"):
         `tag`: `str`
             The name of the paste-here indicator in `template`.
 
+        `lineno`: optional `int`
+        `col_offset`: optional `int`
+            Source location info of the dialect-import that triggered this template.
+
     Return value is `template` with `body` spliced in.
 
     Note `template` and `body` are **not** copied, and **both** will be mutated
@@ -233,14 +245,16 @@ def splice_dialect(body, template, tag="__paste_here__"):
     # Even if they have location info, it's for a different file compared
     # to the use site where `body` comes from.
     #
-    # Pretend the template code appears at the beginning of the user module.
-    #
-    # TODO: It would be better to pretend it appears at the line that has the dialect-import.
-    # TODO: Requires a `lineno` parameter here, and `DialectExpander` must be modified to supply it.
-    # TODO: We could extract the `lineno` in `find_dialectimport_ast` and then pass it to the
-    # TODO: user-defined dialect AST transformer, so it could pass it to us if it wants to.
+    # Pretend the template code appears at the given source location,
+    # or if not given, at the beginning of `body`.
+    if lineno is not None and col_offset is not None:
+        srcloc_dummynode = ast.Constant(value=None)
+        srcloc_dummynode.lineno = lineno
+        srcloc_dummynode.col_offset = col_offset
+    else:
+        srcloc_dummynode = body[0]
     for stmt in template:
-        fix_locations(stmt, body[0], mode="overwrite")
+        fix_locations(stmt, srcloc_dummynode, mode="overwrite")
 
     user_docstring, user_futureimports, body = split_futureimports(body)
     template_docstring, template_futureimports, template = split_futureimports(template)
