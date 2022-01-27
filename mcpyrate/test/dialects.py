@@ -39,6 +39,8 @@ class Tumbler(Dialect):
                 if type(tree) is ast.Constant and type(tree.value) is int:
                     # No one in their right mind would do this outside a unit test.
                     tree.value = 2 * tree.value
+                if type(tree) is ast.Num and type(tree.n) is int:  # Python 3.6
+                    tree.n = 2 * tree.n
                 return self.generic_visit(tree)
         return TumbleTransformer().visit(tree)
 
