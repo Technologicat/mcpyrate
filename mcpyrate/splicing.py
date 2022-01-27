@@ -222,7 +222,7 @@ def splice_dialect(body, template, tag="__paste_here__"):
     if isinstance(body, ast.AST):
         body = [body]
     if isinstance(template, ast.AST):
-        body = [template]
+        template = [template]
     if not body:
         raise ValueError("expected at least one statement in `body`")
     if not template:
