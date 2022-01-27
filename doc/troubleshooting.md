@@ -18,7 +18,7 @@
     - [How to debug macro transformations?](#how-to-debug-macro-transformations)
     - [Macro expansion time where exactly?](#macro-expansion-time-where-exactly)
     - [My macro needs to fill in `lineno` recursively, any recommendations?](#my-macro-needs-to-fill-in-lineno-recursively-any-recommendations)
-        - [How to list the whole public API, and only the public API?](#how-to-list-the-whole-public-api-and-only-the-public-api)
+    - [How to list the whole public API, and only the public API?](#how-to-list-the-whole-public-api-and-only-the-public-api)
 - [Expansion stepping](#expansion-stepping)
     - [My own macros are working, but I'm not seeing any output from `step_expansion` (or `show_bindings`)?](#my-own-macros-are-working-but-im-not-seeing-any-output-from-step_expansion-or-show_bindings)
     - [`step_expansion` is treating the `expands` family of macros as a single step?](#step_expansion-is-treating-the-expands-family-of-macros-as-a-single-step)
@@ -143,7 +143,7 @@ for node in walk(tree):
 ```
 
 
-### How to list the whole public API, and only the public API?
+## How to list the whole public API, and only the public API?
 
 In short, use Python's introspection capabilities. There are some subtleties here; below are some recipes.
 
