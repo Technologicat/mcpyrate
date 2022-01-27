@@ -60,8 +60,7 @@ class OurPowersCombined(Dialect):
 # AST transform, with a `__future__` import in the dialect template
 class FutureTexan(Dialect):
     def transform_ast(self, tree):  # tree is an ast.Module
-        # TODO: We need to invoke just some `__future__` feature in the template, to test that
-        # TODO: the output compiles.
+        # TODO: Just import *anything* from `__future__`, to trigger the handler in `splice_dialect`.
         #
         # TODO: We may need to update this as language versions march on
         # TODO: and the set of available `__future__` features changes.
@@ -71,7 +70,7 @@ class FutureTexan(Dialect):
         # So instead of using a quoted AST (which would get parsed as part of its containing file,
         # leading to invalid Python), we hide it inside a string.
         source = textwrap.dedent("""
-        from __future__ import annotations
+        from __future__ import generator_stop
 
         x = "Howdy from FutureTexan dialect"  # noqa: F841, it's for use by the user code.
 
