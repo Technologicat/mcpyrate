@@ -5,7 +5,7 @@
 **Added**:
 
 - Python 3.10 support.
-- Add block macro `mcpyrate.metatools.expand_first`. This can be used to force, within the `with expand_first[macro0, ...]:` block, the given macros to expand before others. Macros can be specified either by name (will be looked up in the current expander's bindings) or by hygienic capture.
+- Add block macro `mcpyrate.metatools.expand_first`. This can be used to force, within the `with expand_first[macro0, ...]:` block, the given macros to expand before others. Macros can be specified either by name (will be looked up in the current expander's bindings) or by hygienic capture. See [examples in unit tests](mcpyrate/test/test_quotes.py).
 - Add function `mcpyrate.utils.get_lineno` to conveniently extract a `lineno` from an AST-node-ish thing, no matter if that thing is an actual AST node, a list of AST nodes (i.e. statement suite), or an AST marker containing either of those, possibly recursively.
 - Facilitate programmatic inspection of the whole public API of `mcpyrate`. See the recipes in [troubleshooting](doc/troubleshooting.md).
   - This is an interim solution while we decide whether to start supporting [Sphinx](https://www.sphinx-doc.org/en/master/) at some point, so that we could auto-generate proper API docs from the docstrings (which are carefully maintained, and already contain all the necessary content).
