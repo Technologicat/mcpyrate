@@ -1,16 +1,29 @@
 # Changelog
 
-**3.6.0** (in progress, last updated 26 January 2022) *New Year's edition*:
+**3.6.0** (in progress, last updated 27 January 2022) *New Year's edition*:
 
 **Added**:
 
 - Python 3.10 support.
 - Add block macro `mcpyrate.metatools.expand_first`. This can be used to force, within the `with expand_first[macro0, ...]:` block, the given macros to expand before others. Macros can be specified either by name (will be looked up in the current expander's bindings) or by hygienic capture.
+- Add function `mcpyrate.utils.get_lineno` to conveniently extract a `lineno` from an AST-node-ish thing, no matter if that thing is an actual AST node, a list of AST nodes (i.e. statement suite), or an AST marker containing either of those, possibly recursively.
+- Facilitate programmatic inspection of the whole public API of `mcpyrate`. See the recipes in [troubleshooting](doc/troubleshooting.md).
+  - This is an interim solution while we decide whether to start supporting [Sphinx](https://www.sphinx-doc.org/en/master/) at some point, so that we could auto-generate proper API docs from the docstrings (which are carefully maintained, and already contain all the necessary content).
+
 
 **Fixed**:
 
 - Fix https://github.com/Technologicat/mcpyrate/issues/29, with thanks to @set-soft and @brathis for reporting. **`mcpyrate` should now support Python 3.10.**
-- Fix https://github.com/Technologicat/mcpyrate/issues/30, thus extending the fix of #28 (in the previous release) into the dialect subsystem, too. `__future__` imports are accounted for both the dialect template and in user code that invokes the template. This is implemented in the utility function `mcpyrate.splicing.splice_dialect`, so if your dialect definition uses that function in its AST transformer, your dialect should now work correctly with `__future__` imports.
+- Dialect subsystem fixes.
+  - Fix https://github.com/Technologicat/mcpyrate/issues/30, thus extending the fix of #28 (in the previous release) into the dialect subsystem, too.
+    - `__future__` imports are accounted for both the dialect template and in user code that invokes the template.
+    - This is implemented in the utility function `mcpyrate.splicing.splice_dialect`, so if your dialect definition uses that function in its AST transformer, now your dialect should not choke when the template and/or the user code have `__future__` imports.
+  - Fix https://github.com/Technologicat/mcpyrate/issues/31; the dialect machinery now has the infrastructure to pass in the source location info of the dialect-import statement.
+    - This allows dialects to mark any lines coming from the dialect template as effectively coming from the line that contains the dialect-import. If you import one dialect per line, this makes it easy to see which lines of the expanded code were injected by which dialect, for debugging purposes. (Recall that you can use the `StepExpansion` dialect from `mcpyrate.debug` to see the line numbers before and after dialect expansion.)
+    - During dialect expansion, `DialectExpander` automatically makes this info available in `self.lineno` and `self.col_offset` of your dialect definition (i.e. in the instance of your subclass of `Dialect`, which has the transformer methods). In your AST transformer, you can pass these to `mcpyrate.splicing.splice_dialect`.
+    - See updated example dialects in [`unpythonic.dialects`](https://github.com/Technologicat/unpythonic/tree/master/unpythonic/dialects).
+  - Fix handling of rare case where the dialect template consists of a single statement that is not wrapped in a list.
+- Docstring of `mcpyrate.utils.NestingLevelTracker` now has usage examples.
 
 
 ---
