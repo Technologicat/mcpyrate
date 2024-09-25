@@ -22,6 +22,7 @@ We use [semantic versioning](https://semver.org/). `mcpyrate` is almost-but-not-
 **Table of Contents**
 
 - [mcpyrate](#mcpyrate)
+    - [News](#news)
     - [First example](#first-example)
         - [Running the extra examples in the tests](#running-the-extra-examples-in-the-tests)
     - [Features](#features)
@@ -38,6 +39,17 @@ We use [semantic versioning](https://semver.org/). `mcpyrate` is almost-but-not-
     - [Why macros?](#why-macros)
 
 <!-- markdown-toc end -->
+
+## News
+
+**25 September, 2024**
+
+The `mcpyrate` project is still alive, but it already does what I need it to do, and has not required maintenance in the past two years.
+
+Support for Python 3.11 and later is planned, but because I'm the only maintainer at the moment, this is likely to happen when I personally upgrade to 3.11+. For the near-term future, I'm still running 3.10.
+
+If you would like to help out, start [here](https://github.com/Technologicat/mcpyrate/issues/35). Small contributions matter!
+
 
 ## First example
 
