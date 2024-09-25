@@ -1,8 +1,10 @@
 # Changelog
 
-**3.6.1** (in progress, last updated 28 January 2022)
+**3.6.1** (25 September 2024)
 
-*No user-visible changes yet.*
+**Fixed**:
+
+- Fix https://github.com/Technologicat/mcpyrate/issues/33, with thanks to @set-soft.
 
 
 ---
