@@ -4,7 +4,6 @@
 __all__ = ["source_to_xcode", "path_xstats", "path_stats"]
 
 import ast
-import distutils.sysconfig
 from importlib.machinery import SourceFileLoader
 import importlib.util
 import os
@@ -85,7 +84,7 @@ def _detect_stdlib_sourcefile_paths():
     """Return a set of full paths of `.py` files that are part of Python's standard library."""
     # Adapted from StackOverflow answer by Adam Spiers, https://stackoverflow.com/a/8992937
     # Note we don't want to get module names, but full paths to `.py` files.
-    stdlib_dir = distutils.sysconfig.get_python_lib(standard_lib=True)
+    stdlib_dir = os.path.dirname(os.__file__)
     paths = set()
     for root, dirs, files in os.walk(stdlib_dir):
         for filename in files:
