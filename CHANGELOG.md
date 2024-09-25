@@ -1,5 +1,12 @@
 # Changelog
 
+**3.6.2** (in progress, last updated 25 September 2024)
+
+*No user-visible changes yet.*
+
+
+---
+
 **3.6.1** (25 September 2024)
 
 **Fixed**:
