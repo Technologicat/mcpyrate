@@ -219,13 +219,15 @@ class SourceLocationInfoValidator(ASTVisitor):
         print(v.collected)
 
     It's a rather common occurrence when developing macros to have the source
-    location info missing somewhere, but when we `compile`, Python won't tell us
-    *which* nodes are missing them.
+    location info missing somewhere, but when we `compile`, Python (up to 3.10)
+    won't tell us *which* nodes are missing them.
 
     This can also be used to debug whether the problem is what Python claims it is.
-    Python's `compile` is notorious for yelling about a missing source location
-    when the actual problem is that is got a bare value in a position where an
-    AST node was expected.
+    Python's `compile` (up to 3.10) is notorious for yelling about a missing
+    source location when the actual problem is that is got a bare value in a
+    position where an AST node was expected.
+
+    Things might improve now that Python 3.11+ have AST validation in `compile`.
 
     The macro expander *should* fill in missing source location info when it expands
     a macro, so this utility will be needed only rarely.
