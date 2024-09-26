@@ -1,6 +1,6 @@
 # Changelog
 
-**3.6.2** (in progress, last updated 25 September 2024)
+**3.6.2** (in progress, last updated 26 September 2024)
 
 **IMPORTANT**:
 
