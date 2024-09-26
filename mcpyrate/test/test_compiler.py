@@ -251,7 +251,7 @@ def runtests():
                 pass
     test_dynamicmodule_multiphase()
 
-    def test_futureimports_multiphase_nodocstring():
+    def test_futureimports_multiphase_nodocstring():  # TODO: test with some other `__future__` feature on 3.11+?
         try:
             source = dedent("""
             from __future__ import annotations
@@ -269,7 +269,7 @@ def runtests():
                 pass
     test_futureimports_multiphase_nodocstring()
 
-    def test_futureimports_multiphase_withdocstring():
+    def test_futureimports_multiphase_withdocstring():  # TODO: test with some other `__future__` feature on 3.11+?
         try:
             source = dedent("""
             '''Works with a module docstring, too.'''

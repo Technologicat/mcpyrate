@@ -262,7 +262,7 @@ from mcpyrate.debug import macros, step_expansion
 from mcpyrate.metatools import macros, stepr
 ```
 
-on Python 3.6, the invocation `step_expansion[q[42]]` produces:
+on Python 3.6 (this is an old example), the invocation `step_expansion[q[42]]` produces:
 
 ```
 **Tree 0x7f61fddf7a90 (<interactive input>) before macro expansion:

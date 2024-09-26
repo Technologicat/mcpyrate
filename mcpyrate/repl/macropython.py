@@ -2,7 +2,10 @@
 # -*- coding: utf-8 -*-
 """Universal bootstrapper for macro-enabled Python programs powered by mcpyrate."""
 
-# TODO: Currently tested in CPython 3.6, and PyPy3 7.3.0 (Python 3.6). Test in 3.7+.
+# Currently personally using this with CPython 3.10.
+#
+# TODO: Test on CPython 3.11, 3.12.
+# TODO: Last tested in PyPy on PyPy3 7.3.0 (Python 3.6). Test on PyPy 3.8, 3.9, 3.10.
 
 import argparse
 import atexit
