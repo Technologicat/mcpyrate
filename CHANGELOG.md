@@ -2,7 +2,15 @@
 
 **3.6.2** (in progress, last updated 25 September 2024)
 
-*No user-visible changes yet.*
+**IMPORTANT**:
+
+- Minimum Python language version is now 3.8.
+- Python 3.6 and 3.7 support dropped, as these language versions have officially reached end-of-life.
+- 3.8 becomes EOL after October 2024, so support for that version might be dropped soon, too.
+
+**Future plans**:
+
+Near-term focus will likely be on introducing support for Python 3.11 and 3.12, with no major changes to functionality.
 
 
 ---
