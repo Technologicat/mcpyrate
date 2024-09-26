@@ -5,12 +5,15 @@
 **IMPORTANT**:
 
 - Minimum Python language version is now 3.8.
-- Python 3.6 and 3.7 support dropped, as these language versions have officially reached end-of-life.
-- 3.8 becomes EOL after October 2024, so support for that version might be dropped soon, too.
+  - We support 3.8, 3.9, 3.10, 3.11, 3.12, and PyPy3 (language versions 3.8, 3.9, and 3.10).
+  - Python 3.6 and 3.7 support dropped, as these language versions have officially reached end-of-life.
+- Note this release of `mcpyrate` is still in progress. Python 3.8 becomes EOL after October 2024, so support for 3.8 might be dropped before `mcpyrate` 3.6.2 is released.
 
-**Future plans**:
 
-Near-term focus will likely be on introducing support for Python 3.11 and 3.12, with no major changes to functionality.
+**New**:
+
+- **Python 3.12 support**.
+- **Python 3.11 support**.
 
 
 ---

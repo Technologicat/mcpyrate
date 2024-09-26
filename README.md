@@ -46,8 +46,6 @@ We use [semantic versioning](https://semver.org/). `mcpyrate` is almost-but-not-
 
 The `mcpyrate` project is still alive, but it already does what I need it to do, and has not required maintenance in the past two years.
 
-Support for Python 3.11 and later is planned, but because I'm the only maintainer at the moment, this is likely to happen when I personally upgrade to 3.11+. For the near-term future, I'm still running 3.10.
-
 If you would like to help out, start [here](https://github.com/Technologicat/mcpyrate/issues/35). Small contributions matter!
 
 
