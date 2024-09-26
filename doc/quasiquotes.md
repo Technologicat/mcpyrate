@@ -701,8 +701,6 @@ from mcpyrate.quotes import capture_as_macro
 def even(tree, **kw):
     if type(tree) is ast.Constant:
         v = tree.value
-    elif type(tree) is ast.Num:  # up to Python 3.7
-        v = tree.n
 
     if v == 0:
         return q[True]
@@ -711,8 +709,6 @@ def even(tree, **kw):
 def odd(tree, **kw):
     if type(tree) is ast.Constant:
         v = tree.value
-    elif type(tree) is ast.Num:  # up to Python 3.7
-        v = tree.n
 
     if v == 0:
         return q[False]

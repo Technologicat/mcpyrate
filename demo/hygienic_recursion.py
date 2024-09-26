@@ -14,8 +14,6 @@ with phase[1]:
     def even(tree, **kw):
         if type(tree) is ast.Constant:
             v = tree.value
-        elif type(tree) is ast.Num:  # up to Python 3.7
-            v = tree.n
 
         if v == 0:
             return q[True]
@@ -24,8 +22,6 @@ with phase[1]:
     def odd(tree, **kw):
         if type(tree) is ast.Constant:
             v = tree.value
-        elif type(tree) is ast.Num:  # up to Python 3.7
-            v = tree.n
 
         if v == 0:
             return q[False]
