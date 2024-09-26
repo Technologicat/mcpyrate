@@ -46,11 +46,6 @@ We use [semantic versioning](https://semver.org/). `mcpyrate` is almost-but-not-
 
 The `mcpyrate` project is still alive, but it already does what I need it to do, and has not required maintenance in the past two years. Just now, I finally added Python 3.11 and 3.12 support.
 
-For `mcpyrate` 3.6.2, the remaining changes are:
-
-- Waiting for Python 3.8 to EOL (so we can clean up its remnants from the codebase), which is scheduled for October 2024.
-- The local build instructions need to be updated, as `python setup.py install` is very much deprecated and going away soon.
-
 If you would like to help out with anything in this project, start [here](https://github.com/Technologicat/mcpyrate/issues/35). Small contributions matter!
 
 
