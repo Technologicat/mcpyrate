@@ -157,7 +157,7 @@ def fix_locations(tree, reference_node, *, mode):
     def update_col_offset(tree, col_offset, end_col_offset):
         tree.col_offset = col_offset
         if "end_col_offset" in tree._attributes:
-            tree.end_col_offset = col_offset
+            tree.end_col_offset = end_col_offset
 
     def _fix(tree, lineno, col_offset, end_lineno, end_col_offset):
         if tree is None:
