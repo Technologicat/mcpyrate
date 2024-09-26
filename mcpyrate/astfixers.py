@@ -147,30 +147,48 @@ def fix_locations(tree, reference_node, *, mode):
     """
     if not (hasattr(reference_node, "lineno") and hasattr(reference_node, "col_offset")):
         return tree
-    def _fix(tree, lineno, col_offset):
+
+    # Python 3.11+ validate the AST before compiling.
+    # Beside checking that each position has a valid AST node type for that position, it seems to validate e.g. `end_lineno >= lineno`.
+    def update_lineno(tree, lineno, end_lineno):
+        tree.lineno = lineno
+        if "end_lineno" in tree._attributes:
+            tree.end_lineno = end_lineno
+    def update_col_offset(tree, col_offset, end_col_offset):
+        tree.col_offset = col_offset
+        if "end_col_offset" in tree._attributes:
+            tree.end_col_offset = col_offset
+
+    def _fix(tree, lineno, col_offset, end_lineno, end_col_offset):
         if tree is None:
             return
         if isinstance(tree, list):
             for elt in tree:
-                _fix(elt, lineno, col_offset)
+                _fix(elt, lineno, col_offset, end_lineno, end_col_offset)
             return
         if "lineno" in tree._attributes:
             if mode == "overwrite":
-                tree.lineno = lineno
+                update_lineno(tree, lineno, end_lineno)
             else:
                 if not hasattr(tree, "lineno"):
-                    tree.lineno = lineno
+                    update_lineno(tree, lineno, end_lineno)
                 elif mode == "update":
                     lineno = tree.lineno
+                    end_lineno = tree.end_lineno if hasattr(tree, "end_lineno") else None
         if "col_offset" in tree._attributes:
             if mode == "overwrite":
-                tree.col_offset = col_offset
+                update_col_offset(tree, col_offset, end_col_offset)
             else:
                 if not hasattr(tree, "col_offset"):
-                    tree.col_offset = col_offset
+                    update_col_offset(tree, col_offset, end_col_offset)
                 elif mode == "update":
                     col_offset = tree.col_offset
+                    end_col_offset = tree.end_col_offset if hasattr(tree, "end_col_offset") else None
         for child in iter_child_nodes(tree):
-            _fix(child, lineno, col_offset)
-    _fix(tree, reference_node.lineno, reference_node.col_offset)
+            _fix(child, lineno, col_offset, end_lineno, end_col_offset)
+    _fix(tree,
+         reference_node.lineno,
+         reference_node.col_offset,
+         reference_node.end_lineno if hasattr(reference_node, "end_lineno") else None,
+         reference_node.end_col_offset if hasattr(reference_node, "end_col_offset") else None)
     return tree
