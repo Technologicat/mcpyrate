@@ -19,7 +19,7 @@ Near-term focus will likely be on introducing support for Python 3.11 and 3.12, 
 
 **Fixed**:
 
-- Fix https://github.com/Technologicat/mcpyrate/issues/33, with thanks to @set-soft.
+- Fix https://github.com/Technologicat/mcpyrate/issues/33, with thanks to @set-soft. That is, `distutils` is no longer required.
 
 
 ---
