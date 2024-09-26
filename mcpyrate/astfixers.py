@@ -132,7 +132,7 @@ def fix_locations(tree, reference_node, *, mode):
         like `ast.fix_missing_locations` does).
 
         So if a node is missing location info, copy the current reference info
-        in, but if it has location info, then update the reference info.
+        in, but if it has location info, then update the reference info from it.
 
         Good for general use.
 
