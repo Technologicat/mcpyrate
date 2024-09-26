@@ -234,23 +234,16 @@ def main():
     #
     if opts.module:
         # Python 3.7 and later resolve the cwd at interpreter startup time, and use that.
-        # Python 3.6 and earlier use the empty string, which dynamically resolves to
-        # whatever is the current cwd whenever a module is imported.
-        #     https://bugs.python.org/issue33053
-        if sys.version_info >= (3, 7, 0):
-            cwd = str(pathlib.Path.cwd().expanduser().resolve())
-            if sys.path[0] != cwd:
-                sys.path.insert(0, cwd)
-        else:
-            if sys.path[0] != "":
-                sys.path.insert(0, "")
+        # Since our minimum is Python 3.8, we can just do that.
+        cwd = str(pathlib.Path.cwd().expanduser().resolve())
+        if sys.path[0] != cwd:
+            sys.path.insert(0, cwd)
 
-        # https://www.python.org/dev/peps/pep-0582/
-        if sys.version_info >= (3, 8, 0):
-            local_pypackages_dir = pathlib.Path.cwd().expanduser().resolve() / "__pypackages__"
-            if local_pypackages_dir.is_dir():
-                # TODO: figure out correct insert index (spec: "after cwd, just before site packages")
-                sys.path.insert(1, str(local_pypackages_dir))
+        # Python 3.8, https://www.python.org/dev/peps/pep-0582/
+        local_pypackages_dir = pathlib.Path.cwd().expanduser().resolve() / "__pypackages__"
+        if local_pypackages_dir.is_dir():
+            # TODO: figure out correct insert index (spec: "after cwd, just before site packages")
+            sys.path.insert(1, str(local_pypackages_dir))
 
         import_module_as_main(opts.module, script_mode=False)
 
@@ -263,12 +256,11 @@ def main():
         if sys.path[0] != containing_directory:
             sys.path.insert(0, containing_directory)
 
-        # https://www.python.org/dev/peps/pep-0582/
-        if sys.version_info >= (3, 8, 0):
-            local_pypackages_dir = fullpath.parent / "__pypackages__"
-            if local_pypackages_dir.is_dir():
-                # TODO: figure out correct insert index (spec: "after cwd, just before site packages")
-                sys.path.insert(1, str(local_pypackages_dir))
+        # Python 3.8, https://www.python.org/dev/peps/pep-0582/
+        local_pypackages_dir = fullpath.parent / "__pypackages__"
+        if local_pypackages_dir.is_dir():
+            # TODO: figure out correct insert index (spec: "after cwd, just before site packages")
+            sys.path.insert(1, str(local_pypackages_dir))
 
         # This approach finds the standard loader even for macro-enabled scripts.
         # TODO: For mcpyrate, that could be ok, since we monkey-patch just that.

@@ -213,14 +213,12 @@ def path_stats(path, _stats_cache=None):
     # size = stat_result.st_size
     mtimes.append(mtime)
 
-    result = {"mtime": max(mtimes)}  # and sum(sizes)? OTOH, as of Python 3.8, only 'mtime' is mandatory.
-    if sys.version_info >= (3, 7, 0):
-        # Docs say `size` is optional, and this is correct in 3.6 (and in PyPy3 7.3.0):
-        # https://docs.python.org/3/library/importlib.html#importlib.abc.SourceLoader.path_stats
-        #
-        # but in 3.7 and later, the implementation is expecting at least a `None` there,
-        # if the `size` is not used. See `get_code` in:
-        # https://github.com/python/cpython/blob/master/Lib/importlib/_bootstrap_external.py
-        result["size"] = None
+    # Docs say `size` is optional, and this is correct in CPython 3.6 (and in PyPy3 7.3.0, language version 3.6):
+    #     https://docs.python.org/3/library/importlib.html#importlib.abc.SourceLoader.path_stats
+    # but in CPython 3.7 and later, the implementation is expecting at least a `None` there,
+    # if the `size` is not used. See `get_code` in:
+    #     https://github.com/python/cpython/blob/master/Lib/importlib/_bootstrap_external.py
+    # Since our minimum is Python 3.8, let's put `size` there.
+    result = {"mtime": max(mtimes), "size": None}  # and sum(sizes)? OTOH, as of Python 3.8, only 'mtime' is mandatory.
     _stats_cache[path] = result
     return result
