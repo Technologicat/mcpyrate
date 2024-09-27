@@ -244,25 +244,19 @@ It should be emphasized that what follows is a minimal list of differences. In a
 pip install mcpyrate
 ```
 
-possibly with `--user`, if your OS is a *nix, and you feel lucky enough to use the system Python. If not, activate your venv first; the `--user` flag is then not needed.
-
 ### From source
 
 Clone the repo from GitHub. Then, navigate to it in a terminal, and:
 
 ```bash
-python -m setup install
+pip install .
 ```
-
-possibly with `--user`, if your OS is a *nix, and you feel lucky enough to use the system Python. If not, activate your venv first; the `--user` flag is then not needed.
 
 To uninstall:
 
 ```bash
 pip uninstall mcpyrate
 ```
-
-but first, make sure you're not in a folder that has a `mcpyrate` subfolder - `pip` will think it got a folder name instead of a package name, and become confused.
 
 
 ## Understanding the implementation
