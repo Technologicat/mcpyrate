@@ -487,7 +487,8 @@ class Unparser:
         class_str = (self.maybe_colorize_python_keyword("class ") +
                      self.maybe_colorize(t.name, ColorScheme.DEFNAME))
         self.fill(class_str, lineno_node=t)
-        self.write("(")
+        if t.bases or t.keywords:
+            self.write("(")
         comma = False
         for e in t.bases:
             if comma:
@@ -501,7 +502,8 @@ class Unparser:
             else:
                 comma = True
             self.dispatch(e)
-        self.write(")")
+        if t.bases or t.keywords:
+            self.write(")")
 
         self.enter()
         self.dispatch(t.body)

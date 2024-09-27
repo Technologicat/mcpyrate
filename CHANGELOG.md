@@ -36,6 +36,7 @@
 **Fixed**:
 
 - Fix https://github.com/Technologicat/mcpyrate/issues/41. The unparser now supports `match`/`case` (Python 3.10 pattern matching).
+- Fix bug in unparser: a class definition with no bases or keywords should not have parentheses after the class name.
 - Fix bug in `rename`: rename also in `global` and `nonlocal` declarations.
 - Update links in relevant parts of `mcpyrate` documentation to point to Python's official AST documentation instead of GTS (Green Tree Snakes).
   - Nowadays Python has proper [AST documentation](https://docs.python.org/3/library/ast.html).
