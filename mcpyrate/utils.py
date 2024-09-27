@@ -9,6 +9,7 @@ import ast
 from contextlib import contextmanager
 import uuid
 
+from .astcompat import MatchAs, MatchStar
 from .colorizer import colorize, ColorScheme
 from . import markers
 from . import unparser
@@ -131,13 +132,17 @@ def rename(oldname, newname, tree):
                     tree.name = newname
                 if tree.asname == oldname:
                     tree.asname = newname
-            elif T is ast.ExceptHandler:
+            elif T is ast.ExceptHandler:  # Python 3.11+: `try`/`except*` uses the same `ExceptHandler` AST node type as classic `try`/`except`
                 if tree.name == oldname:
                     tree.name = newname
             elif T in (ast.Global, ast.Nonlocal):
                 for j in range(len(tree.names)):
                     if tree.names[j] == oldname:
                         tree.names[j] = newname
+            elif T in (MatchAs, MatchStar):  # Python 3.10+: `match`/`case` (pattern matching)
+                if tree.name == oldname:
+                    tree.name = newname
+            # Python 3.12+: `type` statement needs no special-casing here, as it uses a `Name` node for its LHS.
             return self.generic_visit(tree)
     return Renamer().visit(tree)
 
