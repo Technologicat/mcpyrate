@@ -7,23 +7,9 @@ from ast import (AnnAssign, Assign, AsyncFor, Attribute, AugAssign, Del,
                  Delete, For, Load, Store, Subscript, comprehension,
                  iter_child_nodes, withitem)
 from copy import copy
-from typing import Type
 
+from .astcompat import NamedExpr, TypeAlias
 from . import walkers
-
-class _NoSuchNodeType:
-    pass
-
-try:  # Python 3.8+
-    from ast import NamedExpr
-except ImportError:
-    NamedExpr: Type = _NoSuchNodeType  # type: ignore[no-redef]
-
-try:  # Python 3.12+
-    from ast import TypeAlias
-except ImportError:
-    TypeAlias: Type = _NoSuchNodeType  # type: ignore[no-redef]
-
 
 class _CtxFixer(walkers.ASTTransformer):
     def __init__(self, *, copy_seen_nodes):
