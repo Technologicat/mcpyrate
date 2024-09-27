@@ -87,7 +87,7 @@ class Unparser:
         global quotes
         from . import quotes
 
-        self._except_handler_mode_stack = []  # Python 3.11+: TryStar is like Try, but ExceptHandler nodes inside it are interpreted differently.
+        self._except_handler_mode_stack = []  # Python 3.11+: `TryStar` is like `Try`, but `ExceptHandler` nodes inside it are interpreted differently.
 
         self.debug = debug
         self.color = color
