@@ -260,8 +260,7 @@ If `--no-compile` is NOT used, the precompiled bytecode cache may cause errors s
 
 This is a common issue when using macro expanders in Python. See the [Packaging section in troubleshooting](doc/troubleshooting.md#packaging).
 
-
-To uninstall:
+### Uninstall
 
 ```bash
 pip uninstall mcpyrate
