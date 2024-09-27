@@ -13,7 +13,7 @@
 **New**:
 
 - **Python 3.12 support**.
-- **Python 3.11 support**.
+- **Python 3.11 support**. The unparser now supports `try`/`except*` (exception groups).
 
 **Fixed**:
 
