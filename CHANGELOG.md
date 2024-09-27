@@ -1,6 +1,6 @@
 # Changelog
 
-**3.6.2** (in progress, last updated 26 September 2024)
+**3.6.2** (in progress, last updated 27 September 2024)
 
 **IMPORTANT**:
 
@@ -13,15 +13,33 @@
 **New**:
 
 - **Python 3.12 support**.
-  - Support the `type` statement when fixing `ctx` attributes in the global postprocess pass.
+  - Support the `type` statement (Python 3.12 type alias) when fixing `ctx` attributes in the global postprocess pass.
+  - The unparser now supports the `type` statement (Python 3.12 type alias).
+    - Please note that I pretty much don't use the static typing features of Python myself. This is implemented following the spec, but testing has been rather minimal, so bug reports are welcome!
+    - For the curious, the relevant parts of the official Python documentation are:
+      - https://docs.python.org/3/library/ast.html#type-parameters
+      - https://docs.python.org/3/library/ast.html#ast.TypeAlias
+      - https://docs.python.org/3/library/ast.html#ast.TypeVar
+      - https://docs.python.org/3/library/ast.html#ast.ParamSpec
+      - https://docs.python.org/3/library/ast.html#ast.TypeVarTuple
+      - https://docs.python.org/3/library/typing.html#typing.TypeVar
+      - https://docs.python.org/3/library/typing.html#typing.ParamSpec
+      - https://docs.python.org/3/library/typing.html#typing.TypeVarTuple
+
 - **Python 3.11 support**.
-  - Consider also `end_lineno` and `end_col_offset` when fixing AST locations in the global postprocess pass. Python 3.11's AST validator (in the compiler) checks e.g. that `end_lineno >= lineno`.
-  - The unparser now supports `try`/`except*` (Python 3.11 exception groups).
+  - Consider also `end_lineno` and `end_col_offset` when fixing AST locations in the global postprocess pass.
+    - This is literally the only thing we currently do with `end_lineno` and `end_col_offset`.
+    - Python 3.11's AST validator (now part of the CPython compiler as of 3.11+) checks e.g. that `end_lineno >= lineno`.
+  - The unparser now supports the `try`/`except*` construct (Python 3.11 exception groups).
+
 
 **Fixed**:
 
 - Fix https://github.com/Technologicat/mcpyrate/issues/41. The unparser now supports `match`/`case` (Python 3.10 pattern matching).
 - Fix bug in `rename`: rename also in `global` and `nonlocal` declarations.
+- Update links in relevant parts of `mcpyrate` documentation to point to Python's official AST documentation instead of GTS (Green Tree Snakes).
+  - Nowadays Python has proper [AST documentation](https://docs.python.org/3/library/ast.html).
+  - Thus the separate GTS resource is no longer needed, and is effectively dead as of September 2024.
 
 
 ---
