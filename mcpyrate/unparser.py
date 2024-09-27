@@ -2,7 +2,10 @@
 """Back-convert a Python AST into source code. Original formatting is disregarded.
 
 Python 3.9+ provides `ast.unparse`, but ours comes with some additional features,
-notably syntax highlighting and debug rendering of invisible AST nodes.
+notably syntax highlighting and debug rendering of invisible AST nodes as well as
+of `mcpyrate`'s AST markers.
+
+Last updated for Python 3.12.
 """
 
 __all__ = ["UnparserError", "unparse", "unparse_with_fallbacks"]
