@@ -13,11 +13,13 @@
 **New**:
 
 - **Python 3.12 support**.
-- **Python 3.11 support**. The unparser now supports `try`/`except*` (exception groups).
+- **Python 3.11 support**.
+  - Consider also `end_lineno` and `end_col_offset` when fixing AST locations in the global postprocess pass. Python 3.11's AST validator (in the compiler) checks e.g. that `end_lineno >= lineno`.
+  - The unparser now supports `try`/`except*` (Python 3.11 exception groups).
 
 **Fixed**:
 
-- Fix https://github.com/Technologicat/mcpyrate/issues/41. The unparser now understands the Python 3.10 pattern matching construct `match`/`case`.
+- Fix https://github.com/Technologicat/mcpyrate/issues/41. The unparser now supports `match`/`case` (Python 3.10 pattern matching).
 - Fix bug in `rename`: rename also in `global` and `nonlocal` declarations.
 
 
