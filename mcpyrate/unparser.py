@@ -8,6 +8,9 @@ of `mcpyrate`'s AST markers.
 Last updated for Python 3.12.
 """
 
+# Python 3.8 added the `type_ignores` field to many AST node types. It is a list of locations of "# type: ignore" comments.
+# Since we don't store the source text at all, we just ignore that.
+
 __all__ = ["UnparserError", "unparse", "unparse_with_fallbacks"]
 
 import ast
@@ -289,7 +292,6 @@ class Unparser:
         self.toplevelnode(t)
 
     def toplevelnode(self, t):
-        # TODO: Python 3.8 type_ignores. Since we don't store the source text, maybe ignore that?
         if self.debug:
             label = f"${t.__class__.__name__}"
             self.fill(self.maybe_colorize(label, ColorScheme.INVISIBLENODE),
