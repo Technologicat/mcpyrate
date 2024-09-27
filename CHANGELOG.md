@@ -13,6 +13,7 @@
 **New**:
 
 - **Python 3.12 support**.
+  - Support the `type` statement when fixing `ctx` attributes in the global postprocess pass.
 - **Python 3.11 support**.
   - Consider also `end_lineno` and `end_col_offset` when fixing AST locations in the global postprocess pass. Python 3.11's AST validator (in the compiler) checks e.g. that `end_lineno >= lineno`.
   - The unparser now supports `try`/`except*` (Python 3.11 exception groups).
