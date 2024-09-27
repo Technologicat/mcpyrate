@@ -1065,11 +1065,7 @@ class Unparser:
 
     def _MatchSequence(self, t):
         self.write("[")
-        n = len(t.patterns)
-        for j, p in enumerate(t.patterns):
-            self.dispatch(p)
-            if j < n - 1:
-                self.write(", ")
+        interleave(lambda: self.write(", "), self.dispatch, t.patterns)
         self.write("]")
 
     def _MatchStar(self, t):
@@ -1081,15 +1077,14 @@ class Unparser:
 
     def _MatchMapping(self, t):
         self.write("{")
-        n = len(t.patterns)
-        for j, (k, p) in enumerate(zip(t.keys, t.patterns)):
+        def write_kp(item):
+            k, p = item
             self.dispatch(k)
             self.write(": ")
             self.dispatch(p)
-            if j < n - 1:
-                self.write(", ")
+        interleave(lambda: self.write(", "), write_kp, zip(t.keys, t.patterns))
         if t.rest is not None:
-            if n > 0:
+            if len(t.patterns) > 0:
                 self.write(", ")
             self.write("**")
             self.write(t.rest)
@@ -1098,27 +1093,24 @@ class Unparser:
     def _MatchClass(self, t):
         self.dispatch(t.cls)
         self.write("(")
-        npos = len(t.patterns)
-        for j, p in enumerate(t.patterns):
-            self.dispatch(p)
-            if j < npos - 1:
-                self.write(", ")
+        interleave(lambda: self.write(", "), self.dispatch, t.patterns)
         nkwd = len(t.kwd_attrs)
         if nkwd > 0:
+            npos = len(t.patterns)
             if npos > 0:
-                self.write(", ")
-            for j, (k, p) in enumerate(zip(t.kwd_attrs, t.kwd_patterns)):
+                self.write(", ")  # separate positional and keywords
+            def write_kp(item):
+                k, p = item
                 self.write(k)
                 self.write("=")
                 self.dispatch(p)
-                if j < nkwd - 1:
-                    self.write(", ")
+            interleave(lambda: self.write(", "), write_kp, zip(t.kwd_attrs, t.kwd_patterns))
         self.write(")")
 
     def _MatchAs(self, t):
         if t.name is None:
             assert t.pattern is None  # spec:  If name is None, pattern must also be None and the node represents the wildcard pattern.
-            self.write(self.maybe_colorize_python_keyword("_"))  # _ acts like a keyword only in `match` cases and patterns
+            self.write(self.maybe_colorize_python_keyword("_"))  # `_` is a soft keyword; only acts like a keyword in `match` cases and patterns
         else:
             if t.pattern is None:  # capture pattern (bare name)
                 self.write(t.name)
@@ -1133,11 +1125,7 @@ class Unparser:
                 self.write(t.name)
 
     def _MatchOr(self, t):
-        n = len(t.patterns)
-        for j, p in enumerate(t.patterns):
-            self.dispatch(p)
-            if j < n - 1:
-                self.write(" | ")
+        interleave(lambda: self.write(" | "), self.dispatch, t.patterns)
 
 
 def unparse(tree, *, debug=False, color=False, expander=None):
