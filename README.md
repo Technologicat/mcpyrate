@@ -249,8 +249,17 @@ pip install mcpyrate
 Clone the repo from GitHub. Then, navigate to it in a terminal, and:
 
 ```bash
-pip install .
+pip install . --no-compile
 ```
+
+The `--no-compile` flag is important. It prevents an **incorrect** precompilation of the `mcpyrate` modules, without macro support, that `pip install` would otherwise do at its `bdist_wheel` step.
+
+For most Python projects such precompilation is just fine - it's just macro-enabled projects that shouldn't be precompiled with standard tools.
+
+If `--no-compile` is NOT used, the precompiled bytecode cache may cause errors such as `ImportError: cannot import name 'macros' from 'mcpyrate.quotes'`, when you try to import macros from *some other* macro-enabled package that uses macros from `mcpyrate` (e.g. `from unpythonic.syntax import macros, let`). In-tree, it might work, but against an installed copy, it will fail. It has happened that my CI setup did not detect this kind of failure.
+
+This is a common issue when using macro expanders in Python. See the [Packaging section in troubleshooting](doc/troubleshooting.md#packaging).
+
 
 To uninstall:
 
