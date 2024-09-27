@@ -910,7 +910,7 @@ class Unparser:
             self.write(":")
             self.dispatch(t.step)
 
-    def _ExtSlice(self, t):  # up to Python 3.8; Python 3.9 uses a Tuple instead
+    def _ExtSlice(self, t):  # up to Python 3.8; Python 3.9+ use a Tuple instead
         interleave(lambda: self.write(", "), self.dispatch, t.dims)
 
     # argument
