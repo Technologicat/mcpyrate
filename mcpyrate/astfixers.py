@@ -11,12 +11,18 @@ from typing import Type
 
 from . import walkers
 
+class _NoSuchNodeType:
+    pass
+
 try:  # Python 3.8+
     from ast import NamedExpr
 except ImportError:
-    class _NoSuchNodeType:
-        pass
     NamedExpr: Type = _NoSuchNodeType  # type: ignore[no-redef]
+
+try:  # Python 3.12+
+    from ast import TypeAlias
+except ImportError:
+    TypeAlias: Type = _NoSuchNodeType  # type: ignore[no-redef]
 
 
 class _CtxFixer(walkers.ASTTransformer):
@@ -93,6 +99,9 @@ class _CtxFixer(walkers.ASTTransformer):
 
         elif tt is Delete:
             self.withstate(tree.targets, ctxclass=Del)
+
+        elif tt is TypeAlias:  # Python 3.12+
+            self.withstate(tree.name, ctxclass=Store)
 
 
 def fix_ctx(tree, *, copy_seen_nodes):
