@@ -1,8 +1,13 @@
 # Changelog
 
-**3.6.3** (in progress, last updated 27 September 2024)
+**3.6.3** (27 September 2024) - hotfix:
 
-*No user-visible changes yet.*
+**Fixed**
+
+- Fix interactive console failing on macro imports.
+  - Now `__init__.py` imports `mcpyrate.activate` as soon as possible.
+  - Neither in-tree tests nor the CI automation detected this. It was only when running `macropython -i` (or IPython with the `mcpyrate.repl.iconsole` extension) in a separate terminal window, against an installed `mcpyrate`, that this error came up.
+  - For those arriving from Google, the error message was: `ImportError: cannot import name 'macros' from 'mcpyrate.quotes'`
 
 
 ---

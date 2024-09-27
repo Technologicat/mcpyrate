@@ -8,6 +8,7 @@ from .unparser import unparse  # noqa: F401
 from .utils import gensym  # noqa: F401
 
 # For public API inspection, import modules that wouldn't otherwise get imported.
+from . import activate  # noqa: F401, ensure our own .pyc files are generated with the macro expander enabled
 from . import ansi  # noqa: F401
 from . import debug  # noqa: F401
 from . import metatools  # noqa: F401
