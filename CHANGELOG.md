@@ -31,6 +31,8 @@
     - Python 3.11's AST validator (now part of the CPython compiler as of 3.11+) checks e.g. that `end_lineno >= lineno`.
   - The unparser now supports the `try`/`except*` construct (Python 3.11 exception groups).
 
+- New module `mcpyrate.astcompat`, moved from `unpythonic.syntax.astcompat`. This module handles version differences in the `ast` module in various versions of Python.
+
 
 **Fixed**:
 
