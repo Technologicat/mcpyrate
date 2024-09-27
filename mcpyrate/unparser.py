@@ -87,6 +87,8 @@ class Unparser:
         global quotes
         from . import quotes
 
+        self._except_handler_mode_stack = []  # Python 3.11+: TryStar is like Try, but ExceptHandler nodes inside it are interpreted differently.
+
         self.debug = debug
         self.color = color
         self._color_override = False  # for syntax highlighting of decorators
@@ -418,13 +420,17 @@ class Unparser:
             self.write(self.maybe_colorize_python_keyword(" from "))
             self.dispatch(t.cause)
 
-    def _Try(self, t):
+    def __Try_helper(self, t, mode):
         self.fill(self.maybe_colorize_python_keyword("try"), lineno_node=t)
         self.enter()
         self.dispatch(t.body)
         self.leave()
-        for ex in t.handlers:
-            self.dispatch(ex)
+        self._except_handler_mode_stack.append(mode)
+        try:
+            for ex in t.handlers:
+                self.dispatch(ex)
+        finally:
+            self._except_handler_mode_stack.pop()
         if t.orelse:
             self.fill(self.maybe_colorize_python_keyword("else"), lineno_node=t)
             self.enter()
@@ -436,8 +442,20 @@ class Unparser:
             self.dispatch(t.finalbody)
             self.leave()
 
+    def _Try(self, t):
+        self.__Try_helper(t, mode="Try")
+
+    def _TryStar(self, t):  # Python 3.11+
+        self.__Try_helper(t, mode="TryStar")
+
     def _ExceptHandler(self, t):
-        self.fill(self.maybe_colorize_python_keyword("except"), lineno_node=t)
+        mode = self._except_handler_mode_stack[-1]
+        if mode == "Try":
+            self.fill(self.maybe_colorize_python_keyword("except"), lineno_node=t)
+        elif mode == "TryStar":  # Python 3.11+
+            self.fill(self.maybe_colorize_python_keyword("except*"), lineno_node=t)
+        else:
+            assert False  # unknown mode, should not happen (it's managed by `__Try_helper`)
         if t.type:
             self.write(" ")
             self.dispatch(t.type)
