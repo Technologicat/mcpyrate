@@ -1127,6 +1127,40 @@ class Unparser:
     def _MatchOr(self, t):
         interleave(lambda: self.write(" | "), self.dispatch, t.patterns)
 
+    # Python 3.12+: `type` statement (type aliases)
+    #     https://docs.python.org/3/library/ast.html#type-parameters
+    #     https://docs.python.org/3/library/ast.html#ast.TypeAlias
+    #     https://docs.python.org/3/library/ast.html#ast.TypeVar
+    #     https://docs.python.org/3/library/ast.html#ast.ParamSpec
+    #     https://docs.python.org/3/library/ast.html#ast.TypeVarTuple
+    def _TypeAlias(self, t):  # `type` statement
+        self.fill(lineno_node=t)
+        self.write(self.maybe_colorize_python_keyword("type "))  # `type` is a soft keyword; only acts like a keyword in the `type` statement
+        self.dispatch(t.name)
+        if t.type_params:
+            self.write("[")
+            interleave(lambda: self.write(", "), self.dispatch, t.type_params)
+            self.write("]")
+        self.write(" = ")
+        self.dispatch(t.value)
+
+    def _TypeVar(self, t):
+        # https://docs.python.org/3/library/typing.html#typing.TypeVar
+        self.write(t.name)
+        if t.bound is not None:
+            self.write(": ")
+            self.dispatch(t.bound)
+
+    def _ParamSpec(self, t):
+        # https://docs.python.org/3/library/typing.html#typing.ParamSpec
+        self.write("**")
+        self.write(t.name)
+
+    def _TypeVarTuple(self, t):
+        # https://docs.python.org/3/library/typing.html#typing.TypeVarTuple
+        self.write("*")
+        self.write(t.name)
+
 
 def unparse(tree, *, debug=False, color=False, expander=None):
     """Convert the AST `tree` into source code. Return the code as a string.
