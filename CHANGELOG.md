@@ -18,6 +18,7 @@
 **Fixed**:
 
 - Fix https://github.com/Technologicat/mcpyrate/issues/41. The unparser now understands the Python 3.10 pattern matching construct `match`/`case`.
+- Fix bug in `rename`: rename also in `global` and `nonlocal` declarations.
 
 
 ---

@@ -134,6 +134,10 @@ def rename(oldname, newname, tree):
             elif T is ast.ExceptHandler:
                 if tree.name == oldname:
                     tree.name = newname
+            elif T in (ast.Global, ast.Nonlocal):
+                for j in range(len(tree.names)):
+                    if tree.names[j] == oldname:
+                        tree.names[j] = newname
             return self.generic_visit(tree)
     return Renamer().visit(tree)
 
