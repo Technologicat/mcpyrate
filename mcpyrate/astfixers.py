@@ -19,7 +19,7 @@ try:  # Python 3.8+
 except ImportError:
     NamedExpr: Type = _NoSuchNodeType  # type: ignore[no-redef]
 
-try:  # Python 3.12+
+try:  # for Python 3.12+ features; `ast.TypeAlias` itself was added in 3.10.
     from ast import TypeAlias
 except ImportError:
     TypeAlias: Type = _NoSuchNodeType  # type: ignore[no-redef]
