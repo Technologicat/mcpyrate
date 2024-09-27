@@ -1078,7 +1078,7 @@ class Unparser:
     def _MatchStar(self, t):
         self.write("*")
         if t.name is None:
-            self.write(self.maybe_colorize_python_keyword("_"))  # _ acts like a keyword only in `match` cases and patterns
+            self.write(self.maybe_colorize_python_keyword("_"))  # `_` is a soft keyword; only acts like a keyword in `match` cases and patterns
         else:
             self.write(t.name)
 
