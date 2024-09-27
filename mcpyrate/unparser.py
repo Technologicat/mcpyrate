@@ -194,8 +194,7 @@ class Unparser:
     # should be grouped by sum type. Ideally, this would follow the order in
     # the grammar, but currently doesn't.
     #
-    # https://docs.python.org/3/library/ast.html#abstract-grammar
-    # https://greentreesnakes.readthedocs.io/en/latest/nodes.html
+    # https://docs.python.org/3/library/ast.html
 
     def astmarker(self, tree):
         def write_astmarker_field_value(v):

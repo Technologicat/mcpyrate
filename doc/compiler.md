@@ -308,7 +308,7 @@ Examples can be found in [`mcpyrate.test.test_compiler`](../mcpyrate/test/test_c
 
 There are two different things that in Python, are termed a *module*:
 
- 1. `ast.Module`, one of the three [top-level AST node types](https://greentreesnakes.readthedocs.io/en/latest/nodes.html#top-level-nodes) in Python. This kind of top-level node is produced by `ast.parse(..., mode="exec")`. It represents a sequence of statements.
+ 1. `ast.Module`, one of the three [top-level AST node types](https://docs.python.org/3/library/ast.html#root-nodes) (ignoring the special legacy type `FunctionType`) in Python. This kind of top-level node is produced by `ast.parse(..., mode="exec")`. It represents a sequence of statements.
  2. `types.ModuleType`, the type of thing that lives in `sys.modules`. Usually represents the top-level scope of a `.py` file, and has some magic attributes (e.g. `__name__` and `__file__`) automatically set by the importer.
  
 The common factor between the two senses of the word is that a `.py` file essentially consists of a sequence of statements.

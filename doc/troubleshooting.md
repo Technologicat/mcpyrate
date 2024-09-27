@@ -358,7 +358,7 @@ Accidentally using `append` causes a `list` to appear in the AST where an AST no
 
 ### Wrong type of list
 
-If you edit ASTs manually, check that you're really using a `list` where the [AST docs at Green Tree Snakes](https://greentreesnakes.readthedocs.io/en/latest/nodes.html) say *"a list of ..."*, and not a `tuple` or something else. (Yes, Python's compiler is that picky.)
+If you edit ASTs manually, check that you're really using a `list` where the [AST docs](https://docs.python.org/3/library/ast.html) say *"a list of ..."*, and not a `tuple` or something else. (Yes, Python's compiler is that picky.)
 
 Note that statement suites are represented as a bare `list`, and **not** as an `ast.List`. Any optional statement suite, when not present, is represented by an empty list, `[]`.
 

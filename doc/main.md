@@ -218,7 +218,7 @@ def macro(tree, **kw):
 
 The only explicit hint at the definition site that a function is actually a macro is the `**kw`.
 
-Refer to [Green Tree Snakes](https://greentreesnakes.readthedocs.io/en/latest/nodes.html) (a.k.a. the missing Python AST docs) for details on the AST node types. The documentation for the [AST module](https://docs.python.org/3/library/ast.html) may also be occasionally useful.
+Refer to Python's [AST documentation](https://docs.python.org/3/library/ast.html) for details on the AST node types.
 
 The `tree` parameter is the only positional parameter the macro function is called with. All other parameters are passed by name, so you can easily pick what you need (and let `**kw` gather the ones you don't).
 

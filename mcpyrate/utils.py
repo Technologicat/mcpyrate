@@ -109,8 +109,8 @@ def rename(oldname, newname, tree):
             if T is ast.Name:
                 if tree.id == oldname:
                     tree.id = newname
-            # Look for "raw string" in GTS for a full list of the following.
-            # https://greentreesnakes.readthedocs.io/en/latest/nodes.html
+            # Look for "raw string" in the AST docs for a full list of the following.
+            # https://docs.python.org/3/library/ast.html
             elif T is ast.Attribute:
                 if tree.attr == oldname:
                     tree.attr = newname

@@ -206,7 +206,7 @@ class MacroExpander(BaseMacroExpander):
         The `result` part is sent to the macro as `kw["optional_vars"]`; it's a
         `Name`, `Tuple` or `List` node. What to do with it is up to the macro;
         the typical meaning is to assign something to the name(s).
-            https://greentreesnakes.readthedocs.io/en/latest/nodes.html#withitem
+            https://docs.python.org/3/library/ast.html#ast.withitem
 
         Invoking several block macros in the same `with` is shorthand for nesting::
 

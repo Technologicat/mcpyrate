@@ -104,9 +104,7 @@ placeholder name, such as `_`, and then manually assign a new name for the
 parameter in the AST that was returned by the quasiquote operation. See [`mcpyrate.utils.rename`](../mcpyrate/utils.py), which can do this editing for
 you.
 
-You'll still need to keep [Green Tree
-Snakes](https://greentreesnakes.readthedocs.io/en/latest/nodes.html) and maybe
-also the [ast](https://docs.python.org/3/library/ast.html) documentation handy,
+You'll still need to keep the [AST documentation](https://docs.python.org/3/library/ast.html) handy,
 but usually not much manually written AST-generating code is needed when
 quasiquotes automate most of it. This makes macro code much more readable.
 
