@@ -1007,6 +1007,121 @@ class Unparser:
             self.write(self.maybe_colorize_python_keyword(" as "))
             self.dispatch(t.optional_vars)
 
+    # Python 3.10+: match/case statement (pattern matching).
+    #
+    # Tested on examples from:
+    #     https://docs.python.org/3/library/ast.html
+    #     https://peps.python.org/pep-0634/
+    #
+    # Additional documentation:
+    #     https://docs.python.org/3/whatsnew/3.10.html#pep-634-structural-pattern-matching
+    #     https://peps.python.org/pep-0635/
+    #     https://peps.python.org/pep-0636/
+    def _Match(self, t):
+        self.fill(self.maybe_colorize_python_keyword("match "), lineno_node=t)
+        self.dispatch(t.subject)
+        self.enter()
+        for c in t.cases:
+            self.dispatch(c)
+        self.leave()
+
+    def _match_case(self, t):
+        self.fill(self.maybe_colorize_python_keyword("case "), lineno_node=t)
+        # The or-pattern usually doesn't use parentheses, but when used with a guard, they are useful.
+        if t.guard is not None and type(t.pattern) is ast.MatchOr:
+            self.write("(")
+        self.dispatch(t.pattern)
+        if t.guard is not None and type(t.pattern) is ast.MatchOr:
+            self.write(")")
+        if t.guard is not None:
+            self.write(" if ")
+            self.dispatch(t.guard)
+        self.enter()
+        self.dispatch(t.body)
+        self.leave()
+
+    def _MatchValue(self, t):
+        self.dispatch(t.value)
+
+    def _MatchSingleton(self, t):
+        self.write(self.maybe_colorize(repr(t.value), ColorScheme.NAMECONSTANT))  # None, True or False.
+
+    def _MatchSequence(self, t):
+        self.write("[")
+        n = len(t.patterns)
+        for j, p in enumerate(t.patterns):
+            self.dispatch(p)
+            if j < n - 1:
+                self.write(", ")
+        self.write("]")
+
+    def _MatchStar(self, t):
+        self.write("*")
+        if t.name is None:
+            self.write(self.maybe_colorize_python_keyword("_"))  # _ acts like a keyword only in `match` cases and patterns
+        else:
+            self.write(t.name)
+
+    def _MatchMapping(self, t):
+        self.write("{")
+        n = len(t.patterns)
+        for j, (k, p) in enumerate(zip(t.keys, t.patterns)):
+            self.dispatch(k)
+            self.write(": ")
+            self.dispatch(p)
+            if j < n - 1:
+                self.write(", ")
+        if t.rest is not None:
+            if n > 0:
+                self.write(", ")
+            self.write("**")
+            self.write(t.rest)
+        self.write("}")
+
+    def _MatchClass(self, t):
+        self.dispatch(t.cls)
+        self.write("(")
+        npos = len(t.patterns)
+        for j, p in enumerate(t.patterns):
+            self.dispatch(p)
+            if j < npos - 1:
+                self.write(", ")
+        nkwd = len(t.kwd_attrs)
+        if nkwd > 0:
+            if npos > 0:
+                self.write(", ")
+            for j, (k, p) in enumerate(zip(t.kwd_attrs, t.kwd_patterns)):
+                self.write(k)
+                self.write("=")
+                self.dispatch(p)
+                if j < nkwd - 1:
+                    self.write(", ")
+        self.write(")")
+
+    def _MatchAs(self, t):
+        if t.name is None:
+            assert t.pattern is None  # spec:  If name is None, pattern must also be None and the node represents the wildcard pattern.
+            self.write(self.maybe_colorize_python_keyword("_"))  # _ acts like a keyword only in `match` cases and patterns
+        else:
+            if t.pattern is None:  # capture pattern (bare name)
+                self.write(t.name)
+            else:
+                # The or-pattern usually doesn't use parentheses, but when named, they are useful.
+                if type(t.pattern) is ast.MatchOr:
+                    self.write("(")
+                self.dispatch(t.pattern)
+                if type(t.pattern) is ast.MatchOr:
+                    self.write(")")
+                self.write(" as ")
+                self.write(t.name)
+
+    def _MatchOr(self, t):
+        n = len(t.patterns)
+        for j, p in enumerate(t.patterns):
+            self.dispatch(p)
+            if j < n - 1:
+                self.write(" | ")
+
 
 def unparse(tree, *, debug=False, color=False, expander=None):
     """Convert the AST `tree` into source code. Return the code as a string.
@@ -1028,7 +1143,7 @@ def unparse(tree, *, debug=False, color=False, expander=None):
         try:
             astdump = dump(tree, multiline=True, color=color)
             sep = " " if "\n" not in astdump else "\n"
-            msg = f"unparse failed, likely invalid AST; here's an AST dump instead:{sep}{astdump}"
+            msg = f"unparse failed, likely invalid AST (or a new AST node type from a recent Python); here's an AST dump instead:{sep}{astdump}"
             raise UnparserError(msg) from err
         except TypeError:  # fall back to repr
             representation = repr(tree)
