@@ -1,6 +1,6 @@
 # Changelog
 
-**3.6.2** (in progress, last updated 27 September 2024)
+**3.6.2** (27 September 2024) - *New tree snakes* edition:
 
 **IMPORTANT**:
 
