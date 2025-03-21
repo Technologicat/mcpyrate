@@ -2,7 +2,7 @@
 name = "mcpyrate"
 description = "Advanced macro expander and language lab for Python"
 authors = [
-    { name = "Juha Jeronen", email = "alex.tremblay@utoronto.cajuha.m.jeronen@gmail.com" },
+    { name = "Juha Jeronen", email = "juha.m.jeronen@gmail.com" },
     { name = "Salvador de la Puente González" },
 ]
 requires-python = ">=3.8"
