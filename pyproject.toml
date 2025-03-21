@@ -7,7 +7,7 @@ authors = [
 ]
 requires-python = ">=3.8"
 
-# the `read` function and long_description_content_type from setup.py are no longer needed, 
+# the `read` function and long_description_content_type from setup.py are no longer needed,
 # modern build tools like pdm/hatch already know how to handle markdown if you point them at a .md file
 # they will set the long_description and long_description_content_type for you
 readme = "README.md"
@@ -67,11 +67,11 @@ path = "mcpyrate/__init__.py"
 includes = ["mcpyrate"]
 excludes = ["**/test", "**/__pycache__"]
 
-# note the exclusion of an equivalent to zip_safe. I used to think that zip_safe was a core python metadata flag 
+# note the exclusion of an equivalent to zip_safe. I used to think that zip_safe was a core python metadata flag
 # telling pip and other python tools not to include the package in any kind of zip-import or zipapp file.
 # I was wrong. zip_safe is a setuptools-specific flag that tells setuptools to not include the package in a bdist_egg
 # Since bdist_eggs are no longer really used by anything and have been completely supplanted by wheels, zip_safe has no meaningful effect.
-# The effect i think you hoped to achieve with zip_safe is achieved by excluding `__pycache__` folders from 
+# The effect i think you hoped to achieve with zip_safe is achieved by excluding `__pycache__` folders from
 # the built wheels, using the `excludes` field in the `[tool.pdm.build]` section above.
 
 # most python tools at this point, including mypy, have support for sourcing configuration from pyproject.toml
