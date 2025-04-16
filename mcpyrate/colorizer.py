@@ -60,7 +60,12 @@ def setcolor(*colors, reset=True):
     def _setcolor(color):
         if isinstance(color, (list, tuple)):
             return "".join(_setcolor(elt) for elt in color)
-        return color
+        # To allow the `readline` module to calculate the visual length of colored text correctly, we can wrap the ANSI escape sequences
+        # in ASCII escape sequences that temporarily disable `readline`'s length counting:
+        #     \x01 is ASCII "Start of Heading" (SOH) character.
+        #     \x02 is ASCII "Start of Text" (STX) character.
+        # https://www.reddit.com/r/commandline/comments/1d4t3xz/gnu_readline_issues_setting_up_a_python_prompt/
+        return f"\x01{color}\x02"
     out = [_setcolor(Style.RESET_ALL)] if reset else []
     out.append(_setcolor(colors))
     return "".join(out)
