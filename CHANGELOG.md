@@ -1,8 +1,25 @@
 # Changelog
 
-**3.6.4** (in progress, last updated 27 September 2024)
+**3.6.5** (in progress, last updated 16 April 2025)
 
 *No user-visible changes yet.*
+
+
+---
+
+**3.6.4** (16 April 2025) - hotfix:
+
+**IMPORTANT REMINDER**:
+
+When installing `mcpyrate`, pass the `--no-compile` flag to `pip`.
+
+It is not possible to customize the compile command in the package metadata. Python's default (without the `--no-compile`) incorrectly precompiles `mcpyrate` into bytecode *without enabling macro support*. This will cause any package that depends on `mcpyrate` and attempts to use macros from `mcpyrate` (e.g. quasiquotes) to mysteriously fail.
+
+See [README](README.md) and [troubleshooting](doc/troubleshooting.md) for details.
+
+**Fixed**
+
+- Fix text colorization mechanism so that `setcolor` and `colorize` now work correctly in the input prompt supplied to `input` when using `readline`. While `mcpyrate` itself doesn't use the feature in this particular way, it's part of the public API, so it has been fixed as part of obsessive correctness.
 
 
 ---
