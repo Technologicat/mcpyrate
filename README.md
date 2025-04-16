@@ -260,6 +260,52 @@ If `--no-compile` is NOT used, the precompiled bytecode cache may cause errors s
 
 This is a common issue when using macro expanders in Python. See the [Packaging section in troubleshooting](doc/troubleshooting.md#packaging).
 
+### Development mode (for developing `mcpyrate` itself)
+
+Starting with v3.6.4, `mcpyrate` uses [PDM](https://pdm-project.org/en/latest/) to manage its dependencies. This allows easy installation of a development copy into an isolated venv (virtual environment), allowing you to break things without breaking anything else on your system (including apps and libraries that use an installed copy of `mcpyrate`).
+
+#### Install PDM in your Python environment
+
+To develop `mcpyrate`, if your Python environment does not have PDM, you will need to install it first:
+
+```bash
+python -m pip install pdm
+```
+
+Don't worry; it won't break `pip`, `poetry`, or other similar tools.
+
+We will also need a Python for PDM venvs. This Python is independent of the Python that PDM itself runs on. It is the version of Python you would like to use for developing `mcpyrate`.
+
+For example, we can make Python 3.10 available with the command:
+
+```bash
+pdm python install 3.10
+```
+
+Specifying just a version number defaults to CPython (the usual Python implementation). If you want PyPy instead, you can use e.g. `pypy@3.10`.
+
+#### Install the isolated venv
+
+Now, we will auto-create the development venv, and install `mcpyrate`'s dependencies into it. In a terminal that sees your Python environment, navigate to the `mcpyrate` folder, and issue the command:
+
+```bash
+pdm install
+```
+
+This creates the development venv into the `.venv` hidden subfolder of the `mcpyrate` folder.
+
+If you are a seasoned pythonista, note that there is no `requirements.txt`; the dependency list lives in `pyproject.toml`.
+
+#### Develop
+
+To activate the development venv, in a terminal that sees your Python environment, navigate to the `mcpyrate` folder, and issue the command:
+
+```bash
+$(pdm venv activate)
+```
+
+Note the Bash exec syntax `$(...)`; the command `pdm venv activate` just prints the actual internal activation command.
+
 ### Uninstall
 
 ```bash
