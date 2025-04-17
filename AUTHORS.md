@@ -7,6 +7,7 @@
   - `bunch` simplified from `unpythonic.env`, from [`unpythonic`](https://github.com/Technologicat/unpythonic) by the same author.
   - `deactivate` mechanism and making `colorama` optional contributed by Salvador E. Tropea (@set-soft).
     - `ansi.py`, used for syntax highlighting on *nix OSs when `colorama` is not installed, is a vendored module from [`colorama`](https://github.com/tartley/colorama) by Jonathan Hartley, 2013. Used under the BSD 3-Clause license.
+  - Build system modernized from `setup.py` to `pyproject.toml` by Alex Tremblay (@alextremblay).
 
 - Quasiquote system based on the approach pioneered by [`macropy`](https://github.com/azazel75/macropy), by Li Haoyi, Justin Holmgren, Alberto Berti and all other `macropy` contributors, 2013-2018. MIT license.
   - The code itself was rewritten and extended, but shares many parts of the core design.
