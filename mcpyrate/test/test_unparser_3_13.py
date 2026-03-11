@@ -34,7 +34,10 @@ def runtests():
 
     def test_typevartuple_default():
         src = "type Batch[*Ts = *tuple[int, ...]] = tuple[*Ts]"
+        # Our unparser adds a trailing comma for single-element starred tuple in subscript;
+        # `tuple[*Ts,]` is semantically equivalent.
+        expected = "type Batch[*Ts = *tuple[int, ...]] = tuple[*Ts,]"
         tree = ast.parse(src)
         result = unparse(tree)
-        assert result == src, f"Expected {src!r}, got {result!r}"
+        assert result == expected, f"Expected {expected!r}, got {result!r}"
     test_typevartuple_default()
