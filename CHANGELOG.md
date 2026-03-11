@@ -15,6 +15,7 @@
 **Fixed**:
 
 - Updated AST field presence checks for Python 3.13 optional field defaults (`hasattr` → `getattr`). In Python 3.13, omitted optional AST fields are set to `None` instead of being absent, so `hasattr` always returns `True`. The `fix_locations()` engine, debug field checker, and related guards now use `getattr(..., None)` to correctly detect unset fields.
+- Fix unparser crash on `Expression` nodes (`ast.parse(..., mode="eval")`). `Expression.body` is a single node, not a list — the unparser incorrectly tried to iterate it.
 
 **New**:
 
