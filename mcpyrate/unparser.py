@@ -150,7 +150,7 @@ class Unparser:
         """
         self.write("\n")
         if self.debug and isinstance(lineno_node, ast.AST):
-            lineno = lineno_node.lineno if hasattr(lineno_node, "lineno") else None
+            lineno = getattr(lineno_node, "lineno", None)
             # `mcpyrate.debug.step_expansion` may strip leading space, so
             # it's better to use something else to always have fixed width.
             #
@@ -888,7 +888,7 @@ class Unparser:
     # argument
     def _arg(self, t):
         self.write(t.arg)
-        if hasattr(t, "annotation") and t.annotation:  # macro-generated nodes might not have it
+        if getattr(t, "annotation", None):  # macro-generated nodes might not have it
             self.write(": ")
             self.dispatch(t.annotation)
 
@@ -934,7 +934,7 @@ class Unparser:
             self.write("*")
             if t.vararg:
                 self.write(t.vararg.arg)
-                if hasattr(t.vararg, "annotation") and t.vararg.annotation:
+                if getattr(t.vararg, "annotation", None):
                     self.write(": ")
                     self.dispatch(t.vararg.annotation)
 
@@ -957,7 +957,7 @@ class Unparser:
             else:
                 self.write(", ")
             self.write("**" + t.kwarg.arg)
-            if hasattr(t.kwarg, "annotation") and t.kwarg.annotation:
+            if getattr(t.kwarg, "annotation", None):
                 self.write(": ")
                 self.dispatch(t.kwarg.annotation)
 
@@ -1123,16 +1123,25 @@ class Unparser:
         if t.bound is not None:
             self.write(": ")
             self.dispatch(t.bound)
+        if getattr(t, "default_value", None) is not None:  # Python 3.13+
+            self.write(" = ")
+            self.dispatch(t.default_value)
 
     def _ParamSpec(self, t):
         # https://docs.python.org/3/library/typing.html#typing.ParamSpec
         self.write("**")
         self.write(t.name)
+        if getattr(t, "default_value", None) is not None:  # Python 3.13+
+            self.write(" = ")
+            self.dispatch(t.default_value)
 
     def _TypeVarTuple(self, t):
         # https://docs.python.org/3/library/typing.html#typing.TypeVarTuple
         self.write("*")
         self.write(t.name)
+        if getattr(t, "default_value", None) is not None:  # Python 3.13+
+            self.write(" = ")
+            self.dispatch(t.default_value)
 
 
 def unparse(tree, *, debug=False, color=False, expander=None):

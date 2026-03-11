@@ -140,7 +140,7 @@ def fix_locations(tree, reference_node, *, mode):
 
     Modifies `tree` in-place. For convenience, returns the modified `tree`.
     """
-    if not (hasattr(reference_node, "lineno") and hasattr(reference_node, "col_offset")):
+    if getattr(reference_node, "lineno", None) is None or getattr(reference_node, "col_offset", None) is None:
         return tree
 
     # Python 3.11+ validate the AST before compiling.
@@ -165,25 +165,25 @@ def fix_locations(tree, reference_node, *, mode):
             if mode == "overwrite":
                 update_lineno(tree, lineno, end_lineno)
             else:
-                if not hasattr(tree, "lineno"):
+                if getattr(tree, "lineno", None) is None:
                     update_lineno(tree, lineno, end_lineno)
                 elif mode == "update":
                     lineno = tree.lineno
-                    end_lineno = tree.end_lineno if hasattr(tree, "end_lineno") else None
+                    end_lineno = getattr(tree, "end_lineno", None)
         if "col_offset" in tree._attributes:
             if mode == "overwrite":
                 update_col_offset(tree, col_offset, end_col_offset)
             else:
-                if not hasattr(tree, "col_offset"):
+                if getattr(tree, "col_offset", None) is None:
                     update_col_offset(tree, col_offset, end_col_offset)
                 elif mode == "update":
                     col_offset = tree.col_offset
-                    end_col_offset = tree.end_col_offset if hasattr(tree, "end_col_offset") else None
+                    end_col_offset = getattr(tree, "end_col_offset", None)
         for child in iter_child_nodes(tree):
             _fix(child, lineno, col_offset, end_lineno, end_col_offset)
     _fix(tree,
          reference_node.lineno,
          reference_node.col_offset,
-         reference_node.end_lineno if hasattr(reference_node, "end_lineno") else None,
-         reference_node.end_col_offset if hasattr(reference_node, "end_col_offset") else None)
+         getattr(reference_node, "end_lineno", None),
+         getattr(reference_node, "end_col_offset", None))
     return tree

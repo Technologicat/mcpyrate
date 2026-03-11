@@ -334,7 +334,7 @@ class MacroExpander(BaseMacroExpander):
             if (macroname and self.isbound(macroname) and
                     (macroargs and not isparametricmacro(self.bindings[macroname]))):
                 msg = f"expr macro `{macroname}` invoked {context}; `{format_macrofunction(self.bindings[macroname])}` maybe missing `@parametricmacro` declaration?"
-                lineno = item.lineno if hasattr(item, "lineno") else 0
+                lineno = getattr(item, "lineno", None) or 0
                 warn_explicit(msg, SyntaxWarning, filename=self.filename, lineno=lineno)
 
             if self.ismacrocall(macroname, macroargs, syntax):
@@ -506,7 +506,7 @@ def _insert_coverage_dummy_stmt(tree, macronode, macroname, filename):
     `macroname` and `filename` are included in the dummy node, to ease debugging.
     """
     # `macronode` itself might be macro-generated. In that case don't bother.
-    if not hasattr(macronode, "lineno") and not hasattr(macronode, "col_offset"):
+    if getattr(macronode, "lineno", None) is None and getattr(macronode, "col_offset", None) is None:
         return tree
     if tree is None:
         tree = []

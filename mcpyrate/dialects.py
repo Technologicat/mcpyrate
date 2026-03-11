@@ -437,7 +437,7 @@ class DialectExpander:
                                              statement)
 
         # Get source location info
-        lineno = statement.lineno if hasattr(statement, "lineno") else None
-        col_offset = statement.col_offset if hasattr(statement, "col_offset") else None
+        lineno = getattr(statement, "lineno", None)
+        col_offset = getattr(statement, "col_offset", None)
 
         return module_absname, bindings, lineno, col_offset

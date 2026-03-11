@@ -203,8 +203,9 @@ def get_lineno(tree):
 
     If no `lineno` attribute is found anywhere inside `tree`, the return value is `None`.
     """
-    if hasattr(tree, "lineno"):
-        return tree.lineno
+    lineno = getattr(tree, "lineno", None)
+    if lineno is not None:
+        return lineno
     elif isinstance(tree, markers.ASTMarker) and hasattr(tree, "body"):  # look inside AST markers
         return get_lineno(tree.body)
     elif isinstance(tree, ast.AST):  # look inside AST nodes

@@ -138,7 +138,7 @@ def fill_location(tree, *, syntax, invocation, **kw):
     """
     if syntax != "expr":
         raise SyntaxError("`fill_location` is an expr macro only")
-    if not (hasattr(invocation, "lineno") and hasattr(invocation, "col_offset")):
+    if getattr(invocation, "lineno", None) is None or getattr(invocation, "col_offset", None) is None:
         raise SyntaxError("`fill_location` invocation itself is missing source location info.")
     fake_lineno = invocation.lineno
     fake_col_offset = invocation.col_offset
