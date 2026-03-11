@@ -89,6 +89,11 @@ class _CtxFixer(walkers.ASTTransformer):
         elif tt is TypeAlias:  # Python 3.12+
             self.withstate(tree.name, ctxclass=Store)
 
+        # match/case (Python 3.10+): no handler needed. Captures (MatchAs.name,
+        # MatchStar.name, MatchMapping.rest) use bare strings, not Name nodes,
+        # so there are no ctx attributes to fix. The only Name nodes in patterns
+        # are class/value references (MatchClass.cls, MatchValue), always Load.
+
 
 def fix_ctx(tree, *, copy_seen_nodes):
     """Fix `ctx` attributes in `tree`.
