@@ -289,7 +289,16 @@ class Unparser:
         self.toplevelnode(t)
 
     def _Expression(self, t):  # ast.parse(..., mode="eval")
-        self.toplevelnode(t)
+        # Expression.body is a single node, not a list.
+        if self.debug:
+            label = f"${t.__class__.__name__}"
+            self.fill(self.maybe_colorize(label, ColorScheme.INVISIBLENODE),
+                      lineno_node=t)
+            self.enter()
+            self.dispatch(t.body)
+            self.leave()
+        else:
+            self.dispatch(t.body)
 
     def toplevelnode(self, t):
         if self.debug:

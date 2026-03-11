@@ -12,28 +12,36 @@ from ..unparser import unparse
 def runtests():
     def test_tstring_simple():
         src = "t'hello {name}'"
-        tree = ast.parse(src)
+        tree = ast.parse(src, mode="eval")
         result = unparse(tree)
         assert result == src, f"Expected {src!r}, got {result!r}"
     test_tstring_simple()
 
     def test_tstring_conversion_and_format():
         src = "t'{value!r:>10}'"
-        tree = ast.parse(src)
+        tree = ast.parse(src, mode="eval")
         result = unparse(tree)
         assert result == src, f"Expected {src!r}, got {result!r}"
     test_tstring_conversion_and_format()
 
     def test_tstring_multiple_interpolations():
         src = "t'{x} + {y} = {x + y}'"
-        tree = ast.parse(src)
+        tree = ast.parse(src, mode="eval")
         result = unparse(tree)
         assert result == src, f"Expected {src!r}, got {result!r}"
     test_tstring_multiple_interpolations()
 
     def test_tstring_no_interpolation():
         src = "t'just a template'"
-        tree = ast.parse(src)
+        tree = ast.parse(src, mode="eval")
         result = unparse(tree)
         assert result == src, f"Expected {src!r}, got {result!r}"
     test_tstring_no_interpolation()
+
+    def test_expression_mode_basic():
+        """Verify Expression node handling works for non-t-string expressions too."""
+        src = "42"
+        tree = ast.parse(src, mode="eval")
+        result = unparse(tree)
+        assert result == src, f"Expected {src!r}, got {result!r}"
+    test_expression_mode_basic()
