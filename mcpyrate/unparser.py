@@ -827,20 +827,24 @@ class Unparser:
             return self.maybe_colorize(text, ColorScheme.STRING)
         self.write(c("{"))
         self.dispatch(t.value)
+        self._conversion_and_format_spec(t, c)
+        self.write(c("}"))
+
+    def _conversion_and_format_spec(self, t, c):
+        """Emit ``!conversion:format_spec`` — shared by ``FormattedValue`` and ``Interpolation``."""
         if t.conversion == 115:
             self.write(c("!s"))
         elif t.conversion == 114:
             self.write(c("!r"))
         elif t.conversion == 97:
             self.write(c("!a"))
-        elif t.conversion == -1:  # no formatting
+        elif t.conversion == -1:  # no conversion
             pass
         else:
             raise ValueError(f"Don't know how to unparse conversion code {t.conversion}")
         if t.format_spec:
             self.write(c(":"))
             self._JoinedStr_helper(t.format_spec)
-        self.write(c("}"))
 
     def _JoinedStr(self, t):
         self.write("f" + self.maybe_colorize("'", ColorScheme.STRING))
@@ -857,7 +861,44 @@ class Unparser:
             elif type(v) is ast.FormattedValue:
                 self._FormattedValue_helper(v)
             else:
-                raise ValueError(f"Don't know how to unparse {t!r} inside an f-string")
+                raise ValueError(f"Don't know how to unparse {v!r} inside an f-string or format spec")
+
+    # Python 3.14+: t-strings (PEP 750)
+    def _Interpolation(self, t):
+        # Standalone Interpolation (outside a t-string); mirror _FormattedValue.
+        self.write("t'")
+        self._Interpolation_helper(t)
+        self.write("'")
+
+    def _Interpolation_helper(self, t):
+        def c(text):
+            return self.maybe_colorize(text, ColorScheme.STRING)
+        self.write(c("{"))
+        if t.str is not None:  # prefer original source text (preserves formatting)
+            # Guard against leading `{` being interpreted as `{{` (escaped brace).
+            if t.str.startswith("{"):
+                self.write(" ")
+            self.write(c(t.str))
+        else:  # programmatically constructed node; fall back to unparsing
+            self.dispatch(t.value)
+        self._conversion_and_format_spec(t, c)
+        self.write(c("}"))
+
+    def _TemplateStr(self, t):
+        self.write("t" + self.maybe_colorize("'", ColorScheme.STRING))
+        self._TemplateStr_helper(t)
+        self.write(self.maybe_colorize("'", ColorScheme.STRING))
+
+    def _TemplateStr_helper(self, t):
+        def escape(s):
+            return s.replace("'", r"\'").replace("\n", r"\n")
+        for v in t.values:
+            if type(v) is ast.Constant:
+                self.write(self.maybe_colorize(escape(v.value), ColorScheme.STRING))
+            elif type(v) is ast.Interpolation:
+                self._Interpolation_helper(v)
+            else:
+                raise ValueError(f"Don't know how to unparse {v!r} inside a t-string")
 
     def _Subscript(self, t):
         self.dispatch(t.value)

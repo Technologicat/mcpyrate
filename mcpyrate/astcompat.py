@@ -11,7 +11,8 @@ This module currently works in language versions 3.10 through 3.14.
 __all__ = ["NamedExpr",
            "Match", "match_case", "MatchValue", "MatchSingleton", "MatchSequence", "MatchStar", "MatchMapping", "MatchClass", "MatchAs", "MatchOr",
            "TryStar",
-           "TypeAlias", "TypeVar", "ParamSpec", "TypeVarTuple"]
+           "TypeAlias", "TypeVar", "ParamSpec", "TypeVarTuple",
+           "TemplateStr", "Interpolation"]
 
 import ast
 
@@ -41,3 +42,8 @@ try:  # Python 3.12+: `type` statement (type alias)
     from ast import TypeAlias, TypeVar, ParamSpec, TypeVarTuple
 except ImportError:  # pragma: no cover
     TypeAlias = TypeVar = ParamSpec = TypeVarTuple = _NoSuchNodeType
+
+try:  # Python 3.14+: t-strings (PEP 750)
+    from ast import TemplateStr, Interpolation
+except ImportError:
+    TemplateStr = Interpolation = _NoSuchNodeType

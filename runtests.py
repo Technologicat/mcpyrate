@@ -45,8 +45,27 @@ def discovertestdirectories(root):
             out.append(path)
     return list(sorted(out))
 
+def _version_suffix(filename):
+    """Parse version suffix from filename, e.g. ``test_foo_3_14.py`` → ``(3, 14)``, or ``None``."""
+    m = re.match(r"test_.*_(\d+)_(\d+)\.py$", filename)
+    if m:
+        return (int(m.group(1)), int(m.group(2)))
+    return None
+
 def discovertestfiles_in(path):
-    return [fn for fn in os.listdir(path) if fn.startswith("test_") and fn.endswith(".py")]
+    out = []
+    for fn in os.listdir(path):
+        if not (fn.startswith("test_") and fn.endswith(".py")):
+            continue
+        ver = _version_suffix(fn)
+        if ver is not None and sys.version_info < ver:
+            print(colorize(f"  Skipping '{fn}' (requires Python {ver[0]}.{ver[1]}+, "
+                           f"running {sys.version_info.major}.{sys.version_info.minor})",
+                           ColorScheme.TESTHEADING),
+                  file=sys.stderr)
+            continue
+        out.append(fn)
+    return out
 
 # --------------------------------------------------------------------------------
 # In the `mcpyrate` codebase, demos live in the "demo/" subfolder of the project top level.

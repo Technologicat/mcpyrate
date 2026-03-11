@@ -1,8 +1,26 @@
 # Changelog
 
-**3.6.5** (in progress, last updated 16 April 2025)
+**4.0.0** (in progress)
 
-*No user-visible changes yet.*
+**IMPORTANT**:
+
+- **Python version support changed**: 3.10–3.14 (dropped 3.8, 3.9; added 3.13, 3.14).
+  - If you need `mcpyrate` for Python 3.8 or 3.9, use version 3.6.x.
+
+**Breaking**:
+
+- Removed `getconstant()`, `Num`, `Str`, `Bytes`, `NameConstant`, `Ellipsis`, `Index`, `ExtSlice` from the `astcompat` public API. These deprecated AST node types no longer exist in Python 3.14. Use `ast.Constant.value` directly.
+- Note for downstream macro authors: `visit_Num`/`visit_Str`/etc. on `NodeVisitor`/`NodeTransformer` are no longer called in Python 3.14 — use `visit_Constant` instead.
+
+**Fixed**:
+
+- Updated AST field presence checks for Python 3.13 optional field defaults (`hasattr` → `getattr`). In Python 3.13, omitted optional AST fields are set to `None` instead of being absent, so `hasattr` always returns `True`. The `fix_locations()` engine, debug field checker, and related guards now use `getattr(..., None)` to correctly detect unset fields.
+
+**New**:
+
+- Unparser support for type parameter defaults (Python 3.13, PEP 696): `type Response[T = str] = dict[str, T]`.
+- Unparser support for t-strings (Python 3.14, PEP 750): `t"hello {name}"`. New AST node types `TemplateStr` and `Interpolation` added to `astcompat`.
+- Test runner now supports version-suffixed test modules (`test_*_3_NN.py`), automatically skipping modules that require a newer Python than the running version.
 
 
 ---
