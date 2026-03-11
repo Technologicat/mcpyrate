@@ -15,3 +15,5 @@
 - `mcpyrate.dump` function based on [`astpp.py`](https://alexleone.blogspot.com/2010/01/python-ast-pretty-printer.html) by Alex Leone, 2010. That code in turn originally came from `ast.dump` in Python's stdlib, so it's covered by the PSF license.
 
 - `%%dump_ast` IPython cell magic based on Thomas Kluyver's [version of `astpp.py`](https://bitbucket.org/takluyver/greentreesnakes/src/master/astpp.py) in the Green Tree Snakes source repository.
+
+- Modernization for Python 3.13–3.14 by Juha Jeronen, with [Claude](https://claude.ai/) (Anthropic) as AI pair programmer.
