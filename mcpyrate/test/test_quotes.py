@@ -40,11 +40,8 @@ def runtests():
     assert len(quoted[0].targets) == 1
     assert type(quoted[0].targets[0]) is ast.Name
     assert quoted[0].targets[0].id == "number"
-    assert type(quoted[0].value) in (ast.Constant, ast.Num)  # TODO: Python 3.8: remove ast.Num
-    if type(quoted[0].value) is ast.Constant:
-        assert quoted[0].value.value == 42
-    else:  # ast.Num
-        assert quoted[0].value.n == 42
+    assert type(quoted[0].value) is ast.Constant
+    assert quoted[0].value.value == 42
 
     # u[]: simple value
     v = 42
@@ -127,9 +124,7 @@ def runtests():
 
     # TODO: This is testing, beside what we want, an implementation detail;
     # TODO: is there a better way?
-    # TODO: Python 3.8: remove ast.Num
-    assert unparse(expand1rq[h[q][42]]) in (f"mcpyrate.quotes.splice_ast_literals(mcpyrate.quotes.ast.Num(n=42), '{__file__}')",
-                                            f"mcpyrate.quotes.splice_ast_literals(mcpyrate.quotes.ast.Constant(value=42), '{__file__}')",
+    assert unparse(expand1rq[h[q][42]]) in (f"mcpyrate.quotes.splice_ast_literals(mcpyrate.quotes.ast.Constant(value=42), '{__file__}')",
                                             f"mcpyrate.quotes.splice_ast_literals(mcpyrate.quotes.ast.Constant(value=42, kind=None), '{__file__}')")
 
     # Macro names can be hygienically captured, too. The name becomes "originalname_uuid".

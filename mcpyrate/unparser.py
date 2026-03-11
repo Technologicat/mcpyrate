@@ -5,7 +5,7 @@ Python 3.9+ provides `ast.unparse`, but ours comes with some additional features
 notably syntax highlighting and debug rendering of invisible AST nodes as well as
 of `mcpyrate`'s AST markers.
 
-Last updated for Python 3.12.
+Last updated for Python 3.14.
 """
 
 # Python 3.8 added the `type_ignores` field to many AST node types. It is a list of locations of "# type: ignore" comments.
@@ -623,10 +623,8 @@ class Unparser:
         self.dispatch(t.value)
         self.write(")")
 
-    def _Constant(self, t):  # Python 3.8+
-        # Actually added in 3.6, but Python's parser only produces them starting with 3.8.
-        # Replaces the node types Bytes, Str, Num, NameConstant, and Ellipsis.
-        if hasattr(t, "kind") and t.kind == "u":  # 3.8+: u"..." vs. "..."
+    def _Constant(self, t):
+        if t.kind == "u":  # u"..." vs. "..."
             self.write("u")
         if type(t.value) in (int, float, complex):
             # Represent AST infinity as an overflowing decimal literal.
@@ -644,12 +642,6 @@ class Unparser:
                 raise UnparserError(f"Don't know how to unparse Constant with value of type {type(t.value)}, got {repr(t.value)}")
         self.write(v)
 
-    def _Bytes(self, t):  # up to Python 3.7
-        self.write(self.maybe_colorize(repr(t.s), ColorScheme.STRING))
-
-    def _Str(self, tree):  # up to Python 3.7
-        self.write(self.maybe_colorize(repr(tree.s), ColorScheme.STRING))
-
     def _Name(self, t):
         v = t.id
         if v in builtin_exceptions_and_warnings:
@@ -659,14 +651,6 @@ class Unparser:
         elif self.expander and self.expander.isbound(v):
             v = self.maybe_colorize(v, ColorScheme.MACRONAME)
         self.write(v)
-
-    def _NameConstant(self, t):  # up to Python 3.7
-        self.write(self.maybe_colorize(repr(t.value), ColorScheme.NAMECONSTANT))
-
-    def _Num(self, t):  # up to Python 3.7
-        # Represent AST infinity as an overflowing decimal literal.
-        v = repr(t.n).replace("inf", INFSTR)
-        self.write(self.maybe_colorize(v, ColorScheme.NUMBER))
 
     def _List(self, t):
         self.write("[")
@@ -807,8 +791,7 @@ class Unparser:
         # Special case: 3.__abs__() is a syntax error, so if t.value
         # is an integer literal then we need to either parenthesize
         # it or add an extra space to get 3 .__abs__().
-        if ((isinstance(v, ast.Constant) and isinstance(v.value, int)) or
-                (isinstance(v, ast.Num) and isinstance(v.n, int))):
+        if isinstance(v, ast.Constant) and isinstance(v.value, int):
             self.write(" ")
         self.write(".")
         self.write(t.attr)
@@ -871,8 +854,6 @@ class Unparser:
             # Omit the surrounding quotes in string snippets
             if type(v) is ast.Constant:
                 self.write(self.maybe_colorize(escape(v.value), ColorScheme.STRING))
-            elif type(v) is ast.Str:  # up to Python 3.7
-                self.write(self.maybe_colorize(escape(v.s), ColorScheme.STRING))
             elif type(v) is ast.FormattedValue:
                 self._FormattedValue_helper(v)
             else:
@@ -894,12 +875,6 @@ class Unparser:
         self.dispatch(t.value)
 
     # slice
-    def _Ellipsis(self, t):  # up to Python 3.7
-        self.write("...")
-
-    def _Index(self, t):  # up to Python 3.8; the Index wrapper is gone in Python 3.9
-        self.dispatch(t.value)
-
     def _Slice(self, t):
         if t.lower:
             self.dispatch(t.lower)
@@ -909,9 +884,6 @@ class Unparser:
         if t.step:
             self.write(":")
             self.dispatch(t.step)
-
-    def _ExtSlice(self, t):  # up to Python 3.8; Python 3.9+ use a Tuple instead
-        interleave(lambda: self.write(", "), self.dispatch, t.dims)
 
     # argument
     def _arg(self, t):
@@ -925,18 +897,12 @@ class Unparser:
         first = True
 
         # positional-only, and positional-or-keyword arguments
-        nposargs = len(t.args)
-        if hasattr(t, "posonlyargs"):
-            nposonlyargs = len(t.posonlyargs)
-            nposargs += nposonlyargs
+        nposonlyargs = len(t.posonlyargs)
+        nposargs = len(t.args) + nposonlyargs
         defaults = [None] * (nposargs - len(t.defaults)) + t.defaults
 
-        if hasattr(t, "posonlyargs"):
-            args_sets = [t.posonlyargs, t.args]
-            defaults_sets = [defaults[:nposonlyargs], defaults[nposonlyargs:]]
-        else:
-            args_sets = [t.args]
-            defaults_sets = [defaults]
+        args_sets = [t.posonlyargs, t.args]
+        defaults_sets = [defaults[:nposonlyargs], defaults[nposonlyargs:]]
 
         def write_arg_default_pairs(data):
             nonlocal first
@@ -1009,7 +975,7 @@ class Unparser:
 
         def takes_arguments(lam):
             a = lam.args
-            if hasattr(a, "posonlyargs") and a.posonlyargs:
+            if a.posonlyargs:
                 return True
             return a.args or a.vararg or a.kwonlyargs or a.kwarg
         if takes_arguments(t):

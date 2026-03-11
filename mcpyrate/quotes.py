@@ -828,7 +828,7 @@ def unastify(tree):
         return tree.value
 
     # Support machinery for `Call` AST node. This serendipitously supports also
-    # *args and **kwargs, because at least in Pythons 3.6, 3.7, 3.8, 3.9, 3.10
+    # *args and **kwargs, because at least in Pythons 3.6 through 3.14
     # those appear in `args` and `keywords`, and `Starred` needs no special support here.
     elif T is list:
         return [unastify(elt) for elt in tree]
@@ -954,11 +954,7 @@ def _replace_tree_in_macro_invocation(invocation, newtree):
     """
     new_invocation = copy.copy(invocation)
     if type(new_invocation) is ast.Subscript:
-        if sys.version_info >= (3, 9, 0):  # Python 3.9+: no ast.Index wrapper
-            new_invocation.slice = newtree
-        else:
-            new_invocation.slice = copy.copy(invocation.slice)
-            new_invocation.slice.value = newtree
+        new_invocation.slice = newtree
     elif type(new_invocation) is ast.With:
         new_invocation.body = newtree
     else:

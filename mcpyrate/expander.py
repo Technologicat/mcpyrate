@@ -51,7 +51,6 @@ __all__ = ["namemacro", "isnamemacro",
            "MacroExpander", "MacroCollector",
            "expand_macros", "find_macros"]
 
-import sys
 from ast import (AST, Assign, Call, Starred, Constant, Import, Lambda, Name,
                  NodeVisitor, Store, Subscript, Tuple, alias, arguments,
                  copy_location, iter_fields)
@@ -101,11 +100,7 @@ def destructure_candidate(tree, *, filename, _validate_call_syntax=True):
     if type(tree) is Name:
         return tree.id, []
     elif type(tree) is Subscript and type(tree.value) is Name:
-        if sys.version_info >= (3, 9, 0):  # Python 3.9+: no ast.Index wrapper
-            macroargs = tree.slice
-        else:
-            macroargs = tree.slice.value
-
+        macroargs = tree.slice
         if type(macroargs) is Tuple:  # [a0, a1, ...]
             macroargs = macroargs.elts
         else:  # anything that doesn't have at least one comma at the top level
@@ -172,10 +167,7 @@ class MacroExpander(BaseMacroExpander):
             # Now we know it's a macro invocation, so we can validate the parenthesis syntax to pass arguments.
             macroname, macroargs = destructure_candidate(candidate, filename=self.filename)
             kw = {"args": macroargs}
-            if sys.version_info >= (3, 9, 0):  # Python 3.9+: no ast.Index wrapper
-                tree = subscript.slice
-            else:
-                tree = subscript.slice.value
+            tree = subscript.slice
             sourcecode = unparse_with_fallbacks(subscript, debug=True, color=True, expander=self)
             new_tree = self.expand("expr", subscript, macroname, tree, sourcecode=sourcecode, kw=kw)
             if new_tree is None:
@@ -449,10 +441,7 @@ class MacroCollector(NodeVisitor):
             self.visit(macroargs)
             # Don't `self.generic_visit(tree)`; that'll incorrectly detect
             # the name part as an identifier macro. Recurse only in the expr.
-            if sys.version_info >= (3, 9, 0):  # Python 3.9+: no ast.Index wrapper
-                self.visit(subscript.slice)
-            else:
-                self.visit(subscript.slice.value)
+            self.visit(subscript.slice)
         else:
             self.generic_visit(subscript)
 

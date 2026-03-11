@@ -16,7 +16,7 @@ Single external dependency: `colorama`. This constraint is intentional — keep 
 
 ## Build and Development
 
-Uses PDM with `pdm-backend`. Python 3.8–3.12. Version 3.13/3.14 compatibility update pending.
+Uses PDM with `pdm-backend`. Python 3.10–3.14.
 
 ```bash
 pdm install

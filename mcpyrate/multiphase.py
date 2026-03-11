@@ -60,8 +60,6 @@ def iswithphase(stmt, *, filename):
     arg = macroargs[0]
     if type(arg) is ast.Constant:
         n = arg.value
-    elif type(arg) is ast.Num:  # TODO: Python 3.8: remove ast.Num
-        n = arg.n
     else:
         return False
 
@@ -106,15 +104,11 @@ def extract_phase(tree, *, filename, phase=0):
         else:
             # Lifting to phase >= 1. Decrease the `n` in `with phase[n]`
             # by one, so the block gets processed again in the next phase.
-            if sys.version_info >= (3, 9, 0):  # Python 3.9+: no ast.Index wrapper
-                macroarg = withphase.items[0].context_expr.slice
-            else:
-                macroarg = withphase.items[0].context_expr.slice.value
-
-            if type(macroarg) is ast.Constant:
-                macroarg.value -= 1
-            elif type(macroarg) is ast.Num:  # TODO: Python 3.8: remove ast.Num
-                macroarg.n -= 1
+            macroarg = withphase.items[0].context_expr.slice
+            if type(macroarg) is not ast.Constant:
+                raise SyntaxError(f"Expected an integer literal as phase number, got {type(macroarg).__name__}",
+                                  (filename, withphase.lineno, withphase.col_offset, None))
+            macroarg.value -= 1
             remaining.append(deepcopy(withphase))
 
     thisphase = []

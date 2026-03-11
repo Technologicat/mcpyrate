@@ -5,7 +5,7 @@ authors = [
     { name = "Juha Jeronen", email = "juha.m.jeronen@gmail.com" },
     { name = "Salvador de la Puente González" },
 ]
-requires-python = ">=3.8"
+requires-python = ">=3.10"
 
 # the `read` function and long_description_content_type from setup.py are no longer needed,
 # modern build tools like pdm/hatch already know how to handle markdown if you point them at a .md file
@@ -31,11 +31,11 @@ classifiers = [
     "Operating System :: OS Independent",
     "Programming Language :: Python",
     "Programming Language :: Python :: 3 :: Only",
-    "Programming Language :: Python :: 3.8",
-    "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
     "Programming Language :: Python :: Implementation :: CPython",
     "Programming Language :: Python :: Implementation :: PyPy",
     "Topic :: Software Development :: Libraries",

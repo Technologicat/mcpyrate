@@ -186,13 +186,9 @@ def getdocstring(body):
         return None
     if not isinstance(body, list):
         raise TypeError(f"`body` must be a `list`, got {type(body)} with value {repr(body)}")
-    if type(body[0]) is ast.Expr and type(body[0].value) in (ast.Constant, ast.Str):
+    if type(body[0]) is ast.Expr and type(body[0].value) is ast.Constant:
         docstring_node = body[0].value  # Expr -> Expr.value
-        if type(docstring_node) is ast.Constant:
-            return docstring_node.value
-        # TODO: remove ast.Str once we bump minimum language version to Python 3.8
-        else:  # ast.Str
-            return docstring_node.s
+        return docstring_node.value
     return None
 
 # --------------------------------------------------------------------------------
