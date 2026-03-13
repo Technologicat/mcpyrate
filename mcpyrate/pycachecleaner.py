@@ -42,16 +42,16 @@ def _delete_directory_recursively(path):
         for x in files:
             try:
                 os.unlink(os.path.join(root, x))
-            except FileNotFoundError:
+            except FileNotFoundError:  # pragma: no cover, race condition guard
                 pass
 
         for x in dirs:
             try:
                 os.rmdir(os.path.join(root, x))
-            except FileNotFoundError:
+            except FileNotFoundError:  # pragma: no cover, race condition guard
                 pass
 
     try:
         os.rmdir(path)
-    except FileNotFoundError:
+    except FileNotFoundError:  # pragma: no cover, race condition guard
         pass

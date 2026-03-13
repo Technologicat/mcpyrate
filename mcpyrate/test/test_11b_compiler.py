@@ -288,5 +288,126 @@ def runtests():
                 pass
     test_futureimports_multiphase_withdocstring()
 
+    # -- Error paths and edge cases --
+
+    def test_expand_bad_source_type():
+        """expand() rejects bad source type."""
+        from ..compiler import expand
+        try:
+            expand(42, filename="<test>")
+        except TypeError as e:
+            assert "source" in str(e).lower()
+        else:
+            assert False, "Expected TypeError"
+    test_expand_bad_source_type()
+
+    def test_expand_bad_body_elements():
+        """expand() rejects module body with non-statement elements."""
+        import ast
+        from ..compiler import expand
+        try:
+            expand([ast.Constant(value=42)], filename="<test>")
+        except TypeError as e:
+            assert "not statement" in str(e).lower()
+        else:
+            assert False, "Expected TypeError"
+    test_expand_bad_body_elements()
+
+    def test_expand_ast_module():
+        """expand() accepts an ast.Module directly."""
+        import ast
+        from ..compiler import expand
+        tree = ast.parse("x = 1")
+        result = expand(tree, filename="<test>")
+        assert isinstance(result, ast.Module)
+    test_expand_ast_module()
+
+    def test_expand_multiphase_needs_self_module():
+        """Multi-phase compilation requires self_module."""
+        from ..compiler import expand
+        from textwrap import dedent
+        source = dedent("""\
+            from mcpyrate.multiphase import macros, phase
+            with phase[1]:
+                x = 42
+        """)
+        try:
+            expand(source, filename="<test>", self_module=None)
+        except ValueError as e:
+            assert "self_module" in str(e)
+        else:
+            assert False, "Expected ValueError"
+    test_expand_multiphase_needs_self_module()
+
+    def test_run_with_string_module():
+        """run() accepts a module name as string."""
+        with temporary_module("_test_run_str") as mod:
+            run("x = 42", mod)
+            run("y = x + 1", "_test_run_str")
+            assert mod.y == 43
+    test_run_with_string_module()
+
+    def test_run_with_missing_module_name():
+        """run() with a string that's not in sys.modules raises."""
+        try:
+            run("x = 1", "_nonexistent_module_name_for_test")
+        except ModuleNotFoundError as e:
+            assert "_nonexistent_module_name_for_test" in str(e)
+        else:
+            assert False, "Expected ModuleNotFoundError"
+    test_run_with_missing_module_name()
+
+    def test_run_bad_module_type():
+        """run() rejects bad module type."""
+        try:
+            run("x = 1", 42)
+        except TypeError as e:
+            assert "module" in str(e).lower()
+        else:
+            assert False, "Expected TypeError"
+    test_run_bad_module_type()
+
+    def test_run_with_code_object():
+        """run() accepts a pre-compiled code object."""
+        from ..compiler import compile as mcpyrate_compile
+        code = mcpyrate_compile("x = 42", filename="<test>")
+        with temporary_module() as mod:
+            run(code, mod)
+            assert mod.x == 42
+            assert mod.__doc__ is None  # CodeType path sets doc to None
+    test_run_with_code_object()
+
+    def test_create_module_bad_dotted_name_type():
+        """create_module rejects non-string dotted_name."""
+        try:
+            create_module(42)
+        except TypeError as e:
+            assert "dotted_name" in str(e)
+        else:
+            assert False, "Expected TypeError"
+    test_create_module_bad_dotted_name_type()
+
+    def test_create_module_bad_dotted_name_value():
+        """create_module rejects invalid identifiers in dotted_name."""
+        try:
+            create_module("not-a-valid-identifier")
+        except TypeError as e:
+            assert "identifier" in str(e)
+        else:
+            assert False, "Expected TypeError"
+    test_create_module_bad_dotted_name_value()
+
+    def test_create_module_bad_filename_type():
+        """create_module rejects non-string filename."""
+        try:
+            create_module(filename=42)
+        except TypeError as e:
+            assert "filename" in str(e)
+        else:
+            assert False, "Expected TypeError"
+    test_create_module_bad_filename_type()
+
+    print("    test_compiler: all passed")
+
 if __name__ == '__main__':
     runtests()
