@@ -176,18 +176,30 @@ def expand1sq(tree, *, syntax, **kw):
     `expand1sq[...]` is shorthand for `expand1s[q[...]]`.
 
     `with expand1sq as quoted` has the corresponding effect on a block.
-    but does not factor into `q` and `expand1s`, because the quote is
-    applied first, but with the expander outside of it.
+    In block mode, the expansion is handled directly (not via ``expand1s``)
+    because block-mode ``q`` produces an ``Assign`` wrapper that ``expand1s``
+    does not expect.
 
-    If your tree is quasiquoted, use `expands1` instead.
+    If your tree is already quasiquoted, use `expand1s` instead.
     """
     if syntax not in ("expr", "block"):
         raise SyntaxError("`expand1sq` is an expr and block macro only")
     tree = q(tree, syntax=syntax, **kw)
-    kw = dict(kw)
-    if "optional_vars" in kw:  # the asname was meant for `q`, `expand1s` doesn't take it.
-        kw["optional_vars"] = None
-    return expand1s(tree, syntax=syntax, **kw)
+    if syntax == "expr":
+        kw = dict(kw)
+        if "optional_vars" in kw:
+            kw["optional_vars"] = None
+        return expand1s(tree, syntax=syntax, **kw)
+    # Block mode: `q` returns an Assign(targets, value=splice_ast_literals(...)).
+    # This doesn't factor into `q` then `expand1s`, because `expand1s` can't
+    # handle the Assign wrapper. Do the unastify-expand-requote here directly.
+    expander = kw["expander"]
+    target = kw["optional_vars"]
+    stmts = unastify(tree.value)  # strip splice_ast_literals, recover statement list
+    module = ast.Module(body=stmts, type_ignores=[])
+    module = expander.visit_once(module)  # Done(body=Module(...))
+    return q(module.body.body, syntax="block", expander=expander,
+             invocation=kw["invocation"], optional_vars=target)
 
 
 def expandsq(tree, *, syntax, **kw):
@@ -202,20 +214,30 @@ def expandsq(tree, *, syntax, **kw):
     `expandsq[...]` is shorthand for `expands[q[...]]`.
 
     `with expandsq as quoted` has the corresponding effect on a block.
-    but does not factor into `q` and `expands`, because the quote is
-    applied first, with the expander outside of it.
+    In block mode, the expansion is handled directly (not via ``expands``)
+    because block-mode ``q`` produces an ``Assign`` wrapper that ``expands``
+    does not expect.
 
-    If your tree is quasiquoted, use `expands` instead.
+    If your tree is already quasiquoted, use `expands` instead.
 
     This operator should produce results closest to those of `macropy`'s `q`.
     """
     if syntax not in ("expr", "block"):
         raise SyntaxError("`expandsq` is an expr and block macro only")
     tree = q(tree, syntax=syntax, **kw)
-    kw = dict(kw)
-    if "optional_vars" in kw:
-        kw["optional_vars"] = None
-    return expands(tree, syntax=syntax, **kw)
+    if syntax == "expr":
+        kw = dict(kw)
+        if "optional_vars" in kw:
+            kw["optional_vars"] = None
+        return expands(tree, syntax=syntax, **kw)
+    # Block mode: same rationale as expand1sq above.
+    expander = kw["expander"]
+    target = kw["optional_vars"]
+    stmts = unastify(tree.value)
+    module = ast.Module(body=stmts, type_ignores=[])
+    module = expander.visit_recursively(module)  # no Done wrapper
+    return q(module.body, syntax="block", expander=expander,
+             invocation=kw["invocation"], optional_vars=target)
 
 
 def expand1s(tree, *, syntax, expander, **kw):

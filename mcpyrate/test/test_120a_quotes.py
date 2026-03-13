@@ -297,6 +297,18 @@ def runtests():
         h[first][21]
     assert unparse(quoted) == "(2 * 21)"
 
+    # expand1sq block mode: quote-then-expand-once, as a block.
+    with expand1sq as quoted:
+        first[21]
+    assert len(quoted) == 1
+    assert unparse(quoted) == "second[21]"
+
+    # expandsq block mode: quote-then-expand-all, as a block.
+    with expandsq as quoted:
+        first[21]
+    assert len(quoted) == 1
+    assert unparse(quoted) == "(2 * 21)"
+
     # --------------------------------------------------------------------------------
     # Direct function tests for coverage of quotes.py internals
 
