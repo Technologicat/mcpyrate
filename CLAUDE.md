@@ -52,6 +52,21 @@ python -c "import mcpyrate.activate; from mcpyrate.test.test_compiler import run
 
 Test discovery: `runtests.py` walks subdirectories named `test/`, finds `test_*.py` files. Also runs demos from `demo/`.
 
+**Test layering**: Test modules are numbered with zero-padded 3-digit BASIC-style gaps (005, 010, 020, ..., 130) so that lower-layer infrastructure is tested first and string sort gives the right execution order. The layer map is in `mcpyrate/test/__init__.py`.
+
+**Macro-enabled tests**: Tests for macros should use real macro imports (`from ..quotes import macros, q, u, ...`) and invoke macros as macros — don't simulate the macro context by calling the function directly unless testing error paths that fire before the expansion machinery is needed. To run a macro-enabled test module standalone:
+
+```bash
+python -c "import mcpyrate.activate; from mcpyrate.test.test_120a_quotes import runtests; runtests()"
+```
+
+**Tests as API documentation**: Tests double as detailed API documentation. When a function return value documents an API contract, keep the `result = ...` assignment even if the value isn't used later, and annotate with `# noqa: F841, documents API return`.
+
+**Linting new tests**: Lint any new or modified test files with `flake8 --select=F401,F841,F821`. Pay attention to:
+  - **F841** (assigned but never used): Use `# noqa: F841, documents API return` when the assignment documents the API contract. Otherwise, remove.
+  - **F821** (undefined name): Can legitimately occur in quoted code (`q[...]`). Use `# noqa: F821, only quoted` when the name only appears inside a quasiquote.
+  - **F401** (unused import): Should almost always be cleaned up. The only exception is when the import documents an API dependency, which then needs a `# noqa: F401` comment stating why.
+
 ## Linting
 
 ```bash
