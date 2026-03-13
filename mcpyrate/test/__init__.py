@@ -12,7 +12,7 @@ Layer map:
 
   Pure utilities (no macro infrastructure):
     03  bunch
-    04  astfixers
+    04  astfixers (a), pycachecleaner (b)
     05  utils
     06  walkers
 
