@@ -33,13 +33,20 @@ class ASTMarker(ast.AST):
     operators (some of which expand to markers) may only appear inside a quoted
     section. So just before the quote operator exits, it checks that all
     quasiquote markers within that section have been compiled away.
+
+    Subclasses may define additional fields by setting `_fields` as a class
+    attribute (tuple of field name strings), following the `ast.AST` convention.
     """
-    # TODO: Silly default `None`, because `copy` and `deepcopy` call `__init__` without arguments,
-    # TODO: though the docs say they behave like `pickle` (and wouldn't thus need to call __init__ at all!).
+    _fields = ["body"]
+
+    # Silly default `None`, because `copy` and `deepcopy` call `__init__` without arguments,
+    # though the docs say they behave like `pickle` (and wouldn't thus need to call __init__ at all!).
     def __init__(self, body=None):
         """body: the actual AST that is annotated by this marker"""
         self.body = body
-        self._fields = ["body"]  # support ast.iter_fields
+        # Per-instance copy so that `self._fields += [...]` in subclass
+        # __init__ doesn't mutate the class-level list.
+        self._fields = list(type(self)._fields)
 
 
 def get_markers(tree, cls=ASTMarker):
