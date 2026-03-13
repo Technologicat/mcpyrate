@@ -175,10 +175,9 @@ def expand1sq(tree, *, syntax, **kw):
 
     `expand1sq[...]` is shorthand for `expand1s[q[...]]`.
 
-    `with expand1sq as quoted` has the corresponding effect on a block.
-    In block mode, the expansion is handled directly (not via ``expand1s``)
-    because block-mode ``q`` produces an ``Assign`` wrapper that ``expand1s``
-    does not expect.
+    `with expand1sq as quoted` has the corresponding effect on a block,
+    but does not factor into `q` and `expand1s`, because the quote is
+    applied first, but with the expander outside of it.
 
     If your tree is already quasiquoted, use `expand1s` instead.
     """
@@ -187,7 +186,7 @@ def expand1sq(tree, *, syntax, **kw):
     tree = q(tree, syntax=syntax, **kw)
     if syntax == "expr":
         kw = dict(kw)
-        if "optional_vars" in kw:
+        if "optional_vars" in kw:  # the asname was meant for `q`; `expand1s` doesn't take it.
             kw["optional_vars"] = None
         return expand1s(tree, syntax=syntax, **kw)
     # Block mode: `q` returns an Assign(targets, value=splice_ast_literals(...)).
@@ -213,10 +212,9 @@ def expandsq(tree, *, syntax, **kw):
 
     `expandsq[...]` is shorthand for `expands[q[...]]`.
 
-    `with expandsq as quoted` has the corresponding effect on a block.
-    In block mode, the expansion is handled directly (not via ``expands``)
-    because block-mode ``q`` produces an ``Assign`` wrapper that ``expands``
-    does not expect.
+    `with expandsq as quoted` has the corresponding effect on a block,
+    but does not factor into `q` and `expands`, because the quote is
+    applied first, with the expander outside of it.
 
     If your tree is already quasiquoted, use `expands` instead.
 
@@ -227,7 +225,7 @@ def expandsq(tree, *, syntax, **kw):
     tree = q(tree, syntax=syntax, **kw)
     if syntax == "expr":
         kw = dict(kw)
-        if "optional_vars" in kw:
+        if "optional_vars" in kw:  # the asname was meant for `q`; `expands` doesn't take it.
             kw["optional_vars"] = None
         return expands(tree, syntax=syntax, **kw)
     # Block mode: same rationale as expand1sq above.

@@ -88,14 +88,6 @@ def discoverdemofiles(root):
             dirs.clear()
     return list(sorted(out))
 
-# def discoverdemomodules(root):
-#     out = []
-#     for path, dirs, files in os.walk(root):
-#         demos = filenames_to_modulenames(os.path.relpath(path), discoverdemofiles_in(path))
-#         if demos:
-#             out.extend(demos)
-#     return out
-
 def discoverdemofiles_in(path):
     if os.path.isfile(os.path.join(path, "demo.py")):
         return ["demo.py"]
@@ -137,31 +129,14 @@ def runtests(clear_bytecode_cache=True):
                       file=sys.stderr)
                 traceback.print_exc()
                 errors += 1
-    print(colorize("Testing finished.", ColorScheme.TESTHEADING), file=sys.stderr)
+    cache_result = "Bytecode cache was cleared." if clear_bytecode_cache else "Used existing bytecode."
+    print(colorize(f"Testing finished. {cache_result}", ColorScheme.TESTHEADING), file=sys.stderr)
     all_passed = (errors == 0)
     return all_passed
 
 
-# This just checks that all the demos run without crashing on the version being tested,
-# so that they are likely to be up to date.
-# def rundemos(clear_bytecode_cache=True):
-#     cache_note = "Bytecode cache will be cleared." if clear_bytecode_cache else "Using existing bytecode."
-#     print(colorize(f"Demos started. {cache_note}", ColorScheme.TESTHEADING), file=sys.stderr)
-#     errors = 0
-#     demomodules = discoverdemomodules("demo")
-#     if clear_bytecode_cache:
-#         deletepycachedirs("demo")
-#     for m in demomodules:
-#         print(colorize(f"  Running '{m}'...", ColorScheme.TESTHEADING),
-#               file=sys.stderr)
-#         mod = import_module(m)
-#     print(colorize("Demos finished.", ColorScheme.TESTHEADING), file=sys.stderr)
-#     all_passed = (errors == 0)
-#     return all_passed
-
-# UGH! We can't currently import demos as modules, since they may depend on other modules
-# in their containing directory. So let's run them like a shell script would.
-# (Alternatively, we could tweak `sys.path`.)
+# Demos can't be imported as modules since they may depend on other modules
+# in their containing directory. Run them as subprocesses instead.
 def rundemos(clear_bytecode_cache=True):
     cache_note = "Bytecode cache will be cleared." if clear_bytecode_cache else "Using existing bytecode."
     print(colorize(f"Demos started. {cache_note}", ColorScheme.TESTHEADING), file=sys.stderr)
@@ -187,7 +162,8 @@ def rundemos(clear_bytecode_cache=True):
             traceback.print_exc()
             print(err.stderr.decode("utf-8"), file=sys.stderr)
             errors += 1
-    print(colorize("Demos finished.", ColorScheme.TESTHEADING), file=sys.stderr)
+    cache_result = "Bytecode cache was cleared." if clear_bytecode_cache else "Used existing bytecode."
+    print(colorize(f"Demos finished. {cache_result}", ColorScheme.TESTHEADING), file=sys.stderr)
     all_passed = (errors == 0)
     return all_passed
 
