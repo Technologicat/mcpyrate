@@ -50,7 +50,7 @@ def runtests():
     def test_fix_ctx_type_alias():
         """type X = int: name gets Store. (PEP 695, Python 3.12+)"""
         if sys.version_info < (3, 12):
-            print("      skipped test_fix_ctx_type_alias (needs Python 3.12+)", file=sys.stderr)
+            print("    skipped test_fix_ctx_type_alias (needs Python 3.12+)", file=sys.stderr)
             return
         tree = ast.parse("type X = int")
         fix_ctx(tree, copy_seen_nodes=False)
