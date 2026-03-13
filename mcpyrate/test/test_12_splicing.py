@@ -127,11 +127,10 @@ def runtests():
         template = ast.parse('"Template module."\n__paste_here__').body
         result = splice_dialect(body, template)
         first = result[0]
-        # splice_dialect produces a bare ast.Constant for the combined docstring
-        # (not wrapped in ast.Expr — technically a minor bug, but we test actual behavior)
-        assert isinstance(first, ast.Constant)
-        assert "User module." in first.value
-        assert "Template module." in first.value
+        assert isinstance(first, ast.Expr)
+        doc = first.value.value
+        assert "User module." in doc
+        assert "Template module." in doc
     test_splice_dialect_docstrings()
 
     def test_splice_dialect_future_imports():

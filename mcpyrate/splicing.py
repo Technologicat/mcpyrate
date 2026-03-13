@@ -266,7 +266,7 @@ def splice_dialect(body, template, tag="__paste_here__", lineno=None, col_offset
         template_doc = getdocstring(template_docstring)
         sep = "\n" + ("-" * 79) + "\n"
         new_doc = user_doc + sep + template_doc
-        new_docstring = ast.copy_location(ast.Constant(value=new_doc),
+        new_docstring = ast.copy_location(ast.Expr(value=ast.Constant(value=new_doc)),
                                           user_docstring[0])
         docstring = [new_docstring]
     else:
