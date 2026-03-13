@@ -8,6 +8,9 @@ without renumbering.
 
 Layer map:
 
+  Import hook:
+    005  activate
+
   Rendering infrastructure:
     010  astdumper
     020  unparser
