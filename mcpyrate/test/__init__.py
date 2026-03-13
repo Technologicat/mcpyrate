@@ -30,6 +30,8 @@ Layer map:
     100  core (a), expander (b)
     110  debug
     115  metatools
+    116  multiphase
+    117  dialects
 
   Macro-dependent tests (use quasiquotes):
     120  quotes (a), compiler (b)
