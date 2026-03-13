@@ -44,8 +44,8 @@ class ASTMarker(ast.AST):
     def __init__(self, body=None):
         """body: the actual AST that is annotated by this marker"""
         self.body = body
-        # Per-instance copy so that `self._fields += [...]` in subclass
-        # __init__ doesn't mutate the class-level list.
+        # Per-instance copy so that any accidental `self._fields += [...]`
+        # in downstream code doesn't mutate the class-level list.
         self._fields = list(type(self)._fields)
 
 

@@ -1,6 +1,6 @@
 # Changelog
 
-**4.0.0** (in progress)
+**4.0.0** (in progress) - *New snakes on a ship* edition:
 
 **IMPORTANT**:
 
@@ -11,6 +11,7 @@
 
 - Removed `getconstant()`, `Num`, `Str`, `Bytes`, `NameConstant`, `Ellipsis`, `Index`, `ExtSlice` from the `astcompat` public API. These deprecated AST node types no longer exist in Python 3.14. Use `ast.Constant.value` directly.
 - Note for downstream macro authors: `visit_Num`/`visit_Str`/etc. on `NodeVisitor`/`NodeTransformer` are no longer called in Python 3.14 — use `visit_Constant` instead.
+- `ASTMarker._fields` is now a class attribute (list) instead of being set only in `__init__`. Subclasses should define `_fields` at the class level, following the `ast.AST` convention. The `__init__` still creates a per-instance copy as a safety net. `mcpyrate`'s own quasiquote markers (`quotes.py`) have been updated to use class-level `_fields`. Downstream projects that subclass `ASTMarker` and use `self._fields += ["myfield"]` in `__init__` should migrate to the class-level idiom, but the old pattern still works.
 
 **Fixed**:
 

@@ -79,18 +79,20 @@ class LiftSourcecode(QuasiquoteMarker):
 
     This allows e.g. computing names of lexical variables.
     """
+    _fields = ["body", "filename"]
+
     def __init__(self, body, filename):
         super().__init__(body)
         self.filename = filename
-        self._fields += ["filename"]
 
 
 class ASTLiteral(QuasiquoteMarker):  # similar to `macropy`'s `Literal`, but supports block mode, too.
     """Interpolate the given AST. Emitted by `a`."""
+    _fields = ["body", "syntax"]
+
     def __init__(self, body, syntax):
         super().__init__(body)
         self.syntax = syntax
-        self._fields += ["syntax"]
 
 
 class ASTList(QuasiquoteMarker):
@@ -114,10 +116,11 @@ class Capture(QuasiquoteMarker):  # like `macropy`'s `Captured`
     to support bytecode caching for source files that invoke a macro that uses
     `h[]` in its output.)
     """
+    _fields = ["body", "name"]
+
     def __init__(self, body, name):
         super().__init__(body)
         self.name = name
-        self._fields += ["name"]
 
 # --------------------------------------------------------------------------------
 # Run-time parts of the operators.
