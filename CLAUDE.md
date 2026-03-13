@@ -24,6 +24,16 @@ pdm use --venv in-project
 source .venv/bin/activate
 ```
 
+The project venv is managed by PDM (`pdm venv create`, `pdm use --venv in-project`). To switch Python versions, remove the old venv and create a new one:
+
+```bash
+pdm venv remove in-project
+pdm config venv.in_project true
+pdm venv create 3.14   # or whichever version
+pdm use --venv in-project
+pdm install
+```
+
 **Critical**: Never precompile bytecode (`--compile`). Precompiled `.pyc` without the macro import hooks breaks macro imports.
 
 Entry point: `macropython` (macro-enabled Python REPL/runner).
