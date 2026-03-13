@@ -149,8 +149,6 @@ def runtests():
             assert False, "Expected MacroExpansionError for MyMarker"
     test_check_no_markers_cls_filter()
 
-    print("    test_markers: all passed")
-
 
 if __name__ == '__main__':
     runtests()

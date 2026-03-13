@@ -212,8 +212,6 @@ def runtests():
             assert False, "bunchify with non-identifier keys should raise ValueError"
     test_bunchify_invalid_keys()
 
-    print("    test_bunch: all passed")
-
 
 if __name__ == '__main__':
     runtests()

@@ -78,8 +78,6 @@ def runtests():
     # FileNotFoundError: pass` guards for race conditions in concurrent
     # deletion. Not worth testing — they'd need non-deterministic timing.
 
-    print("    test_pycachecleaner: all passed")
-
 
 if __name__ == '__main__':
     runtests()

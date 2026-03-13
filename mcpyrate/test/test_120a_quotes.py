@@ -606,7 +606,5 @@ def runtests():
     assert isinstance(frozen, bytes)  # post-capture: value has been frozen
     assert lookup_value(key) is f  # round-trip: recovered value is the same object
 
-    print("    test_quotes: all passed")
-
 if __name__ == '__main__':
     runtests()

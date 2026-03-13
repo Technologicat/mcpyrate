@@ -208,8 +208,6 @@ def runtests():
         assert "z = 3" in code
     test_transformer_withstate()
 
-    print("    test_walkers: all passed")
-
 
 if __name__ == '__main__':
     runtests()

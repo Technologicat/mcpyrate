@@ -315,8 +315,6 @@ def runtests():
         assert any(isinstance(s, ast.ImportFrom) for s in tree.body)
     test_find_macros_no_transform()
 
-    print("    test_expander: all passed")
-
 
 if __name__ == '__main__':
     runtests()

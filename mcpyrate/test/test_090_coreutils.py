@@ -306,8 +306,6 @@ def runtests():
             assert False, "should raise TypeError for non-stmt stmts"
     test_inject_after_futureimports_type_error_stmts()
 
-    print("    test_coreutils: all passed")
-
 
 if __name__ == '__main__':
     runtests()

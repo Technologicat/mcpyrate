@@ -217,7 +217,5 @@ def runtests():
     # splice_dialect is system-tested by the dialect tests and by
     # `unpythonic.dialects` in our sister project.
 
-    print("    test_splicing: all passed")
-
 if __name__ == '__main__':
     runtests()

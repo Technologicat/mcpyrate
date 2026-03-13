@@ -89,8 +89,6 @@ def runtests():
         assert any(line.startswith(" ") for line in lines[1:])
     test_nested_structure()
 
-    print("    test_astdumper: all passed")
-
 
 if __name__ == '__main__':
     runtests()

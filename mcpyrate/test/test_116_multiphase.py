@@ -256,8 +256,6 @@ def runtests():
         assert detect_highest_phase(tree, filename="<test>") == 3
     test_detect_highest_phase_finds_max()
 
-    print("    test_multiphase: all passed")
-
 
 if __name__ == '__main__':
     runtests()

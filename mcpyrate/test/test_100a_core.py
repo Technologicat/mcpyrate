@@ -325,8 +325,6 @@ def runtests():
         assert result is None
     test_visit_expansion_none()
 
-    print("    test_core: all passed")
-
 
 if __name__ == '__main__':
     runtests()

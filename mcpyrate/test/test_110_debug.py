@@ -297,5 +297,3 @@ def runtests():
         assert "im" in output
         assert "Result" in output
     test_step_expansion_detailed_mode()
-
-    print("    test_debug: all passed")

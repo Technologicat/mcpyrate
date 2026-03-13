@@ -242,5 +242,3 @@ def runtests():
         # Child should get parent's col_offset since parent's was set
         assert child.col_offset == 10
     test_fix_locations_update_col_offset()
-
-    print("    test_astfixers: all passed")

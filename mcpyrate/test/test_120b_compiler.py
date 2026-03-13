@@ -407,7 +407,5 @@ def runtests():
             assert False, "Expected TypeError"
     test_create_module_bad_filename_type()
 
-    print("    test_compiler: all passed")
-
 if __name__ == '__main__':
     runtests()

@@ -37,8 +37,6 @@ def runtests():
         assert SourceFileLoader.path_stats is path_xstats
     test_reactivate_after_deactivate()
 
-    print("    test_activate: all passed")
-
 
 if __name__ == '__main__':
     runtests()

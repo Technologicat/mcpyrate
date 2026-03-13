@@ -297,8 +297,6 @@ def runtests():
         assert result is not None
     test_expand_first_valid()
 
-    print("    test_metatools: all passed")
-
 
 if __name__ == '__main__':
     runtests()

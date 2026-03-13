@@ -308,8 +308,6 @@ def runtests():
         assert result is NotImplemented
     test_step_expansion_ast_already_debug()
 
-    print("    test_dialects: all passed")
-
 
 if __name__ == '__main__':
     runtests()

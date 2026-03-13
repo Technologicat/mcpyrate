@@ -371,8 +371,6 @@ def runtests():
         assert t.value == 5
     test_nesting_level_custom_start()
 
-    print("    test_utils: all passed")
-
 
 if __name__ == '__main__':
     runtests()

@@ -897,8 +897,6 @@ def runtests():
             _unparser_mod.unparse = _orig
     test_unparse_with_fallbacks_internal_error()
 
-    print("    test_02_unparser: all passed")
-
 
 if __name__ == '__main__':
     runtests()
