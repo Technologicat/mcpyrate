@@ -29,6 +29,7 @@ Layer map:
   Expansion machinery:
     100  core (a), expander (b)
     110  debug
+    115  metatools
 
   Macro-dependent tests (use quasiquotes):
     120  quotes (a), compiler (b)
