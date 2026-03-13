@@ -65,7 +65,7 @@ python -c "import mcpyrate.activate; from mcpyrate.test.test_120a_quotes import 
 **Linting new tests**: Lint any new or modified test files with `flake8 --select=F401,F841,F821`. Pay attention to:
   - **F841** (assigned but never used): Use `# noqa: F841, documents API return` when the assignment documents the API contract. Otherwise, remove.
   - **F821** (undefined name): Can legitimately occur in quoted code (`q[...]`). Use `# noqa: F821, only quoted` when the name only appears inside a quasiquote.
-  - **F401** (unused import): Should almost always be cleaned up. The only exception is when the import documents an API dependency, which then needs a `# noqa: F401` comment stating why.
+  - **F401** (unused import): Should almost always be cleaned up. The only exception is when the import documents a complete set of related names for the reader's benefit (e.g. importing all quasiquote operators `q, u, n, a, s, t, h` even if some aren't used in that file). Use `# noqa: F401` with a brief reason.
 
 ## Linting
 
