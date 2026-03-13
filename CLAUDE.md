@@ -54,7 +54,7 @@ Test discovery: `runtests.py` walks subdirectories named `test/`, finds `test_*.
 
 **Test layering**: Test modules are numbered with zero-padded 3-digit BASIC-style gaps (005, 010, 020, ..., 130) so that lower-layer infrastructure is tested first and string sort gives the right execution order. The layer map is in `mcpyrate/test/__init__.py`.
 
-**Macro-enabled tests**: Tests for macros should use real macro imports (`from ..quotes import macros, q, u, ...`) and invoke macros as macros — don't simulate the macro context by calling the function directly unless testing error paths that fire before the expansion machinery is needed. To run a macro-enabled test module standalone:
+**Macro-enabled tests**: Tests for macros should always use real macro imports (`from ..quotes import macros, q, u, ...`) and invoke macros as macros, as long as the module under test is in a layer high enough that the expander can be trusted to work correctly. Direct function calls are acceptable only for testing error paths that fire before the expansion machinery is involved. To run a macro-enabled test module standalone:
 
 ```bash
 python -c "import mcpyrate.activate; from mcpyrate.test.test_120a_quotes import runtests; runtests()"
