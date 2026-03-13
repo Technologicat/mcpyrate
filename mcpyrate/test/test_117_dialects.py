@@ -35,7 +35,6 @@ class ExplodingTransformDialect(Dialect):
         raise RuntimeError("boom in transform")
 
 
-
 class ExplodingPostprocessDialect(Dialect):
     def postprocess_ast(self, tree):
         raise RuntimeError("boom in postprocess")
