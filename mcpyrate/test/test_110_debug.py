@@ -2,9 +2,17 @@
 """Tests for debug utilities."""
 
 import ast
+import io
+import sys
 
-from ..debug import SourceLocationInfoValidator, format_bindings
+from ..debug import (SourceLocationInfoValidator, format_bindings,
+                     step_expansion, show_bindings)
 from ..expander import MacroExpander
+
+
+def _identity_macro(tree, *, syntax, **kw):
+    """A trivial macro that returns its input unchanged."""
+    return tree
 
 
 def runtests():
@@ -134,5 +142,160 @@ def runtests():
         zebra_pos = result.index("zebra")
         assert alpha_pos < middle_pos < zebra_pos
     test_format_bindings_sorted()
+
+    # -- show_bindings --
+
+    def test_show_bindings_wrong_syntax():
+        """show_bindings rejects non-name syntax."""
+        expander = _make_expander()
+        try:
+            show_bindings(ast.Name(id="x"), syntax="expr", expander=expander)
+        except SyntaxError as e:
+            assert "identifier macro only" in str(e)
+        else:
+            assert False, "should raise SyntaxError for non-name syntax"
+    test_show_bindings_wrong_syntax()
+
+    def test_show_bindings_prints_and_returns_none():
+        """show_bindings prints bindings to stderr and evaluates to None."""
+        def my_macro(tree, **kw):
+            return tree
+        expander = _make_expander({"my_macro": my_macro})
+        old_stderr = sys.stderr
+        sys.stderr = io.StringIO()
+        try:
+            result = expander_result = show_bindings(  # noqa: F841, documents API return
+                ast.Name(id="show_bindings"), syntax="name", expander=expander)
+            output = sys.stderr.getvalue()
+        finally:
+            sys.stderr = old_stderr
+        assert result is None
+        assert "my_macro" in output
+    test_show_bindings_prints_and_returns_none()
+
+    # -- step_expansion: error paths --
+
+    def test_step_expansion_wrong_syntax():
+        """step_expansion rejects non-expr/block syntax."""
+        expander = _make_expander()
+        try:
+            step_expansion(ast.Name(id="x"), args=[], syntax="name",
+                           expander=expander)
+        except SyntaxError as e:
+            assert "expr and block macro only" in str(e)
+        else:
+            assert False, "should raise SyntaxError for name syntax"
+    test_step_expansion_wrong_syntax()
+
+    def test_step_expansion_bad_arg_type():
+        """step_expansion rejects non-Constant arguments."""
+        expander = _make_expander()
+        try:
+            step_expansion(ast.parse("x = 1"), args=[ast.Name(id="bad")],
+                           syntax="expr", expander=expander)
+        except TypeError as e:
+            assert "expected str argument" in str(e)
+        else:
+            assert False, "should raise TypeError for non-Constant arg"
+    test_step_expansion_bad_arg_type()
+
+    def test_step_expansion_unknown_arg():
+        """step_expansion rejects unknown argument values."""
+        expander = _make_expander()
+        try:
+            step_expansion(ast.parse("x = 1"),
+                           args=[ast.Constant(value="bogus")],
+                           syntax="expr", expander=expander)
+        except ValueError as e:
+            assert "unknown argument" in str(e)
+        else:
+            assert False, "should raise ValueError for unknown arg"
+    test_step_expansion_unknown_arg()
+
+    # -- step_expansion: happy paths --
+
+    def _make_macro_invocation_tree():
+        """Build `im[42]` as AST, where `im` is a macro name.
+
+        This is a Subscript node: im[42], which the expander recognizes
+        as an expr-macro invocation when `im` is bound.
+        """
+        tree = ast.Subscript(
+            value=ast.Name(id="im", ctx=ast.Load(),
+                           lineno=1, col_offset=0, end_lineno=1, end_col_offset=2),
+            slice=ast.Constant(value=42, lineno=1, col_offset=3,
+                               end_lineno=1, end_col_offset=5),
+            ctx=ast.Load(),
+            lineno=1, col_offset=0, end_lineno=1, end_col_offset=6)
+        return ast.fix_missing_locations(ast.Module(body=[ast.Expr(value=tree)],
+                                                    type_ignores=[]))
+
+    def test_step_expansion_no_macros():
+        """step_expansion with no macro invocations just prints before/complete."""
+        expander = _make_expander()
+        old_stderr = sys.stderr
+        sys.stderr = io.StringIO()
+        try:
+            result = step_expansion(ast.parse("x = 1"), args=[],  # noqa: F841, documents API return
+                                    syntax="expr", expander=expander)
+            output = sys.stderr.getvalue()
+        finally:
+            sys.stderr = old_stderr
+        assert "before macro expansion" in output
+        assert "macro expansion complete" in output
+        assert "0 steps" in output
+    test_step_expansion_no_macros()
+
+    def test_step_expansion_with_macro():
+        """step_expansion expands a macro and prints step output."""
+        expander = _make_expander({"im": _identity_macro})
+        tree = _make_macro_invocation_tree()
+        old_stderr = sys.stderr
+        sys.stderr = io.StringIO()
+        try:
+            result = step_expansion(tree, args=[], syntax="expr",  # noqa: F841, documents API return
+                                    expander=expander)
+            output = sys.stderr.getvalue()
+        finally:
+            sys.stderr = old_stderr
+        assert "before macro expansion" in output
+        assert "after step 1" in output
+        assert "macro expansion complete" in output
+        assert "1 step." in output  # singular
+    test_step_expansion_with_macro()
+
+    def test_step_expansion_dump_mode():
+        """step_expansion with 'dump' arg uses AST dump renderer."""
+        expander = _make_expander()
+        old_stderr = sys.stderr
+        sys.stderr = io.StringIO()
+        try:
+            step_expansion(ast.parse("x = 1"),
+                           args=[ast.Constant(value="dump")],
+                           syntax="expr", expander=expander)
+            output = sys.stderr.getvalue()
+        finally:
+            sys.stderr = old_stderr
+        # dump mode shows AST node types
+        assert "Module" in output
+    test_step_expansion_dump_mode()
+
+    def test_step_expansion_detailed_mode():
+        """step_expansion with 'detailed' prints per-expansion details."""
+        expander = _make_expander({"im": _identity_macro})
+        tree = _make_macro_invocation_tree()
+        old_stderr = sys.stderr
+        sys.stderr = io.StringIO()
+        try:
+            step_expansion(tree,
+                           args=[ast.Constant(value="detailed")],
+                           syntax="expr", expander=expander)
+            output = sys.stderr.getvalue()
+        finally:
+            sys.stderr = old_stderr
+        assert "Applying" in output
+        assert "im" in output
+        assert "Result" in output
+    test_step_expansion_detailed_mode()
 
     print("    test_debug: all passed")

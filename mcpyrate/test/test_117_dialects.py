@@ -103,7 +103,7 @@ def runtests():
         old_stderr = sys.stderr
         sys.stderr = io.StringIO()
         try:
-            dexpander.postprocess_ast(tree, [dialect])
+            result = dexpander.postprocess_ast(tree, [dialect])  # noqa: F841, documents API return
             output = sys.stderr.getvalue()
         finally:
             sys.stderr = old_stderr
@@ -123,7 +123,7 @@ def runtests():
         old_stderr = sys.stderr
         sys.stderr = io.StringIO()
         try:
-            dexpander.postprocess_ast(tree, [dialect])
+            result = dexpander.postprocess_ast(tree, [dialect])  # noqa: F841, documents API return
             output = sys.stderr.getvalue()
         finally:
             sys.stderr = old_stderr
