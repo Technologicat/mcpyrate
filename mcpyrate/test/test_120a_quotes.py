@@ -13,10 +13,9 @@ from ..compiler import temporary_module, run, expand
 from ..core import Done
 from ..markers import ASTMarker
 from ..quotes import (unastify, astify, is_captured_value, lookup_value,
-                      is_captured_macro, capture_value, capture_macro,
+                      is_captured_macro, capture_macro,
                       capture_as_macro, lift_sourcecode,
-                      ast_literal, ast_list, ast_tuple,
-                      splice_ast_literals, SpliceNodes,
+                      ast_literal, splice_ast_literals, SpliceNodes,
                       _typecheck, _flatten_and_typecheck_iterable)
 from ..unparser import unparse
 from ..walkers import ASTVisitor

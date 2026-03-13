@@ -3,7 +3,7 @@
 
 import ast
 
-from ..expander import MacroExpander, namemacro, parametricmacro
+from ..expander import MacroExpander
 from ..metatools import (macro_bindings,
                          fill_location,
                          expand1sq, expandsq,
@@ -14,8 +14,6 @@ from ..metatools import (macro_bindings,
                          expand_first,
                          runtime_expand1, runtime_expand,
                          _expandr_impl)
-from ..quotes import q
-from ..unparser import unparse_with_fallbacks
 
 
 def _make_expander(bindings=None, filename="<test>"):
