@@ -54,7 +54,7 @@ def _version_suffix(filename):
 
 def discovertestfiles_in(path):
     out = []
-    for fn in os.listdir(path):
+    for fn in sorted(os.listdir(path)):
         if not (fn.startswith("test_") and fn.endswith(".py")):
             continue
         ver = _version_suffix(fn)
@@ -91,7 +91,7 @@ def discoverdemofiles(root):
 def discoverdemofiles_in(path):
     if os.path.isfile(os.path.join(path, "demo.py")):
         return ["demo.py"]
-    return [fn for fn in os.listdir(path) if fn.endswith(".py")]
+    return [fn for fn in sorted(os.listdir(path)) if fn.endswith(".py")]
 
 # --------------------------------------------------------------------------------
 
