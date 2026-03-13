@@ -252,17 +252,18 @@ class BaseMacroExpander(NodeTransformer):
             expansion = self._apply_macro(macro, tree, kw, macroname, target)
 
             # Convert possible iterable result to `list`, then typecheck macro output.
+            # If `expansion` is not iterable, `list()` raises `TypeError`, which
+            # falls through to the `except` block with a proper error message.
             try:
                 if expansion is not None and not isinstance(expansion, AST):
                     expansion = list(expansion)
 
                 if isinstance(expansion, AST) or expansion is None:
                     pass  # ok
-                elif isinstance(expansion, list):
-                    if not all(isinstance(elt, AST) for elt in expansion):
-                        raise TypeError("Expected all elements of list returned by macro function to be ASTs")
+                elif not all(isinstance(elt, AST) for elt in expansion):
+                    raise TypeError("Expected all elements of list returned by macro function to be ASTs")
                 else:
-                    raise TypeError("Unexpected return type from macro function")
+                    pass  # ok: list of ASTs
             except Exception:
                 reason = f"in {syntax} macro invocation for '{macroname}': expected macro to return AST node, iterable of AST nodes, or None; got {type(expansion)} with value {repr(expansion)} (after iterable to list conversion)"
                 msg = f"{loc}\n{reason}"
