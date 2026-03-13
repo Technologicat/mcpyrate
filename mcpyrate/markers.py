@@ -34,8 +34,17 @@ class ASTMarker(ast.AST):
     section. So just before the quote operator exits, it checks that all
     quasiquote markers within that section have been compiled away.
 
-    Subclasses may define additional fields by setting `_fields` as a class
-    attribute (tuple of field name strings), following the `ast.AST` convention.
+    Subclasses should define additional fields at the class level::
+
+        class MyMarker(ASTMarker):
+            _fields = ["body", "kind"]
+
+            def __init__(self, body, kind):
+                super().__init__(body)
+                self.kind = kind
+
+    The ``body`` field must always be included. ``__init__`` creates a
+    per-instance copy of ``_fields`` as a safety net.
     """
     _fields = ["body"]
 
