@@ -3,30 +3,33 @@
 
 Test modules are numbered so that lower-layer infrastructure is tested first.
 The test runner discovers and runs them in alphabetical (= numerical) order.
+Numbers are zero-padded to three digits, spaced by 10 to allow insertion
+without renumbering.
 
 Layer map:
 
   Rendering infrastructure:
-    01  astdumper
-    02  unparser
+    010  astdumper
+    020  unparser
 
   Pure utilities (no macro infrastructure):
-    03  bunch
-    04  astfixers (a), pycachecleaner (b)
-    05  utils
-    06  walkers
+    030  bunch
+    040  astfixers
+    050  pycachecleaner
+    060  utils
+    070  walkers
 
   Higher abstractions:
-    07  markers
-    08  coreutils
+    080  markers
+    090  coreutils
 
   Expansion machinery:
-    09  core (a), expander (b)
-    10  debug
+    100  core (a), expander (b)
+    110  debug
 
   Macro-dependent tests (use quasiquotes):
-    11  quotes (a), compiler (b)
-    12  splicing
+    120  quotes (a), compiler (b)
+    130  splicing
 
   Dialect tests use their own numbering scheme (test_dialects_NN_*).
 """
