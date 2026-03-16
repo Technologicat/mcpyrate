@@ -106,6 +106,7 @@ If you just want to run all tests, `python3 runtests.py`.
 - **Agile development tools**.
   - [Multi-phase compilation](doc/compiler.md#multi-phase-compilation): Use macros also in the same module where they are defined.
   - Universal bootstrapper: `macropython`. Import and use macros in your main program.
+  - Command mode: `macropython -c 'code'`. Run a macro-enabled code snippet from the shell, like `python -c`. *New in 4.0.0.*
   - Interactive console: `macropython -i`. Import, define and use macros in a console session.
     - Embeddable à la `code.InteractiveConsole`. See `mcpyrate.repl.console.MacroConsole`.
   - IPython extension `mcpyrate.repl.iconsole`. Import, define and use macros in an IPython session.

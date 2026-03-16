@@ -51,12 +51,15 @@
 
 # General issues
 
+*Changed in 4.0.0*: The bytecode cache cleaning flag was renamed from `-c` to `-C`. The `-c` flag now runs a macro-enabled code snippet, matching Python's standard `-c` behavior.
+
+
 ## ImportError: cannot import name 'macros' from ...
 
 This occurs when trying to run a macro-enabled program without macro support enabled, such as when trying to run a macro-enabled script from the command line with regular `python`.
 
  - If you did `python myscript.py` or similar, retry with `macropython myscript.py`.
-   - Before retrying, you may first need to clear the bytecode caches under the current directory with `macropython -c .`; otherwise `mcpyrate` may think the bytecode is up to date, even though it was compiled without macro support.
+   - Before retrying, you may first need to clear the bytecode caches under the current directory with `macropython -C .`; otherwise `mcpyrate` may think the bytecode is up to date, even though it was compiled without macro support.
  - If only a part of your code uses macros, and your main program is intended to be run with regular `python`, the problem could be that some module of your program is importing a module that uses macros, without first enabling macro support. Check if you have accidentally forgotten to `import mcpyrate.activate`.
  - If you're using the advanced functions `deactivate` and `activate` from the module `mcpyrate.activate`, the likely reason is that macro support has been manually disabled by calling `deactivate`. Find the offending import, and call `mcpyrate.activate.activate` before invoking that import to re-enable macro support. If you don't need macro support after that import completes, it's then safe to again call `mcpyrate.activate.deactivate` (to make any remaining imports run slightly faster).
 
@@ -69,7 +72,7 @@ Even if you use [`sys.dont_write_bytecode = True`](https://docs.python.org/3/lib
 
 If you want to force all of your code to be macro-expanded again, delete your bytecode cache (`.pyc`) files; they'll be re-generated automatically. Typically, they can be found in a folder named `__pycache__`, at each level of your source tree.
 
-To delete bytecode caches conveniently, you can use the shell command `macropython -c yourdirectory` (equivalent: `macropython --clean yourdirectory`), where `yourdirectory` is a path (can be relative or absolute). If you're wary of allowing a script to delete directories, you can first use `macropython -c yourdirectory -n` (equivalent: `macropython --clean yourdirectory --dry-run`), which just prints the full paths to the directories it would delete. If you need programmatic access to this functionality, see `mcpyrate.pycachecleaner`.
+To delete bytecode caches conveniently, you can use the shell command `macropython -C yourdirectory` (equivalent: `macropython --clean yourdirectory`), where `yourdirectory` is a path (can be relative or absolute). If you're wary of allowing a script to delete directories, you can first use `macropython -C yourdirectory -n` (equivalent: `macropython --clean yourdirectory --dry-run`), which just prints the full paths to the directories it would delete. If you need programmatic access to this functionality, see `mcpyrate.pycachecleaner`.
 
 Normally there is no need to delete bytecode caches manually.
 
@@ -88,7 +91,7 @@ Because those imports are just regular imports (because we want to export the ma
 
 Hence, the importer won't notice that a user program (or, say, a unit test module) using a macro from `unpythonic/syntax/whatever.py` should be recompiled when `whatever.py` has changed, because the program imports that macro from the top-level interface `unpythonic.syntax` - which has not changed, and has no macro-imports itself.
 
-Clearing the bytecode cache with `macropython -c .` should help; this will force a recompile of the `.py` files the next time they are loaded.
+Clearing the bytecode cache with `macropython -C .` should help; this will force a recompile of the `.py` files the next time they are loaded.
 
 
 ## How to debug macro transformations?

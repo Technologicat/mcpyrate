@@ -15,6 +15,7 @@
     - [Loading the extension](#loading-the-extension)
 - [`mcpyrate.repl.console.MacroConsole`, the macro-enabled embeddable REPL](#mcpyratereplconsolemacroconsole-the-macro-enabled-embeddable-repl)
 - [`macropython`, the universal bootstrapper](#macropython-the-universal-bootstrapper)
+    - [Running a macro-enabled code snippet](#running-a-macro-enabled-code-snippet)
     - [Starting a macro-enabled REPL from the shell](#starting-a-macro-enabled-repl-from-the-shell)
     - [Running a macro-enabled main program](#running-a-macro-enabled-main-program)
 - [Questions & Answers](#questions--answers)
@@ -113,10 +114,22 @@ This does not affect using the macros in the intended way, as macros.
 
 # `macropython`, the universal bootstrapper
 
-The bootstrapper has two roles:
+The bootstrapper has three roles:
 
  - It allows starting a **macro-enabled interactive Python interpreter** directly from the shell.
+ - It allows **running a macro-enabled code snippet** from the shell, like `python -c`.
  - It **allows your main program to use macros**.
+
+
+## Running a macro-enabled code snippet
+
+*New in 4.0.0.*
+
+Command mode (`macropython -c 'code'`) compiles and runs the given code snippet through `mcpyrate`, so macros work. This is the macro-enabled equivalent of `python -c`:
+
+```bash
+macropython -c 'import mcpyrate; print(mcpyrate.__version__)'
+```
 
 
 ## Starting a macro-enabled REPL from the shell
