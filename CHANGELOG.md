@@ -1,6 +1,6 @@
 # Changelog
 
-**4.0.0** (in progress) - *New snakes on a ship* edition:
+**4.0.0** (16 March 2026) - *New snakes on a ship* edition:
 
 **IMPORTANT**:
 
