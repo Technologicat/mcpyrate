@@ -22,9 +22,14 @@
 
 **New**:
 
+- `macropython -c 'code'` — run a macro-enabled code snippet from the command line, like `python -c`. The code is compiled and run through `mcpyrate`, so macros work.
 - Unparser support for type parameter defaults (Python 3.13, PEP 696): `type Response[T = str] = dict[str, T]`.
 - Unparser support for t-strings (Python 3.14, PEP 750): `t"hello {name}"`. New AST node types `TemplateStr` and `Interpolation` added to `astcompat`.
 - Test runner now supports version-suffixed test modules (`test_*_3_NN.py`), automatically skipping modules that require a newer Python than the running version.
+
+**Changed**:
+
+- **Breaking**: `macropython -c` (clean bytecode caches) renamed to `macropython -C`. The `-c` flag now runs a code snippet, matching Python's standard `-c` behavior. The `--clean` long form is unchanged.
 
 
 ---

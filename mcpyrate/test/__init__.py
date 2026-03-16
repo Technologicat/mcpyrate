@@ -35,6 +35,7 @@ Layer map:
 
   Macro-dependent tests (use quasiquotes):
     120  quotes (a), compiler (b)
+    125  macropython CLI (subprocess smoke tests)
     130  splicing
 
   Dialect tests use their own numbering scheme (test_dialects_NN_*).

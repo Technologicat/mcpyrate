@@ -18,7 +18,7 @@ from ..core import MacroApplicationError
 from ..coreutils import relativize
 from ..pycachecleaner import deletepycachedirs, getpycachedirs
 
-__version__ = "3.1.0"
+__version__ = "4.0.0"
 
 _config_dir = "~/.config/mcpyrate"
 _macropython_module = None  # sys.modules doesn't always seem to keep it, so stash it locally too.
@@ -155,7 +155,10 @@ def main():
                         help='For use together with "-i". Automatically "import numpy as np", '
                              '"import matplotlib.pyplot as plt", and enable mpl\'s interactive '
                              'mode (somewhat like IPython\'s pylab mode).')
-    parser.add_argument('-c', '--clean', dest='path_to_clean', default=None, type=str, metavar='dir',
+    parser.add_argument('-c', '--command', dest='command', default=None, type=str, metavar='cmd',
+                        help='Run a macro-enabled code snippet (like python -c cmd). '
+                             'The code is compiled and run through mcpyrate, so macros work.')
+    parser.add_argument('-C', '--clean', dest='path_to_clean', default=None, type=str, metavar='dir',
                         help='Delete Python bytecode (`.pyc`) caches inside given directory, recursively, '
                              'and then exit. This removes the `__pycache__` directories, too. '
                              'The purpose is to facilitate testing `mcpyrate` and programs that use it, '
@@ -164,9 +167,23 @@ def main():
                              'expander is done, Python\'s import system automatically writes the `.pyc` '
                              'cache for that module.')
     parser.add_argument("-n", "--dry-run", dest="dry_run", action="store_true", default=False,
-                        help='For use together with "-c". Just scan for and print the .pyc cache '
+                        help='For use together with "-C". Just scan for and print the .pyc cache '
                              'directory paths, don\'t actually clean them.')
     opts = parser.parse_args()
+
+    modes = []
+    if opts.path_to_clean:
+        modes.append("-C")
+    if opts.command:
+        modes.append("-c")
+    if opts.interactive:
+        modes.append("-i")
+    if opts.module:
+        modes.append("-m")
+    if opts.filename:
+        modes.append("file")
+    if len(modes) > 1:
+        parser.error(f"Please specify only one of -C, -c, -i, -m, or filename (got {', '.join(modes)}).")
 
     if opts.path_to_clean:
         # If an error occurs during cleaning, we just let it produce a standard stack trace.
@@ -176,6 +193,16 @@ def main():
             for x in getpycachedirs(opts.path_to_clean):
                 print(x)
         sys.exit(0)  # only reached if cleaning (or dry run) successful
+
+    if opts.command:
+        from ..compiler import create_module, run
+        # Add CWD to import path, like `python -c` does.
+        cwd = str(pathlib.Path.cwd().expanduser().resolve())
+        if sys.path[0] != cwd:
+            sys.path.insert(0, cwd)
+        module = create_module("__main__")
+        run(opts.command, module)
+        sys.exit(0)
 
     if opts.interactive:
         import readline  # noqa: F401, side effect: enable GNU readline in input()
@@ -213,8 +240,6 @@ def main():
     if not opts.filename and not opts.module:
         parser.print_help()
         sys.exit(0)
-    if opts.filename and opts.module:
-        raise ValueError("Please specify just one main program to run (either filename.py or -m module, not both).")
 
     # Import the module, pretending its __name__ is "__main__".
     #
