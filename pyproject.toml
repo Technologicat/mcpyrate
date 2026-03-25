@@ -22,6 +22,16 @@ dynamic = ["version"]
 dependencies = [
     "colorama>=0.4.4"
 ]
+
+[dependency-groups]
+dev = [
+    "flake8",
+    "autopep8",
+    "importmagic",
+    "epc",
+    "jedi>=0.19.2",
+]
+
 keywords=["macros", "syntactic-macros", "macro-expander", "metaprogramming", "import", "importer"]
 classifiers = [
     "Development Status :: 4 - Beta",
