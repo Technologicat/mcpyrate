@@ -41,6 +41,7 @@ def discovertestdirectories(root):
     pattern = f"{os.path.sep}test"
     out = []
     for path, dirs, files in os.walk(root):
+        dirs[:] = [d for d in dirs if not d.startswith(".")]
         if path.endswith(pattern):
             out.append(path)
     return list(sorted(out))
@@ -79,6 +80,7 @@ def discovertestfiles_in(path):
 def discoverdemofiles(root):
     out = []
     for path, dirs, files in os.walk(root):
+        dirs[:] = [d for d in dirs if not d.startswith(".")]
         demos = discoverdemofiles_in(path)
         if demos:
             relpath = os.path.relpath(path)
