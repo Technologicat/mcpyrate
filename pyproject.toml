@@ -120,10 +120,11 @@ ignore = [
     "SIM118",  # in-dict-keys — explicit .keys() marks the variable as a dictlike
     "SIM300",  # yoda conditions — H > threshold reads naturally, threshold < H does not
     "SIM910",  # dict.get with None default — explicit None documents programmer intent
+    "SIM103",  # return condition directly — multi-guard patterns; autofix breaks visual consistency
 ]
 
 [tool.ruff.lint.per-file-ignores]
-"__init__.py" = ["F401"]  # re-exports
+"__init__.py" = ["F401", "F403"]  # re-exports via star-import
 "mcpyrate/test/**" = ["F821", "F823"]  # quasiquoted names appear undefined to static analysis
 
 [tool.mypy]
