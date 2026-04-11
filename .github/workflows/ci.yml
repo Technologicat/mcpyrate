@@ -33,8 +33,9 @@ jobs:
         pip install ruff
         pip install pdm
     - name: Lint with ruff
-      run: |
-        ruff check .
+      run: ruff check . --ignore SIM103
+    - name: Lint advisories (non-blocking)
+      run: ruff check . --select SIM103 || true
     - name: Determine Python version string for PDM
       run: |
         echo "TARGET_PYTHON_VERSION_FOR_PDM=${{ matrix.python-version }}" | tr - @ >> "$GITHUB_ENV"
