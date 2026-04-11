@@ -3,7 +3,7 @@
 
 import ast
 import os
-import sys
+import sys  # noqa: F401 -- documents test scope
 
 from ..coreutils import (resolve_package, relativize, match_syspath,
                          ismacroimport, get_macros,

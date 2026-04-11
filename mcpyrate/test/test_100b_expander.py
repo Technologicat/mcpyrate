@@ -3,7 +3,7 @@
 
 import ast
 
-from ..astdumper import dump as ast_dump
+from ..astdumper import dump as ast_dump  # noqa: F401 -- documents API surface
 from ..expander import (namemacro, isnamemacro, parametricmacro, isparametricmacro,
                         destructure_candidate,
                         MacroExpander, MacroCollector,

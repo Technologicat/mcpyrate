@@ -61,22 +61,20 @@ Test discovery: `runtests.py` walks subdirectories named `test/`, finds `test_*.
 python -c "import mcpyrate.activate; from mcpyrate.test.test_120a_quotes import runtests; runtests()"
 ```
 
-**Tests as API documentation**: Tests double as detailed API documentation. When a function return value documents an API contract, keep the `result = ...` assignment even if the value isn't used later, and annotate with `# noqa: F841, documents API return`.
+**Tests as API documentation**: Tests double as detailed API documentation. When a function return value documents an API contract, keep the `result = ...` assignment even if the value isn't used later, and annotate with `# noqa: F841 -- documents API return`.
 
-**Linting new tests**: Lint any new or modified test files with `flake8 --select=F401,F841,F821`. Pay attention to:
-  - **F841** (assigned but never used): Use `# noqa: F841, documents API return` when the assignment documents the API contract. Otherwise, remove.
-  - **F821** (undefined name): Can legitimately occur in quoted code (`q[...]`). Use `# noqa: F821, only quoted` when the name only appears inside a quasiquote.
+**Linting new tests**: Lint any new or modified test files with `ruff check`. Pay attention to:
+  - **F841** (assigned but never used): Use `# noqa: F841 -- documents API return` when the assignment documents the API contract. Otherwise, remove.
+  - **F821** (undefined name): Can legitimately occur in quoted code (`q[...]`). Use `# noqa: F821 -- only quoted` when the name only appears inside a quasiquote. F821 is globally suppressed for `mcpyrate/test/**` in pyproject.toml, but may still need per-site noqa in other modules.
   - **F401** (unused import): Should almost always be cleaned up. The only exception is when the import documents a complete set of related names for the reader's benefit (e.g. importing all quasiquote operators `q, u, n, a, s, t, h` even if some aren't used in that file). Use `# noqa: F401` with a brief reason.
 
 ## Linting
 
 ```bash
-# Hard errors (syntax errors, undefined names)
-flake8 . --config=flake8rc --select=E9,F63,F7,F82 --show-source
-
-# Soft warnings
-flake8 . --config=flake8rc --exit-zero --max-line-length=127
+ruff check <changed .py files>   # primary linter (config in pyproject.toml)
 ```
+
+Legacy `flake8rc` also present (used by Emacs flycheck, not by CI or CC).
 
 ## Documentation
 

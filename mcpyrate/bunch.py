@@ -64,7 +64,7 @@ class Bunch:
     def values(self):
         return self._data.values()
     def get(self, name, default=None):
-        return self[name] if name in self else default
+        return self[name] if name in self else default  # noqa: SIM401 -- this IS the .get() implementation
     def __eq__(self, other):
         return other == self._data
     def __ne__(self, other):

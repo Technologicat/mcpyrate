@@ -3,15 +3,15 @@
 
 import ast
 
-from ..core import (MacroExpansionError, MacroApplicationError,
+from ..core import (MacroExpansionError, MacroApplicationError,  # noqa: F401 -- documents API surface
                     MacroExpanderMarker, Done,
                     BaseMacroExpander,
                     global_postprocess, global_postprocessors,
                     add_postprocessor, remove_postprocessor,
                     global_bindings)
-from ..expander import MacroExpander, namemacro, parametricmacro
+from ..expander import MacroExpander, namemacro, parametricmacro  # noqa: F401 -- documents API surface
 from ..markers import ASTMarker
-from ..unparser import unparse_with_fallbacks
+from ..unparser import unparse_with_fallbacks  # noqa: F401 -- documents API surface
 
 
 def runtests():

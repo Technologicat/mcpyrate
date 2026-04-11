@@ -19,7 +19,6 @@ __all__ = ["capture_value", "capture_macro", "capture_as_macro",
 import ast
 import copy
 import pickle
-import sys
 
 from .core import Done, MacroExpansionError, global_bindings
 from .coreutils import _mcpyrate_attr

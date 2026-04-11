@@ -158,7 +158,7 @@ def runtests():
 
     def test_splice_expression_1():
         with q as quoted:
-            a = __paste_here__  # noqa: F821, F841; `a` used in surrounding context; `__paste_here__` is a marker
+            a = __paste_here__  # noqa: F821, F841 -- `a` used in surrounding context; `__paste_here__` is a marker
         splice_expression(q[42], quoted)
         with temporary_module() as module:
             run(quoted, module)
