@@ -21,8 +21,9 @@ Uses PDM with `pdm-backend`. Python 3.10–3.14.
 ```bash
 pdm install
 pdm use --venv in-project
-source .venv/bin/activate
 ```
+
+Prefix commands with `pdm run` if the venv is not active.
 
 The project venv is managed by PDM (`pdm venv create`, `pdm use --venv in-project`). To switch Python versions, remove the old venv and create a new one:
 
@@ -43,7 +44,7 @@ Entry point: `macropython` (macro-enabled Python REPL/runner).
 Custom test runner (not pytest). Each test module exports a `runtests()` function. Tests live in `test/` (singular) subdirectories.
 
 ```bash
-# Run all tests and demos (from repo root, with venv activated)
+# Run all tests and demos (from repo root)
 python runtests.py
 
 # Run a single test module
