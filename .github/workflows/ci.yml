@@ -16,10 +16,32 @@ on:
 jobs:
   build:
 
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        shell: bash  # so the `tr` in "Determine Python version string for PDM" works on Windows (uses Git Bash)
     strategy:
+      fail-fast: false
       matrix:
+        # Full Python/PyPy matrix on Linux; newest CPython plus PyPy on
+        # macOS and Windows.  Rationale: mcpyrate is pure Python with a
+        # macro expander that manipulates AST, filesystem paths, and import
+        # machinery — exactly the areas where OS-specific bugs (path
+        # separators, line endings, import cache) tend to show up
+        # independently of the Python minor version.  We include PyPy on
+        # every OS because PyPy is a separate interpreter family with its
+        # own AST/import quirks, not just "CPython with different perf".
+        os: [ubuntu-latest]
         python-version: ["3.10", "3.11", "3.12", "3.13", "3.14", pypy-3.11]
+        include:
+          - os: macos-latest
+            python-version: "3.14"
+          - os: macos-latest
+            python-version: pypy-3.11
+          - os: windows-latest
+            python-version: "3.14"
+          - os: windows-latest
+            python-version: pypy-3.11
 
     steps:
     - uses: actions/checkout@v6
@@ -50,10 +72,7 @@ jobs:
         #     https://pdm-project.org/en/latest/usage/venv/
         pdm install
     - name: Test with runtests.py
-      run: |
-        pdm use --venv in-project
-        source .venv/bin/activate
-        python runtests.py
+      run: pdm run python runtests.py
 
   build-dist:
     needs: build
