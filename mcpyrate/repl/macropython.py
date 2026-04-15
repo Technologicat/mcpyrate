@@ -8,6 +8,7 @@ import argparse
 import atexit
 import os
 import pathlib
+import platform
 import sys
 from importlib import import_module
 from importlib.util import module_from_spec, resolve_name
@@ -228,8 +229,24 @@ def main():
         sys.exit(0)
 
     if opts.interactive:
-        import readline  # noqa: F401, side effect: enable GNU readline in input()
-        import rlcompleter  # noqa: F401, side effects: readline tab completion
+        # Hybrid readline loading: try the stdlib module first (POSIX: Linux
+        # and macOS ship it), fall back to `pyreadline3` (third-party Windows
+        # replacement with a compatible API surface), and finally degrade
+        # gracefully if neither is available.  Without readline, the REPL
+        # still works — you just lose command history, tab completion, and
+        # persistent cross-session history.  The `rlcompleter` module is
+        # tied to readline, so it's loaded/skipped alongside.
+        try:
+            import readline  # noqa: F401, side effect: enable GNU readline in input()
+            import rlcompleter  # noqa: F401, side effects: readline tab completion
+        except ImportError:
+            try:
+                import pyreadline3 as readline  # type: ignore  # noqa: F401
+                import rlcompleter  # noqa: F401
+            except ImportError:
+                readline = None
+                rlcompleter = None
+        _has_readline = readline is not None
 
         from .console import MacroConsole
         repl_locals = {}
@@ -239,20 +256,34 @@ def main():
             repl_locals["np"] = numpy
             repl_locals["plt"] = matplotlib.pyplot
             matplotlib.pyplot.ion()
-        readline.set_completer(rlcompleter.Completer(namespace=repl_locals).complete)
-        readline.parse_and_bind("tab: complete")  # PyPy ignores this, but not needed there.
 
-        config_dir = pathlib.Path(_config_dir).expanduser().resolve()
-        try:
-            readline.read_history_file(config_dir / "macropython_history")
-        except FileNotFoundError:
-            pass
+        if _has_readline:
+            readline.set_completer(rlcompleter.Completer(namespace=repl_locals).complete)
+            # macOS ships `readline` backed by `libedit`, which speaks a
+            # different `parse_and_bind` dialect than GNU readline.
+            # https://stackoverflow.com/questions/7116038/python-repl-tab-completion-on-macos
+            if platform.system() == "Darwin":  # macOS
+                readline.parse_and_bind("bind ^I rl_complete")
+            else:  # Linux, Windows (pyreadline3)
+                readline.parse_and_bind("tab: complete")  # PyPy ignores this, but not needed there.
 
-        def save_history():
-            config_dir.mkdir(parents=True, exist_ok=True)
-            readline.set_history_length(1000)
-            readline.write_history_file(config_dir / "macropython_history")
-        atexit.register(save_history)
+            config_dir = pathlib.Path(_config_dir).expanduser().resolve()
+            try:
+                readline.read_history_file(config_dir / "macropython_history")
+            except FileNotFoundError:
+                pass
+
+            def save_history():
+                config_dir.mkdir(parents=True, exist_ok=True)
+                readline.set_history_length(1000)
+                readline.write_history_file(config_dir / "macropython_history")
+            atexit.register(save_history)
+        else:
+            # Windows without `pyreadline3` installed: let the user know what
+            # they're missing and how to restore the full experience.
+            print("Note: `readline` unavailable — command history and tab completion are disabled.\n"
+                  "      On Windows, `pip install pyreadline3` restores both.",
+                  file=sys.stderr)
 
         # Add CWD to import path like the builtin interactive console does.
         if sys.path[0] != "":
