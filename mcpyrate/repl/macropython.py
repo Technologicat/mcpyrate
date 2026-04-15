@@ -147,9 +147,18 @@ def main():
     # anything outside Latin-1 — so a script that prints, say, a box-drawing
     # rule or a non-Latin name crashes with `UnicodeEncodeError`.  POSIX
     # stdout is usually UTF-8 already, so this is a no-op there.
-    # `reconfigure` was added in Python 3.7; we require 3.10+.  The hasattr
-    # guard covers the edge case where stdout has been replaced with
-    # something that isn't a TextIOWrapper (e.g. a captured pipe in tests).
+    #
+    # Duck-type with `hasattr(stream, "reconfigure")` rather than a strict
+    # `isinstance(stream, io.TextIOWrapper)` check.  Callers can (and do)
+    # replace `sys.stdout` with wrapper objects — notably `unpythonic.net.
+    # server` swaps in a thread-local `unpythonic.Shim` so each remote REPL
+    # client sees its own per-thread output — and we *want* the reconfigure
+    # call to propagate through such wrappers.  `unpythonic.Shim.__getattr__`
+    # unboxes the thread-local value and forwards the call to the inner
+    # stream, which is exactly the desired outcome: the current thread's
+    # stdout becomes UTF-8.  A strict isinstance check would miss that case.
+    # If the stream (or whatever it wraps) genuinely has no `reconfigure`
+    # method, `hasattr` returns False and we skip — safe no-op.
     for stream in (sys.stdout, sys.stderr):
         if hasattr(stream, "reconfigure"):
             stream.reconfigure(encoding="utf-8")
