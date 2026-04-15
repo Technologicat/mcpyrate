@@ -2,7 +2,13 @@
 
 **4.0.1** (in progress):
 
-*No user-visible changes yet.*
+**Fixed**:
+
+- **Windows support for the `macropython` CLI**: `macropython` now forces UTF-8 on stdout and stderr at startup, so macro-enabled scripts can print any Unicode character on Windows. Previously, Windows defaulted to the `cp1252` code page, and any script that printed a non-Latin-1 character (e.g. `\u2015` HORIZONTAL BAR, or any box-drawing or non-Western glyph) crashed with `UnicodeEncodeError` inside Colorama's stdout writer. POSIX shells are UTF-8 by default, so this is a no-op on Linux and macOS.
+- **Test suite now passes on Windows**, enabling Windows CI coverage. Three dev-side issues were blocking it:
+  - `runtests.py` test discovery crashed on Windows with `re.error: bad escape (end of pattern) at position 0`, because `re.sub(os.path.sep, ...)` treated the backslash path separator as an incomplete regex escape. Fixed by using `str.replace`.
+  - `runtests.py` demo runner crashed with `FileNotFoundError` because `rundemos()` hardcoded `/usr/bin/env python3` as the subprocess command. Fixed by using `sys.executable` (which is also strictly better on POSIX: it guarantees the demos run under the same interpreter as the test runner).
+  - `test_120a_quotes.py` had an assertion that interpolated `__file__` into a Python-source-code string via f-string, which worked by accident on POSIX but mismatched on Windows (where `unparse()` properly escapes the path's backslashes). Fixed by using `{__file__!r}` on both sides.
 
 
 ---
