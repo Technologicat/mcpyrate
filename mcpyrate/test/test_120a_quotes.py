@@ -135,8 +135,11 @@ def runtests():
 
     # TODO: This is testing, beside what we want, an implementation detail;
     # TODO: is there a better way?
-    assert unparse(expand1rq[h[q][42]]) in (f"mcpyrate.quotes.splice_ast_literals(mcpyrate.quotes.ast.Constant(value=42), '{__file__}')",
-                                            f"mcpyrate.quotes.splice_ast_literals(mcpyrate.quotes.ast.Constant(value=42, kind=None), '{__file__}')")
+    # `__file__!r` so this works on Windows too (where __file__ contains
+    # backslashes that need escaping in the Python-source representation
+    # that unparse() emits).
+    assert unparse(expand1rq[h[q][42]]) in (f"mcpyrate.quotes.splice_ast_literals(mcpyrate.quotes.ast.Constant(value=42), {__file__!r})",
+                                            f"mcpyrate.quotes.splice_ast_literals(mcpyrate.quotes.ast.Constant(value=42, kind=None), {__file__!r})")
 
     # Macro names can be hygienically captured, too. The name becomes "originalname_uuid".
     assert unparse(q[h[first][42]]).startswith("first_")
