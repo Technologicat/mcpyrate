@@ -8,7 +8,9 @@ Next unused item code: D7
 - **D4: Audit typing: abstract parameter types, concrete return types**: Parameters should use abstract types from `collections.abc` (`Mapping`, `Sequence`, `Iterable`) for widest-possible-accepted semantics. Return types should use concrete lowercase builtins (`tuple[int, int]`, `list[int]`, `dict[str, int]`) — PEP 585, Python 3.9+. The capitalized `typing` forms (`Dict`, `List`, `Tuple`) are deprecated aliases for the builtins and offer no extra width — avoid them. Audit existing type hints across the codebase for consistency. (Discovered during raven-cherrypick compare mode planning, 2026-03-30.)
 
 
-- **D5: Tier 2 REPL tests (subprocess + pty) for `macropython -i`**: Tier 1 coverage for `MacroConsole` lands in `mcpyrate/test/test_126_repl.py` — in-process, scripted input via `builtins.input` monkey-patch, captured stdout/stderr via `io.StringIO`. Fast (milliseconds per test), simple, covers 80–90% of regressions. **We might never need tier 2.**
+- **D5: Tier 2 REPL tests (subprocess + pty) for `macropython -i`**: Tier 1 coverage for `MacroConsole` lands in `mcpyrate/test/test_126_repl.py` — in-process, scripted input via `builtins.input` monkey-patch, captured stdout/stderr via `io.StringIO`. Fast (milliseconds per test), simple, covers a lot of REPL-logic regressions. **We might never need tier 2.**
+
+  **Important framing**: tier 1 is a *REPL-logic test*, not a terminal-UX test.  Monkey-patching `builtins.input` replaces the entire `input()` pathway before `PyOS_Readline` is ever called at the C level, so readline's line editor, history, and tab completion (as rendered to the user via key events) are **not partially covered — they are 0% covered**.  A regression in a `readline.parse_and_bind` call, in a completer registration, or in the SIGINT-during-readline path would pass tier 1 silently.  Tier 2 isn't "a safety net for edge cases" — it's the only place readline actually runs during tests.
 
   A second tier would spawn `python -m mcpyrate.repl.macropython -i` as a real subprocess and drive it through a pseudo-terminal using `pexpect` (or `ptyprocess` directly), with scripted `sendline`/`expect` pairs. This would catch things tier 1 cannot reach:
 
@@ -19,7 +21,7 @@ Next unused item code: D7
 
   Cost:
   - ~0.5–1 s startup per test (vs. milliseconds for tier 1). Matters when you want ~50+ REPL tests.
-  - POSIX-only naturally. Windows needs a ConPTY-based backend — either via `pywinpty` or raw `ctypes` into the Windows API — same blocker family as `unpythonic`'s D9 (port `unpythonic.net` to MS Windows). If we ever do tier 2, the Windows side can piggy-back on whatever decision gets made there.
+  - POSIX-only naturally. Windows would need a ConPTY-based backend — either via `pywinpty` or raw `ctypes` into the Windows API. This is an independent design problem from unpythonic's `unpythonic.net` Windows support, which sidesteps ConPTY entirely by using `socket.socketpair` (sufficient because `unpythonic.net` just needs bidirectional byte streams, not real terminal semantics — whereas tier 2 here *is* testing real terminal semantics and therefore can't substitute a socketpair).
   - `pexpect` would become a new dev dep. Not heavy, but non-zero.
 
   **Rough shape if we ever do it:**

@@ -18,6 +18,17 @@ in `TODO_DEFERRED.md` as D5 for when we need it.  We might never need
 it — tier 1 covers the vast majority of REPL regressions in-process
 at milliseconds per test.
 
+**Tier 1 is zero coverage of readline itself.** Monkey-patching
+`builtins.input` replaces the entire `input()` pathway before
+`PyOS_Readline` is ever called at the C level, so readline's line
+editor, history, and tab completion (as rendered to the user via key
+events) are not "partially covered" — they are uncovered.  A
+regression in a `readline.parse_and_bind` call, in a completer
+registration, or in the SIGINT-during-readline path would pass tier 1
+silently.  Tier 1 is a REPL-logic test, not a terminal-UX test.
+That's the real motivation for tier 2: not "a safety net for edge
+cases", but "the only place readline actually runs during tests".
+
 ---
 
 **Fleet sibling**: `unpythonic/net/tests/test_client.py` is the
