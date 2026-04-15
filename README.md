@@ -100,7 +100,7 @@ Tests must be run using the `mcpyrate` in the source tree (instead of any instal
 
 To run with the `mcpyrate` in the source tree, replace `macropython` with `python3 -m mcpyrate.repl.macropython`. For example, to run a demo, `python3 -m mcpyrate.repl.macropython demo/anaphoric_if.py`, or to run a test, `python3 -m mcpyrate.repl.macropython -m mcpyrate.test.test_compiler`. Here the first `-m` goes to `python3`, whereas the second one goes to `macropython`.
 
-If you just want to run all tests, `python3 runtests.py`.
+If you just want to run all tests, `pdm run python runtests.py`.
 
 
 ## Features
