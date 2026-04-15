@@ -17,6 +17,38 @@ A plausible tier 2 (subprocess + pty driven by `pexpect`) is sketched
 in `TODO_DEFERRED.md` as D5 for when we need it.  We might never need
 it — tier 1 covers the vast majority of REPL regressions in-process
 at milliseconds per test.
+
+---
+
+**Fleet sibling**: `unpythonic/net/tests/test_client.py` is the
+two-REPL-in-one-process variant of this pattern, used to test the
+`unpythonic.net.client` / `unpythonic.net.server` REPL-over-TCP
+subsystem.  Its `scripted_repl` helper diverges from this one in two
+load-bearing ways:
+
+  1. It does **not** monkey-patch `builtins.input`.  The server in
+     that scenario *also* calls `builtins.input` internally (its
+     session-thread `InteractiveConsole.raw_input` reads from the
+     PTY slave via `input(prompt) → sys.stdin.readline()`), so a
+     global patch would hijack both client and server and the test
+     would hang.  Instead, the unpythonic client has a private
+     `_connect(..., _input=None)` seam, and the helper exposes
+     `captured.fake_input` for the caller to thread through.
+
+  2. It does **not** reassign `sys.stdout` / `sys.stderr`.  The
+     unpythonic server installs `sys.stdout = Shim(_threadlocal_stdout)`
+     to route each session thread's output to its own PTY slave, and
+     a global reassignment would replace that Shim, killing PTY
+     routing.  Instead, the helper mutates the *main thread's* slot
+     in `server._threadlocal_stdout/stderr` via `ThreadLocalBox.
+     __lshift__`, leaving session-thread routing untouched.
+
+If you're copying this tier-1 pattern into a new project, use *this*
+version when there's exactly one in-process REPL; use the unpythonic
+variant as the reference when there are two (or more) REPLs sharing
+the same process.  Keep both in mind before you reach for subprocess
+isolation as the answer to "my scripted_repl stopped working" — most
+of the time the fix is smaller than that.
 """
 
 import builtins
