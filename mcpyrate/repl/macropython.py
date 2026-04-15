@@ -140,6 +140,20 @@ def import_module_as_main(name, script_mode):
 
 def main():
     """Handle command-line arguments and run the specified main program."""
+    # Force UTF-8 for stdout/stderr so that macro-enabled scripts can print
+    # any Unicode character on any platform.  On Windows, the default stdout
+    # encoding is `cp1252` (the legacy Western European code page), which
+    # can't represent characters like `\u2015` (HORIZONTAL BAR, `―`) or
+    # anything outside Latin-1 — so a script that prints, say, a box-drawing
+    # rule or a non-Latin name crashes with `UnicodeEncodeError`.  POSIX
+    # stdout is usually UTF-8 already, so this is a no-op there.
+    # `reconfigure` was added in Python 3.7; we require 3.10+.  The hasattr
+    # guard covers the edge case where stdout has been replaced with
+    # something that isn't a TextIOWrapper (e.g. a captured pipe in tests).
+    for stream in (sys.stdout, sys.stderr):
+        if hasattr(stream, "reconfigure"):
+            stream.reconfigure(encoding="utf-8")
+
     parser = argparse.ArgumentParser(description="""Run a Python program or an interactive interpreter with mcpyrate enabled.""",
                                      formatter_class=argparse.RawDescriptionHelpFormatter)
 
