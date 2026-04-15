@@ -21,7 +21,9 @@ def filename_to_modulename(path, filename):
     Example::
         "some/dir", "mod.py" --> "some.dir.mod"
     """
-    modpath = re.sub(os.path.sep, r".", path)
+    # str.replace, not re.sub: on Windows os.path.sep is a lone backslash,
+    # which as a regex pattern is an incomplete escape and raises re.error.
+    modpath = path.replace(os.path.sep, ".")
     themod = re.sub(r"\.py$", r"", filename)
     return ".".join([modpath, themod])
 
