@@ -151,8 +151,10 @@ def rundemos(clear_bytecode_cache=True):
     for fn in demofiles:
         print(colorize(f"  Running file '{fn}'...", ColorScheme.TESTHEADING),
               file=sys.stderr)
-        cmd = ['/usr/bin/env',
-               'python3',
+        # Use sys.executable (not `/usr/bin/env python3`, which doesn't exist
+        # on Windows) so demos run under the same interpreter as the test
+        # runner itself — on every platform.
+        cmd = [sys.executable,
                '-m', 'mcpyrate.repl.macropython',
                fn]
         try:
