@@ -1,7 +1,7 @@
 # -*- coding: utf-8; -*-
 """Find and expand dialects, i.e. whole-module source and AST transformers."""
 
-__all__ = ["Dialect", "DialectExpander"]
+__all__ = ["Dialect", "DialectExpander", "split_at_dialectimport"]
 
 import ast
 import functools
@@ -172,6 +172,140 @@ class StepExpansion(Dialect):  # actually part of public API of mcpyrate.debug, 
 # then fail to parse as a Python statement.
 _dialectimport = re.compile(r"^from\s+([.0-9a-zA-z_]+)\s+import dialects,\s+([^(\\\n]+)\s*$",
                             flags=re.MULTILINE)
+
+
+def split_at_dialectimport(text, dialect_name, lineno=None):
+    """Separate a source-transformer dialect's own territory from the rest.
+
+    Designed for use inside a `Dialect.transform_source` override. Handles
+    the subtle multi-dialect cases so that each dialect author doesn't
+    have to reinvent them.
+
+    Mental model: `from X import dialects, Y` is `mcpyrate`'s Python-surface-
+    syntax equivalent of Racket's ``#lang Y``. A dialect-import is not a
+    real Python import; it is a language-selection directive. The convention
+    is one such directive per dialect per file (you don't declare the same
+    language twice in a Racket file either).
+
+    Arguments:
+
+    - `text`: full source text passed into `transform_source`.
+    - `dialect_name`: the name of the calling dialect as it appears in
+      the `from ... import dialects, ...` statement (for class `BF`, this
+      is the string `"BF"`). Use `type(self).__name__` at the call site.
+    - `lineno`: optional 1-based line number of the specific dialect-import
+      that invoked this call. When given, the search starts with the line
+      at that position; if it is not a matching dialect-import (for
+      instance because an earlier source-transformer already rewrote it),
+      the search falls back to the first import matching `dialect_name`
+      in source order. The expander sets `self.lineno` on the dialect
+      instance before calling `transform_source`, so pass `self.lineno`.
+
+    Returns the triple ``(prologue, other, body)`` on success, or `None`
+    if no matching dialect-import is found. The tuple order mirrors the
+    intended paste order in the transformer's output:
+
+    - `prologue`: text strictly before the calling dialect's import line,
+      with any other dialect-import lines also removed from it.
+    - `other`: a list of dialect-import lines (newline-terminated strings)
+      in source order, to be re-emitted just below the prologue so
+      `mcpyrate` can still find them. The calling dialect's own import
+      line appears in this list only if it carried additional dialects
+      on the same `from ... import dialects, ...` statement; in that
+      case it is rewritten with the calling dialect's name removed.
+    - `body`: text strictly after the calling dialect's import line,
+      with any other dialect-import lines also removed.
+
+    Typical source-transformer usage::
+
+        def transform_source(self, text):
+            r = split_at_dialectimport(text, type(self).__name__, self.lineno)
+            if r is None:
+                return text  # no-op; nothing to do
+            prologue, other, body = r
+            return prologue + "".join(other) + my_compiler(body)
+
+    Placing `other` between `prologue` and the transformed `body` keeps
+    the surviving dialect-imports near the top of the file, which is the
+    conventional Python position and also where `mcpyrate` naturally
+    looks for them on the next iteration.
+
+    Composes correctly with both AST-transformer dialects and other
+    source-transformer dialects (even on the same
+    ``from X import dialects, A, B`` line): each source transformer sees
+    the output of the previous one, strips its own binding from the
+    import line, and leaves the remaining bindings visible for the next
+    iteration.
+    """
+    matches = list(_dialectimport.finditer(text))
+    if not matches:
+        return None
+
+    def line_bounds(match):
+        start = text.rfind("\n", 0, match.start()) + 1
+        end = text.find("\n", match.end())
+        end = len(text) if end == -1 else end + 1
+        return start, end
+
+    def bindings_of(match):
+        statement = match.group(0).strip()
+        try:
+            tree = ast.parse(statement, mode="exec")
+        except SyntaxError:
+            return []
+        import_node = tree.body[0]
+        return [alias.name for alias in import_node.names[1:]]  # skip leading "dialects"
+
+    # Find the calling dialect's own import line. Prefer the exact line at
+    # `lineno` when given; fall back to searching by name so that a
+    # previous source-transformer having shifted or rewritten the line is
+    # not fatal. (The convention is one import per dialect per file, so
+    # the name search is expected to match at most one line.)
+    target = None
+    if lineno is not None:
+        for m in matches:
+            if (1 + text[:m.start()].count("\n") == lineno
+                    and dialect_name in bindings_of(m)):
+                target = m
+                break
+    if target is None:
+        for m in matches:
+            if dialect_name in bindings_of(m):
+                target = m
+                break
+    if target is None:
+        return None
+
+    target_start, target_end = line_bounds(target)
+
+    # Build the `other` list in source order, rewriting the target line
+    # to drop `dialect_name` from its bindings (dropped entirely if that
+    # was the only binding).
+    other = []
+    for m in matches:
+        if m is target:
+            remaining = [n for n in bindings_of(m) if n != dialect_name]
+            if remaining:
+                other.append(f"from {m.group(1)} import dialects, {', '.join(remaining)}\n")
+        else:
+            start, end = line_bounds(m)
+            other.append(text[start:end])
+
+    # Split the non-dialect-import text around the target line.
+    dialect_ranges = sorted(line_bounds(m) for m in matches)
+    prologue_parts = []
+    body_parts = []
+    cursor = 0
+    for ds, de in dialect_ranges:
+        segment = text[cursor:ds]
+        (prologue_parts if ds <= target_start else body_parts).append(segment)
+        cursor = de
+    tail = text[cursor:]
+    (prologue_parts if cursor <= target_start else body_parts).append(tail)
+
+    return "".join(prologue_parts), other, "".join(body_parts)
+
+
 class DialectExpander:
     """The dialect expander.
 

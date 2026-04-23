@@ -2,6 +2,10 @@
 
 **4.0.1** (in progress):
 
+**New**:
+
+- **`mcpyrate.dialects.split_at_dialectimport`**: helper for authors of source-transformer dialects. Given the full source text and the calling dialect's name, returns the triple `(prologue, other, body)` — the parts to concatenate in that order to form the transformer output. `prologue` is the text before the dialect-import line, `other` is a list of dialect-import lines to re-emit so subsequent dialect processing can still find them, and `body` is the text after. Correctly handles sharing a single `from X import dialects, A, B` line between a source-transformer dialect and other dialects (the calling dialect's name is stripped from the bindings list; the rewritten line goes into `other`).
+
 **Fixed**:
 
 - **Dialect-import scanner regex** now excludes newlines from the bindings-list character class, enforcing the documented "import must be on a single line" constraint. Latent bug, triggered only by source-transformer dialects whose body contains no `(` or `\` character (e.g. a brainfuck dialect): the regex previously ate the dialect-import line plus the entire module body as a single match, which then failed to parse as a Python statement. Ordinary Python dialects were unaffected because real Python code contains `(` very early.

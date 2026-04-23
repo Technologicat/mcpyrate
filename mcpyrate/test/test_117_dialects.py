@@ -5,7 +5,7 @@ import ast
 import io
 import sys
 
-from ..dialects import Dialect, DialectExpander, StepExpansion
+from ..dialects import Dialect, DialectExpander, StepExpansion, split_at_dialectimport
 
 
 # Test dialect classes for error path testing
@@ -307,6 +307,74 @@ def runtests():
         result = dialect.transform_ast(ast.parse("x = 1"))
         assert result is NotImplemented
     test_step_expansion_ast_already_debug()
+
+    # -- split_at_dialectimport --
+
+    def test_split_single_dialect():
+        """Single dialect-import, single binding: import line disappears, body preserved."""
+        text = "from x import dialects, BF\n+++.\n"
+        prologue, other, body = split_at_dialectimport(text, "BF", 1)
+        assert prologue == ""
+        assert body == "+++.\n"
+        assert other == []
+    test_split_single_dialect()
+
+    def test_split_preserves_prologue():
+        """Text before the dialect-import line goes into `prologue`."""
+        text = "# encoding comment\n'''docstring'''\nfrom x import dialects, BF\nbody\n"
+        prologue, other, body = split_at_dialectimport(text, "BF", 3)
+        assert prologue == "# encoding comment\n'''docstring'''\n"
+        assert body == "body\n"
+        assert other == []
+    test_split_preserves_prologue()
+
+    def test_split_strips_own_dialect_from_shared_line():
+        """Two dialects on one line: target's name is stripped, line re-emitted in `other`."""
+        text = "from x import dialects, BF, Opt\n+++.\n"
+        prologue, other, body = split_at_dialectimport(text, "BF", 1)
+        assert prologue == ""
+        assert body == "+++.\n"
+        assert other == ["from x import dialects, Opt\n"]
+    test_split_strips_own_dialect_from_shared_line()
+
+    def test_split_preserves_other_dialect_on_separate_line():
+        """Separate dialect-imports: the non-target one is pulled out into `other`."""
+        text = "from x import dialects, BF\nfrom y import dialects, Opt\n+++.\n"
+        prologue, other, body = split_at_dialectimport(text, "BF", 1)
+        assert prologue == ""
+        assert body == "+++.\n"
+        assert other == ["from y import dialects, Opt\n"]
+    test_split_preserves_other_dialect_on_separate_line()
+
+    def test_split_stale_lineno_falls_back_to_name():
+        """A lineno that no longer points to the dialect-import still finds it by name."""
+        text = "from x import dialects, BF\n+++.\n"
+        # lineno 99 doesn't exist in the text; helper falls back to name search.
+        prologue, other, body = split_at_dialectimport(text, "BF", 99)
+        assert prologue == ""
+        assert body == "+++.\n"
+        assert other == []
+    test_split_stale_lineno_falls_back_to_name()
+
+    def test_split_no_matching_dialect():
+        """Returns None when no dialect-import with the given name is present."""
+        text = "from x import dialects, Other\n+++.\n"
+        assert split_at_dialectimport(text, "BF") is None
+    test_split_no_matching_dialect()
+
+    def test_split_no_dialect_import_at_all():
+        """Returns None when there's no dialect-import anywhere in the text."""
+        assert split_at_dialectimport("x = 1\n", "BF") is None
+    test_split_no_dialect_import_at_all()
+
+    def test_split_tolerates_trailing_comment_on_import_line():
+        """A `# noqa`-style trailing comment on the import line is handled."""
+        text = "from x import dialects, BF  # noqa: F401\n+++.\n"
+        prologue, other, body = split_at_dialectimport(text, "BF")
+        assert prologue == ""
+        assert body == "+++.\n"
+        assert other == []
+    test_split_tolerates_trailing_comment_on_import_line()
 
 
 if __name__ == '__main__':
