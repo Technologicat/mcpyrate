@@ -1,6 +1,6 @@
 # Changelog
 
-**4.0.1** (in progress):
+**4.1.0** (23 April 2026) - *Splice the mainbrace* edition:
 
 **New**:
 
