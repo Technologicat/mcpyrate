@@ -164,7 +164,13 @@ class StepExpansion(Dialect):  # actually part of public API of mcpyrate.debug, 
 
 # --------------------------------------------------------------------------------
 
-_dialectimport = re.compile(r"^from\s+([.0-9a-zA-z_]+)\s+import dialects,\s+([^(\\]+)\s*$",
+# The character class in the second capture group excludes `(` and `\` (the
+# dialect-import must not use parentheses or a line continuation) and also
+# `\n`, so the greedy `+` can't run into following lines. Without the newline
+# exclusion, a source-transformer dialect whose body doesn't contain `(` or
+# `\` (e.g. brainfuck) would have the whole program swallowed into the match,
+# then fail to parse as a Python statement.
+_dialectimport = re.compile(r"^from\s+([.0-9a-zA-z_]+)\s+import dialects,\s+([^(\\\n]+)\s*$",
                             flags=re.MULTILINE)
 class DialectExpander:
     """The dialect expander.
