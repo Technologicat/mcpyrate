@@ -13,3 +13,6 @@ pdm.lock
 *.egg-info
 *.mypy_cache
 .python-version
+.coverage
+coverage.xml
+htmlcov/

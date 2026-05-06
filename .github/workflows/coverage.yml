@@ -35,15 +35,14 @@ jobs:
         # "When you run pdm install the first time on a new PDM-managed project, whose Python interpreter is not decided yet,
         #  PDM will create a virtualenv in <project_root>/.venv, and install dependencies into it."
         #     https://pdm-project.org/en/latest/usage/venv/
+        # `coverage` is declared in [dependency-groups].dev (pyproject.toml),
+        # so it lands in the same venv as the code being tested.
         pdm install
-    - name: Install coverage tool in in-project virtualenv
-      run: |
-        pdm run python -m ensurepip
-        # coverage must run in the same venv as the code being tested.
-        pdm run python -m pip install coverage
     - name: Generate coverage report
       run: |
-        pdm run python -m coverage run --source=. -m runtests
+        # `source` and `omit` come from [tool.coverage.run] in pyproject.toml,
+        # so no source flag is needed here.
+        pdm run python -m coverage run -m runtests
         pdm run python -m coverage xml
     - name: Upload coverage to Codecov
       uses: codecov/codecov-action@v6

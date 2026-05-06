@@ -60,6 +60,9 @@ dev = [
     "importmagic",
     "epc",
     "jedi>=0.19.2",
+    # Coverage analysis (used by .github/workflows/coverage.yml). Declared
+    # here so a fresh `pdm install` matches what CI runs.
+    "coverage",
     # For local pre-release sanity checks: `python -m build --sdist`
     # exercises the same sdist path that CI runs on tag push.
     "build",
@@ -83,12 +86,23 @@ path = "mcpyrate/__init__.py"
 includes = ["mcpyrate"]
 excludes = ["**/test", "**/__pycache__"]
 
-# note the exclusion of an equivalent to zip_safe. I used to think that zip_safe was a core python metadata flag
-# telling pip and other python tools not to include the package in any kind of zip-import or zipapp file.
-# I was wrong. zip_safe is a setuptools-specific flag that tells setuptools to not include the package in a bdist_egg
-# Since bdist_eggs are no longer really used by anything and have been completely supplanted by wheels, zip_safe has no meaningful effect.
-# The effect i think you hoped to achieve with zip_safe is achieved by excluding `__pycache__` folders from
-# the built wheels, using the `excludes` field in the `[tool.pdm.build]` section above.
+# Note: there is no `zip_safe` setting here. `zip_safe` is a setuptools-specific
+# flag that controls whether setuptools may pack the package into a `bdist_egg`.
+# Eggs have been fully supplanted by wheels, so the flag has no effect under
+# pdm-backend. Excluding `__pycache__` from the built wheel via the `excludes`
+# field in `[tool.pdm.build]` above keeps stale bytecode out of the distribution.
+
+[tool.coverage.run]
+# Coverage signal is about which lines of *production code* run.
+# The `runtests` driver already reports pass/fail/error per testset,
+# so coverage analysis of the test files themselves would just add
+# rows to the report without insight. The omit glob below uses the
+# singular form (`test/`, not `tests/`) to match the actual layout
+# under `mcpyrate/test/`.
+source = ["mcpyrate"]
+omit = [
+    "*/test/*",
+]
 
 # most python tools at this point, including mypy, have support for sourcing configuration from pyproject.toml
 # making the setup.cfg file unnecessary
