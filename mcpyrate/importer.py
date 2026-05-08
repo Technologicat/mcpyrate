@@ -155,7 +155,26 @@ def path_stats(path, _stats_cache=None):
         # TODO: Or just document it, that the dialect definition module *must* macro-import those macros
         # TODO: even if it just injects them in the template?
         with tokenize.open(path) as sourcefile:
-            tree = ast.parse(sourcefile.read(), filename=path)
+            source_text = sourcefile.read()
+
+        try:
+            tree = ast.parse(source_text, filename=path)
+        except SyntaxError as exc:
+            # Source-level dialects (e.g. brainfuck, Befunge) have a module body
+            # that isn't parseable as Python at all — `ast.parse` raises
+            # `SyntaxError` before any dialect transformer has a chance to run.
+            # The error's `lineno` points at the first non-Python line, so the
+            # *prologue* — everything strictly before that line — is by
+            # definition valid Python (it includes the user's normal imports
+            # and the dialect-import line itself, both of which are real
+            # Python). Re-parse just that prefix; the existing AST scan then
+            # finds macro-imports and dialect-imports the same way it does for
+            # AST-level dialect files. This preserves multi-line parenthesized
+            # macro-imports in the prologue.
+            if exc.lineno is None:
+                raise
+            prologue_lines = source_text.splitlines(keepends=True)[: exc.lineno - 1]
+            tree = ast.parse("".join(prologue_lines), filename=path)
 
         macroimports = []
         dialectimports = []

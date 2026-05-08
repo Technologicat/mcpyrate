@@ -1,8 +1,10 @@
 # Changelog
 
-**4.1.1** (in progress):
+**4.1.1** (8 May 2026) - hotfix:
 
-*No user-visible changes yet.*
+**Fixed**:
+
+- **`mcpyrate.importer.path_stats`** now handles source-level dialect files (e.g. brainfuck, Befunge) on first import. Previously, `path_stats` always called `ast.parse` on the full source text to discover macro-imports and dialect-imports for cache invalidation. For a source-level dialect file the body after the dialect-import line is in another language (not Python), so `ast.parse` raised `SyntaxError` before any dialect transformer had a chance to run, and `macropython hello_bf.py` (or plain `import`) failed with that error. The fix: catch `SyntaxError`, truncate the source at the failing line (which Python tells us via `exc.lineno`), and `ast.parse` just the Python prologue. The existing AST-based scan then finds macro-imports and dialect-imports normally — including multi-line parenthesized `from X import (macros, a, b, c)` in the prologue. AST-level dialect files and ordinary Python files take the original path and are unaffected.
 
 
 ---
