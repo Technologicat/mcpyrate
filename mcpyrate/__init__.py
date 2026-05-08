@@ -16,4 +16,4 @@ from . import pycachecleaner  # noqa: F401
 from . import quotes  # noqa: F401
 from . import splicing  # noqa: F401
 
-__version__ = "4.1.1"
+__version__ = "4.1.2-dev"

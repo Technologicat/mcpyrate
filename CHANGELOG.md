@@ -1,5 +1,12 @@
 # Changelog
 
+**4.1.2** (in progress):
+
+*No user-visible changes yet.*
+
+
+---
+
 **4.1.1** (8 May 2026) - hotfix:
 
 **Fixed**:
