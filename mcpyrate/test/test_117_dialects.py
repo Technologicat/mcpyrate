@@ -143,7 +143,7 @@ def runtests():
                 ast.parse("x = 1"), kind="AST",
                 find_dialectimport=lambda content: ("fake.module",
                                                     {"BadDialect": int},
-                                                    1, 0),
+                                                    1, 0, 1, 10),
                 transform="transform_ast",
                 format_for_display=str)
         except TypeError as e:
@@ -160,7 +160,7 @@ def runtests():
                 ast.parse("x = 1"), kind="AST",
                 find_dialectimport=lambda content: ("fake.module",
                                                     {"Bad": ExplodingInitDialect},
-                                                    1, 0),
+                                                    1, 0, 1, 10),
                 transform="transform_ast",
                 format_for_display=str)
         except ImportError as e:
@@ -177,7 +177,7 @@ def runtests():
                 ast.parse("x = 1"), kind="AST",
                 find_dialectimport=lambda content: ("fake.module",
                                                     {"Bad": ExplodingTransformDialect},
-                                                    1, 0),
+                                                    1, 0, 1, 10),
                 transform="transform_ast",
                 format_for_display=str)
         except ImportError as e:
@@ -194,7 +194,7 @@ def runtests():
                 ast.parse("x = 1"), kind="AST",
                 find_dialectimport=lambda content: ("fake.module",
                                                     {"Bad": EmptyResultDialect},
-                                                    1, 0),
+                                                    1, 0, 1, 10),
                 transform="transform_ast",
                 format_for_display=str)
         except ImportError as e:
@@ -242,7 +242,7 @@ def runtests():
         def find_once(content):
             if call_count[0] == 0:
                 call_count[0] += 1
-                return ("fake.module", {"Good": GoodDialect}, 1, 0)
+                return ("fake.module", {"Good": GoodDialect}, 1, 0, 1, 10)
             return None
 
         old_stderr = sys.stderr
@@ -307,6 +307,69 @@ def runtests():
         result = dialect.transform_ast(ast.parse("x = 1"))
         assert result is NotImplemented
     test_step_expansion_ast_already_debug()
+
+    # -- find_dialectimport_*: source-location field propagation --
+
+    def test_find_dialectimport_source_returns_end_fields():
+        """Text-based finder returns end_lineno (= lineno) and end_col_offset (= statement length)."""
+        # Stick to a real, importable dialect so the module-level get_macros call succeeds.
+        text = "from mcpyrate.dialects import dialects, StepExpansion\n"
+        dexpander = DialectExpander(filename="<test>")
+        result = dexpander.find_dialectimport_source(text)
+        assert result is not None
+        module_absname, bindings, lineno, col_offset, end_lineno, end_col_offset = result
+        assert lineno == 1
+        assert col_offset == 0
+        # Single-line statement, so end_lineno matches lineno; end_col_offset is the
+        # column one past the last char of the stripped statement.
+        assert end_lineno == 1
+        assert end_col_offset == len(text.strip())
+    test_find_dialectimport_source_returns_end_fields()
+
+    def test_find_dialectimport_ast_returns_end_fields():
+        """AST-based finder picks up end_lineno/end_col_offset from the import node."""
+        tree = ast.parse("from mcpyrate.dialects import dialects, StepExpansion\n")
+        dexpander = DialectExpander(filename="<test>")
+        result = dexpander.find_dialectimport_ast(tree)
+        assert result is not None
+        module_absname, bindings, lineno, col_offset, end_lineno, end_col_offset = result
+        # Real ast.ImportFrom carries all four fields on Python 3.8+.
+        assert lineno == 1
+        assert col_offset == 0
+        assert end_lineno == 1
+        assert end_col_offset is not None and end_col_offset > 0
+
+    test_find_dialectimport_ast_returns_end_fields()
+
+    def test_dialect_instance_receives_end_fields():
+        """DialectExpander threads end_lineno/end_col_offset onto the dialect instance."""
+        captured = {}
+
+        class CaptureDialect(Dialect):
+            def transform_ast(self, tree):
+                captured["lineno"] = self.lineno
+                captured["col_offset"] = self.col_offset
+                captured["end_lineno"] = self.end_lineno
+                captured["end_col_offset"] = self.end_col_offset
+                return tree
+
+        dexpander = DialectExpander(filename="<test>")
+        call_count = [0]
+        def find_once(content):
+            if call_count[0] == 0:
+                call_count[0] += 1
+                return ("fake.module", {"Capture": CaptureDialect}, 7, 0, 7, 35)
+            return None
+
+        dexpander._transform(
+            ast.parse("x = 1"), kind="AST",
+            find_dialectimport=find_once,
+            transform="transform_ast",
+            format_for_display=str)
+
+        assert captured == {"lineno": 7, "col_offset": 0,
+                            "end_lineno": 7, "end_col_offset": 35}
+    test_dialect_instance_receives_end_fields()
 
     # -- split_at_dialectimport --
 

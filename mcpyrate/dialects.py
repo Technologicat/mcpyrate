@@ -21,7 +21,9 @@ class Dialect:
                 Stored as `self.expander`.
 
     During dialect expansion, the source location info of the dialect-import statement
-    that invoked this dialect-import is available as `self.lineno` and `self.col_offset`.
+    that invoked this dialect-import is available as `self.lineno` and `self.col_offset`,
+    and (since mcpyrate 4.1.2) the end-of-region counterparts as `self.end_lineno` and
+    `self.end_col_offset`.
 
     You can pass those to `mcpyrate.splicing.splice_dialect` to automatically mark the
     lines from your dialect template as coming from that dialect-import in the user
@@ -31,6 +33,8 @@ class Dialect:
         self.expander = expander
         self.lineno = None
         self.col_offset = None
+        self.end_lineno = None
+        self.end_col_offset = None
 
     def transform_source(self, text):
         """Override this to add a whole-module source transformer to your dialect.
@@ -375,7 +379,7 @@ class DialectExpander:
         while True:
             theimport = find_dialectimport(content)
             if theimport:
-                module_absname, bindings, lineno, col_offset = theimport
+                module_absname, bindings, lineno, col_offset, end_lineno, end_col_offset = theimport
             else:  # no more dialects
                 break
 
@@ -390,6 +394,8 @@ class DialectExpander:
                 # make the dialect-import source location info available to the transformers
                 dialect.lineno = lineno
                 dialect.col_offset = col_offset
+                dialect.end_lineno = end_lineno
+                dialect.end_col_offset = end_col_offset
 
                 try:
                     transformer_method = getattr(dialect, transform)
@@ -493,7 +499,8 @@ class DialectExpander:
         So we can only rely on the literal text "from ... import dialects, ...",
         similarly to how Racket heavily constrains the format of its `#lang` line.
 
-        Return value is the tuple `(module_absname, bindings, lineno, col_offset)`:
+        Return value is the tuple
+        `(module_absname, bindings, lineno, col_offset, end_lineno, end_col_offset)`:
 
             - `module_absname` is the absolute module name referred to by the import
             - `bindings` is a dict `{dialectname: class, ...}`, with all bindings
@@ -503,6 +510,10 @@ class DialectExpander:
               counting the lines of `text`.
             - `col_offset` is the corresponding column offset.
               Currently not extracted; is always set to 0.
+            - `end_lineno` and `end_col_offset` are the Python 3.8+ end-of-region
+              counterparts. Since the dialect-import must be on a single line,
+              `end_lineno == lineno`; `end_col_offset` is the length of the
+              stripped statement. *Added in mcpyrate 4.1.2.*
 
         The return value refers to the first not-yet-seen dialect-import (according
         to the private cache `self._seen`). Note that this does not transform away
@@ -521,6 +532,8 @@ class DialectExpander:
                     self._seen.add(statement)
                     lineno = 1 + text[0:match.start()].count("\n")  # https://stackoverflow.com/a/48647994
                     col_offset = 0  # TODO: extract the correct column offset
+                    end_lineno = lineno  # dialect-import is constrained to a single line
+                    end_col_offset = len(statement)
                     break
         except StopIteration:
             return None
@@ -529,7 +542,7 @@ class DialectExpander:
         dialectimport = dummy_module.body[0]
         module_absname, bindings = get_macros(dialectimport, filename=self.filename,
                                               reload=False, allow_asname=False)
-        return module_absname, bindings, lineno, col_offset
+        return module_absname, bindings, lineno, col_offset, end_lineno, end_col_offset
 
     def find_dialectimport_ast(self, tree):
         """Find the first dialect-import statement by scanning the AST `tree`.
@@ -546,7 +559,8 @@ class DialectExpander:
 
             from ... import dialects, ...
 
-        Return value is the tuple `(module_absname, bindings, lineno)`, where:
+        Return value is the tuple
+        `(module_absname, bindings, lineno, col_offset, end_lineno, end_col_offset)`:
 
             - `module_absname` is the absolute module name referred to by the import
             - `bindings` is a dict `{dialectname: class, ...}`, with all bindings
@@ -556,6 +570,9 @@ class DialectExpander:
               or `None` if the statement had no `lineno` attribute.
             - `col_offset` is the corresponding column offset.
               It is also taken from the same import statement node.
+            - `end_lineno` and `end_col_offset` are the Python 3.8+ end-of-region
+              counterparts of `lineno`/`col_offset`, taken from the import statement
+              node when present, otherwise `None`. *Added in mcpyrate 4.1.2.*
 
         The return value refers to the first dialect-import that has not yet been
         transformed away. If there are no more dialect-imports, the return value
@@ -579,5 +596,7 @@ class DialectExpander:
         # Get source location info
         lineno = getattr(statement, "lineno", None)
         col_offset = getattr(statement, "col_offset", None)
+        end_lineno = getattr(statement, "end_lineno", None)
+        end_col_offset = getattr(statement, "end_col_offset", None)
 
-        return module_absname, bindings, lineno, col_offset
+        return module_absname, bindings, lineno, col_offset, end_lineno, end_col_offset

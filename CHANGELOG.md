@@ -2,7 +2,9 @@
 
 **4.1.2** (in progress):
 
-*No user-visible changes yet.*
+**Changed**:
+
+- **`mcpyrate.splicing.splice_dialect`** and the **`Dialect`** instance now carry the Python 3.8+ source-location fields `end_lineno` / `end_col_offset` alongside the existing `lineno` / `col_offset`. New optional `end_lineno` / `end_col_offset` keyword arguments on `splice_dialect`; corresponding new `Dialect.end_lineno` / `Dialect.end_col_offset` instance attributes, populated by `DialectExpander` from the dialect-import statement (AST or text-based). Source-transformer dialects that already pass `lineno` / `col_offset` to `splice_dialect` should also pass the new fields so spliced template code carries complete source-location info. Step toward closing #32.
 
 
 ---

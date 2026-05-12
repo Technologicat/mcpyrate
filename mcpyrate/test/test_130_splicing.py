@@ -121,6 +121,25 @@ def runtests():
         assert isinstance(result, list)
     test_splice_dialect_with_lineno()
 
+    def test_splice_dialect_with_end_lineno():
+        """Template location info from explicit lineno/col_offset/end_lineno/end_col_offset.
+
+        The end-of-region fields (Python 3.8+) propagate to spliced template stmts
+        alongside the start-of-region fields.
+        """
+        body = ast.parse("x = 1").body
+        template = ast.parse("y = 2\n__paste_here__").body
+        result = splice_dialect(body, template,
+                                lineno=10, col_offset=0,
+                                end_lineno=10, end_col_offset=42)
+        # The first stmt comes from the template; verify it carries the supplied location.
+        first = result[0]
+        assert first.lineno == 10
+        assert first.col_offset == 0
+        assert first.end_lineno == 10
+        assert first.end_col_offset == 42
+    test_splice_dialect_with_end_lineno()
+
     def test_splice_dialect_docstrings():
         """Both body and template have docstrings → concatenated."""
         body = ast.parse('"User module."\nx = 1').body

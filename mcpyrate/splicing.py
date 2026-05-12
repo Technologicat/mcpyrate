@@ -157,7 +157,9 @@ def splice_statements(body, template, tag="__paste_here__"):
     return StatementSplicer().visit(template)
 
 
-def splice_dialect(body, template, tag="__paste_here__", lineno=None, col_offset=None):
+def splice_dialect(body, template, tag="__paste_here__",
+                   lineno=None, col_offset=None,
+                   end_lineno=None, end_col_offset=None):
     """In a dialect AST transformer, splice module `body` into `template`.
 
     On top of what `splice_statements` does, this function handles macro-imports
@@ -183,6 +185,12 @@ def splice_dialect(body, template, tag="__paste_here__", lineno=None, col_offset
     from that dialect-import statement. During dialect expansion, you can
     get these from the `lineno` and `col_offset` attributes of your dialect
     instance (these attributes are filled in by `DialectExpander`).
+
+    The optional `end_lineno` and `end_col_offset` parameters carry the
+    matching end-of-source-region fields added in Python 3.8 (and present on
+    real `ast` nodes since then). They are propagated alongside `lineno` and
+    `col_offset`, and are also available on the dialect instance. *Added in
+    mcpyrate 4.1.2.*
 
     If both `body` and `template` have a module docstring, they are concatenated
     to produce the module docstring for the result. If only one of them has a
@@ -226,6 +234,12 @@ def splice_dialect(body, template, tag="__paste_here__", lineno=None, col_offset
         `col_offset`: optional `int`
             Source location info of the dialect-import that triggered this template.
 
+        `end_lineno`: optional `int`
+        `end_col_offset`: optional `int`
+            End-of-region counterparts of `lineno` and `col_offset` (Python 3.8+);
+            pass them when available so that spliced template code carries complete
+            location info. *Added in mcpyrate 4.1.2.*
+
     Return value is `template` with `body` spliced in.
 
     Note `template` and `body` are **not** copied, and **both** will be mutated
@@ -251,6 +265,10 @@ def splice_dialect(body, template, tag="__paste_here__", lineno=None, col_offset
         srcloc_dummynode = ast.Constant(value=None)
         srcloc_dummynode.lineno = lineno
         srcloc_dummynode.col_offset = col_offset
+        if end_lineno is not None:
+            srcloc_dummynode.end_lineno = end_lineno
+        if end_col_offset is not None:
+            srcloc_dummynode.end_col_offset = end_col_offset
     else:
         srcloc_dummynode = body[0]
     for stmt in template:
