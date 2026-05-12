@@ -1,6 +1,6 @@
 # Changelog
 
-**4.2.0** (in progress) — *"X marks the spot"* edition:
+**4.2.0** (12 May 2026) — *"X marks the spot"* edition:
 
 End-to-end support for the Python 3.8+ source-location fields `end_lineno` and `end_col_offset`, across the macro-expander surface. The four-field source range is now propagated through dialect-templates, run-time `fix_locations` plumbing, the multi-phase compiler's `__phase__` injection, and the source-location validator. PEP 657 precise tracebacks now point at the right thing.
 
