@@ -140,6 +140,35 @@ def runtests():
         assert first.end_col_offset == 42
     test_splice_dialect_with_end_lineno()
 
+    def test_splice_dialect_with_reference_node():
+        """`reference=node` is equivalent to passing the four kwargs explicitly."""
+        body = ast.parse("x = 1").body
+        template = ast.parse("y = 2\n__paste_here__").body
+        ref = ast.Constant(value=None,
+                           lineno=10, col_offset=0,
+                           end_lineno=10, end_col_offset=42)
+        result = splice_dialect(body, template, reference=ref)
+        first = result[0]
+        assert first.lineno == 10
+        assert first.col_offset == 0
+        assert first.end_lineno == 10
+        assert first.end_col_offset == 42
+    test_splice_dialect_with_reference_node()
+
+    def test_splice_dialect_reference_and_kwargs_conflict():
+        """Passing both `reference=` and any of the four location kwargs raises TypeError."""
+        body = ast.parse("x = 1").body
+        template = ast.parse("y = 2\n__paste_here__").body
+        ref = ast.Constant(value=None, lineno=10, col_offset=0,
+                           end_lineno=10, end_col_offset=42)
+        try:
+            splice_dialect(body, template, reference=ref, lineno=99)
+        except TypeError as e:
+            assert "mutually exclusive" in str(e)
+        else:
+            assert False, "expected TypeError when reference and kwargs are both passed"
+    test_splice_dialect_reference_and_kwargs_conflict()
+
     def test_splice_dialect_docstrings():
         """Both body and template have docstrings → concatenated."""
         body = ast.parse('"User module."\nx = 1').body

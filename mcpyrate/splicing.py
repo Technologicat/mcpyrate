@@ -159,7 +159,8 @@ def splice_statements(body, template, tag="__paste_here__"):
 
 def splice_dialect(body, template, tag="__paste_here__",
                    lineno=None, col_offset=None,
-                   end_lineno=None, end_col_offset=None):
+                   end_lineno=None, end_col_offset=None,
+                   reference=None):
     """In a dialect AST transformer, splice module `body` into `template`.
 
     On top of what `splice_statements` does, this function handles macro-imports
@@ -190,7 +191,18 @@ def splice_dialect(body, template, tag="__paste_here__",
     matching end-of-source-region fields added in Python 3.8 (and present on
     real `ast` nodes since then). They are propagated alongside `lineno` and
     `col_offset`, and are also available on the dialect instance. *Added in
-    mcpyrate 4.1.2.*
+    mcpyrate 4.2.0.*
+
+    Alternatively, the optional `reference` parameter accepts an AST node
+    whose source-location fields (`lineno`, `col_offset`, `end_lineno`,
+    `end_col_offset`) bundle the four numbers above. The dialect instance
+    exposes `self.location_ref` for exactly this purpose, so the recommended
+    idiom is::
+
+        splice_dialect(body, template, reference=self.location_ref)
+
+    `reference` and the four explicit kwargs are mutually exclusive — passing
+    both raises `TypeError`. *Added in mcpyrate 4.2.0.*
 
     If both `body` and `template` have a module docstring, they are concatenated
     to produce the module docstring for the result. If only one of them has a
@@ -238,7 +250,15 @@ def splice_dialect(body, template, tag="__paste_here__",
         `end_col_offset`: optional `int`
             End-of-region counterparts of `lineno` and `col_offset` (Python 3.8+);
             pass them when available so that spliced template code carries complete
-            location info. *Added in mcpyrate 4.1.2.*
+            location info. *Added in mcpyrate 4.2.0.*
+
+        `reference`: optional AST node
+            An AST node whose source-location fields (`lineno`, `col_offset`,
+            `end_lineno`, `end_col_offset`) provide the values used above —
+            an alternative to passing the four numbers explicitly. Mutually
+            exclusive with the four kwargs; passing both raises `TypeError`.
+            The dialect instance exposes `self.location_ref` for this purpose.
+            *Added in mcpyrate 4.2.0.*
 
     Return value is `template` with `body` spliced in.
 
@@ -253,6 +273,19 @@ def splice_dialect(body, template, tag="__paste_here__",
         raise ValueError("expected at least one statement in `body`")
     if not template:
         return body
+
+    # `reference` and the four explicit location kwargs are mutually exclusive —
+    # they're two equivalent spellings of the same thing.
+    if reference is not None and any(x is not None for x in
+                                     (lineno, col_offset, end_lineno, end_col_offset)):
+        raise TypeError("`reference` and the explicit `lineno` / `col_offset` / "
+                        "`end_lineno` / `end_col_offset` kwargs are mutually exclusive; "
+                        "pass one or the other, not both.")
+    if reference is not None:
+        lineno = getattr(reference, "lineno", None)
+        col_offset = getattr(reference, "col_offset", None)
+        end_lineno = getattr(reference, "end_lineno", None)
+        end_col_offset = getattr(reference, "end_col_offset", None)
 
     # Generally speaking, dialect templates are fully macro-generated
     # quasiquoted snippets with no source location info to start with.

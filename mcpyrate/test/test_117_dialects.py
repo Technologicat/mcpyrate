@@ -371,6 +371,37 @@ def runtests():
                             "end_lineno": 7, "end_col_offset": 35}
     test_dialect_instance_receives_end_fields()
 
+    def test_dialect_instance_receives_location_ref():
+        """DialectExpander synthesizes a `location_ref` AST node bundling the four fields."""
+        captured = {}
+
+        class CaptureDialect(Dialect):
+            def transform_ast(self, tree):
+                captured["location_ref"] = self.location_ref
+                return tree
+
+        dexpander = DialectExpander(filename="<test>")
+        call_count = [0]
+        def find_once(content):
+            if call_count[0] == 0:
+                call_count[0] += 1
+                return ("fake.module", {"Capture": CaptureDialect}, 7, 0, 7, 35)
+            return None
+
+        dexpander._transform(
+            ast.parse("x = 1"), kind="AST",
+            find_dialectimport=find_once,
+            transform="transform_ast",
+            format_for_display=str)
+
+        ref = captured["location_ref"]
+        assert isinstance(ref, ast.AST)
+        assert ref.lineno == 7
+        assert ref.col_offset == 0
+        assert ref.end_lineno == 7
+        assert ref.end_col_offset == 35
+    test_dialect_instance_receives_location_ref()
+
     # -- split_at_dialectimport --
 
     def test_split_single_dialect():

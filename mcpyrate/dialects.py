@@ -22,12 +22,16 @@ class Dialect:
 
     During dialect expansion, the source location info of the dialect-import statement
     that invoked this dialect-import is available as `self.lineno` and `self.col_offset`,
-    and (since mcpyrate 4.1.2) the end-of-region counterparts as `self.end_lineno` and
-    `self.end_col_offset`.
+    and (since mcpyrate 4.2.0) the end-of-region counterparts as `self.end_lineno` and
+    `self.end_col_offset`. The same information is also bundled (since 4.2.0) into a
+    synthetic AST reference node `self.location_ref`, suitable for passing as the
+    `reference=` argument of `mcpyrate.splicing.splice_dialect`.
 
     You can pass those to `mcpyrate.splicing.splice_dialect` to automatically mark the
     lines from your dialect template as coming from that dialect-import in the user
-    source code.
+    source code. The recommended idiom is the reference-node form::
+
+        splice_dialect(body, template, reference=self.location_ref)
     """
     def __init__(self, expander):
         self.expander = expander
@@ -35,6 +39,7 @@ class Dialect:
         self.col_offset = None
         self.end_lineno = None
         self.end_col_offset = None
+        self.location_ref = None
 
     def transform_source(self, text):
         """Override this to add a whole-module source transformer to your dialect.
@@ -396,6 +401,17 @@ class DialectExpander:
                 dialect.col_offset = col_offset
                 dialect.end_lineno = end_lineno
                 dialect.end_col_offset = end_col_offset
+                # Synthesize a reference AST node bundling the four fields, for use as
+                # the `reference=` argument of `splice_dialect`. We use `Constant` because
+                # it has all four source-location attributes in its `_attributes`.
+                location_ref = ast.Constant(value=None)
+                location_ref.lineno = lineno
+                location_ref.col_offset = col_offset
+                if end_lineno is not None:
+                    location_ref.end_lineno = end_lineno
+                if end_col_offset is not None:
+                    location_ref.end_col_offset = end_col_offset
+                dialect.location_ref = location_ref
 
                 try:
                     transformer_method = getattr(dialect, transform)

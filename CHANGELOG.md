@@ -1,15 +1,20 @@
 # Changelog
 
-**4.1.2** (in progress):
+**4.2.0** (in progress) — *"X marks the spot"* edition:
+
+End-to-end support for the Python 3.8+ source-location fields `end_lineno` and `end_col_offset`, across the macro-expander surface. The four-field source range is now propagated through dialect-templates, run-time `fix_locations` plumbing, the multi-phase compiler's `__phase__` injection, and the source-location validator. PEP 657 precise tracebacks now point at the right thing.
 
 **New**:
 
 - **`mcpyrate.utils.get_end_lineno`**: end-of-region counterpart of `get_lineno`. Recursively searches an AST node, list of nodes, or AST marker, returning the first `end_lineno` value found (or `None` if none). Useful when a macro needs the source-text end of a tree, e.g. to construct a `SyntaxError` that highlights the offending region precisely.
+- **`Dialect.end_lineno`** / **`Dialect.end_col_offset`**: new instance attributes on the dialect base class, populated by `DialectExpander` from the dialect-import statement (both the AST-based and text-based finders extract them). Mirrors the existing `Dialect.lineno` / `Dialect.col_offset`.
+- **`Dialect.location_ref`**: synthetic AST node (an `ast.Constant`) bundling the four source-location fields. Produced by `DialectExpander` for every dialect instance. Suitable for passing to `splice_dialect` via the new `reference=` kwarg as a more compact alternative to enumerating the four fields by name.
+- **`mcpyrate.splicing.splice_dialect`** accepts new optional `end_lineno=` and `end_col_offset=` keyword arguments. Source-transformer dialects that already pass `lineno` / `col_offset` should also pass the new fields so spliced template code carries complete source-location info.
+- **`mcpyrate.splicing.splice_dialect`** also accepts a new optional `reference=` keyword argument: an AST node whose source-location fields supply all four values at once. The recommended idiom is `splice_dialect(body, template, reference=self.location_ref)`. The `reference=` form and the four explicit kwargs are mutually exclusive; passing both raises `TypeError`.
 
 **Changed**:
 
-- **`mcpyrate.splicing.splice_dialect`** and the **`Dialect`** instance now carry the Python 3.8+ source-location fields `end_lineno` / `end_col_offset` alongside the existing `lineno` / `col_offset`. New optional `end_lineno` / `end_col_offset` keyword arguments on `splice_dialect`; corresponding new `Dialect.end_lineno` / `Dialect.end_col_offset` instance attributes, populated by `DialectExpander` from the dialect-import statement (AST or text-based). Source-transformer dialects that already pass `lineno` / `col_offset` to `splice_dialect` should also pass the new fields so spliced template code carries complete source-location info.
-- **`mcpyrate.metatools.fill_location`** now also extracts `end_lineno` and `end_col_offset` from the invocation node and propagates them through the run-time `fix_locations` call. When the invocation carries no end-of-region fields, they are omitted; otherwise the resulting reference Constant has all four source-location fields set.
+- **`mcpyrate.metatools.fill_location`** now extracts `end_lineno` and `end_col_offset` from the invocation node (when present) and propagates them through the run-time `fix_locations` call. When the invocation carries no end-of-region fields, they are omitted; otherwise the resulting reference Constant has all four source-location fields set.
 - **`mcpyrate.multiphase.multiphase_expand`** now attributes the injected `__phase__ = k` introspection helper to the first `with phase[...]` statement in the module — using `ast.copy_location` to pick up all four source-location fields — instead of the previous hardcoded `lineno=1, col_offset=1`. Debuggers and traceback formatters now point at the `with phase[...]` line (which is what introduced multi-phase compilation to the module) rather than at line 1 in the absence of a real source-text origin.
 - **`mcpyrate.debug.SourceLocationInfoValidator`** default `check_fields` now includes `end_lineno` and `end_col_offset` alongside `lineno` / `col_offset`. The validator's `examine` method also filters `check_fields` against each node's `_attributes` so that nodes without source-text regions (e.g. `ast.Module`, `ast.Store`, `ast.Load`) are no longer falsely reported as missing source-location info. Closes #32.
 
