@@ -529,7 +529,7 @@ class DialectExpander:
             - `end_lineno` and `end_col_offset` are the Python 3.8+ end-of-region
               counterparts. Since the dialect-import must be on a single line,
               `end_lineno == lineno`; `end_col_offset` is the length of the
-              stripped statement. *Added in mcpyrate 4.1.2.*
+              stripped statement. *Added in mcpyrate 4.2.0.*
 
         The return value refers to the first not-yet-seen dialect-import (according
         to the private cache `self._seen`). Note that this does not transform away
@@ -588,7 +588,7 @@ class DialectExpander:
               It is also taken from the same import statement node.
             - `end_lineno` and `end_col_offset` are the Python 3.8+ end-of-region
               counterparts of `lineno`/`col_offset`, taken from the import statement
-              node when present, otherwise `None`. *Added in mcpyrate 4.1.2.*
+              node when present, otherwise `None`. *Added in mcpyrate 4.2.0.*
 
         The return value refers to the first dialect-import that has not yet been
         transformed away. If there are no more dialect-imports, the return value

@@ -214,7 +214,7 @@ def get_end_lineno(tree):
     `tree` carries a `lineno` but the AST node type predates the 3.8 fields
     or otherwise omits them from `_attributes`.
 
-    *Added in mcpyrate 4.1.2.*
+    *Added in mcpyrate 4.2.0.*
     """
     return _get_location_field(tree, "end_lineno")
 
