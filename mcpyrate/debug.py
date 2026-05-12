@@ -236,7 +236,8 @@ class SourceLocationInfoValidator(ASTVisitor):
     `(subtree, sourcecode, missing_field_names)`. Each `sourcecode` is truncated
     if too long.
     """
-    def __init__(self, ignore={}, n=5, check_fields=["lineno", "col_offset"]):
+    def __init__(self, ignore={}, n=5,
+                 check_fields=["lineno", "col_offset", "end_lineno", "end_col_offset"]):
         """Constructor.
 
         Parameters:
@@ -257,10 +258,16 @@ class SourceLocationInfoValidator(ASTVisitor):
 
     def examine(self, tree):
         if tree not in self.ignore:
-            present = [getattr(tree, x, None) is not None for x in self.check_fields]
+            # Only consider fields the node type actually declares — `end_lineno`
+            # and `end_col_offset` are absent from the `_attributes` tuple of
+            # nodes that don't have a source-text region (e.g. some helper nodes),
+            # and reporting those as "missing" would be a false positive.
+            applicable = [x for x in self.check_fields
+                          if x in getattr(tree, "_attributes", ())]
+            present = [getattr(tree, x, None) is not None for x in applicable]
             if not all(present):
                 code = format_context(tree, n=self.n)
                 self.collect((tree,
                               code,
-                              [fieldname for fieldname, p in zip(self.check_fields, present) if not p]))
+                              [fieldname for fieldname, p in zip(applicable, present) if not p]))
         self.generic_visit(tree)

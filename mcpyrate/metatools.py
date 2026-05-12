@@ -126,14 +126,18 @@ def fill_location(tree, *, syntax, invocation, **kw):
             ...
         quoted = fill_location[quoted]
 
-    Using this macro, you don't need to manually determine `lineno` and `col_offset`
-    to be used as the fill values. If you wish to use custom values, don't use
-    this macro; use the function `mcpyrate.astfixers.fix_locations` instead.
-    Here's the pattern::
+    Using this macro, you don't need to manually determine `lineno`, `col_offset`,
+    `end_lineno`, and `end_col_offset` to be used as the fill values. If you
+    wish to use custom values, don't use this macro; use the function
+    `mcpyrate.astfixers.fix_locations` instead. Here's the pattern::
 
         fake_lineno = 9999
         fake_col_offset = 9999
-        reference_node = ast.Constant(value=None, lineno=fake_lineno, col_offset=fake_col_offset)
+        fake_end_lineno = 9999
+        fake_end_col_offset = 9999
+        reference_node = ast.Constant(value=None,
+                                      lineno=fake_lineno, col_offset=fake_col_offset,
+                                      end_lineno=fake_end_lineno, end_col_offset=fake_end_col_offset)
         fix_locations(tree, reference_node, mode="reference")
     """
     if syntax != "expr":
@@ -142,6 +146,8 @@ def fill_location(tree, *, syntax, invocation, **kw):
         raise SyntaxError("`fill_location` invocation itself is missing source location info.")
     fake_lineno = invocation.lineno
     fake_col_offset = invocation.col_offset
+    fake_end_lineno = getattr(invocation, "end_lineno", None)
+    fake_end_col_offset = getattr(invocation, "end_col_offset", None)
     reference_node = ast.Constant(value="source location dummy")  # We want this as a run-time AST value.
     # By design, an astified run-time AST value does not carry a source location, because typically,
     # it's used by `q`, and the quoted code will be ultimately spliced in to a different source file.
@@ -154,8 +160,13 @@ def fill_location(tree, *, syntax, invocation, **kw):
     #  It may also be useful to set `fake_lineno` and `fake_col_offset` to 9999 here, to see more clearly
     #  where exactly those values end up in the output AST.)
     astified_reference_node = astify(reference_node)
-    astified_reference_node.keywords.extend([ast.keyword("lineno", astify(fake_lineno)),
-                                             ast.keyword("col_offset", astify(fake_col_offset))])
+    extra_keywords = [ast.keyword("lineno", astify(fake_lineno)),
+                      ast.keyword("col_offset", astify(fake_col_offset))]
+    if fake_end_lineno is not None:
+        extra_keywords.append(ast.keyword("end_lineno", astify(fake_end_lineno)))
+    if fake_end_col_offset is not None:
+        extra_keywords.append(ast.keyword("end_col_offset", astify(fake_end_col_offset)))
+    astified_reference_node.keywords.extend(extra_keywords)
     return ast.Call(_mcpyrate_metatools_attr("fix_locations"),
                     [tree,
                      astified_reference_node],

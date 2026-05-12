@@ -2,7 +2,7 @@
 """General utilities. Can be useful for writing both macros as well as macro expanders."""
 
 __all__ = ["gensym", "scrub_uuid", "flatten", "rename", "extract_bindings", "getdocstring",
-           "get_lineno", "format_location", "format_macrofunction", "format_context",
+           "get_lineno", "get_end_lineno", "format_location", "format_macrofunction", "format_context",
            "NestingLevelTracker"]
 
 import ast
@@ -203,23 +203,40 @@ def get_lineno(tree):
 
     If no `lineno` attribute is found anywhere inside `tree`, the return value is `None`.
     """
-    lineno = getattr(tree, "lineno", None)
-    if lineno is not None:
-        return lineno
+    return _get_location_field(tree, "lineno")
+
+
+def get_end_lineno(tree):
+    """Extract the end-of-region source line number (Python 3.8+) from `tree`.
+
+    Like `get_lineno`, but reads the `end_lineno` field. Returns `None` if no
+    `end_lineno` is found anywhere inside `tree` — including the case where
+    `tree` carries a `lineno` but the AST node type predates the 3.8 fields
+    or otherwise omits them from `_attributes`.
+
+    *Added in mcpyrate 4.1.2.*
+    """
+    return _get_location_field(tree, "end_lineno")
+
+
+def _get_location_field(tree, fieldname):
+    value = getattr(tree, fieldname, None)
+    if value is not None:
+        return value
     elif isinstance(tree, markers.ASTMarker) and hasattr(tree, "body"):  # look inside AST markers
-        return get_lineno(tree.body)
+        return _get_location_field(tree.body, fieldname)
     elif isinstance(tree, ast.AST):  # look inside AST nodes
         # Note `iter_fields` ignores attribute fields such as line numbers and column offsets,
         # so we don't recurse into those.
-        for fieldname, node in ast.iter_fields(tree):
-            lineno = get_lineno(node)
-            if lineno:
-                return lineno
+        for _name, node in ast.iter_fields(tree):
+            value = _get_location_field(node, fieldname)
+            if value:
+                return value
     elif isinstance(tree, list):  # look inside statement suites
         for node in tree:
-            lineno = get_lineno(node)
-            if lineno:
-                return lineno
+            value = _get_location_field(node, fieldname)
+            if value:
+                return value
     return None
 
 

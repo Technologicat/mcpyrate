@@ -84,6 +84,39 @@ def runtests():
         assert isinstance(result, ast.Call)
     test_fill_location_expr()
 
+    def test_fill_location_propagates_end_fields():
+        """fill_location threads end_lineno/end_col_offset alongside lineno/col_offset.
+
+        Two objects to keep straight: the *reference node* passed to `fix_locations`
+        at run time is an `ast.Constant`. `fill_location` constructs that Constant
+        via `astify`, which produces an *AST `Call`* whose keywords reconstruct
+        the Constant when the call is executed. The test inspects that AST `Call`
+        and asserts its keyword list carries the four source-location fields
+        (alongside the `value` / `kind` kwargs that `astify` already emits for a
+        Constant). Stand-in `invocation` = a Constant with the four fields set;
+        in practice it's the macro-invocation node (a Subscript for an expr macro).
+        """
+        invocation = ast.Constant(value=None,
+                                  lineno=5, col_offset=10,
+                                  end_lineno=7, end_col_offset=42)
+        tree = ast.parse("x", mode="eval").body
+        result = fill_location(tree, syntax="expr", invocation=invocation)
+        astified_reference = result.args[1]  # Call(Constant, [], keywords) — see docstring.
+        kw_names = {kw.arg for kw in astified_reference.keywords}
+        assert {"lineno", "col_offset", "end_lineno", "end_col_offset"} <= kw_names
+    test_fill_location_propagates_end_fields()
+
+    def test_fill_location_omits_absent_end_fields():
+        """If invocation lacks end_*, fill_location omits them from the astified reference Call."""
+        invocation = ast.Constant(value=None, lineno=5, col_offset=10)  # no end_*
+        tree = ast.parse("x", mode="eval").body
+        result = fill_location(tree, syntax="expr", invocation=invocation)
+        astified_reference = result.args[1]
+        kw_names = {kw.arg for kw in astified_reference.keywords}
+        assert "lineno" in kw_names and "col_offset" in kw_names
+        assert "end_lineno" not in kw_names and "end_col_offset" not in kw_names
+    test_fill_location_omits_absent_end_fields()
+
     # -- expand1sq / expandsq: syntax errors --
 
     def test_expand1sq_wrong_syntax():

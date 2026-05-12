@@ -19,12 +19,38 @@ def runtests():
     # -- SourceLocationInfoValidator --
 
     def test_validator_detects_valid_location():
-        """A node with lineno and col_offset should not be collected."""
-        node = ast.Constant(value=42, lineno=10, col_offset=5)
+        """A node with all four source-location fields should not be collected."""
+        node = ast.Constant(value=42,
+                            lineno=10, col_offset=5,
+                            end_lineno=10, end_col_offset=7)
         v = SourceLocationInfoValidator()
         v.visit(node)
         assert len(v.collected) == 0
     test_validator_detects_valid_location()
+
+    def test_validator_default_checks_end_fields():
+        """Default check_fields includes end_lineno/end_col_offset (Python 3.8+)."""
+        node = ast.Constant(value=42, lineno=10, col_offset=5)  # missing end_*
+        v = SourceLocationInfoValidator()
+        v.visit(node)
+        assert len(v.collected) == 1
+        _tree, _code, missing = v.collected[0]
+        assert "end_lineno" in missing
+        assert "end_col_offset" in missing
+    test_validator_default_checks_end_fields()
+
+    def test_validator_skips_inapplicable_fields():
+        """Fields absent from a node's `_attributes` are not reported as missing.
+
+        E.g. `ast.Module` has no source-text region, so `_attributes` is empty
+        and none of the source-location fields apply to it.
+        """
+        node = ast.Module(body=[], type_ignores=[])
+        assert "lineno" not in node._attributes  # invariant the test relies on
+        v = SourceLocationInfoValidator()
+        v.visit(node)
+        assert len(v.collected) == 0
+    test_validator_skips_inapplicable_fields()
 
     def test_validator_detects_none_as_missing():
         """lineno=None should be flagged as missing.
@@ -76,13 +102,19 @@ def runtests():
 
     def test_validator_nested_tree():
         """Validator walks into child nodes."""
-        tree = ast.parse("x = 1")
+        # Parse a real expression so the tree is well-formed, then strip the
+        # location info from a deeply nested child node — the validator should
+        # still find it.
+        tree = ast.parse("x = 1 + 2")
+        target = tree.body[0].value.right  # the inner Constant `2`
+        del target.lineno
+        del target.col_offset
+        del target.end_lineno
+        del target.end_col_offset
         v = SourceLocationInfoValidator()
         v.visit(tree)
-        # Module and ctx nodes (Store, Load) lack lineno — they should be collected.
-        assert len(v.collected) > 0
-        collected_types = {type(t).__name__ for t, _, _ in v.collected}
-        assert "Module" in collected_types or "Store" in collected_types
+        # The validator should report the stripped child specifically.
+        assert any(t is target for t, _, _ in v.collected)
     test_validator_nested_tree()
 
     # -- format_bindings --

@@ -2,9 +2,16 @@
 
 **4.1.2** (in progress):
 
+**New**:
+
+- **`mcpyrate.utils.get_end_lineno`**: end-of-region counterpart of `get_lineno`. Recursively searches an AST node, list of nodes, or AST marker, returning the first `end_lineno` value found (or `None` if none). Useful when a macro needs the source-text end of a tree, e.g. to construct a `SyntaxError` that highlights the offending region precisely.
+
 **Changed**:
 
-- **`mcpyrate.splicing.splice_dialect`** and the **`Dialect`** instance now carry the Python 3.8+ source-location fields `end_lineno` / `end_col_offset` alongside the existing `lineno` / `col_offset`. New optional `end_lineno` / `end_col_offset` keyword arguments on `splice_dialect`; corresponding new `Dialect.end_lineno` / `Dialect.end_col_offset` instance attributes, populated by `DialectExpander` from the dialect-import statement (AST or text-based). Source-transformer dialects that already pass `lineno` / `col_offset` to `splice_dialect` should also pass the new fields so spliced template code carries complete source-location info. Step toward closing #32.
+- **`mcpyrate.splicing.splice_dialect`** and the **`Dialect`** instance now carry the Python 3.8+ source-location fields `end_lineno` / `end_col_offset` alongside the existing `lineno` / `col_offset`. New optional `end_lineno` / `end_col_offset` keyword arguments on `splice_dialect`; corresponding new `Dialect.end_lineno` / `Dialect.end_col_offset` instance attributes, populated by `DialectExpander` from the dialect-import statement (AST or text-based). Source-transformer dialects that already pass `lineno` / `col_offset` to `splice_dialect` should also pass the new fields so spliced template code carries complete source-location info.
+- **`mcpyrate.metatools.fill_location`** now also extracts `end_lineno` and `end_col_offset` from the invocation node and propagates them through the run-time `fix_locations` call. When the invocation carries no end-of-region fields, they are omitted; otherwise the resulting reference Constant has all four source-location fields set.
+- **`mcpyrate.multiphase.multiphase_expand`** now attributes the injected `__phase__ = k` introspection helper to the first `with phase[...]` statement in the module — using `ast.copy_location` to pick up all four source-location fields — instead of the previous hardcoded `lineno=1, col_offset=1`. Debuggers and traceback formatters now point at the `with phase[...]` line (which is what introduced multi-phase compilation to the module) rather than at line 1 in the absence of a real source-text origin.
+- **`mcpyrate.debug.SourceLocationInfoValidator`** default `check_fields` now includes `end_lineno` and `end_col_offset` alongside `lineno` / `col_offset`. The validator's `examine` method also filters `check_fields` against each node's `_attributes` so that nodes without source-text regions (e.g. `ast.Module`, `ast.Store`, `ast.Load`) are no longer falsely reported as missing source-location info. Closes #32.
 
 
 ---

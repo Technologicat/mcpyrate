@@ -344,6 +344,14 @@ def multiphase_expand(tree, *, filename, self_module, dexpander=None, _optimize=
     debug = isdebug(tree)
     c, CS = setcolor, ColorScheme
 
+    # The injected `__phase__ = k` introspection helper has no real source-text
+    # counterpart; attribute it to the first `with phase[...]` statement, which
+    # is what introduced multiphase compilation to this module. Guaranteed to
+    # exist because `detect_highest_phase` returned non-None above. Test by
+    # truthiness (`iswithphase` returns `False`, not `None`, on non-matches).
+    phase_origin = next(stmt for stmt in tree.body
+                        if iswithphase(stmt, filename=filename))
+
     # If this module is already in `sys.modules` (e.g. created by Python's
     # import system as a blank module instance, to be filled in by an exec
     # after compilation is done), record the original module object, so we
@@ -375,9 +383,9 @@ def multiphase_expand(tree, *, filename, self_module, dexpander=None, _optimize=
         phase_k_tree = extract_phase(tree, filename=filename, phase=k)
         if phase_k_tree.body:
             # inject `__phase__ = k` for introspection (at run time of the phase being compiled now)
-            tgt = ast.Name(id="__phase__", ctx=ast.Store(), lineno=1, col_offset=1)
-            val = ast.Constant(value=k, lineno=1, col_offset=13)
-            assignment = ast.Assign(targets=[tgt], value=val, lineno=1, col_offset=1)
+            tgt = ast.copy_location(ast.Name(id="__phase__", ctx=ast.Store()), phase_origin)
+            val = ast.copy_location(ast.Constant(value=k), phase_origin)
+            assignment = ast.copy_location(ast.Assign(targets=[tgt], value=val), phase_origin)
 
             # Issue #28: `__future__` imports.
             # They must be the first statements after the module docstring, if any. So we inject after them.

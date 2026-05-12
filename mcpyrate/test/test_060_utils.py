@@ -4,7 +4,7 @@
 import ast
 
 from ..utils import (gensym, scrub_uuid, flatten, rename, extract_bindings,
-                     getdocstring, get_lineno, format_location,
+                     getdocstring, get_lineno, get_end_lineno, format_location,
                      format_macrofunction, format_context, NestingLevelTracker)
 from ..markers import ASTMarker
 
@@ -260,6 +260,33 @@ def runtests():
         marker = ASTMarker(body=inner)
         assert get_lineno(marker) == 7
     test_get_lineno_marker()
+
+    # -- get_end_lineno --
+
+    def test_get_end_lineno_direct():
+        node = ast.Constant(value=42, lineno=10, col_offset=0,
+                            end_lineno=10, end_col_offset=2)
+        assert get_end_lineno(node) == 10
+    test_get_end_lineno_direct()
+
+    def test_get_end_lineno_nested():
+        tree = ast.parse("x = 1\ny = 2")
+        # The Module itself has no end_lineno, but its children do.
+        # Recursive search returns the first non-None value found depth-first.
+        assert get_end_lineno(tree) is not None
+    test_get_end_lineno_nested()
+
+    def test_get_end_lineno_none():
+        node = ast.Constant(value=42, lineno=10, col_offset=0)  # no end_*
+        assert get_end_lineno(node) is None
+    test_get_end_lineno_none()
+
+    def test_get_end_lineno_marker():
+        inner = ast.Constant(value=42, lineno=7, col_offset=0,
+                             end_lineno=7, end_col_offset=2)
+        marker = ASTMarker(body=inner)
+        assert get_end_lineno(marker) == 7
+    test_get_end_lineno_marker()
 
     # -- format_location --
 
