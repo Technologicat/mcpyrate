@@ -74,8 +74,6 @@ python -c "import mcpyrate.activate; from mcpyrate.test.test_120a_quotes import 
 ruff check <changed .py files>   # primary linter (config in pyproject.toml)
 ```
 
-Legacy `flake8rc` also present (used by Emacs flycheck, not by CI or CC).
-
 ## Documentation
 
 Detailed documentation in `doc/`: `main.md` (comprehensive reference), `compiler.md`, `quasiquotes.md`, `dialects.md`, `walkers.md`, `repl.md`, `troubleshooting.md`. Consult these when working on specific subsystems — they cover semantics, edge cases, and design rationale that this file only summarizes.
