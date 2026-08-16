@@ -65,3 +65,20 @@ The reload replaces the module's function objects (`q`, `u`, `n`, `a`, `s`, `t`,
 **My recommendation**: (a). It's a small, principled API addition to `MacroConsole` — a one-shot `MacroConsole` (as used in tests, or embedded in a larger application that doesn't want interactive reloading) is a legitimate use case — and it makes the test clean and cheap. Tier 2 remains an option if the test still needs more isolation afterwards.
 
 Added 2026-04-15 during the tier 1 bring-up; the full investigation notes and the test-case docstring are in `mcpyrate/test/test_126_repl.py` where the stub for the missing test lives.
+
+## Can `runpy` replace part of `import_module_as_main`?
+
+`macropython`'s `import_module_as_main` hand-rolls import semantics — a `sys.meta_path` walk, `module_from_spec`, `__package__` fixing, `__main__.py` resolution for packages. The premise was that nothing in the stdlib will load a module *as* `__main__`. That premise is half true, measured on 3.15.0rc1 with the expander active:
+
+- **`-m` mode: `runpy` works.** `runpy.run_module("demo.promise", run_name="__main__")` expands macros correctly and prints `<__main__.Promise object ...>`, because `run_module` obtains the code via `loader.get_code(mod_name)` (`runpy.py:163`) and so goes through mcpyrate's patched `SourceFileLoader`.
+- **Script mode: `runpy` cannot work.** `runpy.run_path("demo/let.py", run_name="__main__")` fails with `ImportError: cannot import name 'macros'`, because `_get_code_from_file` (`runpy.py:255`) reads the file and calls the builtin `compile` directly, bypassing loaders entirely. That is by design and not something a flag can turn off.
+
+So at most the `-m` half is replaceable, and even there the two are not equivalent:
+
+- **`sys.modules["__main__"]` lifetime.** `runpy` installs the module through `_TempModule`, whose `__exit__` **restores** the previous entry (`runpy.py:42`). `import_module_as_main` replaces `sys.modules["__main__"]` permanently, reverting only on error. Anything that looks up `__main__` after the run — pickling, the REPL, macro machinery — would see a different thing.
+- **`runpy` runs the code in a fresh `ModuleType`**, not in the object built by `module_from_spec`, and sets `__spec__` / `__loader__` / `__package__` afterwards from the spec.
+- **Error presentation.** `import_module_as_main` trims `MacroApplicationError` tracebacks down to the last frame so the chained macro-expansion errors stay readable. `runpy` does nothing of the sort, though this one is wrappable.
+
+A middle option worth weighing for script mode, if the goal is less hackery rather than no hackery: `importlib.util.spec_from_file_location("__main__", path)` plus `module_from_spec` plus `exec_module` routes through the patched loader and is much shorter than the meta_path walk — at the cost of dropping support for whatever non-default finders the walk currently picks up (namespace packages, zipimport, and anything a user has installed).
+
+Not part of the Python 3.15 support work; `import_module_as_main` was verified working as-is on 3.15. Raised 2026-08-16 while checking whether the importlib protocol change had implications for `macropython`.

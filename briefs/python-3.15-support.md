@@ -118,7 +118,17 @@ Accepting the parameter — `def source_to_xcode(self, data, path, fullname=None
 | `"mypkg.mymod"` | 0 (filtered) |
 | `"other.mod"` | 1 |
 
-mcpyrate calls `builtins.compile` itself (`compiler.py:277`), and passes no `module=`. So on 3.15 **every macro-enabled module loses module-based syntax-warning filtering** — silently, since nothing errors and the warnings still appear, merely unfilterable. That is the regression worth fixing; the `TypeError` is just what makes it visible.
+mcpyrate calls `builtins.compile` itself (`compiler.py:277`) and passes no `module=`, so macro-enabled modules keep the old behaviour while ordinary ones gain the new precision.
+
+**What the old behaviour actually is, and therefore what is lost.** When `module` is `None`, the warnings machinery matches the filter against the *filename* instead (`_py_warnings.py:566–569`, dispatching to `_match_filename`). That helper guesses a dotted module name from the path: strip `.py`, strip a trailing `/__init__`, replace `/` with `.`, then attempt the match at every dot-suffix position (`:546–553`). So `/home/juha/mypkg/mymod.py` is tested as `.home.juha.mypkg.mymod`, then `home.juha.mypkg.mymod`, then `juha.mypkg.mymod`, then `mypkg.mymod`, then `mymod`.
+
+That heuristic is decent, which is why this is a papercut rather than a break — a `-W` filter naming `mypkg.mymod` does still match. What it costs is exactly the word "unambiguously" in the What's New:
+
+- **Over-matching.** Every suffix matches, so directory names become module prefixes. Two checkouts of the same package under different paths cannot be told apart, and a filter for `mymod` catches any file of that name anywhere.
+- **Cases where the path does not mirror the import name** — namespace packages, zipimport, a module whose file lives outside its package directory — where the guess is simply wrong and no filter spelling helps.
+- **Inconsistency within one project**: the same `-W` invocation would behave differently for macro-enabled and ordinary modules.
+
+None of that touches expansion correctness. It is worth wiring because it costs one keyword argument at one call site, not because the loss is severe.
 
 **Which name to use.** `fullname` and `self.name` normally agree, and mcpyrate goes out of its way to keep them agreeing: `macropython.py:82` sets `spec.loader.name = "__main__"` alongside `spec.name`, precisely because `importer.py:27` reads `self.name`. They can still diverge, because `get_code(fullname)` takes the name as a parameter while `self.name` is fixed at loader construction.
 
