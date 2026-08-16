@@ -102,7 +102,13 @@ These are the ones that need a live 3.15 and cannot be settled by reading.
 - **open — any macro that reads `DictComp.value` assuming a node.** The walkers are safe (verified above), but a macro that dereferences the field directly is not. Grep again once 3.15 is installed and the new forms can actually be parsed into test fixtures.
 - **Raise the cap last.** `pyproject.toml`: `>=3.10,<3.15` → `>=3.10,<3.16`, plus the `Programming Language :: Python :: 3.15` classifier. Only after the above are green. Note the fleet TODO's warning: an *unbounded* floor makes the resolver seek a version valid for every future Python and silently fall back to an ancient release, so keep the upper bound, just move it.
 
-### 4. Fleet follow-on
+### 4. pyan, the third AST user
+
+Tracked separately in `pyan/briefs/python-3.15-support.md`, and independent of this work — no dependency either way, so it can be done first, last, or in parallel.
+
+Worth knowing while reading this brief: **pyan is the only one of the three that actually crashes on 3.15.** Its `analyze_comprehension` visits `DictComp.value` unconditionally, so a `{**d for ...}` anywhere in the analyzed codebase raises `AttributeError`. It also declares no upper `requires-python` bound, so it installs happily on the version that breaks it. The macro layer, by contrast, is cap-protected and has no known crash.
+
+### 5. Fleet follow-on
 
 Out of scope for this brief, but unblocked by it: CI matrices everywhere, the `cp315-*` cibuildwheel pins in pylu / pydgq / python-wlsqm, and the stale-coverage-Python item that the fleet TODO says to fold into the same pass.
 
