@@ -66,6 +66,33 @@ The reload replaces the module's function objects (`q`, `u`, `n`, `a`, `s`, `t`,
 
 Added 2026-04-15 during the tier 1 bring-up; the full investigation notes and the test-case docstring are in `mcpyrate/test/test_126_repl.py` where the stub for the missing test lives.
 
+## `path_stats` returns `size: None`, which breaks the documented `py_compile` workflow
+
+`doc/troubleshooting.md:484–485` tells users to compile macro-enabled code ahead of time by importing
+`mcpyrate.activate` first and then using `py_compile`. That sequence currently raises:
+
+```
+File "<frozen importlib._bootstrap_external>", line 81, in _pack_uint32
+TypeError: int() argument must be a string, a bytes-like object or a real number, not 'NoneType'
+```
+
+Cause: `importer.py:241` returns `{"mtime": max(mtimes), "size": None}`, with a comment reasoning that
+only `mtime` is mandatory. That holds for the *import* path, which uses `size` only for validation and
+tolerates its absence. It does not hold for `py_compile`, which passes `source_stats['size']` straight
+into `_code_to_timestamp_pyc`, where it is packed as a uint32.
+
+Reproduced on 3.14.6 against an ordinary (non-macro) module with the hook active, so it affects
+anything compiled while mcpyrate is loaded, not only macro-enabled files.
+
+The fix is probably `stat_result.st_size` — the *source file's own* size, not a sum over the
+dependency tree, since CPython validates the field against that one file. But it wants checking
+against the invalidation logic before committing to it: the inflated `mtime` is deliberate, and it is
+worth confirming that a true size plus an inflated mtime still invalidates when a macro dependency
+changes and does not invalidate spuriously otherwise. That check is the reason this is deferred
+rather than fixed inline.
+
+Discovered 2026-08-16 while testing whether `_optimize` survives the import hook.
+
 ## Can `runpy` replace part of `import_module_as_main`?
 
 `macropython`'s `import_module_as_main` hand-rolls import semantics — a `sys.meta_path` walk, `module_from_spec`, `__package__` fixing, `__main__.py` resolution for packages. The premise was that nothing in the stdlib will load a module *as* `__main__`. That premise is half true, measured on 3.15.0rc1 with the expander active:

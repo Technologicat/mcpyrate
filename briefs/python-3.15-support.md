@@ -138,10 +138,16 @@ mcpyrate monkey-patches `source_to_code`, which puts it in that holding position
 
 **The sharp version, and the test worth reusing.** mcpyrate's override drops *two* parameters it is handed: `_optimize` and, until this is fixed, `module`. Only one of those is a defect, and the reason is not their importance but what their default does downstream:
 
-- `_optimize=-1` means *inherit the interpreter's level*, so dropping it reproduces the truth by accident. Verified: importing through the hook under `-OO` correctly strips both module and function docstrings.
-- `module=None` means *guess from the filename*, so dropping it substitutes a heuristic for a fact.
+- `module=None` means *guess from the filename*, so dropping it substitutes a heuristic for a fact — wrong for every caller.
+- `_optimize=-1` means *inherit the interpreter's level*, so dropping it reproduces the truth **only for callers who left it alone**. Verified both halves: importing through the hook under `-OO` correctly strips docstrings (the default case, fine), but `loader.source_to_code(data, path, _optimize=2)` **keeps the module docstring** when it should strip it (the explicit case, broken).
 
-Same shape of omission, opposite outcome, decided entirely by the downstream default. So when forwarding a call, the question is not "does this parameter matter?" but **"does its default inherit, or guess?"** A default that inherits makes the parameter safe to drop; a default that guesses makes dropping it a silent downgrade.
+So the useful question when forwarding a call is not "does this parameter matter?" but **"what does its default do — inherit, or guess?"**, with the rider that an inheriting default only protects the callers who did not set it. `_optimize` looked harmless exactly because the common path never exercises it.
+
+**And it is exercised.** `py_compile.compile(..., optimize=N)` passes it explicitly (`py_compile.py:144`), and `compileall -o N` goes through `py_compile`. So ahead-of-time compilation of macro-enabled code at an explicit optimization level silently produces bytecode at the *interpreter's* level instead — which is a packaging concern, since that is exactly what distro and installer compile steps do.
+
+**Fix `_optimize` in the same edit as `fullname`**, since both are conduit parameters of the same function: thread it through as `compiler.compile(data, filename=path, optimize=_optimize, self_module=...)`. `compiler.compile` already takes `optimize` and already forwards it to the builtin.
+
+**Document all three in the code**, because none of it is obvious from reading `source_to_xcode`: that the function *implements* a stdlib protocol and therefore has to accept whatever CPython passes; that `fullname` and `_optimize` are conduits whose omission is invisible locally and lands on the caller; and what each default does when dropped. Inline the reasoning at the call site — it is the kind of thing a future reader deletes as redundant if the *why* is not there.
 
 **Which name to use.** `fullname` and `self.name` normally agree, and mcpyrate goes out of its way to keep them agreeing: `macropython.py:82` sets `spec.loader.name = "__main__"` alongside `spec.name`, precisely because `importer.py:27` reads `self.name`. They can still diverge, because `get_code(fullname)` takes the name as a parameter while `self.name` is fixed at loader construction.
 
