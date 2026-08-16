@@ -43,6 +43,8 @@ That is the entire change. No new node types; three changed fields, arising from
    - Lazy imports are legal only at module scope. Not in a function, class body, or `try` block; not `lazy from x import *`; not `lazy from __future__ import ...`.
 2. **PEP 798, unpacking in comprehensions** — two distinct AST consequences, and they are not alike.
    - `{**d for d in dicts}` builds `DictComp(key=d, value=None)` (`python.gram:1071`, `_PyAST_DictComp(a, NULL, b, EXTRA)`). The mapping goes in `key`; `value` being `None` *is* the marker. This is the change most likely to fail silently, since `value` was previously always a node.
+     - **The convention is mirrored from the one `Dict` already uses, so reasoning by analogy gives the wrong answer.** A dict *literal* `{**a}` is `Dict(keys=[None], values=[Name('a')])` — the `None` sits in *keys* and the mapping in *values*. A dict *comprehension* `{**d for ...}` puts the `None` in *value* and the mapping in *key*. Opposite halves, same idea. Anyone who knows the literal encoding and guesses the comprehension one will get it backwards.
+     - `ast.dump` omits a `None` field entirely at default settings, so the dump of an unpacking `DictComp` shows no `value` at all rather than `value=None`. Easy to misread as the field being absent when it is present and `None`; pass `show_empty=True` when inspecting.
    - `[*L for L in lists]`, `{*s for s in sets}`, `(*L for L in lists)` need no grammar change: `listcomp` and `setcomp` take `star_named_expression` and `genexp` admits `starred_expression`, so `elt` is simply a `Starred`. CPython added no unparser code for these — existing `Starred` handling suffices.
 
 ### Behavioral changes
