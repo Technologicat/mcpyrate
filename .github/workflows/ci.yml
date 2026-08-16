@@ -8,7 +8,7 @@ name: Python package
 on:
   push:
     branches: [ master ]
-    tags: ["*"]
+    tags: ["[0-9]*"]  # any tag starting with a digit; release tags are bare version numbers (4.2.0), so a scratch tag cannot reach the publish job
   pull_request:
     branches: [ master ]
   workflow_dispatch:
