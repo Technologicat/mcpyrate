@@ -130,6 +130,19 @@ That heuristic is decent, which is why this is a papercut rather than a break �
 
 None of that touches expansion correctness. It is worth wiring because it costs one keyword argument at one call site, not because the loss is severe.
 
+**Why the stdlib must pass it while we appear not to need to.** The apparent asymmetry dissolves: neither *has* to, and the difference is position rather than obligation.
+
+`compile()` cannot derive the module name from what it receives. Filename to dotted name is not an invertible mapping — namespace packages, zipimport, `sys.path` arrangements, and a file deliberately imported under another name (mcpyrate's own `__main__` trick) all break it. CPython's own evidence for this is `_match_filename`: nobody writes a function that guesses by trying every dotted suffix if the answer is computable. The import system, meanwhile, is the one layer that *knows* the name, because resolving it is the job. So the parameter is a conduit, carrying a fact from its only holder to a consumer that cannot reconstruct it.
+
+mcpyrate monkey-patches `source_to_code`, which puts it in that holding position for macro-enabled modules — and a position of that kind comes with forwarding duties attached. "We do fine without it" is true and is exactly the tell: nothing local breaks, because the loss lands a layer further out on someone running `-W`.
+
+**The sharp version, and the test worth reusing.** mcpyrate's override drops *two* parameters it is handed: `_optimize` and, until this is fixed, `module`. Only one of those is a defect, and the reason is not their importance but what their default does downstream:
+
+- `_optimize=-1` means *inherit the interpreter's level*, so dropping it reproduces the truth by accident. Verified: importing through the hook under `-OO` correctly strips both module and function docstrings.
+- `module=None` means *guess from the filename*, so dropping it substitutes a heuristic for a fact.
+
+Same shape of omission, opposite outcome, decided entirely by the downstream default. So when forwarding a call, the question is not "does this parameter matter?" but **"does its default inherit, or guess?"** A default that inherits makes the parameter safe to drop; a default that guesses makes dropping it a silent downgrade.
+
 **Which name to use.** `fullname` and `self.name` normally agree, and mcpyrate goes out of its way to keep them agreeing: `macropython.py:82` sets `spec.loader.name = "__main__"` alongside `spec.name`, precisely because `importer.py:27` reads `self.name`. They can still diverge, because `get_code(fullname)` takes the name as a parameter while `self.name` is fixed at loader construction.
 
 Prefer `fullname`, falling back to `self.name` when it is `None` (an older-style caller may omit it):
