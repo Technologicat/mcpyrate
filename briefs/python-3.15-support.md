@@ -109,7 +109,32 @@ code_object = self.source_to_code(source_bytes, source_path, fullname)   # :877
 
 This is the "many functions related to compiling or parsing Python code now allow the module name to be passed" item in the What's New — which reads like an additive convenience and is in fact a breaking protocol change for anyone overriding the method.
 
-**Verified fix**: accept the parameter — `def source_to_xcode(self, data, path, fullname=None, *, _optimize=-1)`. Tested by patching a scratch copy on 3.15.0rc1; mcpyrate then imports and unparses normally. Consider using `fullname or self.name` for the module name rather than `self.name` alone, since CPython now supplies it explicitly; check which is authoritative when they differ.
+Accepting the parameter — `def source_to_xcode(self, data, path, fullname=None, *, _optimize=-1)` — is enough to make mcpyrate import again; verified on a scratch copy on 3.15.0rc1. But stopping there would leave the *feature* the change exists to deliver silently broken, so it is the smaller half of the job.
+
+**What `fullname` is for, and why mcpyrate currently swallows it.** CPython 3.15 threads the name into `compile(..., module=fullname)`, and `module=` sets the name that syntax warnings are attributed to, so that `-W` and `warnings.filterwarnings(..., module=...)` can select by module. Measured on 3.15.0rc1, filtering `SyntaxWarning` on `module=r"mypkg\..*"`:
+
+| `compile(..., module=)` | warnings seen |
+|---|---|
+| `"mypkg.mymod"` | 0 (filtered) |
+| `"other.mod"` | 1 |
+
+mcpyrate calls `builtins.compile` itself (`compiler.py:277`), and passes no `module=`. So on 3.15 **every macro-enabled module loses module-based syntax-warning filtering** — silently, since nothing errors and the warnings still appear, merely unfilterable. That is the regression worth fixing; the `TypeError` is just what makes it visible.
+
+**Which name to use.** `fullname` and `self.name` normally agree, and mcpyrate goes out of its way to keep them agreeing: `macropython.py:82` sets `spec.loader.name = "__main__"` alongside `spec.name`, precisely because `importer.py:27` reads `self.name`. They can still diverge, because `get_code(fullname)` takes the name as a parameter while `self.name` is fixed at loader construction.
+
+Prefer `fullname`, falling back to `self.name` when it is `None` (an older-style caller may omit it):
+
+- `fullname` is the name the module is being loaded *as*, on this call, and `exec_module` derives it from `module.__name__` — which is the name the module will occupy in `sys.modules`. That is what a self-macro-import has to resolve against.
+- `self.name` is a cached copy of the same thing from construction time.
+- CPython itself now treats `fullname` as authoritative, routing it into `compile`.
+
+Once `fullname` is preferred, the `spec.loader.name` assignment in `macropython.py` is no longer load-bearing *for this purpose*. Leave it — check what else reads it before touching it.
+
+**Threading `module=` through.** `self_module` is already passed the whole way down (`compile` → `_compile` → the `builtins.compile` call), so no new parameter is needed: pass `module=self_module` at `compiler.py:277`. It needs a guard, since mcpyrate supports 3.10–3.14 where the kwarg does not exist — either `sys.version_info >= (3, 15)` or feature detection, whichever fits house style. `module=None` is accepted and is CPython's default, so the dynamically-generated-code path (where `self_module` is `None`) needs no special case.
+
+**One design question worth a decision.** `compiler.compile` advertises itself as a near-drop-in for the builtin and documents the ways it differs. The builtin has now gained a parameter it lacks, so either it gains one too, or the docstring's difference list gains a fourth entry.
+
+Recommendation: derive `module=` from `self_module` rather than adding a separate parameter. The two are distinct concepts — macro self-reference versus warning attribution — but they coincide for every caller that has a module at all, and a second parameter that must almost always equal the first is an invitation for the two to drift. Note the deviation in the docstring instead.
 
 Note what this says about method: the ASDL diff is the right tool for *grammar* changes and it found every one of them, but it cannot see a change like this. An interpreter bump can break an AST consumer through the import machinery, the bytecode format, or a stdlib protocol, none of which the grammar mentions. **Import the package under the new interpreter early** — it is one command and it would have found this before any of the AST analysis.
 
