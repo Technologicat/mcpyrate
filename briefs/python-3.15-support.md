@@ -132,6 +132,18 @@ Once `fullname` is preferred, the `spec.loader.name` assignment in `macropython.
 
 **Threading `module=` through.** `self_module` is already passed the whole way down (`compile` → `_compile` → the `builtins.compile` call), so no new parameter is needed: pass `module=self_module` at `compiler.py:277`. It needs a guard, since mcpyrate supports 3.10–3.14 where the kwarg does not exist — either `sys.version_info >= (3, 15)` or feature detection, whichever fits house style. `module=None` is accepted and is CPython's default, so the dynamically-generated-code path (where `self_module` is `None`) needs no special case.
 
+**`macropython` needs nothing beyond the signature fix — checked, because it looked exposed.** `import_module_as_main` is a hand-rolled approximation of import semantics, so protocol drift is a fair worry. Exercised on 3.15.0rc1 against the patched scratch copy, all green:
+
+- the full test suite (exit 0, no failures, `test_125_macropython` and `test_126_repl` included);
+- `macropython demo/let.py` (script mode);
+- `macropython demo/multiphase_demo.py` (multi-phase, which leans hardest on `self_module`);
+- `macropython -m demo.promise`, which printed `<__main__.Promise object ...>` — the `__main__` pretense and macro expansion both intact, and the most direct evidence that the renaming path still works;
+- `macropython -c` with quasiquotes, and `macropython -i` fed on stdin, both fine.
+
+The reason the approximation survived while the loader override did not is worth keeping, because it predicts where the *next* bump will hurt: **adding a parameter is backward-compatible for callers and breaking for implementers.** `import_module_as_main` only ever *calls* the protocol — `find_spec`, `module_from_spec`, `exec_module` — so a widened signature passes it by. `source_to_xcode` *implements* one, monkey-patched over `SourceFileLoader.source_to_code`, so it must match whatever CPython decides to pass. Audit the implementing side per bump; the calling side is nearly free.
+
+Caveat on that evidence: the CLI and REPL runs above were manual. `TODO_DEFERRED.md` in this repo already records that the subprocess `macropython -i` path and `MacroConsole` macro-imports have no automated coverage, so for those paths this one-off run is currently the only 3.15 evidence there is.
+
 **One design question worth a decision.** `compiler.compile` advertises itself as a near-drop-in for the builtin and documents the ways it differs. The builtin has now gained a parameter it lacks, so either it gains one too, or the docstring's difference list gains a fourth entry.
 
 Recommendation: derive `module=` from `self_module` rather than adding a separate parameter. The two are distinct concepts — macro self-reference versus warning attribution — but they coincide for every caller that has a module at all, and a second parameter that must almost always equal the first is an invitation for the two to drift. Note the deviation in the docstring instead.
