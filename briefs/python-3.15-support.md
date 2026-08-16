@@ -6,6 +6,8 @@ CPython 3.15 reached rc1 in August 2026. The fleet-wide support pass is tracked 
 
 `unpythonic`'s `requires-python = ">=3.10,<3.15"` cap is deliberate and stays until this work lands. A macro expander running against an AST grammar it does not know invites a crash, or worse, a silent misexpansion. Raising the cap is the *last* step, not the first.
 
+**mcpyrate itself declares `>=3.10` with no upper bound, and should have the same cap.** It is the expander — the project the argument for capping applies to most directly — and on 3.15 it does not import at all (item 1 below). Of the three AST users only `unpythonic` is currently protected; `mcpyrate` and `pyan` both advertise support for the version that breaks them. Same timing caveat as pyan's brief records: a cap only reaches users through a release, and adding one locally obstructs setting up the 3.15 venv this work needs, so land it with the fix rather than ahead of it.
+
 Prior art for the analysis shape: unpythonic issue #93 (closed), which tracked the 3.10–3.12 AST changes by asking, per new form, which macro-layer components must learn to detect it. Same question applies here.
 
 ## State of things
@@ -62,6 +64,23 @@ That is the entire change. No new node types; three changed fields, arising from
 - **A value-less `DictComp` traverses safely through every mcpyrate-based walker.** `ASTVisitor` and `ASTTransformer` (`walkers.py:129,173`) inherit CPython's `generic_visit`, which skips a field whose value is neither a list nor an `AST` — so `value=None` is left alone rather than crashing.
 - **unpythonic's `scopeanalyzer` needs no change.** Its comprehension branch (`scopeanalyzer.py:242`) reads only `generators`, and its import branch (`:337`) reads only `names` — so neither the new `is_lazy` field nor a value-less `DictComp` reaches it.
 
+**Read the scope of that deprecation run carefully: it was on 3.14, and 3.14 cannot parse any of the new forms.** It establishes that no AST-constructor deprecation remains; it establishes nothing whatever about behaviour on 3.15. Treating "the suite is green on 3.14" as evidence about 3.15 is how the import-hook blocker below went unnoticed through an otherwise thorough grammar survey.
+
+### Measured on 3.15.0rc1, with the import-hook fix applied
+
+Unparser round-trip, run against a patched scratch copy:
+
+| Input | Result | |
+|---|---|---|
+| `[*L for L in lists]` | `[*L for L in lists]` | correct |
+| `(*L for L in lists)` | `(*L for L in lists)` | correct |
+| `{k: v for k, v in p}` | `{k: v for (k, v) in p}` | correct, unchanged |
+| `lazy import json` | `import json` | **silently wrong** — laziness dropped, no error |
+| `lazy from pathlib import Path` | `from pathlib import Path` | **silently wrong** |
+| `{**d for d in dicts}` | `UnparserError` | fails loudly, degrades to an AST dump |
+
+The two `lazy` rows are the dangerous ones. Unparsed output is what a macro's expansion becomes, so dropping the modifier turns a deferred import into an eager one with nothing raised anywhere. The `DictComp` case at least announces itself — `unparse_with_fallbacks` catches it and the message already guesses the cause ("or a new AST node type from a recent Python").
+
 ## Work items
 
 Ordered by dependency: mcpyrate is unpythonic's dependency, so it goes first.
@@ -72,7 +91,29 @@ Ordered by dependency: mcpyrate is unpythonic's dependency, so it goes first.
 - Record it in `NEW-MACHINE-SETUP.md` in dotclaude, alongside the other deadsnakes versions.
 - Nothing below is finished until it has run on a real 3.15. The static analysis above is solid on *what changed*; it cannot confirm *how our code reacts*.
 
-### 1. mcpyrate: the unparser
+### 1. mcpyrate: the import hook — **blocker, and not an AST issue at all**
+
+**On 3.15, mcpyrate does not import.** Nothing else in this brief can be tested until this is fixed, and unpythonic is blocked behind it too.
+
+```
+TypeError: source_to_xcode() takes 3 positional arguments but 4 were given
+```
+
+`importer.py:21` defines `source_to_xcode(self, data, path, *, _optimize=-1)`, monkey-patched into `importlib.machinery.SourceFileLoader.source_to_code`. In 3.15 that method gained a third positional parameter and the caller passes it:
+
+```python
+# /usr/lib/python3.15/importlib/_bootstrap_external.py
+def source_to_code(self, data, path, fullname=None, *, _optimize=-1):    # :801
+code_object = self.source_to_code(source_bytes, source_path, fullname)   # :877
+```
+
+This is the "many functions related to compiling or parsing Python code now allow the module name to be passed" item in the What's New — which reads like an additive convenience and is in fact a breaking protocol change for anyone overriding the method.
+
+**Verified fix**: accept the parameter — `def source_to_xcode(self, data, path, fullname=None, *, _optimize=-1)`. Tested by patching a scratch copy on 3.15.0rc1; mcpyrate then imports and unparses normally. Consider using `fullname or self.name` for the module name rather than `self.name` alone, since CPython now supplies it explicitly; check which is authoritative when they differ.
+
+Note what this says about method: the ASDL diff is the right tool for *grammar* changes and it found every one of them, but it cannot see a change like this. An interpreter bump can break an AST consumer through the import machinery, the bytecode format, or a stdlib protocol, none of which the grammar mentions. **Import the package under the new interpreter early** — it is one command and it would have found this before any of the AST analysis.
+
+### 2. mcpyrate: the unparser
 
 All four sites are in `mcpyrate/unparser.py`.
 
@@ -85,7 +126,7 @@ All four sites are in `mcpyrate/unparser.py`.
 
 New test module `mcpyrate/test/test_020_unparser_3_15.py`, following the existing `test_020_unparser_3_13.py` / `_3_14.py` pattern — the version suffix is what gates it off on older interpreters. Round-trip at minimum: `lazy import x`, `lazy from x import y`, `{**d for d in dicts}`, `[*L for L in lists]`, `{*s for s in sets}`, `(*L for L in lists)`, and an async generator form.
 
-### 2. mcpyrate: reject lazy macro-imports
+### 3. mcpyrate: reject lazy macro-imports
 
 **Decision taken 2026-08-16: a lazy macro-import is an error, not a silently-ignored modifier.**
 
@@ -93,7 +134,7 @@ A macro-import is consumed at expansion time, so deferring it is meaningless. To
 
 Guard the whole thing on the attribute existing, so the code still runs on 3.10–3.14.
 
-### 3. unpythonic: the open questions
+### 4. unpythonic: the open questions
 
 These are the ones that need a live 3.15 and cannot be settled by reading.
 
@@ -102,13 +143,13 @@ These are the ones that need a live 3.15 and cannot be settled by reading.
 - **open — any macro that reads `DictComp.value` assuming a node.** The walkers are safe (verified above), but a macro that dereferences the field directly is not. Grep again once 3.15 is installed and the new forms can actually be parsed into test fixtures.
 - **Raise the cap last.** `pyproject.toml`: `>=3.10,<3.15` → `>=3.10,<3.16`, plus the `Programming Language :: Python :: 3.15` classifier. Only after the above are green. Note the fleet TODO's warning: an *unbounded* floor makes the resolver seek a version valid for every future Python and silently fall back to an ancient release, so keep the upper bound, just move it.
 
-### 4. pyan, the third AST user
+### 5. pyan, the third AST user
 
 Tracked separately in `pyan/briefs/python-3.15-support.md`, and independent of this work — no dependency either way, so it can be done first, last, or in parallel.
 
 Worth knowing while reading this brief: **pyan is the only one of the three that actually crashes on 3.15.** Its `analyze_comprehension` visits `DictComp.value` unconditionally, so a `{**d for ...}` anywhere in the analyzed codebase raises `AttributeError`. It also declares no upper `requires-python` bound, so it installs happily on the version that breaks it. The macro layer, by contrast, is cap-protected and has no known crash.
 
-### 5. Fleet follow-on
+### 6. Fleet follow-on
 
 Out of scope for this brief, but unblocked by it: CI matrices everywhere, the `cp315-*` cibuildwheel pins in pylu / pydgq / python-wlsqm, and the stale-coverage-Python item that the fleet TODO says to fold into the same pass.
 
