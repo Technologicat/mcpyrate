@@ -1,5 +1,12 @@
 # Changelog
 
+**4.3.1** (in progress):
+
+*No user-visible changes yet.*
+
+
+---
+
 **4.3.0** (17 August 2026) — *"Weigh anchor"* edition:
 
 Python 3.15 support. Under 3.15 the expander could not be imported at all, so nothing macro-enabled would run; it sails again, and the unparser has learned the two syntax additions that come with the new version.
