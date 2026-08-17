@@ -4,6 +4,7 @@
 
 **Fixed**:
 
+- **`unparse` no longer crashes on a hand-built `ImportFrom` that omits `level`.** The field is optional in the AST, so a node constructed in a macro without it has `level=None`, and unparsing raised `TypeError`. Parsed nodes always carry an int, so this only affected generated code.
 - **mcpyrate now imports under Python 3.15.** `importlib`'s `SourceFileLoader.source_to_code` — the method the expander replaces in order to hook compilation — gained a positional `fullname` parameter in 3.15, so the replacement raised `TypeError` and nothing macro-enabled could be imported at all.
   - **The optimization level the caller asks for is now honoured.** It was accepted and then dropped, which went unnoticed because the import path only ever passes `-1`, meaning "use the interpreter's level". `py_compile` and `compileall -o` pass an explicit level, so ahead-of-time compilation of macro-enabled code silently produced bytecode at the interpreter's level rather than the requested one. Long-standing, and unrelated to 3.15.
   - **Syntax warnings from macro-enabled modules can now be filtered by module name** on 3.15+, through `-W` or `warnings.filterwarnings(..., module=...)`, the same as warnings from ordinary modules. mcpyrate calls the built-in `compile` itself, so it now passes 3.15's new `module=` argument along; without it the warnings machinery falls back to guessing a dotted name from the file path.

@@ -332,7 +332,10 @@ class Unparser:
 
     def _ImportFrom(self, t):
         self.fill(self.maybe_colorize_python_keyword("from "), lineno_node=t)
-        self.write("." * t.level)
+        # `level` is optional in the AST, so it is `None` on a node built by hand
+        # without it (e.g. in a macro), where `"." * None` would raise. Parsed nodes
+        # always have an int. CPython's own unparser guards this the same way.
+        self.write("." * (t.level or 0))
         if t.module:
             self.write(t.module)
         self.write(self.maybe_colorize_python_keyword(" import "))
