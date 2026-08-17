@@ -1,16 +1,21 @@
 # Changelog
 
-**4.2.1** (in progress):
+**4.3.0** (17 August 2026) — *"Weigh anchor"* edition:
+
+Python 3.15 support. Under 3.15 the expander could not be imported at all, so nothing macro-enabled would run; it sails again, and the unparser has learned the two syntax additions that come with the new version.
+
+**New**:
+
+- **Python 3.15 is supported.**
+  - **mcpyrate now imports at all under 3.15.** `importlib`'s `SourceFileLoader.source_to_code` — the method the expander replaces in order to hook compilation — gained a positional `fullname` parameter, so the replacement raised `TypeError` and nothing macro-enabled could be imported.
+  - **`unparse` handles the new syntax**: lazy imports (`lazy import x`, `lazy from x import y`) and unpacking in comprehensions (`{**mapping for x in xs}`, `[*items for item in xs]`, and the set and generator forms).
+  - **Syntax warnings from macro-enabled modules can now be filtered by module name**, through `-W` or `warnings.filterwarnings(..., module=...)`, the same as warnings from ordinary modules. mcpyrate calls the built-in `compile` itself, so it now passes 3.15's new `module=` argument along; without it the warnings machinery falls back to guessing a dotted name from the file path.
+  - **A lazy macro-import is an error.** `lazy from mymacros import macros, ...`, and the dialect-import equivalent, now raise `SyntaxError`. The expander consumes a macro-import at macro-expansion time, so deferring one cannot mean anything — and since the statement is rewritten into an ordinary import, accepting it would have discarded the `lazy` without saying so.
 
 **Fixed**:
 
 - **The optimization level the caller asks for is now honoured.** `source_to_xcode` accepted it and then dropped it, which went unnoticed because the import path only ever passes `-1`, meaning "use the interpreter's level". `py_compile` and `compileall -o` pass an explicit level, so ahead-of-time compilation of macro-enabled code silently produced bytecode at the interpreter's level rather than the requested one.
 - **`unparse` no longer crashes on a hand-built `ImportFrom` that omits `level`.** The field is optional in the AST, so a node constructed in a macro without it has `level=None`, and unparsing raised `TypeError`. Parsed nodes always carry an int, so this only affected generated code.
-- **Python 3.15 support.**
-  - **mcpyrate now imports at all under 3.15.** `importlib`'s `SourceFileLoader.source_to_code` — the method the expander replaces in order to hook compilation — gained a positional `fullname` parameter, so the replacement raised `TypeError` and nothing macro-enabled could be imported.
-  - **`unparse` handles the new syntax**: lazy imports (`lazy import x`, `lazy from x import y`) and unpacking in comprehensions (`{**mapping for x in xs}`, `[*items for item in xs]`, and the set and generator forms).
-  - **Syntax warnings from macro-enabled modules can now be filtered by module name**, through `-W` or `warnings.filterwarnings(..., module=...)`, the same as warnings from ordinary modules. mcpyrate calls the built-in `compile` itself, so it now passes 3.15's new `module=` argument along; without it the warnings machinery falls back to guessing a dotted name from the file path.
-  - **A lazy macro-import is an error.** `lazy from mymacros import macros, ...`, and the dialect-import equivalent, now raise `SyntaxError`. The expander consumes a macro-import at macro-expansion time, so deferring one cannot mean anything — and since the statement is rewritten into an ordinary import, accepting it would have discarded the `lazy` without saying so.
 
 **Changed**:
 
