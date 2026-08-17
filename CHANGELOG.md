@@ -10,6 +10,11 @@
   - **mcpyrate now imports at all under 3.15.** `importlib`'s `SourceFileLoader.source_to_code` — the method the expander replaces in order to hook compilation — gained a positional `fullname` parameter, so the replacement raised `TypeError` and nothing macro-enabled could be imported.
   - **`unparse` handles the new syntax**: lazy imports (`lazy import x`, `lazy from x import y`) and unpacking in comprehensions (`{**mapping for x in xs}`, `[*items for item in xs]`, and the set and generator forms).
   - **Syntax warnings from macro-enabled modules can now be filtered by module name**, through `-W` or `warnings.filterwarnings(..., module=...)`, the same as warnings from ordinary modules. mcpyrate calls the built-in `compile` itself, so it now passes 3.15's new `module=` argument along; without it the warnings machinery falls back to guessing a dotted name from the file path.
+  - **A lazy macro-import is an error.** `lazy from mymacros import macros, ...`, and the dialect-import equivalent, now raise `SyntaxError`. The expander consumes a macro-import at macro-expansion time, so deferring one cannot mean anything — and since the statement is rewritten into an ordinary import, accepting it would have discarded the `lazy` without saying so.
+
+**Changed**:
+
+- **`requires-python` now declares an upper bound, `>=3.10,<3.16`.** mcpyrate manipulates the AST and replaces part of the import machinery, so a new Python release can break it in ways a version-agnostic package never sees — as 3.15 did. The ceiling means a future Python has to be tested and released for, rather than silently installed onto.
 
 
 ---

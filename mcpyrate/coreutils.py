@@ -121,6 +121,20 @@ def get_macros(macroimport, *, filename, reload=False, allow_asname=True, self_m
 
     This function is meant for implementing actual macro expanders.
     """
+    # PEP 810 (Python 3.15) added `lazy import x` / `lazy from x import y`, which defer
+    # loading until the name is first used. That cannot mean anything for a macro-import:
+    # the expander consumes the statement at macro-expansion time, so by the time any
+    # deferral could pay off, the import has already had to happen. Rejecting it keeps the
+    # modifier from being silently dropped when the macro-import is rewritten into an
+    # ordinary one. Read the field through `getattr`, since it does not exist before 3.15.
+    #
+    # Dialect-imports arrive here too — they differ from macro-imports only in the magic
+    # name — so this one check covers both.
+    if getattr(macroimport, "is_lazy", False):
+        approx_sourcecode = unparse_with_fallbacks(macroimport, debug=True, color=True)
+        loc = format_location(filename, macroimport, approx_sourcecode)
+        raise SyntaxError(f"{loc}\nmacro-imports cannot be lazy (they are consumed at macro-expansion time)")
+
     package_absname = None
     if macroimport.level and filename.endswith(".py"):
         try:
