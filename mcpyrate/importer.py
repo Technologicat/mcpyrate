@@ -18,13 +18,39 @@ from .unparser import unparse_with_fallbacks
 from .utils import format_location
 
 
-def source_to_xcode(self, data, path, *, _optimize=-1):
+def source_to_xcode(self, data, path, fullname=None, *, _optimize=-1):
     """[mcpyrate] Import hook for the source to bytecode transformation.
 
-    This function is monkey-patched into `importlib.machinery.SourceFileLoader`.
+    This function is monkey-patched into `importlib.machinery.SourceFileLoader`,
+    replacing its `source_to_code`.
+
+    `fullname` is the absolute dotted name the module is being loaded as, and
+    `_optimize` is the optimization level, where `-1` means whichever level the
+    interpreter is running at. Both come from CPython's loader protocol, and both
+    are passed through to the macro-enabled `compile`.
     """
-    # `self.name` is absolute dotted module name, see `importlib.machinery.FileLoader`.
-    return compiler.compile(data, filename=path, self_module=self.name)
+    # We *implement* a stdlib protocol here rather than calling one, and that decides
+    # how a widened signature lands: adding a parameter is backward-compatible for
+    # callers and breaking for implementers. Python 3.15 added `fullname` and passes
+    # it positionally, and mcpyrate did not import at all until this signature
+    # accepted it. So re-check this against `SourceFileLoader.source_to_code` on every
+    # new Python, and forward everything it hands us — the two arguments below are
+    # pure conduits, and dropping a conduit costs nothing *here* while landing on
+    # somebody else, which is exactly what makes the omission easy to miss:
+    #
+    #   - `fullname` ends up as `compile(..., module=...)`, which is what lets syntax
+    #     warnings from this module be filtered by module name.
+    #   - `_optimize` looks safe to ignore, because `-1` means "inherit the
+    #     interpreter's level" and the import path never passes anything else. But
+    #     `py_compile` and `compileall -o` pass an explicit level, and ignoring that
+    #     writes bytecode at the wrong optimization level, silently.
+    #
+    # `self.name` is the same name as `fullname`, cached when the loader was built
+    # (see `importlib.machinery.FileLoader`). Prefer the argument: it is the name
+    # *this particular load* is using, and it is what `exec_module` derives from
+    # `module.__name__`, hence what a self-macro-import has to resolve against.
+    module_name = fullname if fullname is not None else self.name
+    return compiler.compile(data, filename=path, optimize=_optimize, self_module=module_name)
 
 
 # TODO: Support PEP552 (Deterministic pycs). Need to intercept source file hashing, too.

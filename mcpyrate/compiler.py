@@ -29,6 +29,10 @@ from .markers import check_no_markers_remaining
 from .unparser import unparse
 from .utils import gensym, getdocstring
 
+# Python 3.15 added the `module` parameter to the built-in `compile`. See `_compile`,
+# which is the only place we care.
+_COMPILE_ACCEPTS_MODULE = sys.version_info >= (3, 15)
+
 
 def expand(source, filename, optimize=-1, self_module=None):
     """Expand macros and dialects, accounting for multi-phase compilation if needed.
@@ -199,8 +203,11 @@ def compile(source, filename, optimize=-1, self_module=None):
     Currently the API differs from the built-in `compile` in that:
 
      - `mode` is always `"exec"`,
-     - `dont_inherit` is always `True`, and
-     - flags are not supported.
+     - `dont_inherit` is always `True`,
+     - flags are not supported, and
+     - there is no separate `module` parameter (Python 3.15+); `self_module` is
+       used for that too, since the two would have to agree in every case where
+       a module name exists at all.
 
     Return value is a code object, ready for `exec`.
 
@@ -274,7 +281,21 @@ def _compile(source, filename, optimize, self_module):
     expansion = expand(source, filename=filename, self_module=self_module, optimize=optimize)
     assert isinstance(expansion, ast.Module)  # we always parse in `"exec"` mode
     docstring = getdocstring(expansion.body)
-    code = builtins.compile(expansion, filename, mode="exec", dont_inherit=True, optimize=optimize)
+    # On 3.15+, tell the built-in `compile` which module this is. That name is what
+    # syntax warnings get attributed to, so it is what `-W` and
+    # `warnings.filterwarnings(..., module=...)` match against.
+    #
+    # Passing it matters *because* we call the built-in ourselves. With no `module=`,
+    # the warnings machinery falls back to matching the filter against the file path,
+    # guessing a dotted name from it by stripping `.py`, replacing separators with
+    # dots, and trying the match at every dot-suffix position. That guess over-matches
+    # (every directory name becomes a module prefix) and is simply wrong wherever the
+    # path does not mirror the import name, as for namespace packages or zipimport.
+    # So omitting it would leave macro-enabled modules on the old, sloppier behaviour
+    # while ordinary ones got the exact name — a difference nothing would report.
+    module_kwargs = {"module": self_module} if _COMPILE_ACCEPTS_MODULE else {}
+    code = builtins.compile(expansion, filename, mode="exec", dont_inherit=True,
+                            optimize=optimize, **module_kwargs)
     return code, docstring
 
 
