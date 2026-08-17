@@ -1,5 +1,15 @@
 # CC Brief: Python 3.15 support (mcpyrate and unpythonic)
 
+> **Status: mcpyrate's side is done (2026-08-17), and unreleased.** Work items 1-3 and 6 below
+> have landed — import hook, unparser, lazy macro-import rejection, `requires-python` capped at
+> `<3.16`, 3.15 in CI — all pushed and green, accumulating in the `4.2.1` in-progress changelog
+> section. The suite passes on 3.15.0rc1 and 3.14.6.
+>
+> **Do not tag it alone.** mcpyrate and unpythonic release together once verified against each
+> other (see the `release` skill), so this waits on `unpythonic/briefs/python-3.15-support.md`,
+> item 4 below. Note mcpyrate's tags are bare version numbers and its CI publishes on *any* tag
+> matching `[0-9]*`, so a stray tag here is a release.
+
 ## Context
 
 CPython 3.15 reached rc1 in August 2026. The fleet-wide support pass is tracked in `~/.claude/TODO_DEFERRED.md` under "Python 3.15 support pass across the fleet", which notes that `mcpyrate` and `unpythonic` track CPython's AST closely enough to set the pace for everything else.
