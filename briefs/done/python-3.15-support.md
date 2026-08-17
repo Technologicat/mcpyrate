@@ -12,7 +12,7 @@
 > for pylu / pydgq / python-wlsqm and the stale-coverage-Python sweep are untouched.
 >
 > **Do not tag it alone.** mcpyrate and unpythonic release together once verified against each
-> other (see the `release` skill), so this waits on `unpythonic/briefs/python-3.15-support.md`,
+> other (see the `release` skill), so this waits on `unpythonic/briefs/done/python-3.15-support.md`,
 > item 4 below. Note mcpyrate's tags are bare version numbers and its CI publishes on *any* tag
 > matching `[0-9]*`, so a stray tag here is a release.
 
@@ -227,7 +227,7 @@ These are the ones that need a live 3.15 and cannot be settled by reading.
 
 ### 5. pyan, the third AST user
 
-Tracked separately in `pyan/briefs/python-3.15-support.md`, and independent of this work — no dependency either way, so it can be done first, last, or in parallel.
+Tracked separately in `pyan/briefs/done/python-3.15-support.md`, and independent of this work — no dependency either way, so it can be done first, last, or in parallel.
 
 Worth knowing while reading this brief: **pyan is the only one of the three that actually crashes on 3.15.** Its `analyze_comprehension` visits `DictComp.value` unconditionally, so a `{**d for ...}` anywhere in the analyzed codebase raises `AttributeError`. It also declares no upper `requires-python` bound, so it installs happily on the version that breaks it. The macro layer, by contrast, is cap-protected and has no known crash.
 
