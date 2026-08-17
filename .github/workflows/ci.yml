@@ -74,7 +74,12 @@ jobs:
         # 3.15 fails outright while the very same job already has 3.15.0-rc.1 on PATH.
         # Using what is here also sidesteps the naming difference between the two —
         # CI spells it `pypy-3.11`, PDM spells it `pypy@3.11`.
-        pdm use -f "$(which python)"
+        #
+        # Ask Python for its own path rather than using `which`: these steps run under
+        # Git Bash on Windows, where `which python` answers with an MSYS path such as
+        # `/c/hostedtoolcache/...`, which PDM — a native Windows program — cannot
+        # resolve. `sys.executable` is a native path on every platform.
+        pdm use -f "$(python -c 'import sys; print(sys.executable)')"
         # "When you run pdm install the first time on a new PDM-managed project, whose Python interpreter is not decided yet,
         #  PDM will create a virtualenv in <project_root>/.venv, and install dependencies into it."
         #     https://pdm-project.org/en/latest/usage/venv/
