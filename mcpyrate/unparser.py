@@ -53,6 +53,18 @@ def interleave(inter, f, seq):
             f(x)
 
 
+def _import_keyword(t, base):
+    """Return the leading keyword for an `Import`/`ImportFrom`, e.g. `"lazy import "`.
+
+    `base` is the keyword without the modifier, `"import "` or `"from "`.
+    """
+    # PEP 810 (Python 3.15) added `lazy import x` and `lazy from x import y`, recorded
+    # in the new `is_lazy` field. Read it defensively, for two different reasons: the
+    # field does not exist at all on 3.10-3.14, and it is optional in the grammar, so
+    # a node built by hand has `None` there even on 3.15. Parsed nodes carry 0 or 1.
+    return f"lazy {base}" if getattr(t, "is_lazy", False) else base
+
+
 class Unparser:
     """Convert an AST into source code.
 
@@ -327,11 +339,11 @@ class Unparser:
             self.dispatch(t.value)
 
     def _Import(self, t):
-        self.fill(self.maybe_colorize_python_keyword("import "), lineno_node=t)
+        self.fill(self.maybe_colorize_python_keyword(_import_keyword(t, "import ")), lineno_node=t)
         interleave(lambda: self.write(", "), self.dispatch, t.names)
 
     def _ImportFrom(self, t):
-        self.fill(self.maybe_colorize_python_keyword("from "), lineno_node=t)
+        self.fill(self.maybe_colorize_python_keyword(_import_keyword(t, "from ")), lineno_node=t)
         # `level` is optional in the AST, so it is `None` on a node built by hand
         # without it (e.g. in a macro), where `"." * None` would raise. Parsed nodes
         # always have an int. CPython's own unparser guards this the same way.
@@ -692,9 +704,21 @@ class Unparser:
 
     def _DictComp(self, t):
         self.write("{")
-        self.dispatch(t.key)
-        self.write(": ")
-        self.dispatch(t.value)
+        # PEP 798 (Python 3.15) added the dict-unpacking comprehension
+        # `{**mapping for x in xs}`, which reuses this node with `value` empty:
+        # the mapping expression goes in `key`, and `value is None` is the marker.
+        #
+        # Note the encoding is mirrored from the one a dict *literal* uses, where
+        # `{**a}` is `Dict(keys=[None], values=[a])` — there the `None` sits in the
+        # key slot and the mapping in the value slot, i.e. the opposite way round.
+        # Reasoning across from the literal gives the wrong answer.
+        if t.value is not None:
+            self.dispatch(t.key)
+            self.write(": ")
+            self.dispatch(t.value)
+        else:
+            self.write("**")
+            self.dispatch(t.key)
         for gen in t.generators:
             self.dispatch(gen)
         self.write("}")
