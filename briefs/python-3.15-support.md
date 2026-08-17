@@ -1,9 +1,15 @@
 # CC Brief: Python 3.15 support (mcpyrate and unpythonic)
 
-> **Status: mcpyrate's side is done (2026-08-17), and unreleased.** Work items 1-3 and 6 below
-> have landed — import hook, unparser, lazy macro-import rejection, `requires-python` capped at
-> `<3.16`, 3.15 in CI — all pushed and green, accumulating in the `4.2.1` in-progress changelog
-> section. The suite passes on 3.15.0rc1 and 3.14.6.
+> **Status: mcpyrate's side is done (2026-08-17), and unreleased.** Items 1-3 below are mcpyrate's
+> own, and all three have landed — import hook, unparser, lazy macro-import rejection — along with
+> the `requires-python` cap at `<3.16` and 3.15 in its CI matrix. All pushed and green,
+> accumulating in the `4.2.1` in-progress changelog section. The suite passes on 3.15.0rc1 and
+> 3.14.6. Nothing further is outstanding in this repo.
+>
+> The numbering runs across all three projects, so of the rest: **item 5 (pyan) is done and
+> released** as 2.7.0; **item 4 (unpythonic) is the remaining work**; and **item 6 has barely
+> started** — the CI matrices for mcpyrate and pyan are in, but the `cp315-*` cibuildwheel pins
+> for pylu / pydgq / python-wlsqm and the stale-coverage-Python sweep are untouched.
 >
 > **Do not tag it alone.** mcpyrate and unpythonic release together once verified against each
 > other (see the `release` skill), so this waits on `unpythonic/briefs/python-3.15-support.md`,
