@@ -1,16 +1,24 @@
 # Deferred TODOs
 
+<!-- New items go below this line. -->
+
 ## Fix TODO list
+
+*Cluster: housekeeping · Cost: ? · Gate: `todo.md` is untracked, and not on every machine · Filed: 2026-04-17*
 
 `todo.md` (lowercase) has old notes that need review — update, reorganize, or replace.
 
 ## Audit typing: abstract parameter types, concrete return types
+
+*Cluster: typing · Cost: M · Gate: none · Filed: 2026-03-30*
 
 Parameters should use abstract types from `collections.abc` (`Mapping`, `Sequence`, `Iterable`) for widest-possible-accepted semantics. Return types should use concrete lowercase builtins (`tuple[int, int]`, `list[int]`, `dict[str, int]`) — PEP 585, Python 3.9+. The capitalized `typing` forms (`Dict`, `List`, `Tuple`) are deprecated aliases for the builtins and offer no extra width — avoid them. Audit existing type hints across the codebase for consistency.
 
 Discovered during raven-cherrypick compare mode planning (2026-03-30).
 
 ## Tier 2 REPL tests (subprocess + pty) for `macropython -i`
+
+*Cluster: repl-testing · Cost: M · Gate: a regression that tier 1 misses · Filed: 2026-04-15*
 
 Tier 1 coverage for `MacroConsole` lands in `mcpyrate/test/test_126_repl.py` — in-process, scripted input via `builtins.input` monkey-patch, captured stdout/stderr via `io.StringIO`. Fast (milliseconds per test), simple, covers a lot of REPL-logic regressions. **We might never need tier 2.**
 
@@ -48,6 +56,8 @@ Added 2026-04-15, alongside the tier 1 bring-up.
 
 ## Test `MacroConsole` with macro imports (in-process, without stale-identity contamination)
 
+*Cluster: repl-testing · Cost: S · Gate: none · Filed: 2026-04-15*
+
 The tier 1 REPL tests at `mcpyrate/test/test_126_repl.py` deliberately exclude a `test_macro_expansion_in_repl` case that would type `from mcpyrate.quotes import macros, q` into a `MacroConsole` and verify the macro expands.
 
 **The obstacle**: `MacroConsole.runsource` calls `find_macros(..., reload=True)` in `mcpyrate/repl/console.py:164`. That `reload=True` is a deliberate REPL feature — re-importing macros after the user edits their source, without restarting the REPL — and it calls `importlib.reload(mcpyrate.quotes)` (or whatever module was imported) on every `from X import macros, ...` statement.
@@ -67,6 +77,8 @@ The reload replaces the module's function objects (`q`, `u`, `n`, `a`, `s`, `t`,
 Added 2026-04-15 during the tier 1 bring-up; the full investigation notes and the test-case docstring are in `mcpyrate/test/test_126_repl.py` where the stub for the missing test lives.
 
 ## `path_stats` returns `size: None`, which breaks the documented `py_compile` workflow
+
+*Cluster: importer · Cost: S · Gate: none · Filed: 2026-08-16*
 
 `doc/troubleshooting.md:484–485` tells users to compile macro-enabled code ahead of time by importing
 `mcpyrate.activate` first and then using `py_compile`. That sequence currently raises:
@@ -94,6 +106,8 @@ rather than fixed inline.
 Discovered 2026-08-16 while testing whether `_optimize` survives the import hook.
 
 ## Can `runpy` replace part of `import_module_as_main`?
+
+*Cluster: importer · Cost: ? · Gate: none · Filed: 2026-08-16*
 
 `macropython`'s `import_module_as_main` hand-rolls import semantics — a `sys.meta_path` walk, `module_from_spec`, `__package__` fixing, `__main__.py` resolution for packages. The premise was that nothing in the stdlib will load a module *as* `__main__`. That premise is half true, measured on 3.15.0rc1 with the expander active:
 
