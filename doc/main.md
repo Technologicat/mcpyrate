@@ -731,6 +731,7 @@ def mymacro(tree, *, expander, **kw):
  - The scan uses the bindings *from your macro's use site*, so `macroname` is the name the use site imported the macro as, which may be an alias. To check for a particular macro, compare the function: `expander.bindings[macroname] is double`, where `double` is the macro function as your own module knows it.
  - Invocations nested inside other invocations are found too: in macro arguments, in the body of a `with` block, in a decorated definition.
  - A subtree marked `Done` (already expanded) is skipped.
+ - Invocations inside quasiquotes are listed too, although there they are data, and do not expand at that site: in `q[dbl[2]]`, both `q` and `dbl` are listed.
  - To scan again, for example after modifying the tree, call `mc.clear()` first, or make a new `MacroCollector`. Without it, the first scan's entries stay, and a macro already seen is not listed again.
 
 

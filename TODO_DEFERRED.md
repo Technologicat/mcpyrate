@@ -12,15 +12,25 @@ block macro and `@mymacro async def f(): ...` not as a decorator macro. Not yet 
 much anywhere in the fleet (maintainer, 2026-10-09: there are places it would be useful), and mcpyrate and
 `unpythonic` are where adding it would be worth the most.
 
-## Does `MacroCollector` need a variant for invocations inside quoted code?
+## `MacroCollector`: an option to skip quoted code
 
-*Cluster: api · Cost: S to answer · Gate: none · Filed: 2026-10-09*
+*Cluster: api · Cost: S–M (design first) · Gate: none · Filed: 2026-10-09*
 
-Asked in 2020 (`old_todo.txt`) and still unanswered: what `MacroCollector` reports for macro invocations
-inside a `q[...]`, where they are data rather than code to be expanded there. If it lists them as
-invocations, a macro scanning its input gets names that will not expand at that site. A probe macro, as
-used to write the section "Find which macros a tree invokes" in `doc/main.md`, answers it in minutes;
-whether a variant is then wanted, or a sentence in that section, follows from the answer.
+`MacroCollector` lists macro invocations inside quasiquotes, although there they are data and do not expand
+at that site. Measured 2026-10-09 with a probe macro: in `q[dbl[2]]`, with `dbl` used nowhere else, both
+`q` and `dbl` are listed, and at run time the quoted code is still the literal `dbl[2]`. The section "Find
+which macros a tree invokes" in `doc/main.md` now says so. The fix is an option to leave quoted code out:
+
+- **Recognize the quote operators by function identity, not by name.** `q` can be aliased at the use site
+  like any macro, so the collector compares `expander.bindings[macroname]` with `mcpyrate.quotes.q`, as the
+  section recommends to callers.
+- **Decide what the unquotes inside a quote mean.** `u`, `n`, `a`, `s` and `h` are evaluated where the
+  quote runs, so their contents are code at that site rather than data, and invocations in them may need
+  listing after all. Check how the expander treats them before deciding, as with the quote itself.
+- **Nested quotes**: a `q` inside a `q`, and whatever the unquote rules make of it.
+
+Default to the current behaviour, so existing callers see no change. Asked as a question in 2020
+(`old_todo.txt`).
 
 ## Keep exact source formatting, via LibCST or Parso
 
