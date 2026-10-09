@@ -2,11 +2,19 @@
 
 <!-- New items go below this line. -->
 
-## Fix TODO list
+## Review the old notes in `todo.org`
 
-*Cluster: housekeeping · Cost: ? · Gate: `todo.md` is untracked, and not on every machine · Filed: 2026-04-17*
+*Cluster: housekeeping · Cost: S · Gate: the file is untracked, on the personal machine only · Filed: 2026-04-17*
 
-`todo.md` (lowercase) has old notes that need review — update, reorganize, or replace.
+`todo.org`, at the top of the checkout on the personal machine (last changed 2021-04), holds ideas from the
+3.x days: a script that clears the bytecode caches and runs the tests twice; generalizing the functions that
+assume a single node with a `body` (grep "Primarily meant to be called"); renaming "the import algorithm" in
+the docs, multiphase being a compiler feature; a `@macro` decorator for 4.0; compiler tests. Its first entry
+is done (`macropython -C`), and its two line-number ideas are marked dead in the file itself. File what is
+worth keeping as its own item, then delete the file.
+
+Two more untracked notes sit beside it, from the 4.0 modernization in March 2026: `cc-session-notes.md` and
+`coverage-plan.md`. Check whether anything in them is still open before deleting those too.
 
 ## Audit typing: abstract parameter types, concrete return types
 
