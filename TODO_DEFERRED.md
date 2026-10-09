@@ -2,6 +2,26 @@
 
 <!-- New items go below this line. -->
 
+## Document `MacroCollector`, for a macro that needs to find other macros' invocations in its tree
+
+*Cluster: docs · Cost: S · Gate: none · Filed: 2020 (as an idea, in `old_todo.txt`); 2026-10-09 here*
+
+A macro author sometimes needs to know whether a subtree holds other macro invocations, to treat them
+specially rather than expand around them. `mcpyrate.expander.MacroCollector` does this: it is public, and a
+macro reaches it through its `expander` argument, as `MacroCollector(expander).visit(subtree)`, which
+collects `(macroname, syntax)` pairs. But nothing in `doc/` or the README mentions it, so the capability is
+findable only by reading `expander.py`. The 2020 note also asked whether quoted code would need a variant;
+answer that while writing it up.
+
+## Keep exact source formatting, via LibCST or Parso
+
+*Cluster: design · Cost: ? · Gate: tentative; "far future" in the original note · Filed: 2020 (in `old_todo.txt`); 2026-10-09 here*
+
+The standard `ast` drops comments and formatting, so what a debugging tool shows of unexpanded code is
+unparsed rather than the source as written. A concrete syntax tree, from
+[LibCST](https://libcst.readthedocs.io/en/latest/) or [Parso](https://parso.readthedocs.io/en/latest/), would
+keep it.
+
 ## Generalize the functions that assume a single node with a `body`
 
 *Cluster: api · Cost: ? · Gate: none · Filed: 2021 (in `todo.org`); 2026-10-09 here*
@@ -157,3 +177,6 @@ Not part of the Python 3.15 support work; `import_module_as_main` was verified w
   compiling a dynamically generated AST, so line numbers come out relative to the quoted snippet. Not
   needed: dynamically generated ASTs are unparsed before macro expansion. It would also only have worked
   for a snippet quoted in one go. (Declined by 2021-04, in `todo.org`; recorded 2026-10-09.)
+- **An auto-injector for the captured registry**, in `expander.find_macros`. Not needed: mcpyrate already
+  injects the module that defines the macros, and that serves. (Declined in 2020, in `old_todo.txt`;
+  recorded 2026-10-09.)
