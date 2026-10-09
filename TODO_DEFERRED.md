@@ -11,10 +11,12 @@
 assume a single node with a `body` (grep "Primarily meant to be called"); renaming "the import algorithm" in
 the docs, multiphase being a compiler feature; a `@macro` decorator for 4.0; compiler tests. Its first entry
 is done (`macropython -C`), and its two line-number ideas are marked dead in the file itself. File what is
-worth keeping as its own item, then delete the file.
+worth keeping as its own item. **Record the dead ideas before deleting anything**, each with the reason it
+died, under `## Declined` (or in a brief, if one grows from this), so they are not re-proposed by the next
+person to have the same thought. Then delete the file.
 
 Two more untracked notes sit beside it, from the 4.0 modernization in March 2026: `cc-session-notes.md` and
-`coverage-plan.md`. Check whether anything in them is still open before deleting those too.
+`coverage-plan.md`. The same applies to them: what is open becomes an item, what was rejected is recorded.
 
 ## Audit typing: abstract parameter types, concrete return types
 
