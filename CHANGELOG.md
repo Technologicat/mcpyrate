@@ -2,7 +2,9 @@
 
 **4.3.1** (in progress):
 
-*No user-visible changes yet.*
+**New**:
+
+- **`MacroCollector` is documented**, for a macro that needs to know which other macros its input invokes without expanding them. See [Find which macros a tree invokes](doc/main.md#find-which-macros-a-tree-invokes).
 
 
 ---

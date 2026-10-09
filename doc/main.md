@@ -41,6 +41,7 @@
         - [Creating a magic variable](#creating-a-magic-variable)
     - [Expand macros inside-out](#expand-macros-inside-out)
     - [Expand macros inside-out, but only those in a given set](#expand-macros-inside-out-but-only-those-in-a-given-set)
+    - [Find which macros a tree invokes](#find-which-macros-a-tree-invokes)
     - [AST markers](#ast-markers)
 - [Multi-phase compilation](#multi-phase-compilation)
 - [Dialects](#dialects)
@@ -709,6 +710,28 @@ The recipe is as follows:
 The implementation of the quasiquote system has an example of this. See also [demo/anaphoric_if.py](../demo/anaphoric_if.py), for how it expands the anaphoric `it`.
 
 Obviously, if you want to expand just one layer with the second expander, use its `visit_once` method instead of `visit`. (And if you do that, you'll need to decide if you should keep the `Done` marker - to prevent further expansion in that subtree - or discard it and grab the real AST from its `body` attribute.)
+
+
+## Find which macros a tree invokes
+
+Sometimes a macro needs to know which other macros its input invokes, without expanding them - for example, to treat a subtree specially, or to refuse input it cannot handle. `MacroCollector`, in [`mcpyrate.expander`](../mcpyrate/expander.py), scans a tree for macro invocations, using the bindings of the expander you give it:
+
+```python
+from mcpyrate.expander import MacroCollector
+
+def mymacro(tree, *, expander, **kw):
+    mc = MacroCollector(expander)
+    mc.visit(tree)
+    print(mc.collected)  # e.g. [('double', 'expr'), ('block', 'block'), ('it', 'name'), ('deco', 'decorator')]
+    return tree
+```
+
+`mc.collected` is a `list` of `(macroname, syntax)` pairs: each macro the tree invokes, once per kind of invocation, in the order first seen. `syntax` takes the same values as the [named parameter](#named-parameters-filled-by-expander) of the same name: `expr`, `block`, `decorator`, `name`. It tells you *which* macros the tree invokes, not *where*; to act on the invocations themselves, expand them (see above), or walk the tree.
+
+ - The scan uses the bindings *from your macro's use site*, so `macroname` is the name the use site imported the macro as, which may be an alias. To check for a particular macro, compare the function: `expander.bindings[macroname] is double`, where `double` is the macro function as your own module knows it.
+ - Invocations nested inside other invocations are found too: in macro arguments, in the body of a `with` block, in a decorated definition.
+ - A subtree marked `Done` (already expanded) is skipped.
+ - To scan again, for example after modifying the tree, call `mc.clear()` first, or make a new `MacroCollector`. Without it, the first scan's entries stay, and a macro already seen is not listed again.
 
 
 ## AST markers

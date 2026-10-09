@@ -2,17 +2,6 @@
 
 <!-- New items go below this line. -->
 
-## Document `MacroCollector`, for a macro that needs to find other macros' invocations in its tree
-
-*Cluster: docs · Cost: S · Gate: none · Filed: 2020 (as an idea, in `old_todo.txt`); 2026-10-09 here*
-
-A macro author sometimes needs to know whether a subtree holds other macro invocations, to treat them
-specially rather than expand around them. `mcpyrate.expander.MacroCollector` does this: it is public, and a
-macro reaches it through its `expander` argument, as `MacroCollector(expander).visit(subtree)`, which
-collects `(macroname, syntax)` pairs. But nothing in `doc/` or the README mentions it, so the capability is
-findable only by reading `expander.py`. The 2020 note also asked whether quoted code would need a variant;
-answer that while writing it up.
-
 ## Keep exact source formatting, via LibCST or Parso
 
 *Cluster: design · Cost: ? · Gate: tentative; "far future" in the original note · Filed: 2020 (in `old_todo.txt`); 2026-10-09 here*
