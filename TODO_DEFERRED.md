@@ -24,10 +24,12 @@ which macros a tree invokes" in `doc/main.md` now says so. The fix is an option 
 - **Recognize the quote operators by function identity, not by name.** `q` can be aliased at the use site
   like any macro, so the collector compares `expander.bindings[macroname]` with `mcpyrate.quotes.q`, as the
   section recommends to callers.
-- **Decide what the unquotes inside a quote mean.** `u`, `n`, `a`, `s` and `h` are evaluated where the
-  quote runs, so their contents are code at that site rather than data, and invocations in them may need
-  listing after all. Check how the expander treats them before deciding, as with the quote itself.
-- **Nested quotes**: a `q` inside a `q`, and whatever the unquote rules make of it.
+- **Keep listing what is inside an unquote.** All six unquotes — `u`, `n`, `a`, `s`, `t` and `h` — lower the
+  quote level by one and run `expander.visit_recursively` on their contents (read from `mcpyrate/quotes.py`,
+  not yet probed), so invocations in them do expand at that site. Skipping a quote therefore means skipping
+  its contents except its unquotes, descending into those as usual.
+- **Nested quotes**: a `q` inside a `q`. The quote level is what decides at which level an unquote applies,
+  so the collector would need to track it the same way.
 
 Default to the current behaviour, so existing callers see no change. Asked as a question in 2020
 (`old_todo.txt`).
