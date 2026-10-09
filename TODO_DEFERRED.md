@@ -177,6 +177,9 @@ Not part of the Python 3.15 support work; `import_module_as_main` was verified w
   compiling a dynamically generated AST, so line numbers come out relative to the quoted snippet. Not
   needed: dynamically generated ASTs are unparsed before macro expansion. It would also only have worked
   for a snippet quoted in one go. (Declined by 2021-04, in `todo.org`; recorded 2026-10-09.)
-- **An auto-injector for the captured registry**, in `expander.find_macros`. Not needed: mcpyrate already
-  injects the module that defines the macros, and that serves. (Declined in 2020, in `old_todo.txt`;
-  recorded 2026-10-09.)
+- **An auto-injector for the captured registry**, in `expander.find_macros`: an import, injected at each use
+  site, of whatever held the hygienically captured values. Declined in 2020 because `find_macros` already
+  rewrites each macro-import into an absolute `import` of the macro module (its `transform` parameter). Moot
+  since: there is no central registry. `capture_value` pickles each value into the expanded code at its own
+  capture site, since a `.pyc` may be loaded in another process, and the lookup it generates imports
+  `mcpyrate.quotes` itself (`force_import`). (Declined in 2020, in `old_todo.txt`; recorded 2026-10-09.)
