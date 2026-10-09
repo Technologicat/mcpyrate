@@ -2,6 +2,26 @@
 
 <!-- New items go below this line. -->
 
+## Async support: block macros on `async with`, decorator macros on `async def`
+
+*Cluster: async · Cost: ? · Gate: none · Filed: 2026-10-09 · See also: `unpythonic`'s `TODO_DEFERRED.md`, the item of the same name*
+
+`MacroExpander` and `MacroCollector` have visitors for `With`, `FunctionDef` and `ClassDef`, and none for
+`AsyncWith` or `AsyncFunctionDef`. So, as far as the code shows, `async with mymacro:` is not expanded as a
+block macro and `@mymacro async def f(): ...` not as a decorator macro. Not yet tried. Async is not supported
+much anywhere in the fleet (maintainer, 2026-10-09: there are places it would be useful), and mcpyrate and
+`unpythonic` are where adding it would be worth the most.
+
+## Does `MacroCollector` need a variant for invocations inside quoted code?
+
+*Cluster: api · Cost: S to answer · Gate: none · Filed: 2026-10-09*
+
+Asked in 2020 (`old_todo.txt`) and still unanswered: what `MacroCollector` reports for macro invocations
+inside a `q[...]`, where they are data rather than code to be expanded there. If it lists them as
+invocations, a macro scanning its input gets names that will not expand at that site. A probe macro, as
+used to write the section "Find which macros a tree invokes" in `doc/main.md`, answers it in minutes;
+whether a variant is then wanted, or a sentence in that section, follows from the answer.
+
 ## Keep exact source formatting, via LibCST or Parso
 
 *Cluster: design · Cost: ? · Gate: tentative; "far future" in the original note · Filed: 2020 (in `old_todo.txt`); 2026-10-09 here*
