@@ -2,21 +2,34 @@
 
 <!-- New items go below this line. -->
 
-## Review the old notes in `todo.org`
+## Generalize the functions that assume a single node with a `body`
 
-*Cluster: housekeeping · Cost: S · Gate: the file is untracked, on the personal machine only · Filed: 2026-04-17*
+*Cluster: api · Cost: ? · Gate: none · Filed: 2021 (in `todo.org`); 2026-10-09 here*
 
-`todo.org`, at the top of the checkout on the personal machine (last changed 2021-04), holds ideas from the
-3.x days: a script that clears the bytecode caches and runs the tests twice; generalizing the functions that
-assume a single node with a `body` (grep "Primarily meant to be called"); renaming "the import algorithm" in
-the docs, multiphase being a compiler feature; a `@macro` decorator for 4.0; compiler tests. Its first entry
-is done (`macropython -C`), and its two line-number ideas are marked dead in the file itself. File what is
-worth keeping as its own item. **Record the dead ideas before deleting anything**, each with the reason it
-died, under `## Declined` (or in a brief, if one grows from this), so they are not re-proposed by the next
-person to have the same thought. Then delete the file.
+Nine functions accept only a node carrying a `body` attribute, where they could take any statement list or
+node; their docstrings say so with "Primarily meant to be called" (grep for it). Five are in `multiphase.py`,
+two in `expander.py`, one each in `compiler.py` and `dialects.py`. Whether each generalization is worth its
+API surface is a call per function. Originally an idea for a GitHub issue.
 
-Two more untracked notes sit beside it, from the 4.0 modernization in March 2026: `cc-session-notes.md` and
-`coverage-plan.md`. The same applies to them: what is open becomes an item, what was rejected is recorded.
+## Docs: multi-phase compilation is a compiler feature, and "the import algorithm" names the wrong thing
+
+*Cluster: docs · Cost: S · Gate: a better name for the section · Filed: 2021 (in `todo.org`); 2026-10-09 here*
+
+`doc/compiler.md` has a section titled "The import algorithm", linked from several places, that describes
+compilation rather than importing; multi-phase compilation is likewise a feature of the compiler, not of the
+importer. `doc/dialects.md` has a "Dialect import algorithm" section of the same kind. Renaming means
+updating every anchor link to them; `unpythonic`'s docs have none (checked 2026-10-09).
+
+## A `@macro` decorator, so a macro is declared where it is defined
+
+*Cluster: design · Cost: ? · Gate: a design decision; tentative · Filed: 2021 (in `todo.org`, for 4.0); 2026-10-09 here*
+
+Being a macro would become a property of the definition site rather than of the use site, departing from
+the macropythonic tradition. Macros would no longer need tagging for import: the expander would inspect
+every from-import and check whether the object is a macro, keeping the rule that macros are from-imported.
+Against it: renames by as-import still need handling; a function so marked could no longer be called as an
+ordinary function; and it probably does not help with detecting nested quasiquote operators. 4.0 through 4.3
+shipped without it.
 
 ## Audit typing: abstract parameter types, concrete return types
 
@@ -133,3 +146,14 @@ So at most the `-m` half is replaceable, and even there the two are not equivale
 A middle option worth weighing for script mode, if the goal is less hackery rather than no hackery: `importlib.util.spec_from_file_location("__main__", path)` plus `module_from_spec` plus `exec_module` routes through the patched loader and is much shorter than the meta_path walk — at the cost of dropping support for whatever non-default finders the walk currently picks up (namespace packages, zipimport, and anything a user has installed).
 
 Not part of the Python 3.15 support work; `import_module_as_main` was verified working as-is on 3.15. Raised 2026-08-16 while checking whether the importlib protocol change had implications for `macropython`.
+
+## Declined
+
+- **Line numbers for an AST passed to `compiler.run`, by unparsing it and injecting the source as the code
+  object's "code string".** Would need an unparser mode filling in line numbers as it goes. Too complicated,
+  and the premise was wrong: a code object carries raw bytecode, not a source string. (Declined by 2021-04,
+  in `todo.org`; recorded 2026-10-09.)
+- **A mode for `q` and friends to juggle source location info**, subtracting the smallest line number when
+  compiling a dynamically generated AST, so line numbers come out relative to the quoted snippet. Not
+  needed: dynamically generated ASTs are unparsed before macro expansion. It would also only have worked
+  for a snippet quoted in one go. (Declined by 2021-04, in `todo.org`; recorded 2026-10-09.)
