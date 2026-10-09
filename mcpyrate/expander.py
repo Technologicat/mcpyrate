@@ -401,8 +401,7 @@ class MacroCollector(NodeVisitor):
     def __init__(self, expander):
         """`expander`: a `MacroExpander` instance to query macro bindings from.
 
-        `filename`: full path to `.py` file being expanded, for error reporting.
-                    Only used for errors during `destructure_candidate`.
+        Errors from `destructure_candidate` are reported against `expander.filename`.
         """
         self.expander = expander
         self.clear()
