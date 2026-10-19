@@ -52,11 +52,6 @@ jobs:
       uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
       with:
         python-version: ${{ matrix.python-version }}
-        # 3.15 is at rc1, which the setup-python manifest marks unstable, so a bare
-        # "3.15" resolves to nothing without this. Versions that have a stable release
-        # are unaffected — a prerelease is only used when no stable one satisfies the
-        # request. Becomes a no-op once 3.15 final ships.
-        allow-prereleases: true
     - name: Install tools in CI venv
       run: |
         python -m pip install --upgrade pip
@@ -70,8 +65,8 @@ jobs:
       run: |
         # Point PDM at the interpreter `setup-python` already installed, instead of
         # having it fetch a second copy. `-f` ("--first") is what stops it reaching for
-        # its own download: PDM's index carries no prerelease build, so asking it for
-        # 3.15 fails outright while the very same job already has 3.15.0-rc.1 on PATH.
+        # its own download: PDM's index carries no prerelease build, so asking it for a
+        # Python at rc fails outright while the very same job already has it on PATH.
         # Using what is here also sidesteps the naming difference between the two —
         # CI spells it `pypy-3.11`, PDM spells it `pypy@3.11`.
         #
